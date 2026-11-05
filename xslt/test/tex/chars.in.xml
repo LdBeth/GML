@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><body><h1 anchor="gml-h1-1">Characters &amp; specials</h1>
+<p>TeX specials: $5 &amp; 10% #1 a_b x^2 ~tilde \back {braces} &lt;angle&gt; |bar| "quoted".
+Dashes: a--b and a---b; Latin-1: café, Straße, Ærø, naïve, ñ, ¿qué?, ©, °, ±, ×.
+Typographic: “double” ‘single’ — em – en … • € ™ and an unknown ☃ snowman.
+</p><xmp xml:space="preserve"><gml:fo fill="no" align="left" overdraw="extend" break="yes"/>  $x = {a_b} &amp; ~y; # % \z
+	tab	separated
+<gml:fo fill="yes" align="justify" overdraw="extend" break="yes"/></xmp><ol nest="1"><li num="1"><gml:num>1.</gml:num>First
+</li><li num="2"><gml:num>2.</gml:num>Second <hp3>bold italic</hp3>
+</li></ol><sl><li>simple
+</li></sl><gl><gt>Term</gt>
+<gd>Glossary definition.
+</gd></gl><dl break="break"><dthd>Heading term
+</dthd><ddhd>Heading description
+</ddhd><dt>A very long definition term</dt>
+<dd>Description on its own line.
+</dd></dl></body></gdoc></gml:doc>

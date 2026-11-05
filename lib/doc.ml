@@ -1,0 +1,409 @@
+(* Document builder: turns events into a [Tree.node].
+
+   A stack of open elements; the bottom one is the root [gml:doc].
+   Children are accumulated in reverse; adjacent text is merged.
+
+   Element models ([.xd], see [model]) drive the implicit-close engine.
+   All names are lowercase.  The algorithm is deliberately simple and
+   deterministic:
+
+   - An element [Y] is {e implicitly closable} if its model has a
+     non-empty [closedby] list, or some model lists [Y] in its [closes]
+     list.  Only such elements may be closed without their own end.
+   - Opening [X] ([start_element]): while the innermost open element [T]
+     (not the root) is closed by [X] — [X] is in T's [closedby], or [T]
+     is in X's [closes] — close [T].  Only the top of the stack is
+     examined, repeatedly; nothing deeper is searched, so a model must
+     list every element that can be on top (e.g. "p closedby=p,li,ol").
+     Then [X] is pushed; if its model is [empty] it is closed at once.
+   - Ending [X] ([end_element]): [X] must be open.  The elements above
+     it are closed first: silently if they are implicitly closable,
+     otherwise ([~force:true], a GML end tag) with their names
+     returned for a warning, or ([~force:false], [.xe]) not at all: the
+     call fails with [Mismatch] and nothing changes.
+   - End of input ([finish]): everything still open is closed; the names
+     of those that are not implicitly closable are returned for a
+     warning.
+
+   - An element whose model is [eol] (or opened with [~eol:true]) is
+     closed at the end of the input line it was opened on ([text],
+     [end_line]): the heading, term and index entry tags, whose element
+     is the text of the tag line.  The word space goes after it.
+   - Line scopes ([gml:lines], see [scope]) wrap the text of a counted
+     number of input lines.
+
+   Every element is finished in [close_top].  Duplicate [id] attribute
+   values are reported (cross references are resolved later, in XSLT). *)
+
+type display = Unspecified | Inline | Block
+
+type model = {
+  closes : string list;     (** opening this element closes these *)
+  closedby : string list;   (** these close this element when opened *)
+  empty : bool;             (** closed as soon as it is opened *)
+  display : display;        (** recorded for the backends *)
+  eol : bool;
+  (** closed at the end of the input line it was opened on (headings,
+      terms, index entries: the text of the tag line) *)
+}
+
+let default_model =
+  { closes = []; closedby = []; empty = false; display = Unspecified; eol = false }
+
+(** A line scope ([gml:lines]): the text of the next [remaining] input
+    lines (or up to an explicit end) is wrapped in a [gml:lines] element
+    carrying the formatting state that applies to them (see [Hints]).
+    Scopes are always the innermost open elements: an element opened or
+    closed while a scope is active splits it, the scope going on inside
+    the new element (or the parent) as a piece marked [cont="yes"]. *)
+type scope = {
+  word : string;                  (** the control word *)
+  first : Tree.attrs;             (** attributes of the first piece *)
+  rest : Tree.attrs;              (** attributes of later pieces *)
+  mutable remaining : int option; (** lines still covered; None: until ended *)
+  mutable started : bool;         (** a non-empty piece was emitted *)
+  next : scope list;              (** scopes that begin when this one ends *)
+}
+
+let scope_name = "gml:lines"
+
+type kind = Plain | Scope of scope
+
+type open_elt = {
+  name : string;
+  mutable attrs : Tree.attrs;
+  mutable children : Tree.node list;   (** reversed *)
+  kind : kind;
+  eol_close : bool;
+}
+
+type t = {
+  mutable stack : open_elt list;
+  models : (string, model) Hashtbl.t;
+  ids : (string, string) Hashtbl.t;    (** id -> where first used *)
+  mutable report : string -> unit;     (** a warning *)
+  mutable here : unit -> string;       (** current location, for [ids] *)
+  mutable mute : bool;
+  (** nothing is added to the tree: set while an ignored conditional
+      section is open.  Its GML tags and macros are still "resolved"
+      (SH35-0069 p.268), so APFs run and their symbol side effects
+      happen, but their elements, hints, raw output and text are
+      dropped, and the tree is left as if the section were absent:
+      no implicit closes, no id checks, no line-scope counting. *)
+  tr : (char, string) Hashtbl.t;
+  (** the output translate table ([.tr], SH35-0069 p.207): applied to
+      text as it enters the tree.  DCF-VERIFY: DCF translates when the
+      line is put out, so a [.tr] change in the middle of an output line
+      would also affect the text before it there. *)
+}
+
+let root_name = "gml:doc"
+
+let elt ?(kind = Plain) ?(eol_close = false) name attrs =
+  { name; attrs; children = []; kind; eol_close }
+
+let create () =
+  { stack = [ elt root_name [] ];
+    models = Hashtbl.create 16;
+    ids = Hashtbl.create 16;
+    report = ignore;
+    here = (fun () -> "");
+    mute = false;
+    tr = Hashtbl.create 8 }
+
+let top t = List.hd t.stack
+
+let is_scope e = match e.kind with Scope _ -> true | Plain -> false
+
+let add t node =
+  let e = top t in
+  match node, e.children with
+  | Tree.Text b, Tree.Text a :: rest -> e.children <- Tree.Text (a ^ b) :: rest
+  | _ -> e.children <- node :: e.children
+
+(* Close the top element into its parent; an empty scope piece is
+   dropped. *)
+let close_top t =
+  match t.stack with
+  | e :: (parent :: _ as rest) ->
+    t.stack <- rest;
+    (match e.kind with
+     | Scope sc when e.children = [] -> ignore sc
+     | Scope sc ->
+       sc.started <- true;
+       parent.children <- Tree.Element (e.name, e.attrs, List.rev e.children)
+                          :: parent.children
+     | Plain ->
+       parent.children <- Tree.Element (e.name, e.attrs, List.rev e.children)
+                          :: parent.children)
+  | _ -> invalid_arg "Doc.close_top: root"
+
+(* ---- scopes --------------------------------------------------------------- *)
+
+(* Close the active scope pieces (the top of the stack); returns their
+   scopes, outermost first. *)
+let suspend t =
+  let rec go acc =
+    match t.stack with
+    | ({ kind = Scope sc; _ }) :: _ :: _ -> close_top t; go (sc :: acc)
+    | _ -> acc
+  in
+  go []
+
+let push_scope t sc =
+  let attrs = ("word", sc.word) :: (if sc.started then sc.rest else sc.first) in
+  t.stack <- elt ~kind:(Scope sc) scope_name attrs :: t.stack
+
+let resume t scs = List.iter (push_scope t) scs
+
+let active_scopes t =
+  List.filter_map (fun e -> match e.kind with Scope sc -> Some sc | Plain -> None) t.stack
+
+(** Start a scope; an active scope of the same word ends first (a new
+    [.ce n] replaces the one in progress). *)
+(* Close the scope pieces down to and including the one of [word];
+   returns the scopes that were above it, outermost first. *)
+let suspend_to t word =
+  let rec go acc =
+    match t.stack with
+    | { kind = Scope sc; _ } :: _ :: _ ->
+      close_top t;
+      if sc.word = word then acc else go (sc :: acc)
+    | _ -> acc
+  in
+  go []
+
+(** End the scope of [word] (e.g. [.ce off]); false if none is active.
+    The scopes inside it go on. *)
+let close_scope t word =
+  if t.mute then true
+  else if not (List.exists (fun sc -> sc.word = word) (active_scopes t)) then false
+  else begin
+    resume t (suspend_to t word);
+    true
+  end
+
+let open_scope t sc =
+  if not t.mute then begin
+  ignore (close_scope t sc.word);
+  push_scope t sc
+  end
+
+let scope_active t word = List.exists (fun sc -> sc.word = word) (active_scopes t)
+
+(* ---- models ------------------------------------------------------------- *)
+
+let define_model t name m = Hashtbl.replace t.models name m
+
+let model t name = Hashtbl.find_opt t.models name
+
+let has_model t name = Hashtbl.mem t.models name
+
+let model_or_default t name = Option.value (model t name) ~default:default_model
+
+let closable t name =
+  let m = model_or_default t name in
+  m.closedby <> [] || m.eol
+  || Hashtbl.fold (fun _ m acc -> acc || List.mem name m.closes) t.models false
+
+(* Does opening [x] close the open element [y]? *)
+let closed_by t ~y ~x =
+  List.mem x (model_or_default t y).closedby
+  || List.mem y (model_or_default t x).closes
+
+(* ---- ids ---------------------------------------------------------------- *)
+
+let check_id t attrs =
+  match List.assoc_opt "id" attrs with
+  | None -> ()
+  | Some v -> (
+    match Hashtbl.find_opt t.ids v with
+    | Some first ->
+      t.report (Printf.sprintf "duplicate id %s (first used at %s)" v first)
+    | None -> Hashtbl.add t.ids v (t.here ()))
+
+(* ---- elements ----------------------------------------------------------- *)
+
+let plain_stack t = List.filter (fun e -> not (is_scope e)) t.stack
+
+(** Names of the open elements, innermost first (root and scopes
+    excluded). *)
+let open_elements t =
+  let l = plain_stack t in
+  let n = List.length l - 1 in
+  List.filteri (fun i _ -> i < n) l |> List.map (fun e -> e.name)
+
+let is_open t name = List.mem name (open_elements t)
+
+let current t = match open_elements t with [] -> None | n :: _ -> Some n
+
+let start_element ?(eol = false) t name attrs =
+  if not t.mute then begin
+  let s = suspend t in
+  let rec implicit () =
+    match t.stack with
+    | y :: _ :: _ when closed_by t ~y:y.name ~x:name -> close_top t; implicit ()
+    | _ -> ()
+  in
+  implicit ();
+  check_id t attrs;
+  let m = model_or_default t name in
+  t.stack <- elt ~eol_close:(eol || m.eol) name attrs :: t.stack;
+  if m.empty then close_top t;
+  resume t s
+  end
+
+type end_result =
+  | Closed of string list
+  (** done; the elements that had to be closed although they are not
+      implicitly closable (innermost first) *)
+  | Not_open
+  | Mismatch of string
+  (** the innermost element above [name] that cannot be closed
+      implicitly; nothing was changed *)
+
+(** Close [name] and the elements opened inside it (see the algorithm at
+    the top). *)
+let end_element ?(force = false) t name =
+  let opened = open_elements t in
+  if t.mute then Closed []
+  else if not (List.mem name opened) then Not_open
+  else begin
+    let rec above = function
+      | n :: _ when n = name -> []
+      | n :: rest -> n :: above rest
+      | [] -> []
+    in
+    let inner = above opened in
+    match List.find_opt (fun n -> not (closable t n)) inner with
+    | Some n when not force -> Mismatch n
+    | _ ->
+      let s = suspend t in
+      let forced = List.filter (fun n -> not (closable t n)) inner in
+      List.iter (fun _ -> close_top t) inner;
+      close_top t;
+      resume t s;
+      Closed forced
+  end
+
+(** Set (or replace) attribute [k] of the innermost open element; false
+    if there is none. *)
+let set_attr t k v =
+  if t.mute then true
+  else
+  match List.filter (fun e -> not (is_scope e)) t.stack with
+  | [ _ ] | [] -> false
+  | e :: _ ->
+    if k = "id" then check_id t [ (k, v) ];
+    e.attrs <-
+      (if List.mem_assoc k e.attrs then
+         List.map (fun (k', v') -> if k' = k then (k, v) else (k', v')) e.attrs
+       else e.attrs @ [ (k, v) ]);
+    true
+
+(* ---- content ------------------------------------------------------------ *)
+
+let translate t s =
+  if Hashtbl.length t.tr = 0 then s
+  else begin
+    let b = Buffer.create (String.length s) in
+    String.iter
+      (fun c ->
+         match Hashtbl.find_opt t.tr c with
+         | Some r -> Buffer.add_string b r
+         | None -> Buffer.add_char b c)
+      s;
+    Buffer.contents b
+  end
+
+(* The end of an input line: line scopes count it ([counted], a text
+   line), and elements opened on the line with an [eol] model are
+   closed; then the word space ("\n", [text]) follows. *)
+let line_end t ~counted ~text =
+  let expired =
+    if not counted then []
+    else
+      List.filter
+        (fun sc ->
+           match sc.remaining with
+           | Some n -> sc.remaining <- Some (n - 1); n - 1 <= 0
+           | None -> false)
+        (active_scopes t)
+  in
+  let has_eol = List.exists (fun e -> e.eol_close) t.stack in
+  if not has_eol then begin
+    (* innermost first; the scopes inside an expired one go on *)
+    List.iter (fun sc -> resume t (suspend_to t sc.word)) expired;
+    if text then add t (Tree.Text "\n");
+    List.iter (fun sc -> List.iter (push_scope t) sc.next) (List.rev expired)
+  end
+  else begin
+    let s = suspend t in
+    if has_eol then begin
+      let rec close_eol () =
+        if List.exists (fun e -> e.eol_close) t.stack then begin
+          close_top t;
+          close_eol ()
+        end
+      in
+      close_eol ()
+    end;
+    if text then add t (Tree.Text "\n");
+    resume t
+      (List.concat_map
+         (fun sc ->
+            match sc.remaining with Some n when n <= 0 -> sc.next | _ -> [ sc ])
+         s)
+  end
+
+(** One text line; the line end (the word space) is kept as "\n". *)
+let text t s =
+  if not t.mute then begin
+    if s <> "" then add t (Tree.Text (translate t s));
+    line_end t ~counted:true ~text:true
+  end
+
+(** The end of an input line that put no text out (a tag alone on its
+    line): only the [eol] elements are closed. *)
+let end_line t = if not t.mute then line_end t ~counted:false ~text:false
+
+(** Text without a line end (a piece of a line before a GML tag, or a
+    line with continuation). *)
+let text_inline t s = if s <> "" && not t.mute then add t (Tree.Text (translate t s))
+
+(** [.ct text] (SH35-0069 p.48): the word space after the previous text
+    line goes, so [text] continues it. *)
+let join_previous t =
+  let e = top t in
+  if not t.mute then
+  match e.children with
+  | Tree.Text a :: rest when a <> "" && a.[String.length a - 1] = '\n' ->
+    let a = String.sub a 0 (String.length a - 1) in
+    e.children <- (if a = "" then rest else Tree.Text a :: rest)
+  | _ -> ()
+
+(** [.ct] alone: a continuation in effect (the previous text line ended
+    without a word space) is cancelled. *)
+let cancel_continuation t =
+  let e = top t in
+  if not t.mute then
+  match e.children with
+  | Tree.Text a :: _ when a <> "" && a.[String.length a - 1] <> '\n' -> add t (Tree.Text "\n")
+  | _ -> ()
+
+let hint t name attrs = if not t.mute then add t (Tree.Hint (name, attrs))
+
+let raw t backend content = if not t.mute then add t (Tree.Raw (backend, content))
+
+(** Close everything still open and return the root element.  Returns the
+    names of the elements that had to be closed and are not implicitly
+    closable (innermost first), so the caller can diagnose them. *)
+let finish t =
+  let unclosed = ref [] in
+  while List.length t.stack > 1 do
+    let n = (top t).name in
+    if not (is_scope (top t)) && not (closable t n) then unclosed := n :: !unclosed;
+    close_top t
+  done;
+  let r = top t in
+  (Tree.Element (r.name, r.attrs, List.rev r.children), List.rev !unclosed)

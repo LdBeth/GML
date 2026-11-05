@@ -1,0 +1,3 @@
+.ty main: imbedding
+.im inner &kind
+.ty main: never reached

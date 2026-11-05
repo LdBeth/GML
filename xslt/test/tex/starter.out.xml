@@ -1,0 +1,119 @@
+\input gml
+\gmlbegindocument%
+\gmlstart{gdoc}{sec=IBM Internal}%
+\gmlstart{frontm}{}%
+\gmlstart{titlep}{}%
+\gmlstart{title}{stitle=Guide,text=The GML Guide}%
+The GML Guide\gmlend{title}%
+\gmlstart{docnum}{}%
+SH00-0000\gmlend{docnum}%
+\gmlstart{date}{}%
+June 13th, 1986\gmlend{date}%
+\gmlstart{author}{}%
+J. Smith\gmlend{author}%
+\gmlstart{address}{}%
+\gmlstart{aline}{}%
+1 Main St\gmlend{aline}%
+\gmlstart{aline}{}%
+Anytown\gmlend{aline}%
+\gmlend{address}%
+\gmlend{titlep}%
+\gmlstart{abstract}{}%
+\gmlstart{p}{}%
+This is the abstract.
+\gmlend{p}%
+\gmlend{abstract}%
+\gmlstart{toc}{}%
+\gmltocbegin{Table of Contents}%
+\gmltocentry{level=1,refid=intro,section=body}{}{Introduction}{\gmlpageref{intro}{always}{}}%
+\gmltocentry{level=2,refid=gml-h2-1,section=body}{}{Second \gmlstart{hp2}{}part\gmlend{hp2}}{\gmlpageref{gml-h2-1}{always}{}}%
+\gmltocentry{level=3,refid=gml-h3-1,section=body}{}{Third level}{\gmlpageref{gml-h3-1}{always}{}}%
+\gmltocentry{level=1,refid=gml-h1-2,section=appendix,num=A}{Appendix A.}{Appendix A}{\gmlpageref{gml-h1-2}{always}{}}%
+\gmltocend%
+\gmlend{toc}%
+\gmlend{frontm}%
+\gmlstart{body}{}%
+\gmlstart{h1}{id=intro,anchor=intro,text=Introduction}%
+\gmlanchor{intro}Introduction\gmlend{h1}%
+\gmlstart{p}{}%
+Some text with \gmlstart{q}{}a quote\gmlend{q} and a \gmlstart{hp1}{}highlight\gmlend{hp1}.
+More text.\gmlstart{fn}{num=1,anchor=gml-fn-1,callout=yes}\gmlanchor{gml-fn-1}\gmlnum{1}A footnote.\gmlend{fn}\gmlend{p}%
+\gmlstart{ol}{compact=compact,nest=1}%
+\gmlstart{li}{num=1}%
+\gmlnum{1.}one
+\gmlend{li}%
+\gmlstart{li}{num=2}%
+\gmlnum{2.}two
+\gmlstart{ul}{nest=1}%
+\gmlstart{li}{}%
+nested
+\gmlend{li}%
+\gmlend{ul}%
+\gmlend{li}%
+\gmlend{ol}%
+\gmlstart{dl}{}%
+\gmlstart{dt}{}%
+Term\gmlend{dt}%
+\gmlstart{dd}{}%
+Definition
+\gmlend{dd}%
+\gmlstart{dt}{}%
+Second\gmlend{dt}%
+\gmlstart{dd}{}%
+Again
+\gmlend{dd}%
+\gmlend{dl}%
+\gmlstart{xmp}{xml:space=preserve}%
+\gmlhint{fo}{fill=no,align=left,overdraw=extend,break=yes}%
+\ \ indented\ line
+
+last\ line
+\gmlhint{fo}{fill=yes,align=justify,overdraw=extend,break=yes}%
+\gmlend{xmp}%
+\gmlstart{h2}{anchor=gml-h2-1,text=Second part}%
+\gmlanchor{gml-h2-1}Second \gmlstart{hp2}{}part\gmlend{hp2}\gmlend{h2}%
+\gmlstart{fig}{id=f1,frame=box,num=1,anchor=f1}%
+\gmlanchor{f1}Figure content.
+\gmlstart{figcap}{desc=yes}%
+\gmlnum{Figure\gmlchar{160}1.}A caption\gmlend{figcap}%
+\gmlstart{figdesc}{}%
+Description.
+\gmlend{figdesc}%
+\gmlend{fig}%
+\gmlstart{p}{}%
+See \gmlstart{figref}{refid=f1,resolved=yes,target=fig,num=1}Figure\gmlchar{160}1\gmlpageref{f1}{auto}{on page}\gmlend{figref} and \gmlstart{hdref}{refid=intro,resolved=yes,target=h1}\gmlchar{8220}Introduction\gmlchar{8221}\gmlpageref{intro}{auto}{on page}\gmlend{hdref}.
+\gmlstart{i1}{anchor=gml-i1-1}\gmlanchor{gml-i1-1}\gmlend{i1}
+\gmlstart{i2}{anchor=gml-i2-1}\gmlanchor{gml-i2-1}\gmlend{i2}\gmlend{p}%
+\gmlstart{note}{}%
+Watch out.
+\gmlend{note}%
+\gmlstart{lq}{}%
+\gmlstart{p}{}%
+Long quote.
+\gmlend{p}%
+\gmlend{lq}%
+\gmlstart{ul}{nest=1}%
+\gmlstart{li}{}%
+an item
+\gmlend{li}%
+\gmlend{ul}%
+\gmlstart{h3}{anchor=gml-h3-1,text=Third level}%
+\gmlanchor{gml-h3-1}Third level\gmlend{h3}%
+\gmlend{body}%
+\gmlstart{appendix}{}%
+\gmlstart{h1}{num=A,anchor=gml-h1-2,text=Appendix A}%
+\gmlanchor{gml-h1-2}\gmlnum{Appendix A.}Appendix A\gmlend{h1}%
+\gmlend{appendix}%
+\gmlstart{backm}{}%
+\gmlstart{index}{}%
+\gmlindexbegin{Index}%
+\gmlindexgroup{I}%
+\gmlindexentry{1}{index entry}{\gmlindexfirst \gmlindexref{gml-i1-1}{}}%
+\gmlindexentry{2}{sub entry}{\gmlindexfirst \gmlindexref{gml-i2-1}{}}%
+\gmlindexend%
+\gmlend{index}%
+\gmlend{backm}%
+\gmlend{gdoc}%
+%
+\gmlenddocument
+\bye

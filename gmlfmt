@@ -1,0 +1,110 @@
+#!/usr/local/plan9/bin/rc
+# gmlfmt - run the GML pipeline on one file, result on standard output.
+#
+#   gmlfmt [-to xml|resolved|scoped|semantic|html|tex|fo] [-profile p]
+#          [-set name=value]... [-p name=value]... [-I dir]... in.gml
+#
+#   -to       the stage to stop at (default xml):
+#               xml       gml -profile p              canonical XML
+#               resolved  + xslt/resolve.xsl
+#               scoped    + xslt/scope.xsl            (from resolved)
+#               semantic  + xslt/strip-hints.xsl      (from resolved)
+#               html      + xslt/html.xsl             (from scoped)
+#               fo        + xslt/fo.xsl               (from scoped)
+#               tex       + xslt/tex.xsl              (from resolved)
+#   -profile  the gml profile (default starter)
+#   -set      a symbol for gml (-set) and a parameter for every stylesheet
+#   -p        a parameter for the stylesheets only (e.g. -p h1-prefix=Chapter)
+#   -I        an imbed directory for gml
+#
+# The same tools as the mkfile: GML (default: the gml built by dune in the
+# project, through opam, with -share GMLROOT/share so that the profiles
+# are read from the source tree: dune exec does not refresh the copy in
+# _build), SAXON (default /usr/local/bin/transform); GMLROOT is the
+# project root (default: the directory of this script).
+
+fn usage {
+	echo 'usage: gmlfmt [-to xml|resolved|scoped|semantic|html|tex|fo] [-profile p] [-set name=value]... [-p name=value]... [-I dir]... in.gml' >[1=2]
+	exit usage
+}
+
+to=xml
+profile=starter
+sets=()
+params=()
+gmlargs=()
+while(! ~ $#* 0 && ~ $1 -*){
+	if(~ $#* 1) usage
+	switch($1){
+	case -to
+		to=$2
+	case -profile
+		profile=$2
+	case -set
+		sets=($sets $2)
+	case -p
+		params=($params $2)
+	case -I
+		gmlargs=($gmlargs -I $2)
+	case *
+		usage
+	}
+	shift 2
+}
+if(! ~ $#* 1) usage
+in=$1
+if(! ~ $to xml resolved scoped semantic html tex fo) usage
+
+if(~ $#GMLROOT 0) GMLROOT=`{/usr/local/plan9/bin/basename -d $0}
+root=`{cd $GMLROOT && pwd}
+xslt=$root/xslt
+if(~ $#SAXON 0) SAXON=/usr/local/bin/transform
+if(~ $#GML 0) gml=(opam exec --switch gml -- dune exec --root $root --display quiet -- gml -share $root/share)
+if not gml=`{echo $GML}
+
+if(~ $#TMPDIR 0) TMPDIR=/tmp
+tmp=$TMPDIR/gmlfmt.$pid
+fn sigexit { rm -f $tmp.xml $tmp.r.xml $tmp.s.xml }
+
+setargs=()
+for(s in $sets) setargs=($setargs -set $s)
+
+# xsl stylesheet input [-o:output]
+fn xsl {
+	sheet=$xslt/$1.xsl
+	if(! test -f $sheet) { echo gmlfmt: $sheet not written yet >[1=2]; exit 1 }
+	src=$2
+	shift 2
+	$SAXON -s:$src -xsl:$sheet $* $sets $params || exit 1
+}
+
+# gml returns 4 after warnings (DCF return codes): still a result
+fn rungml {
+	st=()
+	$gml -profile $profile $gmlargs $setargs $in || st=$status
+	if(! ~ $st '' 4) exit $st
+	status=()
+}
+
+if(~ $to xml){
+	rungml
+	exit
+}
+rungml > $tmp.xml
+switch($to){
+case resolved
+	xsl resolve $tmp.xml
+case semantic
+	xsl resolve $tmp.xml -o:$tmp.r.xml
+	xsl strip-hints $tmp.r.xml
+case tex
+	xsl resolve $tmp.xml -o:$tmp.r.xml
+	xsl tex $tmp.r.xml
+case scoped
+	xsl resolve $tmp.xml -o:$tmp.r.xml
+	xsl scope $tmp.r.xml
+case html fo
+	xsl resolve $tmp.xml -o:$tmp.r.xml
+	xsl scope $tmp.r.xml -o:$tmp.s.xml
+	xsl $to $tmp.s.xml
+}

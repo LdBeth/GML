@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><body><h1>State hints</h1>
+<p>Normal text, then
+<gml:in left="4" unit="ch" break="yes"/>indented in the middle of a paragraph
+<gml:bf font="hi1" break="no"/>and a font change.
+</p><p>The next paragraph inherits both.
+</p><ul><li>an item
+<gml:in left="6" unit="ch" delta="+2" break="yes"/>indented further inside the item
+</li><li>the next item
+</li></ul><gml:pf initial="yes" break="no"/><p>Font back,
+<gml:in left="0" unit="ch" break="yes"/>margin back.
+</p><xmp xml:space="preserve"><gml:fo fill="no" align="left" overdraw="extend" break="yes"/>  verbatim
+<gml:fo fill="yes" align="justify" overdraw="extend" break="yes"/></xmp><gml:fo fill="no" align="left" overdraw="extend" break="yes"/><gml:tp action="set" stops="5ch 10ch" break="no"/><p>no fill
+<gml:tp action="add" stops="20ch" break="no"/>with tabs
+<gml:fo fill="yes" align="justify" overdraw="extend" break="yes"/></p><p>filled again
+<gml:hy mode="on" break="no"/></p><p>hyphenation on
+<gml:in left="1" unit="i" for="2" for-unit="i" temporary="yes" break="yes"/>temporary indent: an event
+</p></body></gdoc></gml:doc>

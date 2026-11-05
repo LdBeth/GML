@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><gml:rh><gml:lines word="ce" n="1" break="yes">Hint test running head</gml:lines>
+</gml:rh><body><h1 anchor="gml-h1-1">Formatting hints</h1>
+<p>Normal filled text that goes on for a while so that it wraps at least
+once in the justified paragraph mode of the formatter.
+<gml:in left="4" unit="ch" break="yes"/>Indented by four characters, still in the same paragraph? No: .in breaks.
+<gml:in left="4ch+1i" unit="mixed" delta="+1i" break="yes"/>A mixed indent of four characters plus one inch.
+<gml:in left="0" unit="ch" break="yes"/><gml:ir right="10" unit="mh" break="yes"/>Right margin pulled in by ten ems so that this text wraps earlier than the
+others do on the page.
+<gml:ir right="0" unit="ch" break="yes"/><gml:sp n="2" unit="line" break="yes"/>After two blank lines.
+<gml:sk n="1" unit="line" break="yes"/><gml:sk n="2" unit="line" break="yes"/>After skips of one and two lines: only the larger counts.
+<gml:lines word="ce" n="2" break="yes">These two lines
+are centered.</gml:lines>
+<gml:lines word="ri" n="on" break="yes">Flush right one
+flush right two
+</gml:lines><gml:fo fill="no" align="left" overdraw="extend" break="yes"/>No fill: this line
+and this line
+  are kept as lines.
+<gml:fo fill="yes" align="justify" overdraw="extend" break="yes"/><gml:fo fill="yes" align="center" overdraw="extend" break="yes"/>Centered fill mode text.
+<gml:fo fill="yes" align="justify" overdraw="extend" break="yes"/><gml:lines word="us" n="2" break="no">Underscored words here
+and here</gml:lines>
+<gml:lines word="up" n="1" break="no">Upper case line with café</gml:lines>
+Back to normal.
+<gml:in left="5" unit="ch" break="yes"/><gml:lines word="in" n="1" after="yes" left="0" unit="ch" break="no">First line at the old margin, then the following lines are indented by</gml:lines>
+five characters until the margin changes again, which is right now.
+<gml:in left="0" unit="ch" break="yes"/><gml:lines word="il" n="1" left="3" unit="mh" break="yes">An indented first line in a paragraph that is long enough to wrap onto a</gml:lines>
+second line so the effect can be seen.
+<gml:of offset="4" unit="ch" break="yes"/>Offset: the first line is at the margin and every following line is
+indented by four characters, for this paragraph and the next.
+<gml:br break="yes"/>Next paragraph still offset by the .of control word, all of its lines.
+<gml:in left="0" unit="ch" offset="0" break="yes"/><gml:bf font="hi2" break="no"/>Bold from a font change,
+<hp1>italic inside it</hp1>,
+<gml:pf initial="yes" break="no"/>and back to the initial font.
+<gml:df name="big" spec="type(bold italic)" break="no"/><gml:bf font="big" break="no"/>Defined bold italic font.
+<gml:pf initial="yes" break="no"/><gml:tp action="set" stops="10mh 20mh 30mh" break="no"/><gml:fo fill="no" align="left" overdraw="extend" break="yes"/>Name	Value	Note
+Apple	12	red
+<gml:tp action="set" stops="./25m" break="no"/>Leader	dots
+<gml:tp action="reset" break="no"/><gml:fo fill="yes" align="justify" overdraw="extend" break="yes"/><gml:sx left="Left side" fill="." right="Right side" break="yes"/><gml:hr break="yes"/><gml:bx action="on" spec="1ch 40ch" break="yes"/>Text inside a box.
+<gml:bx action="off" break="yes"/><gml:hy mode="on" break="no"/><gml:hw word="ex-cep-tion-al" break="no"/>Hyphenation is now on for exceptional words.
+<gml:hy mode="off" break="no"/><gml:cp n="5" unit="line" break="yes"/><gml:kp mode="on" break="yes"/>Kept text one.
+Kept text two.
+<gml:kp mode="off" break="yes"/><gml:ls spec="by 1.5" break="no"/>Wider line spacing for a while so that a couple of lines of text show
+the change in spacing between the lines of one paragraph.
+<gml:br break="yes"/><gml:ls spec="normal" break="no"/><gml:ws spec="by 2" break="no"/>Wide word spaces.
+<gml:ws spec="normal" break="no"/><gml:rc code="1" char="*" break="no"/><gml:br break="yes"/><gml:rc code="1" mode="on" break="no"/>Revised text marked in the margin.
+<gml:br break="yes"/><gml:rc code="1" mode="off" break="no"/><gml:ll length="4" unit="i" break="yes"/>A shorter line length of four inches for this paragraph which is long
+enough to wrap at that length.
+<gml:ll length="default" break="yes"/><gml:fn>An unnumbered footnote from .fn on.
+</gml:fn><gml:dh level="2" spec="font bold" break="no"/><gml:vr break="no"/><gml:pa break="yes"/><gml:pn spec="roman" break="no"/>After a page eject, roman page numbers.
+<gml:h level="2" break="yes">A control word heading</gml:h>
+Text after .h2.
+<gml:pa side="odd" break="yes"/>On an odd page.
+</p></body></gdoc></gml:doc>

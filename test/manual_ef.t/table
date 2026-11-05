@@ -1,0 +1,19 @@
+.tp 3 21
+.cs 2 on
+.cs 1 ignore
+.sp 2
+.fo off
+.bx 1 19 36
+.se bxoff =
+.cs 2 ignore
+.cs 2 off
+.im tablsym
+&$TAB.&state.&$TAB.&capital
+.bx &bxoff
+.cs 1 on
+.fo on
+.cs 2 include
+.sp 2
+.ef
+.cs 1 off
+.ap table

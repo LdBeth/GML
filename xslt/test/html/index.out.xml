@@ -1,0 +1,68 @@
+<!DOCTYPE HTML><html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="GML html.xsl">
+<title>Indexed</title>
+<link rel="stylesheet" href="gml.css">
+</head>
+<body class="gml">
+<main class="gml-doc">
+<article class="gml-gdoc">
+<section class="gml-body">
+<h1 id="gml-h1-1" class="gml-h1">Indexed</h1>
+<p>Some text.
+<span class="gml-ix" id="fruit"></span>
+<span class="gml-ix" id="apple"></span>
+<span class="gml-ix" id="gml-i3-1"></span>
+<span class="gml-ix" id="gml-i1-2"></span>
+<span class="gml-ix" id="gml-i1-3"></span>
+</p>
+<p>More text.
+<span class="gml-ix" id="gml-i1-4"></span>
+<span class="gml-ix" id="gml-i1-5"></span>
+<span class="gml-ix" id="gml-i1-6"></span>
+<span class="gml-ix" id="gml-ih1-1"></span>
+<span class="gml-ix" id="gml-ih1-2"></span>
+<span class="gml-ix" id="gml-iref-1"></span><span class="gml-ix" id="gml-i1-7"></span>
+<span class="gml-ix" id="gml-i1-8"></span>
+</p></section>
+<section class="gml-backm">
+<section class="gml-index">
+<h1 class="gml-index-title">Index</h1>
+<div class="gml-index-group">
+<ul class="gml-index-list">
+<li class="gml-index-entry gml-index-l1"><span class="gml-index-term">123 numbers</span>, <a class="gml-index-ref" href="#gml-i1-5">1</a></li></ul></div>
+<div class="gml-index-group">
+<h2 class="gml-index-letter">E</h2>
+<ul class="gml-index-list">
+<li class="gml-index-entry gml-index-l1"><span class="gml-index-term">Éclair</span>, <a class="gml-index-ref" href="#gml-i1-7">1</a></li>
+<li class="gml-index-entry gml-index-l1"><span class="gml-index-term">eggs</span>, <a class="gml-index-ref" href="#gml-i1-8">1</a></li></ul></div>
+<div class="gml-index-group">
+<h2 class="gml-index-letter">F</h2>
+<ul class="gml-index-list">
+<li class="gml-index-entry gml-index-l1"><span class="gml-index-term">fruit</span>, <a class="gml-index-ref" href="#fruit">1</a>, <a class="gml-index-ref" href="#gml-iref-1">2</a>
+<ul class="gml-index-list">
+<li class="gml-index-entry gml-index-l2"><span class="gml-index-term">apple</span>, <a class="gml-index-ref" href="#apple">1</a>
+<ul class="gml-index-list">
+<li class="gml-index-entry gml-index-l3"><span class="gml-index-term">red</span>, <a class="gml-index-ref" href="#gml-i3-1">1</a></li></ul></li></ul></li></ul></div>
+<div class="gml-index-group">
+<h2 class="gml-index-letter">P</h2>
+<ul class="gml-index-list">
+<li class="gml-index-entry gml-index-l1"><span class="gml-index-term">pome</span> <span class="gml-see gml-see"><em class="gml-see-label">See</em> fruit, apple</span></li>
+<li class="gml-index-entry gml-index-l1"><span class="gml-index-term">produce</span> <span class="gml-see gml-see"><em class="gml-see-label">See</em> fruit</span></li></ul></div>
+<div class="gml-index-group">
+<h2 class="gml-index-letter">T</h2>
+<ul class="gml-index-list">
+<li class="gml-index-entry gml-index-l1"><span class="gml-index-term">textual</span>, <a class="gml-index-ref" href="#gml-i1-6">see chapter 2</a></li></ul></div>
+<div class="gml-index-group">
+<h2 class="gml-index-letter">V</h2>
+<ul class="gml-index-list">
+<li class="gml-index-entry gml-index-l1"><span class="gml-index-term">vegetables</span>, <strong class="gml-major"><a class="gml-index-ref" href="#gml-i1-2">1</a></strong></li></ul></div>
+<div class="gml-index-group">
+<h2 class="gml-index-letter">Z</h2>
+<ul class="gml-index-list">
+<li class="gml-index-entry gml-index-l1"><span class="gml-index-term">zebra</span>, <a class="gml-index-ref" href="#gml-i1-3">1</a>–<a class="gml-index-ref" href="#gml-i1-4">2</a></li></ul></div></section></section></article>
+</main>
+</body>
+</html>

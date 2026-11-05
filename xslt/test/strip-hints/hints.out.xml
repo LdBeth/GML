@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- every kind of gml:* node: hints go, scopes are unwrapped, running
+     headings go with their text; gml:h, gml:fn, gml:raw and the resolve
+     vocabulary stay --><gml:doc xmlns:gml="urn:x-gml:canonical"><gml:h level="1" break="yes">Control word heading</gml:h>
+kept
+centered
+
+revised
+scoped text
+<gml:fn>A footnote.</gml:fn><gml:raw backend="tex">\relax</gml:raw>
+
+<h1 num="1.0" anchor="a"><gml:num>1.0</gml:num>Heading</h1><hdref refid="a" resolved="yes" target="h1">“Heading”<gml:pageref refid="a" when="auto" label="on page"/></hdref>
+<xmp xml:space="preserve">  kept as written
+</xmp></gml:doc>

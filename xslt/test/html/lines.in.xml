@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><body><h1 anchor="gml-h1-1">Line-counted words</h1>
+<p>start
+<gml:lines word="in" n="2" left="3" unit="ch" break="yes">two lines
+indented</gml:lines>
+back
+<gml:scope kind="block" in="4ch"><gml:br break="yes" cause="in"/><gml:lines word="in" n="1" after="yes" left="0" unit="ch" break="no">one line</gml:lines>
+then indented
+<gml:lines word="il" n="1" left="6" unit="ch" break="yes">indented line</gml:lines>
+<gml:lines word="un" n="1" left="2" unit="ch" break="yes">undented line</gml:lines>
+<gml:lines word="uc" n="1" break="no">underscore caps</gml:lines>
+<gml:rc code="1" char="|" break="no"/><gml:lines word="rc" n="1" char="|" break="no">revised</gml:lines>
+<gml:sx left="left" fill="." right="right" break="yes"/><gml:hr break="yes"/><gml:sk n="2" unit="line" break="yes"/><gml:kp mode="on" break="yes"/>kept
+<gml:kp mode="off" break="yes"/></gml:scope><gml:lines word="ce" n="on" break="yes">first centred
+second centred
+</gml:lines></p></body></gdoc></gml:doc>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><body><h1>State hints</h1>
+<p>Normal text, then
+indented in the middle of a paragraph
+and a font change.
+</p><p>The next paragraph inherits both.
+</p><ul><li>an item
+indented further inside the item
+</li><li>the next item
+</li></ul><p>Font back,
+margin back.
+</p><xmp xml:space="preserve">  verbatim
+</xmp><p>no fill
+with tabs
+</p><p>filled again
+</p><p>hyphenation on
+temporary indent: an event
+</p></body></gdoc></gml:doc>

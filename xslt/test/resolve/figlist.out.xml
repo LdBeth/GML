@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- the figure list: only figures with a figcap are numbered and listed;
+     the caption text drops footnotes and index terms, keeps highlights --><gml:doc xmlns:gml="urn:x-gml:canonical"><frontm><figlist><gml:figlist-entries title="List of Illustrations"><gml:figlist-entry refid="a" num="1"><gml:num>Figure 1</gml:num><gml:entry-text>The <hp1>first</hp1> figure</gml:entry-text><gml:pageref refid="a"/></gml:figlist-entry><gml:figlist-entry refid="gml-fig-2" num="2"><gml:num>Figure 2</gml:num><gml:entry-text>Second figure</gml:entry-text><gml:pageref refid="gml-fig-2"/></gml:figlist-entry><gml:figlist-entry refid="gml-fig-4" num="3"><gml:num>Figure 3</gml:num><gml:entry-text>In the appendix</gml:entry-text><gml:pageref refid="gml-fig-4"/></gml:figlist-entry></gml:figlist-entries></figlist></frontm><body><fig id="a" frame="rule" num="1" anchor="a"><xmp xml:space="preserve">code
+</xmp><figcap><gml:num>Figure 1.</gml:num>The <hp1>first</hp1> figure<fn num="1" anchor="gml-fn-1" callout="yes"><gml:num>1</gml:num>a note</fn><i1 anchor="gml-i1-1">figures</i1></figcap>
+</fig><fig num="2" anchor="gml-fig-2"><figcap><gml:num>Figure 2.</gml:num>
+  Second   figure
+</figcap>
+<figdesc>with a description
+</figdesc></fig><fig id="plain" anchor="plain">no caption: not numbered
+</fig><appendix><fig num="3" anchor="gml-fig-4"><figcap><gml:num>Figure 3.</gml:num>In the appendix</figcap>
+</fig></appendix></body></gml:doc>

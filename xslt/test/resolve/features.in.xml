@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><frontm><titlep><title>Test</title>
+</titlep><toc/><figlist/><preface><h1>Preface head</h1>
+<p>Pre.
+</p></preface></frontm><body><h1 id="intro">Introduction</h1>
+<p>Text.<fn id="fa">Footnote with id.</fn> More<fn>Plain footnote.</fn>
+See <fnref refid="fa"/>.
+</p><ol><li id="l1">one
+</li><li>two
+<ol><li id="l2">two-a
+<ul><li>bullet
+<ol><li id="l3">deep
+</li></ol></li></ul></li></ol></li></ol><p>Ref <liref refid="l2"/> and <liref refid="nope"/> and <hdref refid="sub" page="yes"/> <hdref refid="bad"/>.
+</p><h2 id="sub">Sub <hp1>section</hp1></h2>
+<fig id="f1">body
+<figcap>First fig</figcap>
+</fig><fig><figcap>Second</figcap>
+<figdesc>desc
+</figdesc></fig><p><figref refid="f1"/> <figref refid="f1" page="no"/> <figref refid="zz"/>.
+<i1 id="ia">Apple</i1>
+<i2 id="ib">Red</i2>
+<i3>Deep</i3>
+<i1 pg="major">banana</i1>
+<ih1 see="Apple">Fruit</ih1>
+<ih1 seeid="ia">Pome</ih1>
+<iref refid="ia"/><iref refid="ib" pg="start"/><i2 refid="ia">Green</i2>
+<gml:in left="5" unit="ch" break="yes"/></p><p>indented
+<gml:bf font="hi1" break="no"/>font
+</p><h3>Third</h3>
+<h4>Fourth</h4>
+<h5>Fifth</h5>
+</body><appendix><h1 id="appa">Extra</h1>
+<h2>Appsub</h2>
+</appendix><backm><index/></backm></gdoc></gml:doc>

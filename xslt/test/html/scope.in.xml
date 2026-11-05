@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><body><h1 anchor="gml-h1-1">Scopes</h1>
+<p>Normal, then
+<gml:scope kind="block" in="3ch" ir="2ch" of="4ch" ll="60ch"><gml:br break="yes" cause="in ir ll of"/>indented with offset.
+</gml:scope><gml:scope kind="block" in="0.5i" ir="2ch" ll="60ch"><gml:br break="yes" cause="in"/>inches
+</gml:scope><gml:scope kind="block" in="1cm" ir="2ch" ll="60ch"><gml:br break="yes" cause="in"/>centimetres
+</gml:scope><gml:scope kind="block" in="2mm" ir="12pt" ll="60ch"><gml:br break="yes" cause="in ir"/>millimetres and points
+</gml:scope><gml:scope kind="block" in="18dd" ir="12pt" ll="60ch"><gml:br break="yes" cause="in"/>ciceros
+</gml:scope><gml:scope kind="block" in="2mh" ir="1mh" ll="60ch"><gml:br break="yes" cause="in ir"/>ems
+</gml:scope><gml:scope kind="block" in="30dh" ir="1mh" ll="60ch"><gml:br break="yes" cause="in"/>device units
+</gml:scope><gml:scope kind="block" fill="no" align="left"><gml:br break="yes" cause="ir of ll in nf"/>no fill
+   kept
+</gml:scope><gml:scope kind="block" align="center"><gml:br break="yes" cause="fo fo"/>centered fill
+</gml:scope><gml:scope kind="block" align="right"><gml:br break="yes" cause="fo"/>right aligned
+</gml:scope><gml:scope kind="block" tb="5ch 10ch 15ch"><gml:br break="yes" cause="fo"/>tabbed
+</gml:scope><gml:scope kind="inline" font="hi2">bold font
+</gml:scope><gml:scope kind="inline" hy="on">hyphenated
+</gml:scope><gml:scope kind="block" ls="1line">double spaced
+</gml:scope></p><gml:scope kind="block" ls="0line"><ul nest="1"><li>an item
+<gml:scope kind="block" in="2ch"><gml:br break="yes" cause="in"/>indented inside the item
+</gml:scope></li><gml:scope kind="block" in="2ch"><li>the next item
+</li></gml:scope></ul><gml:scope kind="inline" font="hi1"><p>Italic paragraph.
+</p></gml:scope></gml:scope><gml:scope kind="block" ll="default+1i" ls="0line"><p>Longer line.
+</p></gml:scope><gml:scope kind="block" in="4ch+1i" ls="0line"><p>Mixed indent.
+</p></gml:scope></body></gdoc></gml:doc>

@@ -1,0 +1,9 @@
+#!/bin/sh
+# run - the XSLT fixture tests (the tests themselves are run.rc).
+#
+# This launcher only gives rc an absolute path: plan9port's rcmain runs a
+# script as ". $*", and rc's "." looks a name that does not begin with
+# /, ./ or ../ up in $path, so "rc xslt/test/run" (what the kernel runs
+# for xslt/test/run) fails with ".: can't open".
+d=$(cd "$(dirname "$0")" && pwd) || exit 1
+exec /usr/local/plan9/bin/rc "$d/run.rc" "$@"

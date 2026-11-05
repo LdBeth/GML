@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><body><h1 anchor="gml-h1-1">Lists</h1>
+<ol nest="1"><li id="one" num="1" anchor="one"><gml:num>1.</gml:num>First
+</li><li num="2"><gml:num>2.</gml:num>Second
+</li><lp>A list part.
+</lp><li num="3"><gml:num>3.</gml:num>Third
+<ol compact="compact" nest="2"><li id="sub" num="a" anchor="sub"><gml:num>a.</gml:num>Nested a
+</li><li num="b"><gml:num>b.</gml:num>Nested b
+</li></ol></li></ol><ul compact="compact" nest="1"><li>Bullet
+<ul nest="2"><li>Inner bullet
+</li></ul></li></ul><sl><li>Simple
+</li><li>List
+</li></sl><dl><dthd>Term
+</dthd><ddhd>Description
+</ddhd><dt>GML</dt>
+<dd>Generalized Markup Language.
+</dd><dt>DCF</dt>
+<dd>Document Composition Facility.
+</dd></dl><dl compact="compact" break="break"><dt>Compact</dt>
+<dd>Compact definition list.
+</dd></dl><gl><gt>glossary</gt>
+<gd>A list of terms.
+</gd></gl><gl compact="compact"><gt>compact</gt>
+<gd>Tight.
+</gd></gl><p>See item <liref refid="sub" resolved="yes" target="li" num="a">a.<gml:pageref refid="sub" when="auto" label="on page"/></liref> and <liref refid="one" page="yes" resolved="yes" target="li" num="1">1.<gml:pageref refid="one" when="always" label="on page"/></liref>.
+</p></body></gdoc></gml:doc>

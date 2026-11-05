@@ -1,0 +1,108 @@
+#!/usr/local/plan9/bin/rc
+# run.rc - the XSLT fixture tests (started by ./run, or rc with an
+# absolute path).
+#
+#   xslt/test/run [-update] [name...]
+#
+# Each test is a file STAGE/NAME.in.xml, STAGE being the stylesheet
+# (resolve, scope, strip-hints, html, tex, fo, fo-vendor-ah).  It is
+# transformed with xslt/STAGE.xsl, with the parameters listed in
+# STAGE/NAME.params (name=value words), and the result is compared with
+# STAGE/NAME.out.xml; the xsl:message output (standard error) is compared
+# with STAGE/NAME.err (empty if absent).  A failure prints a diff -u.
+# Names select tests: STAGE/NAME, NAME (that test in every stage), or
+# STAGE alone (all the tests of that stage).
+# -update rewrites the expected files from the current results: check
+# them by eye before keeping them.
+#
+# The tests need no OCaml.  The gml-generated inputs were made once from
+# gml/*.gml and frozen; regenerate them (and check the diffs) when the
+# engine or the profile changes.  All with
+#   G = gml -profile starter -set SYSDAYOFM=13 -set SYSMONTH=06 -set SYSYEAR=1986
+# (gmlfmt -to ... -set ... gives the same files):
+#   G gml/starter.gml          -> resolve/starter.in.xml
+#   G gml/features.gml         -> resolve/features.in.xml
+#   G gml/state.gml            -> scope/state.in.xml
+#   resolve/features.in.xml | resolve.xsl SYSVARH=yes  -> scope/features.in.xml
+#   scope/state.in.xml | scope.xsl                     -> strip-hints/scoped.in.xml
+#   resolve/xrefs.out.xml, resolve/index.out.xml -> resolve/idempotent*.in.xml
+#     (their expected output is the input itself)
+# The backend inputs, with -set SYSVARP=STAGE (so :psc sections select):
+#   tex  gmlfmt -to resolved gml/tex-NAME.gml  -> tex/NAME.in.xml
+#        (chars, hints, lines; params reuses chars); tex/starter is
+#        gml/starter.gml resolved; tex/features = resolve/features.out.xml
+#   html gmlfmt -to scoped gml/html-NAME.gml   -> html/NAME.in.xml
+#        (figs, fn, hints, index, lines, lists, scope, sections, text);
+#        html/starter and html/params are gml/starter.gml scoped,
+#        fn-chapter reuses fn; features, nesting, state, values are
+#        copies of scope/*.out.xml
+#   fo   gmlfmt -to scoped gml/fo-NAME.gml     -> fo/NAME.in.xml
+#        (hints, layout, lists; layout-duplex, layout-offset and
+#        fo-vendor-ah/layout reuse layout); fo/starter and fo/state are
+#        gml/starter.gml and gml/state.gml scoped; fo/features =
+#        scope/features.out.xml
+# The fo tests also run test/fo/check.xsl (check= in their .params).
+
+if(~ $#SAXON 0) SAXON=/usr/local/bin/transform
+here=`{cd `{/usr/local/plan9/bin/basename -d $0} && pwd}
+xslt=`{cd $here/.. && pwd}
+update=no
+if(~ $1 -update) { update=yes; shift }
+if(~ $#TMPDIR 0) TMPDIR=/tmp
+tmp=$TMPDIR/gmltest.$pid
+fn sigexit { rm -f $tmp.out $tmp.err $tmp.experr }
+
+pass=0
+fail=0
+failed=()
+for(in in $here/*/*.in.xml){
+	stage=`{/usr/local/plan9/bin/basename `{/usr/local/plan9/bin/basename -d $in}}
+	name=`{/usr/local/plan9/bin/basename $in .in.xml}
+	if(~ $#* 0 || ~ $stage/$name $* || ~ $name $* || ~ $stage $*){
+		base=$here/$stage/$name
+		params=()
+		if(test -f $base.params) params=`{cat $base.params}
+		if(! $SAXON -s:$in -xsl:$xslt/$stage.xsl -o:$tmp.out $params >[2]$tmp.err){
+			echo FAIL $stage/$name: transform failed
+			cat $tmp.err
+			fail=`{echo $fail + 1 | bc}
+			failed=($failed $stage/$name)
+		}
+		if not if(~ $update yes){
+			cp $tmp.out $base.out.xml
+			if(test -s $tmp.err) cp $tmp.err $base.err
+			if not rm -f $base.err
+			echo updated $stage/$name
+		}
+		if not {
+			if(test -f $base.err) cp $base.err $tmp.experr
+			if not cp /dev/null $tmp.experr
+			ok=yes
+			if(! cmp -s $tmp.out $base.out.xml){
+				ok=no
+				echo FAIL $stage/$name: output differs
+				diff -u $base.out.xml $tmp.out
+			}
+			if(! cmp -s $tmp.err $tmp.experr){
+				ok=no
+				echo FAIL $stage/$name: messages differ
+				diff -u $tmp.experr $tmp.err
+			}
+			if(~ $ok yes){
+				echo ok $stage/$name
+				pass=`{echo $pass + 1 | bc}
+			}
+			if not {
+				fail=`{echo $fail + 1 | bc}
+				failed=($failed $stage/$name)
+			}
+		}
+	}
+}
+if(~ $update yes) exit
+echo $pass passed, $fail failed
+if(! ~ $fail 0) {
+	echo failed: $failed
+	exit fail
+}
+exit ''

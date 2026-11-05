@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- value forms: zero, mixed sums, ll default and relative, tabs set/add/del/reset,
+     pf restoring a font, generic specs; events stay (temporary in, hy options,
+     sp, pa); gml:lines and gml:fn are ordinary elements; breaking hints in
+     running text leave one gml:br per run --><gml:doc xmlns:gml="urn:x-gml:canonical"><p>a<gml:br break="yes" cause="in"/>zero is the initial value
+<gml:scope kind="block" in="4ch+1i" of="2ch" ll="6i"><gml:br break="yes" cause="in ll of"/>three hints, one break
+</gml:scope><gml:scope kind="block" in="4ch+1i" of="2ch" ll="default+1i"><gml:br break="yes" cause="ll"/>relative to default
+</gml:scope><gml:scope kind="block" in="4ch+1i" of="2ch"><gml:br break="yes" cause="ll"/>default again
+<gml:sp n="1" unit="line" break="yes"/></gml:scope><gml:scope kind="block" in="4ch+1i" ir="2ch" of="2ch">after a space: no extra break
+</gml:scope><gml:scope kind="block" in="4ch+1i" ir="2ch" of="2ch" tb="5ch 10ch 15ch">tabs
+</gml:scope><gml:scope kind="block" in="4ch+1i" ir="2ch" of="2ch" tb="5ch 15ch">minus one
+</gml:scope><gml:scope kind="block" in="4ch+1i" ir="2ch" of="2ch" tb="5ch 15ch 30ch">plus one
+</gml:scope><gml:scope kind="block" in="4ch+1i" ir="2ch" of="2ch">reset
+<gml:scope kind="inline" font="hi2">two fonts
+</gml:scope><gml:scope kind="inline" font="hi1">back to hi1
+</gml:scope>initial
+</gml:scope><gml:scope kind="block" in="4ch+1i" ir="2ch" of="2ch" ls="2">double spaced <gml:scope kind="inline" ws="by 1.5">wide words
+</gml:scope></gml:scope><gml:scope kind="block" in="4ch+1i" ir="2ch" of="2ch">normal
+<gml:hy options="sup" break="no"/>hy options only: an event
+<gml:scope kind="inline" hy="on">hyphenation on
+<gml:in left="1" unit="i" for="2" for-unit="i" temporary="yes" break="yes"/>temporary: an event
+<gml:lines word="ce" n="2" break="yes">centered <gml:scope kind="inline" font="hi3">line
+</gml:scope></gml:lines></gml:scope><gml:scope kind="inline" font="hi3" hy="on">after the lines
+<gml:fn>footnote <gml:scope kind="block" in="3ch"><gml:br break="yes" cause="in"/>text</gml:scope></gml:fn></gml:scope></gml:scope><gml:scope kind="block" in="3ch" ir="2ch" of="2ch"><gml:scope kind="inline" font="hi3" hy="on">
+<gml:pa break="yes"/>end</gml:scope></gml:scope></p></gml:doc>

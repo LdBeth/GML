@@ -1,0 +1,1 @@
+check=test/fo/check.xsl SYSVARS=two SYSVARD=yes paper=a4

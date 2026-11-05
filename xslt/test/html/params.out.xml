@@ -1,0 +1,97 @@
+<!DOCTYPE HTML><html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="GML html.xsl">
+<title>Parameters</title>
+<style>
+/* inline test */
+body { color: black; }
+</style>
+</head>
+<body class="gml">
+<main class="gml-doc">
+<article class="gml-gdoc">
+<p class="gml-sec">IBM Internal</p>
+<section class="gml-frontm">
+<header class="gml-titlep">
+<h1 class="gml-title">The GML Guide</h1>
+<p class="gml-docnum">SH00-0000</p>
+<p class="gml-date">June 13th, 1986</p>
+<p class="gml-author">J. Smith</p>
+<address class="gml-address">
+<div class="gml-aline">1 Main St</div>
+<div class="gml-aline">Anytown</div></address></header>
+<section class="gml-abstract">
+<h1 class="gml-section-title">Zusammenfassung</h1>
+<p>This is the abstract.
+</p></section>
+<nav class="gml-toc">
+<h1 class="gml-toc-title">Table of Contents</h1>
+<ol class="gml-toc-list">
+<li class="gml-toc-entry gml-toc-l1 gml-toc-body"><a href="#intro">Introduction</a>
+<ol class="gml-toc-list">
+<li class="gml-toc-entry gml-toc-l2 gml-toc-body"><a href="#gml-h2-1">Second <strong class="gml-hp2">part</strong></a>
+<ol class="gml-toc-list">
+<li class="gml-toc-entry gml-toc-l3 gml-toc-body"><a href="#gml-h3-1">Third level</a></li></ol></li></ol></li>
+<li class="gml-toc-entry gml-toc-l1 gml-toc-appendix"><a href="#gml-h1-2"><span class="gml-num">Appendix A.</span> Appendix A</a></li></ol></nav></section>
+<section class="gml-body">
+<h1 id="intro" class="gml-h1">Introduction</h1>
+<p>Some text with <q class="gml-q">a quote</q> and a <em class="gml-hp1">highlight</em>.
+More text.<sup class="gml-fn-callout"><a href="#gml-fn-1" id="gml-fn-1-ref" role="doc-noteref">1</a></sup>
+</p>
+<ol class="gml-ol gml-compact gml-nest-1">
+<li><span class="gml-label">1.</span> one
+</li>
+<li><span class="gml-label">2.</span> two
+<ul class="gml-ul gml-nest-1">
+<li><span class="gml-label">*</span> nested
+</li></ul></li></ol>
+<dl class="gml-dl">
+<dt>Term</dt>
+<dd>Definition
+</dd>
+<dt>Second</dt>
+<dd>Again
+</dd></dl>
+<pre class="gml-xmp">  indented line
+
+last line
+</pre>
+<h2 id="gml-h2-1" class="gml-h2">Second <strong class="gml-hp2">part</strong></h2>
+<figure id="f1" class="gml-fig gml-frame-box">
+<div class="gml-figbody">Figure content.
+</div>
+<figcaption><span class="gml-figcap"><span class="gml-num">Figure&nbsp;1.</span> A caption</span><span class="gml-figdesc" style="display: block">Description.
+</span></figcaption></figure>
+<p>See <a class="gml-figref" href="#f1">Figure&nbsp;1</a> and <a class="gml-hdref" href="#intro">“Introduction”</a>.
+<span class="gml-ix" id="gml-i1-1"></span>
+<span class="gml-ix" id="gml-i2-1"></span>
+</p>
+<p class="gml-note"><span class="gml-note-label">N.B.</span>&nbsp;Watch out.
+</p>
+<blockquote class="gml-lq">
+<p>Long quote.
+</p></blockquote>
+<ul class="gml-ul gml-nest-1">
+<li><span class="gml-label">*</span> an item
+</li></ul>
+<h3 id="gml-h3-1" class="gml-h3">Third level</h3></section>
+<section class="gml-appendix">
+<h1 id="gml-h1-2" class="gml-h1"><span class="gml-num">Appendix A.</span> Appendix A</h1></section>
+<section class="gml-backm">
+<section class="gml-index">
+<h1 class="gml-index-title">Index</h1>
+<div class="gml-index-group">
+<h2 class="gml-index-letter">I</h2>
+<ul class="gml-index-list">
+<li class="gml-index-entry gml-index-l1"><span class="gml-index-term">index entry</span>, <a class="gml-index-ref" href="#gml-i1-1">1</a>
+<ul class="gml-index-list">
+<li class="gml-index-entry gml-index-l2"><span class="gml-index-term">sub entry</span>, <a class="gml-index-ref" href="#gml-i2-1">1</a></li></ul></li></ul></div></section></section></article>
+<section class="gml-footnotes" role="doc-endnotes">
+<h2 class="gml-footnotes-title">Notes</h2>
+<ol class="gml-footnote-list">
+<li id="gml-fn-1" class="gml-footnote"><span class="gml-fn-num"><a href="#gml-fn-1-ref" role="doc-backlink">1</a></span> A footnote.</li></ol></section>
+</main>
+</body>
+</html>

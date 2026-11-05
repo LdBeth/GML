@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- value forms: zero, mixed sums, ll default and relative, tabs set/add/del/reset,
+     pf restoring a font, generic specs; events stay (temporary in, hy options,
+     sp, pa); gml:lines and gml:fn are ordinary elements; breaking hints in
+     running text leave one gml:br per run -->
+<gml:doc xmlns:gml="urn:x-gml:canonical"><p>a<gml:in left="0.0" unit="i" break="yes"/>zero is the initial value
+<gml:in left="4ch+1i" unit="mixed" delta="+1i" break="yes"/><gml:ll length="6" unit="i" break="yes"/><gml:of offset="2" unit="ch" break="yes"/>three hints, one break
+<gml:ll length="default" delta="+1i" break="yes"/>relative to default
+<gml:ll length="default" break="yes"/>default again
+<gml:sp n="1" unit="line" break="yes"/><gml:ir right="2" unit="ch" break="yes"/>after a space: no extra break
+<gml:tb action="set" stops="5ch 10ch 15ch" break="no"/>tabs
+<gml:tb action="del" stops="10ch" break="no"/>minus one
+<gml:tb action="add" stops="30ch" break="no"/>plus one
+<gml:tb action="reset" break="no"/>reset
+<gml:bf font="hi1" break="no"/><gml:bf font="hi2" break="no"/>two fonts
+<gml:pf font="hi1" break="no"/>back to hi1
+<gml:pf initial="yes" break="no"/>initial
+<gml:ls spec="2" break="no"/>double spaced <gml:ws spec="by 1.5" break="no"/>wide words
+<gml:ls break="no"/><gml:ws break="no"/>normal
+<gml:hy options="sup" break="no"/>hy options only: an event
+<gml:hy mode="on" break="no"/>hyphenation on
+<gml:in left="1" unit="i" for="2" for-unit="i" temporary="yes" break="yes"/>temporary: an event
+<gml:lines word="ce" n="2" break="yes">centered <gml:bf font="hi3" break="no"/>line
+</gml:lines>after the lines
+<gml:fn>footnote <gml:in left="3" unit="ch" break="yes"/>text</gml:fn>
+<gml:pa break="yes"/>end</p></gml:doc>

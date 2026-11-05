@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- state set deep inside nested elements continues after them, at every
+     level up (re-opened scopes); an element inside a scope inherits it;
+     a change back to the initial value inside a scope is written --><gml:doc xmlns:gml="urn:x-gml:canonical"><body><ol><li>one <q>quoted <gml:scope kind="block" ir="3ch">text</gml:scope></q><gml:scope kind="block" ir="3ch"> after the quote
+</gml:scope></li><gml:scope kind="block" ir="3ch"><li>two
+</li></gml:scope></ol><gml:scope kind="block" ir="3ch"><p>para</p></gml:scope><p>right margin reset</p><gml:scope kind="block" in="4ch"><dl><dt>term</dt><dd>desc <gml:scope kind="block" in="0"><gml:br break="yes" cause="in"/>back to 0 inside dd
+</gml:scope></dd><gml:scope kind="block" in="0"><dt>next</dt></gml:scope></dl></gml:scope><p>still 0</p><gml:scope kind="block" in="1i"><gml:scope kind="inline" font="hi2"><p>both <gml:scope kind="block" fill="no" align="left"><gml:br break="yes" cause="fo"/>now no fill
+</gml:scope></p></gml:scope></gml:scope><gml:scope kind="block" in="1i" fill="no" align="left"><gml:scope kind="inline" font="hi2"><p>last</p></gml:scope></gml:scope></body></gml:doc>

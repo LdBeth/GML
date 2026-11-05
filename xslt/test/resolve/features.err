@@ -1,0 +1,3 @@
+resolve: liref refid="nope": no such id
+resolve: hdref refid="bad": no such id
+resolve: figref refid="zz": no such id

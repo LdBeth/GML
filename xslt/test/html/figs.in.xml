@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><body><h1 id="figs" anchor="figs">Figures</h1>
+<fig id="box" frame="box" num="1" anchor="box">boxed content
+<figcap><gml:num>Figure 1.</gml:num>A boxed figure</figcap>
+<figdesc>Its description.
+</figdesc></fig><fig frame="rule" place="top" width="column" num="2" anchor="gml-fig-2">ruled content
+<figcap><gml:num>Figure 2.</gml:num>A ruled figure</figcap>
+</fig><fig frame="none" place="bottom" width="page" anchor="gml-fig-3">plain content
+</fig><fig frame="*" num="3" anchor="gml-fig-4">starred frame
+<figcap><gml:num>Figure 3.</gml:num>A character frame</figcap>
+</fig><xmp xml:space="preserve"><gml:scope kind="block" fill="no" align="left">  verbatim &lt;code&gt; &amp; stuff
+    indented
+
+last line
+</gml:scope></xmp><p>See <figref refid="box" resolved="yes" target="fig" num="1">Figure 1<gml:pageref refid="box" when="auto" label="on page"/></figref> and <figref refid="box" page="yes" resolved="yes" target="fig" num="1">Figure 1<gml:pageref refid="box" when="always" label="on page"/></figref> and <hdref refid="figs" resolved="yes" target="h1">“Figures”<gml:pageref refid="figs" when="auto" label="on page"/></hdref>.
+</p></body></gdoc></gml:doc>

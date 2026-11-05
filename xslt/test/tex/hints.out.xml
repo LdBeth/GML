@@ -1,0 +1,99 @@
+\input gml
+\gmlbegindocument%
+\gmlstart{gdoc}{}%
+\gmlstart{gml:rh}{}%
+\gmlbeginlines{ce}{n=1,break=yes}Hint test running head\gmlendlines{}\gmlend{gml:rh}%
+\gmlstart{body}{}%
+\gmlstart{h1}{anchor=gml-h1-1,text=Formatting hints}%
+\gmlanchor{gml-h1-1}Formatting hints\gmlend{h1}%
+\gmlstart{p}{}%
+Normal filled text that goes on for a while so that it wraps at least
+once in the justified paragraph mode of the formatter.
+\gmlhint{in}{left=4,unit=ch,break=yes}%
+Indented by four characters, still in the same paragraph? No: .in breaks.
+\gmlhint{in}{left=4ch+1i,unit=mixed,delta=+1i,break=yes}%
+A mixed indent of four characters plus one inch.
+\gmlhint{in}{left=0,unit=ch,break=yes}%
+\gmlhint{ir}{right=10,unit=mh,break=yes}%
+Right margin pulled in by ten ems so that this text wraps earlier than the
+others do on the page.
+\gmlhint{ir}{right=0,unit=ch,break=yes}%
+\gmlhint{sp}{n=2,unit=line,break=yes}%
+After two blank lines.
+\gmlhint{sk}{n=1,unit=line,break=yes}%
+\gmlhint{sk}{n=2,unit=line,break=yes}%
+After skips of one and two lines: only the larger counts.
+\gmlbeginlines{ce}{n=2,break=yes}These two lines
+are centered.\gmlendlines{}
+\gmlbeginlines{ri}{n=on,break=yes}Flush right one
+flush right two
+\gmlendlines{}\gmlhint{fo}{fill=no,align=left,overdraw=extend,break=yes}%
+No fill: this line
+and this line
+  are kept as lines.
+\gmlhint{fo}{fill=yes,align=justify,overdraw=extend,break=yes}%
+\gmlhint{fo}{fill=yes,align=center,overdraw=extend,break=yes}%
+Centered fill mode text.
+\gmlhint{fo}{fill=yes,align=justify,overdraw=extend,break=yes}%
+\gmlbeginlines{us}{n=2,break=no}\gmlusword{Underscored} \gmlusword{words} \gmlusword{here}
+\gmlusword{and} \gmlusword{here}\gmlendlines{}
+\gmlbeginlines{up}{n=1,break=no}\gmlupword{Upper} \gmlupword{case} \gmlupword{line} \gmlupword{with} \gmlupword{caf\gmlchar{233}}\gmlendlines{}
+Back to normal.
+\gmlhint{in}{left=5,unit=ch,break=yes}%
+\gmlbeginlines{in}{n=1,after=yes,left=0,unit=ch,break=no}First line at the old margin, then the following lines are indented by\gmlendlines{}
+five characters until the margin changes again, which is right now.
+\gmlhint{in}{left=0,unit=ch,break=yes}%
+\gmlbeginlines{il}{n=1,left=3,unit=mh,break=yes}An indented first line in a paragraph that is long enough to wrap onto a\gmlendlines{}
+second line so the effect can be seen.
+\gmlhint{of}{offset=4,unit=ch,break=yes}%
+Offset: the first line is at the margin and every following line is
+indented by four characters, for this paragraph and the next.
+\gmlhint{br}{break=yes}%
+Next paragraph still offset by the .of control word, all of its lines.
+\gmlhint{in}{left=0,unit=ch,offset=0,break=yes}%
+\gmlhint{bf}{font=hi2,break=no}Bold from a font change,
+\gmlstart{hp1}{}italic inside it\gmlend{hp1},
+\gmlhint{pf}{initial=yes,break=no}and back to the initial font.
+\gmlhint{df}{name=big,spec=type(bold italic),break=no}\gmlhint{bf}{font=big,break=no}Defined bold italic font.
+\gmlhint{pf}{initial=yes,break=no}\gmlhint{tp}{action=set,stops=10mh 20mh 30mh,break=no}\gmlhint{fo}{fill=no,align=left,overdraw=extend,break=yes}%
+\gmltabline{Name\gmltab Value\gmltab Note}
+\gmltabline{Apple\gmltab 12\gmltab red}
+\gmlhint{tp}{action=set,stops=./25m,break=no}\gmltabline{Leader\gmltab dots}
+\gmlhint{tp}{action=reset,break=no}\gmlhint{fo}{fill=yes,align=justify,overdraw=extend,break=yes}%
+\gmlhint{sx}{left=Left side,fill=.,right=Right side,break=yes}%
+\gmlhint{hr}{break=yes}%
+\gmlhint{bx}{action=on,spec=1ch 40ch,break=yes}%
+Text inside a box.
+\gmlhint{bx}{action=off,break=yes}%
+\gmlhint{hy}{mode=on,break=no}\gmlhint{hw}{word=ex-cep-tion-al,break=no}Hyphenation is now on for exceptional words.
+\gmlhint{hy}{mode=off,break=no}\gmlhint{cp}{n=5,unit=line,break=yes}%
+\gmlhint{kp}{mode=on,break=yes}%
+Kept text one.
+Kept text two.
+\gmlhint{kp}{mode=off,break=yes}%
+\gmlhint{ls}{spec=by 1.5,break=no}Wider line spacing for a while so that a couple of lines of text show
+the change in spacing between the lines of one paragraph.
+\gmlhint{br}{break=yes}%
+\gmlhint{ls}{spec=normal,break=no}\gmlhint{ws}{spec=by 2,break=no}Wide word spaces.
+\gmlhint{ws}{spec=normal,break=no}\gmlhint{rc}{code=1,char=*,break=no}\gmlhint{br}{break=yes}%
+\gmlhint{rc}{code=1,mode=on,break=no}Revised text marked in the margin.
+\gmlhint{br}{break=yes}%
+\gmlhint{rc}{code=1,mode=off,break=no}\gmlhint{ll}{length=4,unit=i,break=yes}%
+A shorter line length of four inches for this paragraph which is long
+enough to wrap at that length.
+\gmlhint{ll}{length=default,break=yes}%
+\gmlstart{gml:fn}{}An unnumbered footnote from .fn on.
+\gmlend{gml:fn}\gmlhint{dh}{level=2,spec=font bold,break=no}\gmlhint{vr}{break=no}\gmlhint{pa}{break=yes}%
+\gmlhint{pn}{spec=roman,break=no}After a page eject, roman page numbers.
+\gmlstart{gml:h}{level=2,break=yes,text=A control word heading}%
+A control word heading\gmlend{gml:h}%
+
+Text after .h2.
+\gmlhint{pa}{side=odd,break=yes}%
+On an odd page.
+\gmlend{p}%
+\gmlend{body}%
+\gmlend{gdoc}%
+%
+\gmlenddocument
+\bye

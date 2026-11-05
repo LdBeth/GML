@@ -1,0 +1,35 @@
+<!DOCTYPE HTML><html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="GML html.xsl">
+<title>Document</title>
+<link rel="stylesheet" href="gml.css">
+</head>
+<body class="gml">
+<main class="gml-doc">
+<section class="gml-body">
+<ol class="gml-ol">
+<li>one <q class="gml-q">quoted text</q> after the quote
+</li>
+<li style="margin-right: 3ch">two
+</li></ol>
+<div class="gml-scope" style="margin-right: 3ch">
+<p>para</p></div>
+<p>right margin reset</p>
+<div class="gml-scope" style="margin-left: 4ch">
+<dl class="gml-dl">
+<dt>term</dt>
+<dd>desc 
+<div class="gml-scope" style="margin-left: calc(0px - 4ch)">back to 0 inside dd
+</div></dd>
+<dt style="margin-left: calc(0px - 4ch)">next</dt></dl></div>
+<p>still 0</p>
+<div class="gml-scope" style="margin-left: 1in">
+<div class="gml-scope gml-font gml-font-hi2" data-font="hi2">
+<p>both <span class="gml-scope" style="display: block; white-space: pre-wrap; text-align: left">now no fill
+</span></p></div></div>
+<div class="gml-scope" style="margin-left: 1in; white-space: pre-wrap; text-align: left"><div class="gml-scope gml-font gml-font-hi2" data-font="hi2"><p>last</p></div></div></section>
+</main>
+</body>
+</html>

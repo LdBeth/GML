@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- headings in every section; toc collects h0-h4 outside frontm -->
+<gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><frontm><toc/><preface><h1>Preface</h1>
+<p>x</p></preface></frontm><body><h0>Part One</h0>
+<h1 id="intro">Introduction</h1>
+<h2>Scope</h2>
+<h2 id="terms">Terms</h2>
+<h3>Detail</h3>
+<h4>Deeper</h4>
+<h5>Inline five</h5>
+<h1>Second <hp1>chapter</hp1></h1>
+<h3>Skipped level</h3>
+<h2>After</h2>
+<h6>Six</h6>
+</body><appendix><h1 id="appa">First appendix</h1>
+<h2>Appendix sub</h2>
+<h1>Second appendix</h1>
+</appendix><backm><h1>Glossary</h1>
+</backm></gdoc></gml:doc>

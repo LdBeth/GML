@@ -1,0 +1,30 @@
+<!DOCTYPE HTML><html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="GML html.xsl">
+<title>Line-counted words</title>
+<link rel="stylesheet" href="gml.css">
+</head>
+<body class="gml">
+<main class="gml-doc">
+<article class="gml-gdoc">
+<section class="gml-body">
+<h1 id="gml-h1-1" class="gml-h1">Line-counted words</h1>
+<p>start
+<span class="gml-lines gml-in" style="display: block; margin-left: 3ch">two lines
+indented</span>
+back
+<span class="gml-scope" style="display: block; margin-left: 4ch"><span class="gml-lines gml-in" style="display: block; margin-left: calc(0px - 4ch)">one line</span>
+then indented
+<span class="gml-lines gml-il" style="display: block; text-indent: calc(6ch - 4ch)">indented line</span>
+<span class="gml-lines gml-un" style="display: block; text-indent: calc(2ch - 4ch)">undented line</span>
+<span class="gml-lines gml-uc" style="text-decoration: underline; text-transform: uppercase">underscore caps</span>
+<span class="gml-lines gml-rc" data-rc="|">revised</span>
+<span class="gml-sx" style="display: flex"><span class="gml-sx-left">left</span><span class="gml-sx-fill" data-fill="."></span><span class="gml-sx-right">right</span></span><span class="gml-hr" style="display: block"></span><span class="gml-sp" style="display: block; height: 2lh"></span>kept
+</span><span class="gml-lines gml-ce" style="display: block; text-align: center; white-space: pre-line">first centred
+second centred
+</span></p></section></article>
+</main>
+</body>
+</html>

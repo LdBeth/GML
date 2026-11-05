@@ -1,0 +1,49 @@
+<!DOCTYPE HTML><html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="GML html.xsl">
+<title>Scopes</title>
+<link rel="stylesheet" href="gml.css">
+</head>
+<body class="gml">
+<main class="gml-doc">
+<article class="gml-gdoc">
+<section class="gml-body">
+<h1 id="gml-h1-1" class="gml-h1">Scopes</h1>
+<p>Normal, then
+<span class="gml-scope" style="display: block; margin-left: 3ch; margin-right: 2ch; padding-left: 4ch; text-indent: -4ch; max-width: 60ch">indented with offset.
+</span><span class="gml-scope" style="display: block; margin-left: 0.5in; margin-right: 2ch; max-width: 60ch">inches
+</span><span class="gml-scope" style="display: block; margin-left: 1cm; margin-right: 2ch; max-width: 60ch">centimetres
+</span><span class="gml-scope" style="display: block; margin-left: 2mm; margin-right: 12pt; max-width: 60ch">millimetres and points
+</span><span class="gml-scope" style="display: block; margin-left: 19.18pt; margin-right: 12pt; max-width: 60ch">ciceros
+</span><span class="gml-scope" style="display: block; margin-left: 2em; margin-right: 1em; max-width: 60ch">ems
+</span><span class="gml-scope" style="display: block; margin-left: 30px; margin-right: 1em; max-width: 60ch">device units
+</span><span class="gml-scope" style="display: block; white-space: pre-wrap; text-align: left">no fill
+   kept
+</span><span class="gml-scope" style="display: block; text-align: center">centered fill
+</span><span class="gml-scope" style="display: block; text-align: right">right aligned
+</span><span class="gml-scope" style="display: block; tab-size: 5" data-gml-tb="5ch 10ch 15ch">tabbed
+</span><span class="gml-scope gml-font gml-font-hi2" data-font="hi2">bold font
+</span><span class="gml-scope" style="hyphens: auto">hyphenated
+</span><span class="gml-scope" style="line-height: calc(var(--gml-leading) * 2)">double spaced
+</span></p>
+<div class="gml-scope" style="line-height: var(--gml-leading)">
+<ul class="gml-ul gml-nest-1">
+<li><span class="gml-label">•</span> an item
+<div class="gml-scope" style="margin-left: 2ch">indented inside the item
+</div></li>
+<li style="margin-left: 2ch"><span class="gml-label">•</span> the next item
+</li></ul>
+<div class="gml-scope gml-font gml-font-hi1" data-font="hi1">
+<p>Italic paragraph.
+</p></div></div>
+<div class="gml-scope" style="max-width: calc(var(--gml-measure) + 1in); line-height: var(--gml-leading)">
+<p>Longer line.
+</p></div>
+<div class="gml-scope" style="margin-left: calc(4ch + 1in); line-height: var(--gml-leading)">
+<p>Mixed indent.
+</p></div></section></article>
+</main>
+</body>
+</html>

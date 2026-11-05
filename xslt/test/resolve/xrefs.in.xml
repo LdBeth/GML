@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- cross-references of every kind, forward and backward, resolved and not -->
+<gml:doc xmlns:gml="urn:x-gml:canonical"><body><h1 id="intro">The <hp2>first</hp2> chapter<fn>Not in the reference.</fn><i1>chapter</i1></h1>
+<p>Forward: <hdref refid="sec2"/>, with page: <hdref refid="sec2" page="yes"/>,
+in a quote: <q>see <hdref refid="intro"/></q>, nested: <q>a <q>b <hdref refid="intro"/></q></q>.
+</p><h2 id="sec2">Second
+section</h2>
+<p><figref refid="f2"/>, <figref refid="f2" page="no"/>, <figref refid="nocap"/>, <figref refid="intro"/>.
+<liref refid="item2"/>, <liref refid="bullet"/>, <liref refid="missing" page="yes"/>.
+<fnref refid="fnx"/><fnref refid="nofn"/> and <hdref refid="f2"/>.
+</p><fig id="nocap" frame="box">no caption
+</fig><fig id="f2"><figcap>Caption <q>two</q></figcap>
+<figdesc>Description.
+</figdesc></fig><ol><li>first
+</li><li id="item2">second
+</li></ol><ul><li id="bullet">bullet
+</li></ul><p>A footnote<fn id="fnx">With an id: called out by fnref.</fn> and another<fn>Plain.</fn>.
+<gml:fn>A SCRIPT .fn footnote: not numbered.
+</gml:fn></p></body></gml:doc>

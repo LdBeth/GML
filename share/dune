@@ -1,0 +1,6 @@
+; The shipped profiles, installed in share/gml/profile/.
+(install
+ (section share)
+ (package gml)
+ (files
+  (profile/starter.gml as profile/starter.gml)))

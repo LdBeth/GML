@@ -1,0 +1,5 @@
+.ty short: part 1
+.ef
+.ty short: part 2
+.ef close
+.ty short: part 3 is never read

@@ -1,0 +1,21 @@
+# dune
+_build/
+*.install
+*.corrected
+
+# reference manuals (scanned IBM publications, kept locally only)
+SH35-*.pdf
+
+# pipeline outputs produced by mk / gmlfmt in the project root
+/*.xml
+/*.html
+/*.fo
+/*.tex
+/*.dvi
+/*.pdf
+*.log
+*.aux
+*.ref
+
+# OS
+.DS_Store

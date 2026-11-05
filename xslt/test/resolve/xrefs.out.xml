@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- cross-references of every kind, forward and backward, resolved and not --><gml:doc xmlns:gml="urn:x-gml:canonical"><body><h1 id="intro" anchor="intro">The <hp2>first</hp2> chapter<fn num="1" anchor="gml-fn-1" callout="yes"><gml:num>1</gml:num>Not in the reference.</fn><i1 anchor="gml-i1-1">chapter</i1></h1>
+<p>Forward: <hdref refid="sec2" resolved="yes" target="h2">“Second section”<gml:pageref refid="sec2" when="auto" label="on page"/></hdref>, with page: <hdref refid="sec2" page="yes" resolved="yes" target="h2">“Second section”<gml:pageref refid="sec2" when="always" label="on page"/></hdref>,
+in a quote: <q>see <hdref refid="intro" resolved="yes" target="h1">‘The <hp2>first</hp2> chapter’<gml:pageref refid="intro" when="auto" label="on page"/></hdref></q>, nested: <q>a <q>b <hdref refid="intro" resolved="yes" target="h1">“The <hp2>first</hp2> chapter”<gml:pageref refid="intro" when="auto" label="on page"/></hdref></q></q>.
+</p><h2 id="sec2" anchor="sec2">Second
+section</h2>
+<p><figref refid="f2" resolved="yes" target="fig" num="1">Figure 1<gml:pageref refid="f2" when="auto" label="on page"/></figref>, <figref refid="f2" page="no" resolved="yes" target="fig" num="1">Figure 1<gml:pageref refid="f2" when="auto" label="on page"/></figref>, <figref refid="nocap" resolved="no">Figure nocap unknown</figref>, <figref refid="intro" resolved="no">Figure intro unknown</figref>.
+<liref refid="item2" resolved="yes" target="li" num="2">2.<gml:pageref refid="item2" when="auto" label="on page"/></liref>, <liref refid="bullet" resolved="no">LI bullet unknown</liref>, <liref refid="missing" page="yes" resolved="no">LI missing unknown</liref>.
+<fnref refid="fnx" resolved="yes" target="fn" num="2">2</fnref><fnref refid="nofn" resolved="no">00</fnref> and <hdref refid="f2" resolved="no">Heading f2 unknown</hdref>.
+</p><fig id="nocap" frame="box" anchor="nocap">no caption
+</fig><fig id="f2" num="1" anchor="f2"><figcap><gml:num>Figure 1.</gml:num>Caption <q>two</q></figcap>
+<figdesc>Description.
+</figdesc></fig><ol nest="1"><li num="1"><gml:num>1.</gml:num>first
+</li><li id="item2" num="2" anchor="item2"><gml:num>2.</gml:num>second
+</li></ol><ul nest="1"><li id="bullet" anchor="bullet">bullet
+</li></ul><p>A footnote<fn id="fnx" num="2" anchor="fnx" callout="no"><gml:num>2</gml:num>With an id: called out by fnref.</fn> and another<fn num="3" anchor="gml-fn-3" callout="yes"><gml:num>3</gml:num>Plain.</fn>.
+<gml:fn>A SCRIPT .fn footnote: not numbered.
+</gml:fn></p></body></gml:doc>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ordered item numbers by ordered nesting depth (1. a. 1) a) i. i), then again);
+     ul and sl in between do not count; lp is not an item -->
+<gml:doc xmlns:gml="urn:x-gml:canonical"><ol compact="compact"><li>one
+</li><li id="two">two
+<ol><li>a
+</li><li>b
+<ul><li id="bul">bullet
+<ol><li>in ul
+</li><li>2
+<ol><li>d4
+<ol><li>d5
+<ol><li>d6
+</li><li>d6b
+<ol><li>d7
+</li></ol></li></ol></li></ol></li></ol></li></ol></li></ul></li><lp>part
+</lp><li id="c">c
+</li></ol></li></ol><sl><li>simple
+</li></sl><ol><li>restart
+</li></ol></gml:doc>

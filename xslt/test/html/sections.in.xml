@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc sec="Internal Use Only"><frontm><titlep><title stitle="Sections">Document Sections</title>
+<title>A Second Title Line</title>
+<docnum>GH00-0001</docnum>
+<date>June 13th, 1986</date>
+<author>A. Author</author>
+<author>B. Writer</author>
+<address><aline>1 Main Street</aline>
+<aline>Anytown</aline>
+</address></titlep><abstract><p>The abstract.
+</p></abstract><preface><p>The preface.
+</p></preface><toc><gml:toc-entries title="Table of Contents"><gml:toc-entry level="0" refid="part1" section="body"><gml:entry-text>Part One</gml:entry-text><gml:pageref refid="part1"/></gml:toc-entry><gml:toc-entry level="1" refid="intro" section="body"><gml:entry-text>Introduction</gml:entry-text><gml:pageref refid="intro"/></gml:toc-entry><gml:toc-entry level="2" refid="gml-h2-1" section="body"><gml:entry-text>Second level</gml:entry-text><gml:pageref refid="gml-h2-1"/></gml:toc-entry><gml:toc-entry level="3" refid="gml-h3-1" section="body"><gml:entry-text>Third level</gml:entry-text><gml:pageref refid="gml-h3-1"/></gml:toc-entry><gml:toc-entry level="4" refid="gml-h4-1" section="body"><gml:entry-text>Fourth level</gml:entry-text><gml:pageref refid="gml-h4-1"/></gml:toc-entry><gml:toc-entry level="1" refid="gml-h1-2" section="appendix" num="A"><gml:num>Appendix A.</gml:num><gml:entry-text>First appendix</gml:entry-text><gml:pageref refid="gml-h1-2"/></gml:toc-entry><gml:toc-entry level="2" refid="gml-h2-2" section="appendix"><gml:entry-text>Appendix section</gml:entry-text><gml:pageref refid="gml-h2-2"/></gml:toc-entry><gml:toc-entry level="1" refid="gml-h1-3" section="backm"><gml:entry-text>Glossary</gml:entry-text><gml:pageref refid="gml-h1-3"/></gml:toc-entry></gml:toc-entries></toc><figlist><gml:figlist-entries title="List of Illustrations"><gml:figlist-entry refid="gml-fig-1" num="1"><gml:num>Figure 1</gml:num><gml:entry-text>The only figure</gml:entry-text><gml:pageref refid="gml-fig-1"/></gml:figlist-entry></gml:figlist-entries></figlist></frontm><body><h0 id="part1" anchor="part1">Part One</h0>
+<h1 id="intro" anchor="intro">Introduction</h1>
+<p>Text.
+</p><h2 anchor="gml-h2-1">Second level</h2>
+<h3 anchor="gml-h3-1">Third level</h3>
+<h4 anchor="gml-h4-1">Fourth level</h4>
+<h5 anchor="gml-h5-1">Fifth level</h5>
+<h6 anchor="gml-h6-1">Sixth level</h6>
+<fig num="1" anchor="gml-fig-1">picture
+<figcap><gml:num>Figure 1.</gml:num>The only figure</figcap>
+</fig></body><appendix><h1 num="A" anchor="gml-h1-2"><gml:num>Appendix A.</gml:num>First appendix</h1>
+<h2 anchor="gml-h2-2">Appendix section</h2>
+</appendix><backm><h1 anchor="gml-h1-3">Glossary</h1>
+<index><gml:index-entries title="Index"/></index></backm></gdoc></gml:doc>

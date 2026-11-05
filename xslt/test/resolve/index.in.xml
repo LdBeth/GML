@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- index: i1/i2/i3 context, refid, ih print/see/seeid, iref, pg values,
+     merging of equal terms, collation (case and accents), symbol group -->
+<gml:doc xmlns:gml="urn:x-gml:canonical"><body><p>
+<i1 id="fr">fruit</i1>
+<i2 id="ap">apple</i2>
+<i3>Cox</i3>
+<i3>Bramley</i3>
+<i2>Banana</i2>
+<i1 pg="major">Zebra</i1>
+<i1>éclair</i1>
+<i1>Eagle</i1>
+<i1>fruit</i1>
+<i2>apple</i2>
+<i1 pg="start">  multi
+  word  </i1>
+<i1 pg="end">multi word</i1>
+<i1 pgref="see chapter 3">Archive</i1>
+<i1>3270 terminal</i1>
+<i1>_underscore</i1>
+<ih1 print="IBM">ibm</ih1>
+<i2>products</i2>
+<ih1 see="fruit">Orchard</ih1>
+<ih1 seeid="ap">Pome</ih1>
+<ih1 seeid="nosuch">Broken</ih1>
+<ih2 see="apple">pippin</ih2>
+<iref refid="ap"/>
+<iref refid="fr" pageref="begin"/>
+<iref refid="nosuch"/>
+<iref refid="fr" see="Zebra"/>
+<i2 refid="fr">pear</i2>
+<i3 refid="ap">Gala</i3>
+<i3 refid="fr">wrong level</i3>
+<i3>pear tree</i3>
+<i1></i1>
+</p></body><backm><index/></backm></gml:doc>

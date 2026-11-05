@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><body><h1 anchor="gml-h1-1">Indexed</h1>
+<p>Some text.
+<i1 id="fruit" anchor="fruit">fruit</i1>
+<i2 id="apple" anchor="apple">apple</i2>
+<i3 anchor="gml-i3-1">red</i3>
+<i1 pg="major" anchor="gml-i1-2">vegetables</i1>
+<i1 pg="start" anchor="gml-i1-3">zebra</i1>
+</p><p>More text.
+<i1 pg="end" anchor="gml-i1-4">zebra</i1>
+<i1 anchor="gml-i1-5">123 numbers</i1>
+<i1 pg="see chapter 2" anchor="gml-i1-6">textual</i1>
+<ih1 see="fruit" anchor="gml-ih1-1">produce</ih1>
+<ih1 seeid="apple" anchor="gml-ih1-2">pome</ih1>
+<iref refid="fruit" anchor="gml-iref-1"/><i1 anchor="gml-i1-7">Éclair</i1>
+<i1 anchor="gml-i1-8">eggs</i1>
+</p></body><backm><index><gml:index-entries title="Index"><gml:index-group letter=""><gml:index-entry level="1"><gml:index-term>123 numbers</gml:index-term><gml:pageref refid="gml-i1-5"/></gml:index-entry></gml:index-group><gml:index-group letter="E"><gml:index-entry level="1"><gml:index-term>Éclair</gml:index-term><gml:pageref refid="gml-i1-7"/></gml:index-entry><gml:index-entry level="1"><gml:index-term>eggs</gml:index-term><gml:pageref refid="gml-i1-8"/></gml:index-entry></gml:index-group><gml:index-group letter="F"><gml:index-entry level="1"><gml:index-term>fruit</gml:index-term><gml:pageref refid="fruit"/><gml:pageref refid="gml-iref-1"/><gml:index-entry level="2"><gml:index-term>apple</gml:index-term><gml:pageref refid="apple"/><gml:index-entry level="3"><gml:index-term>red</gml:index-term><gml:pageref refid="gml-i3-1"/></gml:index-entry></gml:index-entry></gml:index-entry></gml:index-group><gml:index-group letter="P"><gml:index-entry level="1"><gml:index-term>pome</gml:index-term><gml:see kind="see" label="See">fruit, apple</gml:see></gml:index-entry><gml:index-entry level="1"><gml:index-term>produce</gml:index-term><gml:see kind="see" label="See">fruit</gml:see></gml:index-entry></gml:index-group><gml:index-group letter="T"><gml:index-entry level="1"><gml:index-term>textual</gml:index-term><gml:pageref refid="gml-i1-6" text="see chapter 2"/></gml:index-entry></gml:index-group><gml:index-group letter="V"><gml:index-entry level="1"><gml:index-term>vegetables</gml:index-term><gml:pageref refid="gml-i1-2" major="yes"/></gml:index-entry></gml:index-group><gml:index-group letter="Z"><gml:index-entry level="1"><gml:index-term>zebra</gml:index-term><gml:pageref refid="gml-i1-3" range="start"/><gml:pageref refid="gml-i1-4" range="end"/></gml:index-entry></gml:index-group></gml:index-entries></index></backm></gdoc></gml:doc>

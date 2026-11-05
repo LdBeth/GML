@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- the figure list: only figures with a figcap are numbered and listed;
+     the caption text drops footnotes and index terms, keeps highlights -->
+<gml:doc xmlns:gml="urn:x-gml:canonical"><frontm><figlist/></frontm><body><fig id="a" frame="rule"><xmp xml:space="preserve">code
+</xmp><figcap>The <hp1>first</hp1> figure<fn>a note</fn><i1>figures</i1></figcap>
+</fig><fig><figcap>
+  Second   figure
+</figcap>
+<figdesc>with a description
+</figdesc></fig><fig id="plain">no caption: not numbered
+</fig><appendix><fig><figcap>In the appendix</figcap>
+</fig></appendix></body></gml:doc>

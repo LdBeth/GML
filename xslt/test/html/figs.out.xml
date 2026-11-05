@@ -1,0 +1,41 @@
+<!DOCTYPE HTML><html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="GML html.xsl">
+<title>Figures</title>
+<link rel="stylesheet" href="gml.css">
+</head>
+<body class="gml">
+<main class="gml-doc">
+<article class="gml-gdoc">
+<section class="gml-body">
+<h1 id="figs" class="gml-h1">Figures</h1>
+<figure id="box" class="gml-fig gml-frame-box">
+<div class="gml-figbody">boxed content
+</div>
+<figcaption><span class="gml-figcap"><span class="gml-num">Figure&nbsp;1.</span> A boxed figure</span><span class="gml-figdesc" style="display: block">Its description.
+</span></figcaption></figure>
+<figure id="gml-fig-2" class="gml-fig gml-frame-rule gml-place-top gml-width-column">
+<div class="gml-figbody">ruled content
+</div>
+<figcaption><span class="gml-figcap"><span class="gml-num">Figure&nbsp;2.</span> A ruled figure</span></figcaption></figure>
+<figure id="gml-fig-3" class="gml-fig gml-frame-none gml-place-bottom gml-width-page">
+<div class="gml-figbody">plain content
+</div></figure>
+<figure id="gml-fig-4" class="gml-fig gml-frame-char" data-frame="*">
+<div class="gml-frame-chars" aria-hidden="true">********************************************************************************************************************************************************************************************************</div>
+<div class="gml-figbody">starred frame
+</div>
+<div class="gml-frame-chars" aria-hidden="true">********************************************************************************************************************************************************************************************************</div>
+<figcaption><span class="gml-figcap"><span class="gml-num">Figure&nbsp;3.</span> A character frame</span></figcaption></figure>
+<pre class="gml-xmp">  verbatim &lt;code&gt; &amp; stuff
+    indented
+
+last line
+</pre>
+<p>See <a class="gml-figref" href="#box">Figure&nbsp;1</a> and <a class="gml-figref" href="#box">Figure&nbsp;1</a> and <a class="gml-hdref" href="#figs">“Figures”</a>.
+</p></section></article>
+</main>
+</body>
+</html>

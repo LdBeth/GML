@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><body><h1 anchor="gml-h1-1">State hints</h1>
+<p>Normal text, then
+<gml:scope kind="block" in="4ch"><gml:br break="yes" cause="in"/>indented in the middle of a paragraph
+<gml:scope kind="inline" font="hi1">and a font change.
+</gml:scope></gml:scope></p><gml:scope kind="block" in="4ch"><gml:scope kind="inline" font="hi1"><p>The next paragraph inherits both.
+</p><ul nest="1"><li>an item
+<gml:scope kind="block" in="6ch"><gml:br break="yes" cause="in"/>indented further inside the item
+</gml:scope></li><gml:scope kind="block" in="6ch"><li>the next item
+</li></gml:scope></ul></gml:scope></gml:scope><gml:scope kind="block" in="6ch"><p>Font back,
+<gml:scope kind="block" in="0"><gml:br break="yes" cause="in"/>margin back.
+</gml:scope></p></gml:scope><xmp xml:space="preserve"><gml:scope kind="block" fill="no" align="left">  verbatim
+</gml:scope></xmp><gml:scope kind="block" fill="no" align="left" tp="5ch 10ch"><p>no fill
+<gml:scope kind="block" tp="5ch 10ch 20ch">with tabs
+</gml:scope></p></gml:scope><gml:scope kind="block" tp="5ch 10ch 20ch"><p>filled again
+</p><gml:scope kind="inline" hy="on"><p>hyphenation on
+<gml:in left="1" unit="i" for="2" for-unit="i" temporary="yes" break="yes"/>temporary indent: an event
+</p></gml:scope></gml:scope></body></gdoc></gml:doc>

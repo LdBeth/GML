@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><body><h1 anchor="gml-h1-1">Text elements</h1>
+<p>A paragraph with <hp0>normal</hp0>, <hp1>italic</hp1>, <hp2>bold</hp2>
+and <hp3>bold italic</hp3> text, a citation <cit>The Book</cit>,
+and <q>a quote with <q>a nested quote</q> inside</q>.
+</p><lq><p>A long quotation.
+</p></lq><pc>A paragraph continuation.
+</pc><note>Mind the gap.
+</note><p>Special characters: &lt;tag&gt; &amp; "quotes".
+</p><p>Processed for html only.
+</p></body></gdoc></gml:doc>

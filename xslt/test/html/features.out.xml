@@ -1,0 +1,117 @@
+<!DOCTYPE HTML><html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="GML html.xsl">
+<title>Test</title>
+<link rel="stylesheet" href="gml.css">
+</head>
+<body class="gml">
+<main class="gml-doc">
+<article class="gml-gdoc">
+<section class="gml-frontm">
+<header class="gml-titlep">
+<h1 class="gml-title">Test</h1></header>
+<nav class="gml-toc">
+<h1 class="gml-toc-title">Table of Contents</h1>
+<ol class="gml-toc-list">
+<li class="gml-toc-entry gml-toc-l1 gml-toc-body"><a href="#intro"><span class="gml-num">1.0</span> Introduction</a>
+<ol class="gml-toc-list">
+<li class="gml-toc-entry gml-toc-l2 gml-toc-body"><a href="#sub"><span class="gml-num">1.1</span> Sub <em class="gml-hp1">section</em></a>
+<ol class="gml-toc-list">
+<li class="gml-toc-entry gml-toc-l3 gml-toc-body"><a href="#gml-h3-1"><span class="gml-num">1.1.1</span> Third</a>
+<ol class="gml-toc-list">
+<li class="gml-toc-entry gml-toc-l4 gml-toc-body"><a href="#gml-h4-1"><span class="gml-num">1.1.1.1</span> Fourth</a></li></ol></li></ol></li></ol></li>
+<li class="gml-toc-entry gml-toc-l1 gml-toc-appendix"><a href="#appa"><span class="gml-num">Appendix A.</span> Extra</a>
+<ol class="gml-toc-list">
+<li class="gml-toc-entry gml-toc-l2 gml-toc-appendix"><a href="#gml-h2-2"><span class="gml-num">A.1</span> Appsub</a></li></ol></li></ol></nav>
+<nav class="gml-figlist">
+<h1 class="gml-figlist-title">List of Illustrations</h1>
+<ol class="gml-figlist-list">
+<li class="gml-figlist-entry"><a href="#f1"><span class="gml-num">Figure&nbsp;1</span> First fig</a></li>
+<li class="gml-figlist-entry"><a href="#gml-fig-2"><span class="gml-num">Figure&nbsp;2</span> Second</a></li></ol></nav>
+<section class="gml-preface">
+<h1 class="gml-section-title">Preface</h1>
+<h1 id="gml-h1-1" class="gml-h1">Preface head</h1>
+<p>Pre.
+</p></section></section>
+<section class="gml-body">
+<h1 id="intro" class="gml-h1"><span class="gml-num">1.0</span> Introduction</h1>
+<p>Text. More<sup class="gml-fn-callout"><a href="#gml-fn-2" id="gml-fn-2-ref" role="doc-noteref">2</a></sup>
+See <sup class="gml-fnref"><a href="#fa" role="doc-noteref" id="fa-ref">1</a></sup>.
+</p>
+<ol class="gml-ol gml-nest-1">
+<li id="l1"><span class="gml-label">1.</span> one
+</li>
+<li><span class="gml-label">2.</span> two
+<ol class="gml-ol gml-nest-2">
+<li id="l2"><span class="gml-label">a.</span> two-a
+<ul class="gml-ul gml-nest-1">
+<li><span class="gml-label">•</span> bullet
+<ol class="gml-ol gml-nest-3">
+<li id="l3"><span class="gml-label">1)</span> deep
+</li></ol></li></ul></li></ol></li></ol>
+<p>Ref <a class="gml-liref" href="#l2">a.</a> <a class="gml-pageref" href="#l2" title="on page">§</a> and <span class="gml-liref gml-unresolved">LI nope unknown</span> and <a class="gml-hdref" href="#sub">“Sub <em class="gml-hp1">section</em>”</a> <a class="gml-pageref" href="#sub" title="on page">§</a> <span class="gml-hdref gml-unresolved">Heading bad unknown</span>.
+</p>
+<h2 id="sub" class="gml-h2"><span class="gml-num">1.1</span> Sub <em class="gml-hp1">section</em></h2>
+<figure id="f1" class="gml-fig gml-frame-rule">
+<div class="gml-figbody">body
+</div>
+<figcaption><span class="gml-figcap"><span class="gml-num">Figure&nbsp;1.</span> First fig</span></figcaption></figure>
+<figure id="gml-fig-2" class="gml-fig gml-frame-rule">
+<div class="gml-figbody"></div>
+<figcaption><span class="gml-figcap"><span class="gml-num">Figure&nbsp;2.</span> Second</span><span class="gml-figdesc" style="display: block">desc
+</span></figcaption></figure>
+<p><a class="gml-figref" href="#f1">Figure&nbsp;1</a> <a class="gml-pageref" href="#f1" title="on page">§</a> <a class="gml-figref" href="#f1">Figure&nbsp;1</a> <a class="gml-pageref" href="#f1" title="on page">§</a> <span class="gml-figref gml-unresolved">Figure zz unknown</span>.
+<span class="gml-ix" id="ia"></span>
+<span class="gml-ix" id="ib"></span>
+<span class="gml-ix" id="gml-i3-1"></span>
+<span class="gml-ix" id="gml-i1-2"></span>
+<span class="gml-ix" id="gml-ih1-1"></span>
+<span class="gml-ix" id="gml-ih1-2"></span>
+<span class="gml-ix" id="gml-iref-1"></span><span class="gml-ix" id="gml-iref-2"></span><span class="gml-ix" id="gml-i2-2"></span>
+</p>
+<div class="gml-scope" style="margin-left: 5ch">
+<p>indented
+<span class="gml-scope gml-font gml-font-hi1" data-font="hi1">font
+</span></p>
+<div class="gml-scope gml-font gml-font-hi1" data-font="hi1">
+<h3 id="gml-h3-1" class="gml-h3"><span class="gml-num">1.1.1</span> Third</h3>
+<h4 id="gml-h4-1" class="gml-h4"><span class="gml-num">1.1.1.1</span> Fourth</h4>
+<h5 id="gml-h5-1" class="gml-h5">Fifth</h5></div></div></section>
+<div class="gml-scope" style="margin-left: 5ch">
+<div class="gml-scope gml-font gml-font-hi1" data-font="hi1">
+<section class="gml-appendix">
+<h1 id="appa" class="gml-h1"><span class="gml-num">Appendix A.</span> Extra</h1>
+<h2 id="gml-h2-2" class="gml-h2"><span class="gml-num">A.1</span> Appsub</h2></section>
+<section class="gml-backm">
+<section class="gml-index">
+<h1 class="gml-index-title">Index</h1>
+<div class="gml-index-group">
+<h2 class="gml-index-letter">A</h2>
+<ul class="gml-index-list">
+<li class="gml-index-entry gml-index-l1"><span class="gml-index-term">Apple</span>, <a class="gml-index-ref" href="#ia">1</a>, <a class="gml-index-ref" href="#gml-iref-1">2</a>
+<ul class="gml-index-list">
+<li class="gml-index-entry gml-index-l2"><span class="gml-index-term">Green</span>, <a class="gml-index-ref" href="#gml-i2-2">1</a></li>
+<li class="gml-index-entry gml-index-l2"><span class="gml-index-term">Red</span>, <a class="gml-index-ref" href="#ib">1</a>, <a class="gml-index-ref" href="#gml-iref-2">2</a>
+<ul class="gml-index-list">
+<li class="gml-index-entry gml-index-l3"><span class="gml-index-term">Deep</span>, <a class="gml-index-ref" href="#gml-i3-1">1</a></li></ul></li></ul></li></ul></div>
+<div class="gml-index-group">
+<h2 class="gml-index-letter">B</h2>
+<ul class="gml-index-list">
+<li class="gml-index-entry gml-index-l1"><span class="gml-index-term">banana</span>, <strong class="gml-major"><a class="gml-index-ref" href="#gml-i1-2">1</a></strong></li></ul></div>
+<div class="gml-index-group">
+<h2 class="gml-index-letter">F</h2>
+<ul class="gml-index-list">
+<li class="gml-index-entry gml-index-l1"><span class="gml-index-term">Fruit</span> <span class="gml-see gml-see"><em class="gml-see-label">See</em> Apple</span></li></ul></div>
+<div class="gml-index-group">
+<h2 class="gml-index-letter">P</h2>
+<ul class="gml-index-list">
+<li class="gml-index-entry gml-index-l1"><span class="gml-index-term">Pome</span> <span class="gml-see gml-see"><em class="gml-see-label">See</em> Apple</span></li></ul></div></section></section></div></div></article>
+<section class="gml-footnotes" role="doc-endnotes">
+<ol class="gml-footnote-list">
+<li id="fa" class="gml-footnote"><span class="gml-fn-num"><a href="#fa-ref" role="doc-backlink">1</a></span> Footnote with id.</li>
+<li id="gml-fn-2" class="gml-footnote"><span class="gml-fn-num"><a href="#gml-fn-2-ref" role="doc-backlink">2</a></span> Plain footnote.</li></ol></section>
+</main>
+</body>
+</html>

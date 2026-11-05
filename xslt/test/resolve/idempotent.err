@@ -1,0 +1,6 @@
+resolve: figref refid="nocap": the figure has no figcap
+resolve: figref refid="intro": refers to a h1, not a figure
+resolve: liref refid="bullet": not an ordered list item
+resolve: liref refid="missing": no such id
+resolve: fnref refid="nofn": no such id
+resolve: hdref refid="f2": refers to a fig, not a heading

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><body><h1 anchor="gml-h1-1">Chapter one</h1>
+<p>Text with a footnote.<fn num="1" anchor="gml-fn-1" callout="yes"><gml:num>1</gml:num>The first footnote.</fn>
+And one with an id<fn id="named" num="2" anchor="named" callout="no"><gml:num>2</gml:num>A named footnote.</fn> called out as <fnref refid="named" resolved="yes" target="fn" num="2">2</fnref>
+and again <fnref refid="named" resolved="yes" target="fn" num="2">2</fnref>.
+<gml:fn>An unnumbered control word footnote.
+</gml:fn></p><h1 anchor="gml-h1-2">Chapter two</h1>
+<p>More text.<fn num="3" anchor="gml-fn-3" callout="yes"><gml:num>3</gml:num>The third footnote, with <hp2>bold</hp2> text.</fn>
+</p></body><appendix><h1 num="A" anchor="gml-h1-3"><gml:num>Appendix A.</gml:num>Appendix</h1>
+<p>Appendix text.<fn num="4" anchor="gml-fn-4" callout="yes"><gml:num>4</gml:num>An appendix footnote.</fn>
+</p></appendix></gdoc></gml:doc>

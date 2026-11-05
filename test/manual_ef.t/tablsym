@@ -1,0 +1,19 @@
+.se state 'STATE
+.se capital 'CAPITAL
+.ef
+.se state 'Alabama
+.se capital 'Montgomery
+.ef
+.se state 'Alaska
+.se capital 'Juneau
+.ef
+.se state 'Arizona
+.se capital 'Phoenix
+.ef
+.se state 'Arkansas
+.se capital 'Little Rock
+.ef
+.se state 'California
+.se capital 'Sacramento
+.se bxoff = off
+.cs 1 include

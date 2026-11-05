@@ -1,0 +1,75 @@
+<!DOCTYPE HTML><html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="GML html.xsl">
+<title>Document Sections</title>
+<link rel="stylesheet" href="gml.css">
+</head>
+<body class="gml">
+<main class="gml-doc">
+<article class="gml-gdoc">
+<p class="gml-sec">Internal Use Only</p>
+<section class="gml-frontm">
+<header class="gml-titlep">
+<h1 class="gml-title">Document Sections</h1>
+<h1 class="gml-title">A Second Title Line</h1>
+<p class="gml-docnum">GH00-0001</p>
+<p class="gml-date">June 13th, 1986</p>
+<p class="gml-author">A. Author</p>
+<p class="gml-author">B. Writer</p>
+<address class="gml-address">
+<div class="gml-aline">1 Main Street</div>
+<div class="gml-aline">Anytown</div></address></header>
+<section class="gml-abstract">
+<h1 class="gml-section-title">Abstract</h1>
+<p>The abstract.
+</p></section>
+<section class="gml-preface">
+<h1 class="gml-section-title">Preface</h1>
+<p>The preface.
+</p></section>
+<nav class="gml-toc">
+<h1 class="gml-toc-title">Table of Contents</h1>
+<ol class="gml-toc-list">
+<li class="gml-toc-entry gml-toc-l0 gml-toc-body"><a href="#part1">Part One</a>
+<ol class="gml-toc-list">
+<li class="gml-toc-entry gml-toc-l1 gml-toc-body"><a href="#intro">Introduction</a>
+<ol class="gml-toc-list">
+<li class="gml-toc-entry gml-toc-l2 gml-toc-body"><a href="#gml-h2-1">Second level</a>
+<ol class="gml-toc-list">
+<li class="gml-toc-entry gml-toc-l3 gml-toc-body"><a href="#gml-h3-1">Third level</a>
+<ol class="gml-toc-list">
+<li class="gml-toc-entry gml-toc-l4 gml-toc-body"><a href="#gml-h4-1">Fourth level</a></li></ol></li></ol></li></ol></li>
+<li class="gml-toc-entry gml-toc-l1 gml-toc-appendix"><a href="#gml-h1-2"><span class="gml-num">Appendix A.</span> First appendix</a>
+<ol class="gml-toc-list">
+<li class="gml-toc-entry gml-toc-l2 gml-toc-appendix"><a href="#gml-h2-2">Appendix section</a></li></ol></li>
+<li class="gml-toc-entry gml-toc-l1 gml-toc-backm"><a href="#gml-h1-3">Glossary</a></li></ol></li></ol></nav>
+<nav class="gml-figlist">
+<h1 class="gml-figlist-title">List of Illustrations</h1>
+<ol class="gml-figlist-list">
+<li class="gml-figlist-entry"><a href="#gml-fig-1"><span class="gml-num">Figure&nbsp;1</span> The only figure</a></li></ol></nav></section>
+<section class="gml-body">
+<h1 id="part1" class="gml-h0">Part One</h1>
+<h1 id="intro" class="gml-h1">Introduction</h1>
+<p>Text.
+</p>
+<h2 id="gml-h2-1" class="gml-h2">Second level</h2>
+<h3 id="gml-h3-1" class="gml-h3">Third level</h3>
+<h4 id="gml-h4-1" class="gml-h4">Fourth level</h4>
+<h5 id="gml-h5-1" class="gml-h5">Fifth level</h5>
+<h6 id="gml-h6-1" class="gml-h6">Sixth level</h6>
+<figure id="gml-fig-1" class="gml-fig gml-frame-rule">
+<div class="gml-figbody">picture
+</div>
+<figcaption><span class="gml-figcap"><span class="gml-num">Figure&nbsp;1.</span> The only figure</span></figcaption></figure></section>
+<section class="gml-appendix">
+<h1 id="gml-h1-2" class="gml-h1"><span class="gml-num">Appendix A.</span> First appendix</h1>
+<h2 id="gml-h2-2" class="gml-h2">Appendix section</h2></section>
+<section class="gml-backm">
+<h1 id="gml-h1-3" class="gml-h1">Glossary</h1>
+<section class="gml-index">
+<h1 class="gml-index-title">Index</h1></section></section></article>
+</main>
+</body>
+</html>

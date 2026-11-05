@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- index: i1/i2/i3 context, refid, ih print/see/seeid, iref, pg values,
+     merging of equal terms, collation (case and accents), symbol group --><gml:doc xmlns:gml="urn:x-gml:canonical"><body><p>
+<i1 id="fr" anchor="fr">fruit</i1>
+<i2 id="ap" anchor="ap">apple</i2>
+<i3 anchor="gml-i3-1">Cox</i3>
+<i3 anchor="gml-i3-2">Bramley</i3>
+<i2 anchor="gml-i2-2">Banana</i2>
+<i1 pg="major" anchor="gml-i1-2">Zebra</i1>
+<i1 anchor="gml-i1-3">éclair</i1>
+<i1 anchor="gml-i1-4">Eagle</i1>
+<i1 anchor="gml-i1-5">fruit</i1>
+<i2 anchor="gml-i2-3">apple</i2>
+<i1 pg="start" anchor="gml-i1-6">  multi
+  word  </i1>
+<i1 pg="end" anchor="gml-i1-7">multi word</i1>
+<i1 pgref="see chapter 3" anchor="gml-i1-8">Archive</i1>
+<i1 anchor="gml-i1-9">3270 terminal</i1>
+<i1 anchor="gml-i1-10">_underscore</i1>
+<ih1 print="IBM" anchor="gml-ih1-1">ibm</ih1>
+<i2 anchor="gml-i2-4">products</i2>
+<ih1 see="fruit" anchor="gml-ih1-2">Orchard</ih1>
+<ih1 seeid="ap" anchor="gml-ih1-3">Pome</ih1>
+<ih1 seeid="nosuch" anchor="gml-ih1-4">Broken</ih1>
+<ih2 see="apple" anchor="gml-ih2-1">pippin</ih2>
+<iref refid="ap" anchor="gml-iref-1"/>
+<iref refid="fr" pageref="begin" anchor="gml-iref-2"/>
+<iref refid="nosuch" anchor="gml-iref-3"/>
+<iref refid="fr" see="Zebra" anchor="gml-iref-4"/>
+<i2 refid="fr" anchor="gml-i2-5">pear</i2>
+<i3 refid="ap" anchor="gml-i3-3">Gala</i3>
+<i3 refid="fr" anchor="gml-i3-4">wrong level</i3>
+<i3 anchor="gml-i3-5">pear tree</i3>
+<i1 anchor="gml-i1-11"/>
+</p></body><backm><index><gml:index-entries title="Index"><gml:index-group letter=""><gml:index-entry level="1"><gml:index-term>_underscore</gml:index-term><gml:pageref refid="gml-i1-10"/></gml:index-entry><gml:index-entry level="1"><gml:index-term>3270 terminal</gml:index-term><gml:pageref refid="gml-i1-9"/></gml:index-entry></gml:index-group><gml:index-group letter="A"><gml:index-entry level="1"><gml:index-term>Archive</gml:index-term><gml:pageref refid="gml-i1-8" text="see chapter 3"/></gml:index-entry></gml:index-group><gml:index-group letter="B"><gml:index-entry level="1"><gml:index-term>Broken</gml:index-term><gml:see kind="see" label="See">?</gml:see><gml:index-entry level="2"><gml:index-term>pippin</gml:index-term><gml:see kind="see" label="See">apple</gml:see></gml:index-entry></gml:index-entry></gml:index-group><gml:index-group letter="E"><gml:index-entry level="1"><gml:index-term>Eagle</gml:index-term><gml:pageref refid="gml-i1-4"/></gml:index-entry><gml:index-entry level="1"><gml:index-term>éclair</gml:index-term><gml:pageref refid="gml-i1-3"/></gml:index-entry></gml:index-group><gml:index-group letter="F"><gml:index-entry level="1"><gml:index-term>fruit</gml:index-term><gml:pageref refid="fr"/><gml:pageref refid="gml-i1-5"/><gml:pageref refid="gml-iref-2" range="start"/><gml:see kind="see-also" label="See also">Zebra</gml:see><gml:index-entry level="2"><gml:index-term>apple</gml:index-term><gml:pageref refid="ap"/><gml:pageref refid="gml-i2-3"/><gml:pageref refid="gml-iref-1"/><gml:index-entry level="3"><gml:index-term>Bramley</gml:index-term><gml:pageref refid="gml-i3-2"/></gml:index-entry><gml:index-entry level="3"><gml:index-term>Cox</gml:index-term><gml:pageref refid="gml-i3-1"/></gml:index-entry><gml:index-entry level="3"><gml:index-term>Gala</gml:index-term><gml:pageref refid="gml-i3-3"/></gml:index-entry></gml:index-entry><gml:index-entry level="2"><gml:index-term>Banana</gml:index-term><gml:pageref refid="gml-i2-2"/></gml:index-entry><gml:index-entry level="2"><gml:index-term>pear</gml:index-term><gml:pageref refid="gml-i2-5"/><gml:index-entry level="3"><gml:index-term>pear tree</gml:index-term><gml:pageref refid="gml-i3-5"/></gml:index-entry></gml:index-entry></gml:index-entry></gml:index-group><gml:index-group letter="I"><gml:index-entry level="1"><gml:index-term>IBM</gml:index-term><gml:index-entry level="2"><gml:index-term>products</gml:index-term><gml:pageref refid="gml-i2-4"/></gml:index-entry></gml:index-entry></gml:index-group><gml:index-group letter="M"><gml:index-entry level="1"><gml:index-term>multi word</gml:index-term><gml:pageref refid="gml-i1-6" range="start"/><gml:pageref refid="gml-i1-7" range="end"/></gml:index-entry></gml:index-group><gml:index-group letter="O"><gml:index-entry level="1"><gml:index-term>Orchard</gml:index-term><gml:see kind="see" label="See">fruit</gml:see></gml:index-entry></gml:index-group><gml:index-group letter="P"><gml:index-entry level="1"><gml:index-term>Pome</gml:index-term><gml:see kind="see" label="See">fruit, apple</gml:see></gml:index-entry></gml:index-group><gml:index-group letter="Z"><gml:index-entry level="1"><gml:index-term>Zebra</gml:index-term><gml:pageref refid="gml-i1-2" major="yes"/></gml:index-entry></gml:index-group></gml:index-entries></index></backm></gml:doc>

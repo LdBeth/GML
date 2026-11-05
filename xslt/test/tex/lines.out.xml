@@ -1,0 +1,34 @@
+\input gml
+\gmlbegindocument%
+\gmlbeginlines{ce}{n=2,break=yes}After this control word is processed,
+the next two lines are centered.\gmlendlines{}
+However, this one is not.
+\gmlbeginlines{ce}{n=1,break=yes}Chapter 1\gmlendlines{}
+\gmlbeginlines{ri}{n=on,break=yes}These lines must
+be flush right.
+\gmlendlines{}\gmlhint{in}{left=5,unit=ch,break=yes}%
+\gmlbeginlines{in}{n=1,after=yes,left=0,unit=ch,break=no}Subsequent text will be indented,\gmlendlines{}
+except for the first line.
+\gmlhint{in}{left=0,unit=ch,break=yes}%
+\gmlbeginlines{in}{n=2,left=2,unit=ch,delta=+2,break=yes}temporary one
+temporary two\gmlendlines{}
+permanent
+\gmlbeginlines{in}{n=1,after=yes,left=0,unit=ch,break=yes}old margin\gmlendlines{}
+\gmlbeginlines{in}{n=1,left=3,unit=ch,delta=+3,break=no}temporary\gmlendlines{}
+back
+\gmlhint{in}{left=0,unit=ch,break=yes}%
+\gmlbeginlines{il}{n=1,left=3,unit=mh,break=yes}first line indented\gmlendlines{}
+second line
+\gmlbeginlines{us}{n=3,break=no}\gmlusword{Do} \gmlusword{not}
+\gmlusword{destroy} \gmlusword{this} \gmlusword{letter}
+\gmlusword{until}\gmlendlines{}
+its expiration date.
+\gmlbeginlines{ce}{n=2,break=yes,more=yes}before \gmlendlines{}\gmlstart{hp}{}\gmlbeginlines{ce}{cont=yes,more=yes}a phrase\gmlendlines{}\gmlend{hp}\gmlbeginlines{ce}{cont=yes} after
+and a second line\gmlendlines{}
+outside
+\gmlhint{in}{left=1,unit=i,for=2,for-unit=i,temporary=yes,break=yes}%
+not counted: the amount is not in lines
+not centered
+%
+\gmlenddocument
+\bye

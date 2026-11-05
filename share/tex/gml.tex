@@ -1,0 +1,1088 @@
+% gml.tex - plain TeX macros for the GML backend (xslt/tex.xsl).
+%
+% Works with Knuth's tex (DVI) and pdftex in plain mode.  No LaTeX.
+% The document written by tex.xsl uses only these public commands:
+%
+%   \gmlbegindocument ... \gmlenddocument      around the whole document
+%   \gmlstart{NAME}{k=v,...} ... \gmlend{NAME}  every source element
+%       (h1, p, ol, gml:h, gml:fn ...).  \gmlstart opens a TeX group,
+%       stores the attribute list (\gmlattr{key}\macro reads it) and calls
+%       \gml@NAME@start; \gmlend calls \gml@NAME@end, closes the group and
+%       re-applies the formatting state (\gml@apply).  An element without
+%       a definition is shown as plain text (message once).
+%   \gmlhint{NAME}{k=v,...}       a DCF formatting hint (point event):
+%       break=yes calls \gml@break (\par), then \gml@hint@NAME.
+%   \gmlbeginlines{WORD}{k=v,...} ... \gmlendlines    a gml:lines scope
+%       (.ce .ri .us .up .uc .in/.ir after/for .il .un .rc *); handlers
+%       \gml@lines@WORD@pre (before the group) @begin @end @post (after).
+%   \gmlnum{label}                gml:num, dispatched on the current
+%       element: \gml@num@NAME{label} (h1: label+quad, li: hanging label,
+%       figcap: bold hanging label, fn: dropped - the mark is a key).
+%   \gmlanchor{name}              a page-reference target
+%   \gmlpageref{anchor}{when}{label}   when = always | auto
+%   \gmltocbegin{title} \gmltocentry{k=v}{num}{text}{page} \gmltocend
+%   \gmlfiglistbegin{title} \gmlfiglistentry{k=v}{label}{text}{page} \gmlfiglistend
+%   \gmlindexbegin{title} \gmlindexgroup{letter}
+%       \gmlindexentry{level}{term}{refs} \gmlindexend
+%       refs: \gmlindexfirst \gmlindexref{anchor}{major=,range=,text=}
+%             \gmlindexsep \gmlindexrangesep \gmlsee{kind}{label}{text}
+%   \gmlchar{codepoint}           any non-ASCII or TeX-special character
+%   \gmltabline{seg\gmltab seg...}  one input line holding tab characters
+%   \gmlusword \gmlupword \gmlucword {word}   words inside .us/.up/.uc
+%
+% Overriding: every internal macro is \gml@...; load your own file after
+% this one (a file gmllocal.tex on TEXINPUTS is \input automatically at
+% the end of this file), and use the helpers that need no @ catcode:
+%   \gmldefstart{h1}{...}  \gmldefend{h1}{...}  \gmldefhint{sp}{...}
+%   \gmldeflines{ce}{begin}{...}  \gmldefnum{li}#1{...}
+%   \gmldefchar{8364}{EUR}  \gmldeffont{hi1}{\sl}
+% or \catcode`\@=11 and redefine \gml@... directly.
+%
+% Formatting state.  DCF control words are state (set until changed),
+% and so are \leftskip & co. in TeX.  Hints set GLOBAL hint state
+% (\gml@hintleft, \gml@hintright, \gml@hintll, fill/align, font, keep);
+% elements set LOCAL element state (\gml@elemleft ... and font/fill
+% overrides).  \gml@apply combines them: margins add (element indent +
+% DCF .in), for fill mode and font the most recent setting wins (a
+% global clock stamps each setting), so a .bf inside a paragraph lives
+% on after the paragraph and a :hp1 inside a .bf region is still italic.
+%
+% DCF units (\gml@dimof{n}{unit}\register): ch = width of "0" in the
+% initial font (cmr10: 5pt); line = \baselineskip; i cm mm; pt = DCF
+% (pica) points = 1/72in = TeX bp; dd = Didot points; mh/mv = em of the
+% current font (\fontdimen6; DCF's em-height is the font size, so mv is
+% also the em, not the ex-height); dh/dv = device units of 1/240in (3820
+% pels).  A mixed sum ("4ch+1i", unit=mixed) is parsed term by term.
+%
+% Page references: \gmlanchor writes \gml@ap{name}{\folio} to
+% \jobname.ref at shipout; the file is read by \gmlbegindocument, so
+% references are right on the second run ("??" on the first).  A
+% when=auto reference also writes its own page (\gml@rp{n}{\folio}) and
+% prints " label page" only if the target is on another page (on the
+% first run it always prints).  \gmlenddocument re-reads the new file
+% and says when TeX must be run again.
+%
+% Non-ASCII: tex.xsl writes pure ASCII; every character outside
+% printable ASCII and every TeX special except $ & # % (which become \$
+% \& \# \%) is \gmlchar{decimal code point}.  The table below covers
+% Latin-1, Latin Extended-A letters with plain accents, typographic
+% punctuation, a few symbols; anything else prints "?" with a message.
+% In a typewriter font (\fam=\ttfam) the ASCII specials print as
+% themselves.
+\ifx\gmlbegindocument\undefined\else\endinput\fi
+\chardef\gmlatcode=\catcode`\@
+\catcode`\@=11
+
+% ---- registers ---------------------------------------------------------
+\newdimen\gml@chwidth \newdimen\gml@devunit
+\newdimen\gml@elemleft \newdimen\gml@elemright \newdimen\gml@elemhsize
+\newdimen\gml@hintleft \newdimen\gml@hintright \newdimen\gml@hintll
+\newdimen\gml@defaulthsize
+\newdimen\gml@dima \newdimen\gml@dimb \newdimen\gml@dimc \newdimen\gml@dimd
+\newdimen\gml@listind \newdimen\gml@capind
+\newdimen\gml@tabpos \newdimen\gml@ofdim
+\newdimen\gml@bxleft \newdimen\gml@bxright
+\newdimen\gml@basebs
+\newdimen\gml@pagelength \newdimen\gml@pagewidth
+\newdimen\gml@topmargin \newdimen\gml@botmargin \newdimen\gml@leftmargin
+\newcount\gml@clock \newcount\gml@efontstamp \newcount\gml@hfontstamp
+\newcount\gml@efillstamp \newcount\gml@hfillstamp
+\newcount\gml@cnta \newcount\gml@cntb \newcount\gml@refcount
+\newcount\gml@qdepth \newcount\gml@tabidx \newcount\gml@ofstate
+\newcount\gmlindexcolumns
+\newbox\gml@box \newbox\gml@figbox \newbox\gml@dtbox
+\newbox\gml@rhodd \newbox\gml@rheven \newbox\gml@rfodd \newbox\gml@rfeven
+\newbox\gml@fnleader \newbox\gml@ixbox
+\newwrite\gml@refout \newread\gml@in
+\newif\ifgml@plainpage \newif\ifgml@keep \newif\ifgml@aftertitle
+\newif\ifgml@userrh \newif\ifgml@userrf \newif\ifgml@rhsup \newif\ifgml@rfsup
+\newif\ifgml@nofolio \newif\ifgml@refschanged \newif\ifgml@reffile
+\newif\ifgml@tabfound \newif\ifgml@tabfirst \newif\ifgml@rcon
+\newif\ifgml@intitlep \newif\ifgml@preserve \newif\ifgml@paoff
+\newif\ifgml@found \newif\ifgml@pnpref \newif\ifgml@bxfirst
+\newif\ifgml@userleader \newif\ifgml@inhead
+
+% ---- constants -----------------------------------------------------------
+\def\gml@yes{yes} \def\gml@no{no} \def\gml@mixedstr{mixed}
+\def\gml@onstr{on} \def\gml@offstr{off} \def\gml@autostr{auto}
+\def\gml@inlinestr{inline} \def\gml@boxstr{box} \def\gml@rulestr{rule}
+\def\gml@nonestr{none} \def\gml@canstr{can} \def\gml@charstr{char}
+\def\gml@cancelstr{cancel} \def\gml@supstr{sup} \def\gml@resstr{res}
+\def\gml@resetstr{reset} \def\gml@setstr{set} \def\gml@addstr{add}
+\def\gml@delstr{del} \def\gml@defaultstr{default} \def\gml@bystr{by}
+\def\gml@normalstr{normal} \def\gml@oddstr{odd} \def\gml@evenstr{even}
+\def\gml@leaderstr{leader} \def\gml@topstr{top} \def\gml@offnostr{offno}
+\def\gml@romanstr{roman} \def\gml@arabicstr{arabic} \def\gml@prefstr{pref}
+\def\gml@nobindstr{nobind}
+\def\gml@nokeymark{\gml@nokey}
+\def\gml@end{\gml@end}
+
+% ---- fonts ----------------------------------------------------------------
+\font\gml@tenbi=cmbxti10
+\font\gml@hdfontA=cmbx12 scaled\magstep4
+\font\gml@hdfontB=cmbx12 scaled\magstep3
+\font\gml@hdfontC=cmbx12 scaled\magstep2
+\font\gml@hdfontD=cmbx12
+\font\gml@titlefnt=cmbx12 scaled\magstep5
+\def\gml@bi{\fam\m@ne\gml@tenbi}
+\def\gmldeffont#1{\expandafter\def\csname gml@font@#1\endcsname}
+% DCF / Starter Set font names (SH35-0050 Figure 6, page printers)
+\gmldeffont{hi0}{\rm}  \gmldeffont{hi1}{\it}
+\gmldeffont{hi2}{\bf}  \gmldeffont{hi3}{\gml@bi}
+\gmldeffont{hd0}{\fam\m@ne\gml@hdfontA}  \gmldeffont{hd1}{\fam\m@ne\gml@hdfontA}
+\gmldeffont{hd2}{\fam\m@ne\gml@hdfontB}  \gmldeffont{hd3}{\fam\m@ne\gml@hdfontC}
+\gmldeffont{hd4}{\fam\m@ne\gml@hdfontD}  \gmldeffont{hd5}{\bf}
+\gmldeffont{hd6}{\gml@bi}
+\gmldeffont{title}{\fam\m@ne\gml@titlefnt}
+\gmldeffont{normal}{\rm} \gmldeffont{roman}{\rm} \gmldeffont{bold}{\bf}
+\gmldeffont{italic}{\it} \gmldeffont{bolditalic}{\gml@bi}
+\gmldeffont{mono}{\tt} \gmldeffont{xmp}{\tt} \gmldeffont{slanted}{\sl}
+\gmldeffont{rh}{\rm} \gmldeffont{rf}{\rm} \gmldeffont{figcap}{\rm}
+\def\gml@hi#1{\csname gml@font@hi#1\endcsname}
+
+% ---- page layout (DCF page printer defaults, one column) ----------------
+\gml@pagelength=11in \gml@pagewidth=8.5in
+\gml@topmargin=1in \gml@botmargin=1.1in \gml@leftmargin=1in
+\hsize=6.5in \gml@defaulthsize=\hsize \gml@elemhsize=\hsize
+\def\gml@layout{%
+  \global\vsize\gml@pagelength \global\advance\vsize-\gml@topmargin
+  \global\advance\vsize-\gml@botmargin
+  \global\voffset\gml@topmargin \global\advance\voffset-1in
+  \global\hoffset\gml@leftmargin \global\advance\hoffset-1in
+  \ifx\pdfpagewidth\undefined\else
+    \global\pdfpagewidth\gml@pagewidth \global\pdfpageheight\gml@pagelength\fi}
+\gml@layout
+\parindent=\z@ \parskip=\z@
+\gml@basebs=12pt \baselineskip=\gml@basebs
+\tolerance=1000 \emergencystretch=2em \hbadness=5000 \vbadness=5000
+\hyphenpenalty=\@M   % DCF: hyphenation is off until .hy on
+\raggedbottom
+\setbox0\hbox{\tenrm 0}\gml@chwidth=\wd0
+\gml@devunit=1in \divide\gml@devunit by 240
+\gmlindexcolumns=2
+\def\gmltitlealign{right}     % SYSVART: right | left | center
+\def\gmldocnumlabel{Document Number}
+\def\gmlnotelabel{Note:}
+\def\gmlabstracttitle{Abstract}
+\def\gmlprefacetitle{Preface}
+\def\gml@titletop{2in}
+\def\gml@titlegapdim{2in}
+\def\gml@colsep{2em}
+\def\gml@tocpage{2.5em}
+\def\gml@figpad{4pt}
+\def\gml@rulesep{3pt}
+\def\gml@folioprefix{}
+
+% ---- utilities -------------------------------------------------------------
+\def\gml@warnonce#1#2{\expandafter\ifx\csname gml@w@#1\endcsname\relax
+  \immediate\write16{GML: #2}\expandafter\gdef\csname gml@w@#1\endcsname{}\fi}
+\def\gml@notimpl#1{\gml@warnonce{hint#1}{hint .#1 is not implemented in TeX (ignored)}}
+% \gml@get\list{key}\macro: \macro := the value of key in list, or empty
+\def\gml@get#1#2#3{\def\gml@get@a##1,#2=##2,##3\gml@nil{\def#3{##2}}%
+  \expandafter\gml@get@a\expandafter,#1,#2=\gml@nokey,\gml@nil
+  \ifx#3\gml@nokeymark\let#3\empty\fi}
+\def\gml@aget{\gml@get\gml@attrs}
+\def\gml@hget{\gml@get\gml@hattrs}
+\def\gml@lget{\gml@get\gml@thislattrs}
+\def\gmlattr#1#2{\gml@aget{#1}#2}
+\def\gmlhintattr#1#2{\gml@hget{#1}#2}
+\let\gml@attrs\empty \let\gml@hattrs\empty \let\gml@lattrs\empty
+\let\gml@thislattrs\empty \def\gml@cur{}
+% \gml@forwords{list}\cmd: \cmd{word} for each blank-separated word
+\def\gml@forwords#1#2{\let\gml@fw@do#2\edef\gml@fw@list{#1\space}%
+  \expandafter\gml@fw@a\gml@fw@list\gml@nil}
+\def\gml@fw@a#1 #2\gml@nil{\def\gml@fw@w{#1}%
+  \ifx\gml@fw@w\empty\else\gml@fw@do{#1}\fi
+  \def\gml@fw@w{#2}\ifx\gml@fw@w\empty\else\gml@fw@a#2\gml@nil\fi}
+% \gml@ifin{\macro}{string}: \ifgml@found
+\def\gml@ifin#1#2{\def\gml@ifin@a##1#2##2\gml@nil{\def\gml@ifin@r{##2}}%
+  \expandafter\gml@ifin@a#1#2\gml@nil
+  \ifx\gml@ifin@r\empty\gml@foundfalse\else\gml@foundtrue\fi}
+\def\gml@lower#1{\edef\gml@tmpl{#1}\lowercase\expandafter{\expandafter
+  \def\expandafter\gml@tmpl\expandafter{\gml@tmpl}}}
+
+% ---- DCF units ---------------------------------------------------------------
+\def\gml@u@ch#1#2{#2=#1\gml@chwidth}
+\def\gml@u@line#1#2{#2=#1\baselineskip}
+\def\gml@u@i#1#2{#2=#1in}
+\def\gml@u@cm#1#2{#2=#1cm}
+\def\gml@u@mm#1#2{#2=#1mm}
+\def\gml@u@pt#1#2{#2=#1bp}
+\def\gml@u@dd#1#2{#2=#1dd}
+\def\gml@u@mh#1#2{#2=#1\fontdimen6\font}
+\let\gml@u@mv\gml@u@mh \let\gml@u@m\gml@u@mh
+\def\gml@u@dh#1#2{#2=#1\gml@devunit} \let\gml@u@dv\gml@u@dh
+\expandafter\let\csname gml@u@\endcsname\gml@u@ch
+% \gml@dimof{number}{unit}\register   (unit "mixed": number is a sum)
+\def\gml@dimof#1#2#3{\edef\gml@dv{#1}\edef\gml@du{#2}%
+  \ifx\gml@du\gml@mixedstr \expandafter\gml@sum\expandafter{\gml@dv}#3%
+  \else\expandafter\ifx\csname gml@u@\gml@du\endcsname\relax
+    \gml@warnonce{unit\gml@du}{unknown space unit \gml@du\space(taken as ch)}%
+    \gml@u@ch\gml@dv#3%
+  \else\csname gml@u@\gml@du\endcsname\gml@dv#3\fi\fi}
+% \gml@sum{4ch+1i}\register; also one token "15pt" (\gml@dimtok)
+\def\gml@sum#1#2{\let\gml@sumreg#2\gml@sumreg=\z@
+  \def\gml@sn{}\def\gml@su{}\gml@sum@a#1\gml@end}
+\def\gml@sum@a#1{%
+  \ifx#1\gml@end \gml@sum@flush \let\gml@next\relax
+  \else \let\gml@next\gml@sum@a
+    \ifx#1+\gml@sum@flush\def\gml@sn{}%
+    \else\ifx#1-\gml@sum@flush\def\gml@sn{-}%
+    \else\ifnum`#1<`a\relax
+      \ifx\gml@su\empty\else\gml@sum@flush\fi\edef\gml@sn{\gml@sn#1}%
+    \else\edef\gml@su{\gml@su#1}\fi\fi\fi
+  \fi\gml@next}
+\def\gml@sum@flush{\ifx\gml@sn\empty\else
+  \ifx\gml@su\empty\def\gml@su{ch}\fi
+  \gml@dimof\gml@sn\gml@su\gml@dimd \advance\gml@sumreg\gml@dimd
+  \def\gml@sn{}\def\gml@su{}\fi}
+\def\gml@dimtok#1#2{\edef\gml@tmpt{#1}\expandafter\gml@sum\expandafter{\gml@tmpt}#2}
+% the number part of a token ("2line" -> 2) in \gml@sn
+\def\gml@numpart#1{\def\gml@sn{}\edef\gml@tmpt{#1}\expandafter\gml@np@a\gml@tmpt\gml@end}
+\def\gml@np@a#1{\ifx#1\gml@end\let\gml@next\relax\else\let\gml@next\gml@np@a
+  \ifnum`#1<`a\relax\edef\gml@sn{\gml@sn#1}\fi\fi\gml@next}
+% a hint dimension: \gml@hdim{attr}{unit attr}\register
+\def\gml@hdim#1#2#3{\gml@hget{#1}\gml@tv\gml@hget{#2}\gml@tu\gml@dimof\gml@tv\gml@tu#3}
+
+% ---- formatting state ----------------------------------------------------------
+\def\gml@efont{\rm} \let\gml@hfont\empty
+\let\gml@efill\empty \let\gml@ealign\empty
+\def\gml@hfill{yes} \def\gml@halign{justify}
+\def\gml@setfont#1{\global\advance\gml@clock\@ne \gml@efontstamp\gml@clock
+  \def\gml@efont{#1}#1}
+\def\gml@setfill#1#2{\global\advance\gml@clock\@ne \gml@efillstamp\gml@clock
+  \edef\gml@efill{#1}\edef\gml@ealign{#2}}
+\def\gml@hsetfill#1#2{\global\advance\gml@clock\@ne \global\gml@hfillstamp\gml@clock
+  \xdef\gml@hfill{#1}\xdef\gml@halign{#2}}
+\def\gml@hsetfontcmd{\global\advance\gml@clock\@ne \global\gml@hfontstamp\gml@clock
+  \global\let\gml@hfont\gml@fontcmd}
+\def\gml@applyfont{\ifx\gml@hfont\empty\gml@efont
+  \else\ifnum\gml@efontstamp>\gml@hfontstamp\gml@efont\else\gml@hfont\fi\fi}
+\def\gml@applyfill{%
+  \ifx\gml@efill\empty \let\gml@curfill\gml@hfill \let\gml@curalign\gml@halign
+  \else\ifnum\gml@efillstamp>\gml@hfillstamp
+    \let\gml@curfill\gml@efill \let\gml@curalign\gml@ealign
+  \else \let\gml@curfill\gml@hfill \let\gml@curalign\gml@halign\fi\fi
+  \ifx\gml@curfill\gml@no\catcode`\^^M=\active\else\catcode`\^^M=5 \fi}
+\def\gml@applymargins{%
+  \gml@dima\gml@elemleft \advance\gml@dima\gml@hintleft
+  \gml@dimb\gml@elemright \advance\gml@dimb\gml@hintright
+  \leftskip\gml@dima \rightskip\gml@dimb \parfillskip\z@ plus1fil
+  \csname gml@align@\gml@curalign\endcsname}
+\def\gml@align@justify{\ifx\gml@curfill\gml@no\advance\rightskip\z@ plus1fil\fi}
+\def\gml@align@left{\ifx\gml@curfill\gml@no\advance\rightskip\z@ plus1fil
+  \else\advance\rightskip\z@ plus3em\fi}
+\def\gml@align@right{\advance\leftskip\z@ plus1fil \parfillskip\z@}
+\def\gml@align@center{\advance\leftskip\z@ plus1fil
+  \advance\rightskip\z@ plus1fil \parfillskip\z@}
+\let\gml@align@inside\gml@align@left   % no page parity at typesetting time
+\let\gml@align@outside\gml@align@right
+\def\gml@applyhsize{\ifdim\gml@hintll>\z@\hsize\gml@hintll\else\hsize\gml@elemhsize\fi}
+\def\gml@applykeep{\ifgml@keep\interlinepenalty\@M\else\interlinepenalty\z@\fi}
+\def\gml@apply{\gml@applyfont\gml@applyfill\gml@applymargins
+  \gml@applyhsize\gml@applykeep}
+% an obeyed end of line (format off): the line is a paragraph; an empty
+% line is a blank line only in xml:space="preserve" text
+{\catcode`\^^M=\active \gdef^^M{\gml@obeyedline}}
+\def\gml@obeyedline{\ifhmode\par\else\ifgml@preserve\leavevmode\par\fi\fi}
+% DCF .of and revision codes act on every paragraph start
+\def\gml@everypar{\ifcase\gml@ofstate\or
+    \hangindent\gml@ofdim\hangafter\@ne\global\gml@ofstate\tw@
+  \or\hangindent\gml@ofdim\hangafter\z@\fi
+  \ifgml@rcon\llap{\gml@rcchar\enspace}\fi}
+\def\gml@rcchar{|}
+
+% ---- vertical space ------------------------------------------------------------
+% \gml@vskip: a DCF skip (.sk): discarded at the top of a page, and
+% consecutive skips do not add up (the larger one counts).
+\def\gml@vskip#1{\par\ifvmode\gml@dimd=#1\relax
+  \ifdim\lastskip<\gml@dimd \ifdim\lastskip>\z@\vskip-\lastskip\fi
+    \ifgml@keep\nobreak\fi\vskip\gml@dimd\fi\fi}
+% \gml@vspace: a DCF space (.sp): kept at the top of a page
+\def\gml@vspace#1{\par\ifvmode\vglue#1\relax\fi}
+\def\gml@newpage{\par\vfill\penalty-\@M}
+\def\gml@needspace#1{\par\ifvmode\ifinner\else\gml@dimc=#1\relax\penalty\z@
+  \ifdim\pagegoal<\maxdimen \gml@dimb\pagegoal\advance\gml@dimb-\pagetotal
+    \ifdim\gml@dimb<\gml@dimc\vfill\penalty-\@M\fi\fi\fi\fi}
+\def\gml@parstart#1{\ifhmode\ifdim\lastkern=1sp\unkern\else\gml@vskip{#1}\fi
+  \else\gml@vskip{#1}\fi}
+
+% ---- dispatch --------------------------------------------------------------------
+\def\gmlstart#1#2{\begingroup\def\gml@cur{#1}\def\gml@attrs{#2}%
+  \expandafter\ifx\csname gml@#1@start\endcsname\relax
+    \gml@warnonce{elt#1}{no TeX style for element #1 (shown as plain text)}%
+  \else\csname gml@#1@start\endcsname\fi}
+\def\gmlend#1{\expandafter\ifx\csname gml@#1@end\endcsname\relax
+  \else\csname gml@#1@end\endcsname\fi\endgroup\gml@apply}
+\def\gmldefstart#1{\expandafter\def\csname gml@#1@start\endcsname}
+\def\gmldefend#1{\expandafter\def\csname gml@#1@end\endcsname}
+\def\gml@letelement#1#2{%
+  \expandafter\let\csname gml@#1@start\expandafter\endcsname\csname gml@#2@start\endcsname
+  \expandafter\let\csname gml@#1@end\expandafter\endcsname\csname gml@#2@end\endcsname}
+\def\gmldefhint#1{\expandafter\def\csname gml@hint@#1\endcsname}
+\def\gmldeflines#1#2{\expandafter\def\csname gml@lines@#1@#2\endcsname}
+\def\gmldefnum#1{\expandafter\def\csname gml@num@#1\endcsname}
+\def\gmldefchar#1{\expandafter\def\csname gml@char@#1\endcsname}
+
+\def\gml@break{\par}
+\def\gmlhint#1#2{\def\gml@hattrs{#2}\gml@hget{break}\gml@tmpb
+  \ifx\gml@tmpb\gml@yes\gml@break\fi
+  \expandafter\ifx\csname gml@hint@#1\endcsname\relax\gml@notimpl{#1}%
+  \else\csname gml@hint@#1\endcsname\fi}
+
+\def\gmlbeginlines#1#2{\def\gml@lattrs{#2}\gml@get\gml@lattrs{break}\gml@tmpb
+  \ifx\gml@tmpb\gml@yes\gml@break\fi
+  \expandafter\ifx\csname gml@lines@#1@begin\endcsname\relax
+    \gml@warnonce{lines#1}{line scope .#1 is not implemented in TeX (ignored)}\fi
+  \gml@lcall{#1}{pre}\begingroup\def\gml@lword{#1}\let\gml@thislattrs\gml@lattrs
+  \gml@lcall{#1}{begin}}
+\def\gml@lcall#1#2{\expandafter\ifx\csname gml@lines@#1@#2\endcsname\relax
+  \else\csname gml@lines@#1@#2\endcsname\fi}
+\def\gmlendlines{\gml@lcall\gml@lword{end}%
+  \expandafter\gml@endlines@a\expandafter{\gml@lword}}
+\def\gml@endlines@a#1{\endgroup\gml@apply\gml@lcall{#1}{post}}
+\def\gml@lmore{\gml@lget{more}\gml@tmpb\ifx\gml@tmpb\gml@yes\else\ifhmode\par\fi\fi}
+
+\def\gmlnum#1{\expandafter\ifx\csname gml@num@\gml@cur\endcsname\relax
+  #1\enspace\else\csname gml@num@\gml@cur\endcsname{#1}\fi}
+
+% ---- characters ---------------------------------------------------------------------
+\def\gml@char#1{\expandafter\ifx\csname gml@char@#1\endcsname\relax
+  \gml@warnonce{char#1}{no rendering for character #1 (decimal code point), printed as ?}?%
+  \else\csname gml@char@#1\endcsname\fi}
+\let\gmlchar\gml@char
+\def\gml@ttor#1#2{\ifnum\fam=\ttfam\char#1\relax\else#2\fi}
+\gmldefchar{34}{\gml@ttor{34}{''}}
+\gmldefchar{60}{\gml@ttor{60}{$<$}}
+\gmldefchar{62}{\gml@ttor{62}{$>$}}
+\gmldefchar{92}{\gml@ttor{92}{$\backslash$}}
+\gmldefchar{94}{\gml@ttor{94}{\^{}}}
+\gmldefchar{95}{\gml@ttor{95}{\_}}
+\gmldefchar{123}{\gml@ttor{123}{$\{$}}
+\gmldefchar{124}{\gml@ttor{124}{$\vert$}}
+\gmldefchar{125}{\gml@ttor{125}{$\}$}}
+\gmldefchar{126}{\gml@ttor{126}{\~{}}}
+\gmldefchar{44}{,} \gmldefchar{61}{=}
+% Latin-1
+\gmldefchar{160}{\nobreak\ }        \gmldefchar{161}{!`}
+\gmldefchar{162}{\rlap/c}            \gmldefchar{163}{{\it\$}}
+\gmldefchar{164}{$\diamond$}         \gmldefchar{165}{Y\llap=}
+\gmldefchar{166}{$\vert$}            \gmldefchar{167}{\S}
+\gmldefchar{168}{\"{}}               \gmldefchar{169}{\copyright}
+\gmldefchar{170}{$^{\underline{\rm a}}$} \gmldefchar{171}{$\ll$}
+\gmldefchar{172}{$\neg$}             \gmldefchar{173}{\-}
+\gmldefchar{174}{{\ooalign{\hfil\raise.07ex\hbox{\sevenrm R}\hfil\crcr\mathhexbox20D}}}
+\gmldefchar{175}{\={}}               \gmldefchar{176}{$^\circ$}
+\gmldefchar{177}{$\pm$}              \gmldefchar{178}{$^2$}
+\gmldefchar{179}{$^3$}               \gmldefchar{180}{\'{}}
+\gmldefchar{181}{$\mu$}              \gmldefchar{182}{\P}
+\gmldefchar{183}{$\cdot$}            \gmldefchar{184}{\c{}}
+\gmldefchar{185}{$^1$}               \gmldefchar{186}{$^{\underline{\rm o}}$}
+\gmldefchar{187}{$\gg$}              \gmldefchar{188}{$1\over4$}
+\gmldefchar{189}{$1\over2$}          \gmldefchar{190}{$3\over4$}
+\gmldefchar{191}{?`}
+\gmldefchar{192}{\`A} \gmldefchar{193}{\'A} \gmldefchar{194}{\^A} \gmldefchar{195}{\~A}
+\gmldefchar{196}{\"A} \gmldefchar{197}{\AA} \gmldefchar{198}{\AE} \gmldefchar{199}{\c C}
+\gmldefchar{200}{\`E} \gmldefchar{201}{\'E} \gmldefchar{202}{\^E} \gmldefchar{203}{\"E}
+\gmldefchar{204}{\`I} \gmldefchar{205}{\'I} \gmldefchar{206}{\^I} \gmldefchar{207}{\"I}
+\gmldefchar{208}{D\llap{\raise.25ex\hbox{\vrule height.4pt width.35em}\kern.35em}}
+\gmldefchar{209}{\~N} \gmldefchar{210}{\`O} \gmldefchar{211}{\'O} \gmldefchar{212}{\^O}
+\gmldefchar{213}{\~O} \gmldefchar{214}{\"O} \gmldefchar{215}{$\times$} \gmldefchar{216}{\O}
+\gmldefchar{217}{\`U} \gmldefchar{218}{\'U} \gmldefchar{219}{\^U} \gmldefchar{220}{\"U}
+\gmldefchar{221}{\'Y} \gmldefchar{222}{Th} \gmldefchar{223}{\ss}
+\gmldefchar{224}{\`a} \gmldefchar{225}{\'a} \gmldefchar{226}{\^a} \gmldefchar{227}{\~a}
+\gmldefchar{228}{\"a} \gmldefchar{229}{\aa} \gmldefchar{230}{\ae} \gmldefchar{231}{\c c}
+\gmldefchar{232}{\`e} \gmldefchar{233}{\'e} \gmldefchar{234}{\^e} \gmldefchar{235}{\"e}
+\gmldefchar{236}{\`\i} \gmldefchar{237}{\'\i} \gmldefchar{238}{\^\i} \gmldefchar{239}{\"\i}
+\gmldefchar{240}{dh} \gmldefchar{241}{\~n} \gmldefchar{242}{\`o} \gmldefchar{243}{\'o}
+\gmldefchar{244}{\^o} \gmldefchar{245}{\~o} \gmldefchar{246}{\"o} \gmldefchar{247}{$\div$}
+\gmldefchar{248}{\o} \gmldefchar{249}{\`u} \gmldefchar{250}{\'u} \gmldefchar{251}{\^u}
+\gmldefchar{252}{\"u} \gmldefchar{253}{\'y} \gmldefchar{254}{th} \gmldefchar{255}{\"y}
+% Latin Extended-A (a selection)
+\gmldefchar{262}{\'C} \gmldefchar{263}{\'c} \gmldefchar{268}{\v C} \gmldefchar{269}{\v c}
+\gmldefchar{282}{\v E} \gmldefchar{283}{\v e} \gmldefchar{286}{\u G} \gmldefchar{287}{\u g}
+\gmldefchar{304}{\.I} \gmldefchar{305}{\i} \gmldefchar{321}{\L} \gmldefchar{322}{\l}
+\gmldefchar{323}{\'N} \gmldefchar{324}{\'n} \gmldefchar{327}{\v N} \gmldefchar{328}{\v n}
+\gmldefchar{336}{\H O} \gmldefchar{337}{\H o} \gmldefchar{338}{\OE} \gmldefchar{339}{\oe}
+\gmldefchar{344}{\v R} \gmldefchar{345}{\v r} \gmldefchar{346}{\'S} \gmldefchar{347}{\'s}
+\gmldefchar{350}{\c S} \gmldefchar{351}{\c s} \gmldefchar{352}{\v S} \gmldefchar{353}{\v s}
+\gmldefchar{366}{\r U} \gmldefchar{367}{\r u} \gmldefchar{368}{\H U} \gmldefchar{369}{\H u}
+\gmldefchar{376}{\"Y} \gmldefchar{377}{\'Z} \gmldefchar{378}{\'z} \gmldefchar{379}{\.Z}
+\gmldefchar{380}{\.z} \gmldefchar{381}{\v Z} \gmldefchar{382}{\v z}
+\gmldefchar{710}{\^{}} \gmldefchar{732}{\~{}}
+% punctuation and symbols
+\gmldefchar{8194}{\enspace} \gmldefchar{8195}{\quad} \gmldefchar{8201}{\thinspace}
+\gmldefchar{8203}{} \gmldefchar{8208}{-} \gmldefchar{8209}{\hbox{-}}
+\gmldefchar{8211}{--} \gmldefchar{8212}{---} \gmldefchar{8213}{---}
+\gmldefchar{8216}{`} \gmldefchar{8217}{'} \gmldefchar{8218}{,}
+\gmldefchar{8220}{``} \gmldefchar{8221}{''} \gmldefchar{8222}{,,}
+\gmldefchar{8224}{$\dagger$} \gmldefchar{8225}{$\ddagger$} \gmldefchar{8226}{$\bullet$}
+\gmldefchar{8230}{\dots} \gmldefchar{8240}{\%\raise.2ex\hbox{\sevenrm0}}
+\gmldefchar{8242}{$'$} \gmldefchar{8243}{$''$}
+\gmldefchar{8249}{$\langle$} \gmldefchar{8250}{$\rangle$}
+\gmldefchar{8364}{EUR} \gmldefchar{8482}{$^{\rm TM}$}
+\gmldefchar{8592}{$\leftarrow$} \gmldefchar{8594}{$\rightarrow$}
+\gmldefchar{8593}{$\uparrow$} \gmldefchar{8595}{$\downarrow$}
+\gmldefchar{8656}{$\Leftarrow$} \gmldefchar{8658}{$\Rightarrow$}
+\gmldefchar{8722}{$-$} \gmldefchar{8730}{$\surd$} \gmldefchar{8734}{$\infty$}
+\gmldefchar{8800}{$\ne$} \gmldefchar{8804}{$\le$} \gmldefchar{8805}{$\ge$}
+\gmldefchar{8776}{$\approx$} \gmldefchar{9632}{$\blacksquare$}
+\gmldefchar{9633}{$\square$} \gmldefchar{9675}{$\circ$} \gmldefchar{9679}{$\bullet$}
+% upper case (.up/.uc scopes)
+\def\gml@ucchar#1{\gml@cnta=#1\relax
+  \ifnum\gml@cnta>223 \ifnum\gml@cnta<255 \ifnum\gml@cnta=247 \else
+    \advance\gml@cnta-32 \fi\fi\fi
+  \ifnum\gml@cnta=255 \gml@cnta=376 \fi
+  \ifnum\gml@cnta>255 \ifnum\gml@cnta<383 \ifodd\gml@cnta
+    \ifnum\gml@cnta=305 \else\ifnum\gml@cnta<312 \advance\gml@cnta\m@ne
+    \else\ifnum\gml@cnta>328 \advance\gml@cnta\m@ne\fi\fi\fi
+  \else\ifnum\gml@cnta>312 \ifnum\gml@cnta<329 \advance\gml@cnta\m@ne\fi
+    \else\ifnum\gml@cnta>377 \advance\gml@cnta\m@ne\fi\fi\fi\fi\fi
+  \expandafter\gml@char\expandafter{\the\gml@cnta}}
+\def\gmlupword#1{{\let\gmlchar\gml@ucchar\uppercase{#1}}}
+\def\gmlusword#1{\underbar{#1}}
+\def\gmlucword#1{\underbar{\gmlupword{#1}}}
+
+% ---- tabs (.tp/.tb) -----------------------------------------------------------------
+% A line with tab characters is \gmltabline{seg\gmltab seg...}.  The
+% segments are boxed and measured from the start of the line; the k-th
+% tab goes to the first stop after the previous one that lies beyond
+% the current position (DCF order: the stops are used as listed).
+\let\gml@tabstops\empty
+\def\gml@tabadd{\gml@forwords\gml@tu\gml@tab@addone}
+\def\gml@tab@addone#1{\gml@tabsplit#1//\gml@nil{#1}}
+\def\gml@tabsplit#1/#2/#3\gml@nil#4{\def\gml@tmpd{#2}%
+  \ifx\gml@tmpd\empty\gml@dimtok{#1}\gml@dima\toks2{}%
+  \else\gml@dimtok{#2}\gml@dima\toks2{#1}\fi
+  \toks@\expandafter{\gml@tabstops}\toks4{#4}%
+  \xdef\gml@tabstops{\the\toks@\noexpand\gml@ts{\number\gml@dima}{\the\toks2}{\the\toks4}}}
+\def\gml@tabdel{\gml@forwords\gml@tu\gml@tab@delone}
+\def\gml@tab@delone#1{\def\gml@deltok{#1}\let\gml@newstops\empty
+  \let\gml@ts\gml@ts@keep\gml@tabstops\global\let\gml@tabstops\gml@newstops}
+\def\gml@ts@keep#1#2#3{\def\gml@tmpd{#3}\ifx\gml@tmpd\gml@deltok\else
+  \toks@\expandafter{\gml@newstops}\toks2{#2}\toks4{#3}%
+  \edef\gml@newstops{\the\toks@\noexpand\gml@ts{#1}{\the\toks2}{\the\toks4}}\fi}
+\def\gml@tabdefault{\global\let\gml@tabstops\empty
+  \def\gml@tu{5ch 10ch 15ch 20ch 25ch 30ch 35ch 40ch 45ch 50ch 55ch 60ch
+    65ch 70ch 75ch 80ch}\gml@tabadd}
+\def\gml@ts@find#1#2#3{\advance\gml@cnta\@ne
+  \ifgml@tabfound\else\ifnum\gml@cnta>\gml@tabidx \ifdim#1sp>\gml@tabpos
+    \gml@tabfoundtrue\gml@tabidx\gml@cnta\gml@dimb#1sp\def\gml@tabfill{#2}\fi\fi\fi}
+\def\gml@tabadvance{\gml@cnta\z@\gml@tabfoundfalse\let\gml@ts\gml@ts@find\gml@tabstops
+  \ifgml@tabfound \advance\gml@dimb-\gml@tabpos
+    \ifx\gml@tabfill\empty\hskip\gml@dimb
+    \else\hbox to\gml@dimb{\xleaders\hbox{\gml@tabfill}\hfil}\fi
+    \advance\gml@tabpos\gml@dimb
+  \else\ \fi}
+\def\gmltab{\gml@warnonce{tab}{tab outside \string\gmltabline}\ }
+\def\gmltabline#1{\leavevmode\begingroup\gml@tabpos\z@\gml@tabidx\z@\gml@tabfirsttrue
+  \gml@tabloop#1\gmltab\gml@nil\endgroup}
+\def\gml@tabloop#1\gmltab#2\gml@nil{\setbox\gml@box\hbox{#1}%
+  \ifgml@tabfirst\gml@tabfirstfalse\else\gml@tabadvance\fi
+  \advance\gml@tabpos\wd\gml@box\box\gml@box
+  \def\gml@tmpd{#2}\ifx\gml@tmpd\empty\else\gml@tabloop#2\gml@nil\fi}
+
+% ---- parshape for temporary indents ---------------------------------------------------
+% \gml@shape{a}{n}{dl}{dr}: a lines unchanged, n lines moved by dl/dr
+% (relative to the current margins), then unchanged
+\def\gml@shape#1#2#3#4{\gml@dima=#3\relax\gml@dimb=#4\relax
+  \gml@dimc\hsize\advance\gml@dimc-\gml@dima\advance\gml@dimc-\gml@dimb
+  \let\gml@shapelist\empty
+  \count@=#1\relax\loop\ifnum\count@>\z@
+    \edef\gml@shapelist{\gml@shapelist\space0pt\space\the\hsize}\advance\count@\m@ne\repeat
+  \count@=#2\relax\loop\ifnum\count@>\z@
+    \edef\gml@shapelist{\gml@shapelist\space\the\gml@dima\space\the\gml@dimc}\advance\count@\m@ne\repeat
+  \gml@cnta=#1\relax\advance\gml@cnta#2\relax\advance\gml@cnta\@ne
+  \parshape\gml@cnta\gml@shapelist\space0pt\space\hsize\relax}
+% lines in a vertical amount: \gml@cntb := ceiling(dim / baselineskip)
+\def\gml@linesof#1{\gml@dimd=#1\relax\gml@cntb\gml@dimd
+  \gml@cnta\baselineskip\divide\gml@cntb\gml@cnta
+  \multiply\gml@cnta\gml@cntb\ifnum\gml@cnta<\gml@dimd\advance\gml@cntb\@ne\fi}
+
+% ---- hints ------------------------------------------------------------------------
+\gmldefhint{br}{}
+\gmldefhint{sp}{\gml@hdim{n}{unit}\gml@dima\gml@vspace\gml@dima}
+\gmldefhint{sk}{\gml@hdim{n}{unit}\gml@dima\gml@vskip\gml@dima}
+% .in/.ir: permanent margins; temporary (FOR/AFTER not in lines): parshape
+% a permanent .in that ends the offset carries offset=0 (SH35-0069 p.80)
+\def\gml@indent#1#2{\gml@hget{temporary}\gml@tmpb
+  \ifx\gml@tmpb\gml@yes\gml@tempindent{#1}{#2}%
+  \else\gml@hdim{#1}{unit}\gml@dima\global#2\gml@dima
+    \gml@hget{offset}\gml@tmpb
+    \ifx\gml@tmpb\empty\else\global\gml@ofdim\z@\global\gml@ofstate\z@\fi
+    \gml@apply\fi}
+\gmldefhint{in}{\gml@indent{left}\gml@hintleft}
+\gmldefhint{ir}{\gml@indent{right}\gml@hintright}
+\def\gml@tempindent#1#2{\gml@hdim{#1}{unit}\gml@dima\advance\gml@dima-#2%
+  \edef\gml@tdelta{\the\gml@dima}%
+  \gml@hget{for}\gml@tv\gml@hget{for-unit}\gml@tu
+  \ifx\gml@tv\empty\def\gml@tfor{1}\else
+    \gml@dimof\gml@tv\gml@tu\gml@dimc\gml@linesof\gml@dimc\edef\gml@tfor{\the\gml@cntb}\fi
+  \gml@hget{after}\gml@tv\gml@hget{after-unit}\gml@tu
+  \ifx\gml@tv\empty\def\gml@tafter{0}\else
+    \gml@dimof\gml@tv\gml@tu\gml@dimc\gml@linesof\gml@dimc\edef\gml@tafter{\the\gml@cntb}\fi
+  \def\gml@tmpb{left}\edef\gml@tmpc{#1}%
+  \ifx\gml@tmpb\gml@tmpc\gml@shape\gml@tafter\gml@tfor\gml@tdelta\z@
+  \else\gml@shape\gml@tafter\gml@tfor\z@\gml@tdelta\fi}
+\gmldefhint{of}{\gml@hdim{offset}{unit}\gml@dima\global\gml@ofdim\gml@dima
+  \ifdim\gml@ofdim=\z@\global\gml@ofstate\z@\else\global\gml@ofstate\@ne\fi}
+\gmldefhint{ll}{\gml@hget{length}\gml@tv
+  \ifx\gml@tv\gml@defaultstr \global\gml@hintll\z@
+    \gml@hget{delta}\gml@tv\ifx\gml@tv\empty\else
+      \gml@dimtok\gml@tv\gml@dima\global\gml@hintll\gml@defaulthsize
+      \global\advance\gml@hintll\gml@dima\fi
+  \else\gml@hdim{length}{unit}\gml@dima\global\gml@hintll\gml@dima\fi\gml@apply}
+\gmldefhint{cl}{\gml@hget{spec}\gml@tv\ifx\gml@tv\empty\global\gml@hintll\z@
+  \else\gml@dimtok\gml@tv\gml@dima\global\gml@hintll\gml@dima\fi\gml@apply}
+\gmldefhint{fo}{\gml@hget{fill}\gml@tv\gml@hget{align}\gml@tu
+  \gml@hsetfill\gml@tv\gml@tu\gml@apply}
+\let\gml@hint@nf\gml@hint@fo \let\gml@hint@ju\gml@hint@fo
+\def\gml@blankpage{\hbox{}\vfill\penalty-\@M}
+\gmldefhint{pa}{\gml@hget{mode}\gml@tv
+  \ifx\gml@tv\gml@offstr\global\gml@paofftrue
+  \else\ifx\gml@tv\gml@onstr\global\gml@paofffalse
+  \else\ifgml@paoff\else
+    \gml@hget{nobreak}\gml@tmpb
+    \ifx\gml@tmpb\gml@yes\ifhmode\vadjust{\vfill\penalty-\@M}\else\gml@newpage\fi
+    \else\gml@newpage\fi
+    \gml@hget{side}\gml@tv
+    \ifx\gml@tv\gml@oddstr\ifodd\pageno\else\gml@blankpage\fi\fi
+    \ifx\gml@tv\gml@evenstr\ifodd\pageno\gml@blankpage\fi\fi
+    \gml@hget{page}\gml@tv\ifx\gml@tv\empty\else\global\pageno=\gml@tv\relax\fi
+  \fi\fi\fi}
+\gmldefhint{cp}{\gml@hget{n}\gml@tv\ifx\gml@tv\empty\gml@newpage
+  \else\gml@hdim{n}{unit}\gml@dima\gml@needspace\gml@dima\fi}
+\let\gml@hint@cc\gml@hint@cp
+\gmldefhint{cb}{\gml@newpage}
+% .bx: horizontal rules only, from the first to the last position
+% (relative to the current left margin); vertical rules are not drawn
+\def\gml@bx@tok#1{\gml@dimtok{#1}\gml@dima
+  \ifgml@bxfirst\global\gml@bxleft\gml@dima\gml@bxfirstfalse\fi
+  \global\gml@bxright\gml@dima}
+\def\gml@bxrule{\gml@dima\gml@bxright\advance\gml@dima-\gml@bxleft
+  \ifdim\gml@dima>\z@\par\nointerlineskip\vskip\gml@rulesep
+    \gml@dimb\leftskip\advance\gml@dimb\gml@bxleft
+    \moveright\gml@dimb\vbox{\hrule width\gml@dima}\vskip\gml@rulesep\fi}
+\gmldefhint{bx}{\gml@hget{action}\gml@tv\gml@hget{spec}\gml@tu
+  \ifx\gml@tv\gml@canstr\else\ifx\gml@tv\gml@charstr\else
+    \ifx\gml@tu\empty\else\gml@bxfirsttrue\gml@forwords\gml@tu\gml@bx@tok\fi
+    \ifdim\gml@bxright=\z@\global\gml@bxright\hsize\fi
+    \gml@bxrule
+    \ifx\gml@tv\gml@offstr\global\gml@bxleft\z@\global\gml@bxright\z@\fi
+  \fi\fi}
+\gmldefhint{hr}{\par\vskip\gml@rulesep\hrule\vskip\gml@rulesep}
+% .kp: keeps cannot be boxed across hints; on/float/delay forbid page
+% breaks (between lines and at element skips) until .kp off; .kp v is a
+% conditional page eject
+\def\gml@kp@tok#1{\gml@dimtok{#1}\gml@dimb\advance\gml@dima\gml@dimb}
+\gmldefhint{kp}{\gml@hget{mode}\gml@tv
+  \ifx\gml@tv\gml@inlinestr\gml@hget{depth}\gml@tu
+    \ifx\gml@tu\empty\else\ifvmode\gml@dima\z@\gml@forwords\gml@tu\gml@kp@tok
+      \gml@needspace\gml@dima\fi\fi
+  \else\ifx\gml@tv\gml@offstr\global\gml@keepfalse\else\global\gml@keeptrue\fi\fi
+  \gml@apply}
+\def\gml@runaction#1{\gml@hget{action}\gml@tv
+  \ifx\gml@tv\gml@cancelstr\global\csname gml@user#1true\endcsname
+    \global\setbox\csname gml@#1odd\endcsname\box\voidb@x
+    \global\setbox\csname gml@#1even\endcsname\box\voidb@x
+  \else\ifx\gml@tv\gml@supstr\global\csname gml@#1suptrue\endcsname
+  \else\ifx\gml@tv\gml@resstr\global\csname gml@#1supfalse\endcsname\fi\fi\fi}
+\gmldefhint{rh}{\gml@runaction{rh}}
+\gmldefhint{rf}{\gml@runaction{rf}}
+\gmldefhint{sx}{\gml@hget{left}\gml@sxl\gml@hget{fill}\gml@sxf\gml@hget{right}\gml@sxr
+  \par\noindent\gml@sxl
+  \ifx\gml@sxf\empty\hfill\else\xleaders\hbox{\gml@sxf}\hfill\fi\gml@sxr\par}
+\gmldefhint{tp}{\gml@hget{action}\gml@tv\gml@hget{stops}\gml@tu
+  \ifx\gml@tv\gml@resetstr\gml@tabdefault
+  \else\ifx\gml@tv\gml@setstr\global\let\gml@tabstops\empty\gml@tabadd
+  \else\ifx\gml@tv\gml@addstr\gml@tabadd
+  \else\ifx\gml@tv\gml@delstr\gml@tabdel\fi\fi\fi\fi}
+\let\gml@hint@tb\gml@hint@tp
+% fonts: the first known name of the list (lower case) is used
+\def\gml@fontlookup#1{\let\gml@fontcmd\relax\gml@lower{#1}%
+  \gml@forwords\gml@tmpl\gml@fl@one
+  \ifx\gml@fontcmd\relax\gml@warnonce{font#1}{unknown font #1 (font unchanged)}\fi}
+\def\gml@fl@one#1{\ifx\gml@fontcmd\relax
+  \expandafter\ifx\csname gml@font@#1\endcsname\relax\else
+  \expandafter\let\expandafter\gml@fontcmd\csname gml@font@#1\endcsname\fi\fi}
+\gmldefhint{bf}{\gml@hget{font}\gml@tv\gml@fontlookup\gml@tv
+  \ifx\gml@fontcmd\relax\else\gml@hsetfontcmd\fi\gml@apply}
+\gmldefhint{pf}{\gml@hget{font}\gml@tv
+  \ifx\gml@tv\empty\let\gml@fontcmd\empty\gml@hsetfontcmd
+  \else\gml@fontlookup\gml@tv\ifx\gml@fontcmd\relax\let\gml@fontcmd\empty\fi
+    \gml@hsetfontcmd\fi\gml@apply}
+% .df name spec: bold / italic / mono keywords in the spec choose the face
+\gmldefhint{df}{\gml@hget{name}\gml@tv\gml@lower\gml@tv\let\gml@dfname\gml@tmpl
+  \gml@hget{spec}\gml@tv\gml@lower\gml@tv
+  \def\gml@dfcmd{\rm}%
+  \gml@ifin\gml@tmpl{ital}\ifgml@found\def\gml@dfcmd{\it}\fi
+  \gml@ifin\gml@tmpl{bold}\ifgml@found
+    \ifgml@found\def\gml@tmpd{\it}\ifx\gml@dfcmd\gml@tmpd
+      \def\gml@dfcmd{\gml@bi}\else\def\gml@dfcmd{\bf}\fi\fi\fi
+  \gml@ifin\gml@tmpl{mono}\ifgml@found\def\gml@dfcmd{\tt}\fi
+  \expandafter\let\csname gml@font@\gml@dfname\endcsname\gml@dfcmd}
+\gmldefhint{hy}{\gml@hget{mode}\gml@tv
+  \ifx\gml@tv\gml@onstr\global\hyphenpenalty50
+  \else\ifx\gml@tv\gml@offstr\global\hyphenpenalty\@M\fi\fi}
+\def\gml@hw@a#1{\ifx#1\gml@end\let\gml@next\relax\else\let\gml@next\gml@hw@a
+  \ifcat a\noexpand#1\edef\gml@hwword{\gml@hwword#1}\else
+  \ifx#1-\edef\gml@hwword{\gml@hwword-}\fi\fi\fi\gml@next}
+\gmldefhint{hw}{\gml@hget{word}\gml@tv\def\gml@hwword{}%
+  \expandafter\gml@hw@a\gml@tv\gml@end
+  \ifx\gml@hwword\empty\else\expandafter\hyphenation\expandafter{\gml@hwword}\fi}
+\gmldefhint{rc}{\gml@hget{code}\gml@tv\gml@hget{mode}\gml@tu\gml@hget{char}\gml@tw
+  \ifx\gml@tv\empty\else
+    \ifx\gml@tu\empty\expandafter\global\expandafter\let\csname gml@rc@\gml@tv\endcsname\gml@tw
+    \else\ifx\gml@tu\gml@onstr\global\gml@rcontrue
+      \expandafter\ifx\csname gml@rc@\gml@tv\endcsname\relax\gdef\gml@rcchar{|}%
+      \else\global\expandafter\let\expandafter\gml@rcchar\csname gml@rc@\gml@tv\endcsname\fi
+    \else\global\gml@rconfalse\fi\fi\fi}
+% .ls normal [v] | by f   (the factor f is kept as written by gml)
+\def\gml@twowords#1{\edef\gml@tmpd{#1\space\space}\expandafter\gml@tw@a\gml@tmpd\gml@nil}
+\def\gml@tw@a#1 #2 #3\gml@nil{\def\gml@wa{#1}\def\gml@wb{#2}}
+\gmldefhint{ls}{\gml@hget{spec}\gml@tv\gml@twowords\gml@tv
+  \ifx\gml@wa\gml@bystr
+    \ifx\gml@wb\empty\else\global\baselineskip\gml@wb\gml@basebs\fi
+  \else\ifx\gml@wa\gml@normalstr
+    \ifx\gml@wb\empty\global\baselineskip\gml@basebs
+    \else\gml@dimtok\gml@wb\gml@dima\global\baselineskip\gml@dima\fi\fi\fi}
+% .ws / .es normal [h] | by f
+\def\gml@wordspace#1{\gml@hget{spec}\gml@tv\gml@twowords\gml@tv
+  \ifx\gml@wa\gml@bystr\ifx\gml@wb\empty\else
+    \global#1=\gml@wb\fontdimen2\font plus\gml@wb\fontdimen3\font
+      minus\gml@wb\fontdimen4\font\fi
+  \else\ifx\gml@wa\gml@normalstr
+    \ifx\gml@wb\empty\global#1\z@skip
+    \else\gml@dimtok\gml@wb\gml@dima\global#1\gml@dima plus.5\gml@dima minus.25\gml@dima\fi
+  \fi\fi}
+\gmldefhint{ws}{\gml@wordspace\spaceskip}
+\gmldefhint{es}{\gml@wordspace\xspaceskip}
+\def\gml@pn@one#1{\def\gml@tmpd{#1}%
+  \ifgml@pnpref\gdef\gml@folioprefix{#1}\gml@pnpreffalse
+  \else\ifx\gml@tmpd\gml@prefstr\gml@pnpreftrue
+  \else\ifx\gml@tmpd\gml@romanstr\ifnum\pageno>\z@\global\pageno-\pageno\fi
+  \else\ifx\gml@tmpd\gml@arabicstr\ifnum\pageno<\z@\global\pageno-\pageno\fi
+  \else\ifx\gml@tmpd\gml@offstr\global\gml@nofoliotrue
+  \else\ifx\gml@tmpd\gml@offnostr\global\gml@nofoliotrue
+  \else\ifx\gml@tmpd\gml@onstr\global\gml@nofoliofalse
+  \else\gml@numpart{#1}\ifx\gml@sn\empty\else\global\pageno=\gml@sn\relax\fi
+  \fi\fi\fi\fi\fi\fi\fi}
+\gmldefhint{pn}{\gml@hget{spec}\gml@tv\gml@pnpreffalse\gml@forwords\gml@tv\gml@pn@one}
+% page layout words: the first dimension of the operands
+\def\gml@firstdim@one#1{\ifgml@found\else\def\gml@tmpd{#1}%
+  \ifx\gml@tmpd\gml@nobindstr\else\gml@dimtok{#1}\gml@dima\gml@foundtrue\fi\fi}
+\def\gml@layouthint#1{\gml@hget{spec}\gml@tv\gml@foundfalse
+  \gml@forwords\gml@tv\gml@firstdim@one
+  \ifgml@found\global#1\gml@dima\gml@layout\fi}
+\gmldefhint{pl}{\gml@layouthint\gml@pagelength}
+\gmldefhint{pw}{\gml@layouthint\gml@pagewidth}
+\gmldefhint{pm}{\gml@layouthint\gml@leftmargin}
+\gmldefhint{tm}{\gml@layouthint\gml@topmargin}
+\gmldefhint{bm}{\gml@layouthint\gml@botmargin}
+% hints with no TeX meaning (or not modelled): a message once
+% .cd n positions: the first word is the column count
+\gmldefhint{cd}{\gml@hget{spec}\gml@tv\gml@twowords\gml@tv\gml@numpart\gml@wa
+  \ifnum0\gml@sn>1 \gml@warnonce{cd}{multi-column layout (.cd) is not supported; one column}\fi}
+\gmldefhint{sc}{}
+\gmldefhint{mc}{\gml@notimpl{mc}}
+\gmldefhint{dh}{\gml@notimpl{dh}}
+\gmldefhint{tc}{\gml@warnonce{tc}{.tc ignored: the table of contents comes from :toc}}
+\gmldefhint{vr}{\gml@notimpl{vr}}
+\gmldefhint{sb}{\gml@notimpl{sb}}
+\gmldefhint{bc}{} \gmldefhint{fl}{} \gmldefhint{wz}{}
+\gmldefhint{is}{\gml@notimpl{is}} \gmldefhint{ic}{\gml@notimpl{ic}}
+\gmldefhint{ud}{\gml@notimpl{ud}} \gmldefhint{dr}{\gml@notimpl{dr}}
+
+% ---- line scopes ------------------------------------------------------------------------
+% .ce/.ri: each covered input line is a centred / right-aligned line
+\def\gml@linesalign#1{\def\gml@curfill{no}\def\gml@curalign{#1}%
+  \gml@applymargins\catcode`\^^M=\active}
+\gmldeflines{ce}{begin}{\gml@linesalign{center}}
+\gmldeflines{ce}{end}{\gml@lmore}
+\gmldeflines{ri}{begin}{\gml@linesalign{right}}
+\gmldeflines{ri}{end}{\gml@lmore}
+% .us/.up/.uc: tex.xsl wraps the words (\gmlusword ...); nothing else
+\gmldeflines{us}{begin}{} \gmldeflines{up}{begin}{} \gmldeflines{uc}{begin}{}
+% .in/.ir FOR/AFTER n, .il, .un: the first n lines get the scope's margin.
+% Fill mode: \parshape over n output lines (set before the group);
+% format off: the margin for the covered lines (each one a paragraph).
+\def\gml@lines@margin#1#2#3{% attr, permanent register, left|right
+  \gml@get\gml@lattrs{#1}\gml@tv\gml@get\gml@lattrs{unit}\gml@tu
+  \gml@dimof\gml@tv\gml@tu\gml@dima\advance\gml@dima-#2%
+  \edef\gml@tdelta{\the\gml@dima}%
+  \gml@get\gml@lattrs{n}\gml@tv\gml@numpart\gml@tv
+  \ifx\gml@sn\empty\def\gml@sn{1}\fi
+  \ifx\gml@curfill\gml@no\else
+    \gml@get\gml@lattrs{cont}\gml@tmpb\ifx\gml@tmpb\gml@yes\else
+      \def\gml@tmpb{left}\def\gml@tmpc{#3}%
+      \ifx\gml@tmpb\gml@tmpc\gml@shape0\gml@sn\gml@tdelta\z@
+      \else\gml@shape0\gml@sn\z@\gml@tdelta\fi\fi\fi}
+\gmldeflines{in}{pre}{\gml@lines@margin{left}\gml@hintleft{left}}
+\gmldeflines{in}{begin}{\ifx\gml@curfill\gml@no
+  \advance\leftskip\gml@tdelta\relax\fi}
+\gmldeflines{in}{end}{\ifx\gml@curfill\gml@no\gml@lmore\fi}
+\gmldeflines{ir}{pre}{\gml@lines@margin{right}\gml@hintright{right}}
+\gmldeflines{ir}{begin}{\ifx\gml@curfill\gml@no\advance\rightskip\gml@tdelta\relax\fi}
+\gmldeflines{ir}{end}{\ifx\gml@curfill\gml@no\gml@lmore\fi}
+\expandafter\let\csname gml@lines@il@pre\expandafter\endcsname\csname gml@lines@in@pre\endcsname
+\expandafter\let\csname gml@lines@il@begin\expandafter\endcsname\csname gml@lines@in@begin\endcsname
+\expandafter\let\csname gml@lines@il@end\expandafter\endcsname\csname gml@lines@in@end\endcsname
+\expandafter\let\csname gml@lines@un@pre\expandafter\endcsname\csname gml@lines@in@pre\endcsname
+\expandafter\let\csname gml@lines@un@begin\expandafter\endcsname\csname gml@lines@in@begin\endcsname
+\expandafter\let\csname gml@lines@un@end\expandafter\endcsname\csname gml@lines@in@end\endcsname
+% .rc * c: a revision character in the margin of the covered line
+\gmldeflines{rc}{begin}{\gml@lget{char}\gml@tv\gml@lget{cont}\gml@tmpb
+  \ifx\gml@tmpb\gml@yes\else\leavevmode\llap{\gml@tv\enspace}\fi}
+
+% ---- page references ----------------------------------------------------------------
+\def\gml@pagenumber#1{\expandafter\ifx\csname gml@pg@#1\endcsname\relax
+  \global\gml@refschangedtrue??\else\csname gml@pg@#1\endcsname\fi}
+\def\gmlanchor#1{\ifgml@reffile
+  \edef\gml@tmpa{\write\gml@refout{\string\gml@ap{#1}{\noexpand\gml@folio}}}%
+  \ifvmode\gml@tmpa\nobreak\else\gml@tmpa\fi\fi}
+\def\gml@reflabel#1{\def\gml@tmpe{#1}\ifx\gml@tmpe\empty\else\ #1\nobreak\ \fi}
+\def\gmlpageref#1#2#3{\def\gml@tmpd{#2}%
+  \ifx\gml@tmpd\gml@autostr\gml@pageref@auto{#1}{#3}%
+  \else\gml@reflabel{#3}\gml@pagenumber{#1}\fi}
+\def\gml@pageref@auto#1#2{\global\advance\gml@refcount\@ne
+  \ifgml@reffile\edef\gml@tmpa{\write\gml@refout
+    {\string\gml@rp{\the\gml@refcount}{\noexpand\gml@folio}}}\gml@tmpa\fi
+  \expandafter\let\expandafter\gml@pa\csname gml@rpg@\the\gml@refcount\endcsname
+  \expandafter\let\expandafter\gml@pb\csname gml@pg@#1\endcsname
+  \ifx\gml@pa\relax\gml@reflabel{#2}\gml@pagenumber{#1}%
+  \else\ifx\gml@pa\gml@pb\else\gml@reflabel{#2}\gml@pagenumber{#1}\fi\fi}
+\def\gml@folio{\gml@folioprefix\folio}
+\def\gml@readrefs{\begingroup\catcode`\@=11
+  \def\gml@ap##1##2{\expandafter\gdef\csname gml@pg@##1\endcsname{##2}}%
+  \def\gml@rp##1##2{\expandafter\gdef\csname gml@rpg@##1\endcsname{##2}}%
+  \openin\gml@in=\jobname.ref
+  \ifeof\gml@in\closein\gml@in\global\gml@refschangedtrue
+  \else\closein\gml@in\input\jobname.ref \fi\endgroup
+  \immediate\openout\gml@refout=\jobname.ref \global\gml@reffiletrue}
+\def\gml@checkrefs{\immediate\closeout\gml@refout\global\gml@reffilefalse
+  \begingroup\catcode`\@=11
+  \def\gml@ap##1##2{\def\gml@tmpd{##2}\expandafter\ifx\csname gml@pg@##1\endcsname
+    \gml@tmpd\else\global\gml@refschangedtrue\fi}%
+  \def\gml@rp##1##2{\def\gml@tmpd{##2}\expandafter\ifx\csname gml@rpg@##1\endcsname
+    \gml@tmpd\else\global\gml@refschangedtrue\fi}%
+  \openin\gml@in=\jobname.ref
+  \ifeof\gml@in\closein\gml@in\else\closein\gml@in\input\jobname.ref \fi\endgroup
+  \ifgml@refschanged\immediate\write16{GML: page references have changed;
+    run TeX again to get them right.}\fi}
+
+% ---- running headings and footings ------------------------------------------------------
+\def\gml@sec{} \def\gml@shead{}
+\headline={\gml@headline} \footline={\gml@footline}
+\def\gml@headline{\rm\ifgml@plainpage\hfil\else\ifgml@rhsup\hfil
+  \else\ifgml@userrh\gml@userrh\else\gml@defaultrh\fi\fi\fi}
+\def\gml@footline{\rm\ifgml@plainpage\hfil\else\ifgml@rfsup\hfil
+  \else\ifgml@userrf\gml@userrf\else\gml@defaultrf\fi\fi\fi}
+% Starter Set: the security classification centred at the top; the short
+% heading on the left and the page number on the right at the foot
+\def\gml@defaultrh{\hfil{\gml@hi{2}\gml@sec}\hfil}
+\def\gml@defaultrf{\gml@shead\hfil\ifgml@nofolio\else\gml@folio\fi}
+\def\gml@userrh{\ifodd\pageno\copy\gml@rhodd\else\copy\gml@rheven\fi\hss}
+\def\gml@userrf{\ifodd\pageno\copy\gml@rfodd\else\copy\gml@rfeven\fi\hss}
+\output={\hsize\gml@defaulthsize\plainoutput\global\gml@plainpagefalse}
+\def\gml@runsetup{\hsize\gml@defaulthsize\gml@elemhsize\hsize
+  \gml@elemleft\z@\gml@elemright\z@\def\gml@efont{\rm}\gml@apply}
+\def\gml@runstart#1#2{\gml@aget{page}\gml@runpage
+  \setbox\gml@box#2\bgroup\gml@runsetup}
+\def\gml@runend#1{\par\egroup\global\csname gml@user#1true\endcsname
+  \ifx\gml@runpage\gml@evenstr\else
+    \global\setbox\csname gml@#1odd\endcsname\copy\gml@box\fi
+  \ifx\gml@runpage\gml@oddstr\else
+    \global\setbox\csname gml@#1even\endcsname\copy\gml@box\fi}
+\gmldefstart{gml:rh}{\gml@runstart{rh}\vbox}
+\gmldefend{gml:rh}{\gml@runend{rh}}
+\gmldefstart{gml:rf}{\gml@runstart{rf}\vtop}
+\gmldefend{gml:rf}{\gml@runend{rf}}
+
+% ---- headings ------------------------------------------------------------------------------
+% SH35-0050 Figure 6 (fonts) and Figure 14 (spacing, page devices)
+\expandafter\def\csname gml@head@pre@0\endcsname{\gml@newpage\gml@vspace{1.3in}}
+\expandafter\def\csname gml@head@pre@1\endcsname{\gml@newpage\gml@vspace{1.3in}}
+\expandafter\def\csname gml@head@pre@2\endcsname{\gml@vskip{20bp}}
+\expandafter\def\csname gml@head@pre@3\endcsname{\gml@vskip{18bp}}
+\expandafter\def\csname gml@head@pre@4\endcsname{\gml@vskip{14bp}}
+\expandafter\def\csname gml@head@pre@5\endcsname{\gml@vskip\baselineskip}
+\expandafter\def\csname gml@head@pre@6\endcsname{\gml@vskip\baselineskip}
+\expandafter\def\csname gml@head@post@0\endcsname{\gml@vskip{14bp}}
+\expandafter\def\csname gml@head@post@1\endcsname{\gml@vskip{14bp}}
+\expandafter\def\csname gml@head@post@2\endcsname{\gml@vskip{11bp}}
+\expandafter\def\csname gml@head@post@3\endcsname{\gml@vskip{11bp}}
+\expandafter\def\csname gml@head@post@4\endcsname{\gml@vskip{11bp}}
+\expandafter\def\csname gml@head@post@5\endcsname{}
+\expandafter\def\csname gml@head@post@6\endcsname{}
+\expandafter\def\csname gml@head@bs@0\endcsname{25pt}
+\expandafter\def\csname gml@head@bs@1\endcsname{25pt}
+\expandafter\def\csname gml@head@bs@2\endcsname{21pt}
+\expandafter\def\csname gml@head@bs@3\endcsname{17pt}
+\expandafter\def\csname gml@head@bs@4\endcsname{14.5pt}
+\expandafter\def\csname gml@head@bs@5\endcsname{12pt}
+\expandafter\def\csname gml@head@bs@6\endcsname{12pt}
+\def\gml@headstart#1{\par\csname gml@head@pre@#1\endcsname
+  \gml@setfont{\csname gml@font@hd#1\endcsname}%
+  \baselineskip\csname gml@head@bs@#1\endcsname\relax
+  \hyphenpenalty\@M\gml@setfill{yes}{left}\gml@apply\gml@inheadtrue\noindent}
+\def\gml@headend#1{\par\nobreak\csname gml@head@post@#1\endcsname}
+\def\gml@headshead{\gml@aget{stitle}\gml@tv\ifx\gml@tv\empty\gml@aget{text}\gml@tv\fi
+  \global\let\gml@shead\gml@tv}
+\def\gml@headnum#1{#1\quad}
+\def\gml@defheading#1{%
+  \gmldefstart{h#1}{\gml@headstart{#1}\ifnum#1<2 \gml@headshead\fi}%
+  \gmldefend{h#1}{\gml@headend{#1}}%
+  \expandafter\let\csname gml@num@h#1\endcsname\gml@headnum}
+\gml@defheading0 \gml@defheading1 \gml@defheading2 \gml@defheading3
+\gml@defheading4 \gml@defheading5 \gml@defheading6
+\gmldefstart{gml:h}{\gml@aget{level}\gml@lvl\ifx\gml@lvl\empty\def\gml@lvl{1}\fi
+  \expandafter\gml@headstart\expandafter{\gml@lvl}}
+\gmldefend{gml:h}{\expandafter\gml@headend\expandafter{\gml@lvl}}
+% a heading with a literal text (abstract, preface, toc, figlist, index)
+\def\gml@sectionhead#1{\begingroup\gml@headstart1#1\gml@headend1\endgroup
+  \gdef\gml@shead{#1}\gml@apply}
+
+% ---- document sections and the title page -----------------------------------------------
+\gmldefstart{gdoc}{\gml@aget{sec}\gml@tv\global\let\gml@sec\gml@tv}
+\gmldefend{gdoc}{\par}
+\gmldefstart{frontm}{\gml@newpage\global\pageno\m@ne}
+\gmldefstart{body}{\gml@newpage\global\pageno\@ne}
+\gmldefstart{appendix}{\gml@newpage}
+\gmldefstart{backm}{\gml@newpage}
+\gmldefstart{abstract}{\gml@newpage\gml@sectionhead\gmlabstracttitle}
+\gmldefstart{preface}{\gml@newpage\gml@sectionhead\gmlprefacetitle}
+\gmldefstart{toc}{} \gmldefstart{figlist}{} \gmldefstart{index}{}
+\gmldefstart{titlep}{\gml@newpage\global\gml@plainpagetrue\gml@intitleptrue
+  \gml@vspace\gml@titletop\global\gml@aftertitlefalse
+  \gml@setfill{yes}{\gmltitlealign}\hyphenpenalty\@M\gml@apply}
+\gmldefend{titlep}{\par\ifx\gml@sec\empty\else\gml@vskip{2\baselineskip}%
+  \noindent{\gml@hi{2}\gml@sec}\par\fi\gml@newpage}
+\def\gml@titlegap{\par\ifgml@aftertitle\global\gml@aftertitlefalse
+  \gml@vspace\gml@titlegapdim\else\gml@vskip\baselineskip\fi}
+\gmldefstart{title}{\par\gml@setfont{\csname gml@font@title\endcsname}%
+  \baselineskip30pt\gml@apply
+  \gml@aget{stitle}\gml@tv\ifx\gml@tv\empty\gml@aget{text}\gml@tv\fi
+  \global\let\gml@shead\gml@tv\noindent}
+\gmldefend{title}{\par\global\gml@aftertitletrue}
+\gmldefstart{docnum}{\gml@titlegap\noindent\gmldocnumlabel\ }
+\gmldefend{docnum}{\par}
+\gmldefstart{date}{\gml@titlegap\noindent}
+\gmldefend{date}{\par}
+\gmldefstart{author}{\gml@titlegap\noindent}
+\gmldefend{author}{\par}
+\gmldefstart{address}{\ifgml@intitlep\gml@titlegap\gml@setfill{no}{\gmltitlealign}%
+  \else\gml@vskip{.75\baselineskip}\advance\gml@elemleft4\gml@chwidth
+    \gml@setfill{no}{left}\fi\gml@apply}
+\gmldefend{address}{\par\ifgml@intitlep\else\gml@vskip{.75\baselineskip}\fi}
+\gmldefstart{aline}{\par}
+\gmldefend{aline}{\par}
+
+% ---- paragraphs, notes, quotations, examples --------------------------------------------
+\gmldefstart{p}{\gml@parstart{.75\baselineskip}}
+\gmldefend{p}{\par}
+\gml@letelement{pc}{p}
+\gmldefstart{note}{\gml@parstart{.75\baselineskip}\leavevmode
+  {\gml@hi{2}\gmlnotelabel}\nobreak\ }
+\gmldefend{note}{\par}
+\gmldefstart{lq}{\gml@vskip\baselineskip\advance\gml@elemleft3\gml@chwidth
+  \advance\gml@elemright3\gml@chwidth\gml@apply}
+\gmldefend{lq}{\gml@vskip\baselineskip}
+\gmldefstart{xmp}{\gml@vskip\baselineskip\advance\gml@elemleft2\gml@chwidth
+  \gml@setfont\tt\gml@setfill{no}{left}\gml@preservetrue\gml@apply}
+\gmldefend{xmp}{\par\gml@vskip\baselineskip}
+
+% ---- highlighting and phrases -------------------------------------------------------------
+% in a heading the heading font is kept (it is already bold and large)
+\def\gml@hp#1{\ifgml@inhead\else\gml@setfont{\gml@hi{#1}}\fi}
+\gmldefstart{hp0}{\gml@hp0}
+\gmldefstart{hp1}{\gml@hp1} \gmldefend{hp1}{\/}
+\gmldefstart{hp2}{\gml@hp2}
+\gmldefstart{hp3}{\gml@hp3} \gmldefend{hp3}{\/}
+\gmldefstart{cit}{\gml@setfont{\gml@hi{1}}} \gmldefend{cit}{\/}
+\gmldefstart{q}{\advance\gml@qdepth\@ne\ifodd\gml@qdepth``\else`\fi}
+\gmldefend{q}{\ifodd\gml@qdepth''\else'\fi}
+\gmldefstart{hdref}{} \gmldefstart{figref}{} \gmldefstart{liref}{}
+\def\gml@fnmark#1{\leavevmode\raise.5ex\hbox{\sevenrm#1}}
+\gmldefstart{fnref}{\leavevmode\raise.5ex\hbox\bgroup\sevenrm}
+\gmldefend{fnref}{\egroup}
+% index tags: only their anchors (the terms are in gml:index-entries)
+\gmldefstart{i1}{} \gmldefstart{i2}{} \gmldefstart{i3}{}
+\gmldefstart{ih1}{} \gmldefstart{ih2}{} \gmldefstart{ih3}{} \gmldefstart{iref}{}
+
+% ---- lists ---------------------------------------------------------------------------------------
+% SH35-0050 Figure 5: indent / skip  ol ul sl 4 .75, dl 10 1, gl 0 .75
+\def\gml@itemskip{\z@} \def\gml@listtype{} \def\gml@ulnest{1}
+\def\gml@termhi{2} \def\gml@headhi{3}
+\def\gml@liststart#1#2#3{\gml@vskip{#3}\def\gml@listtype{#1}%
+  \advance\gml@elemleft#2\relax\gml@listind#2\relax
+  \gml@aget{compact}\gml@tv\ifx\gml@tv\empty\def\gml@itemskip{#3}\else\def\gml@itemskip{\z@}\fi
+  \gml@aget{termhi}\gml@tv\ifx\gml@tv\empty\else\let\gml@termhi\gml@tv\fi
+  \gml@aget{headhi}\gml@tv\ifx\gml@tv\empty\else\let\gml@headhi\gml@tv\fi
+  \gml@apply}
+\def\gml@listend#1{\gml@vskip{#1}}
+\gmldefstart{ol}{\gml@liststart{ol}{4\gml@chwidth}{.75\baselineskip}}
+\gmldefend{ol}{\gml@listend{.75\baselineskip}}
+\gml@letelement{ul}{ol}
+\gmldefstart{ul}{\gml@liststart{ul}{4\gml@chwidth}{.75\baselineskip}%
+  \gml@aget{nest}\gml@tv\ifx\gml@tv\empty\else\let\gml@ulnest\gml@tv\fi}
+\gmldefstart{sl}{\gml@liststart{sl}{4\gml@chwidth}{.75\baselineskip}}
+\gmldefend{sl}{\gml@listend{.75\baselineskip}}
+\gml@letelement{l}{sl}
+\gmldefstart{dl}{\gml@liststart{dl}{10\gml@chwidth}{\baselineskip}%
+  \gml@aget{break}\gml@dlbreak}
+\gmldefend{dl}{\gml@listend\baselineskip}
+\gmldefstart{gl}{\gml@liststart{gl}{\z@}{.75\baselineskip}}
+\gmldefend{gl}{\gml@listend{.75\baselineskip}}
+\def\gmlbullet#1{\ifcase#1\or$\bullet$\or---\or$\ast$\else$\bullet$\fi}
+\def\gml@itemlabel#1{\llap{\hbox to\gml@listind{#1\hss}}}
+\def\gml@li@ul{\gml@itemlabel{\gmlbullet\gml@ulnest}}
+\gmldefstart{li}{\par\gml@vskip\gml@itemskip\leavevmode
+  \csname gml@li@\gml@listtype\endcsname}
+\gmldefend{li}{\par}
+\gmldefnum{li}#1{\gml@itemlabel{#1}}
+\gmldefstart{lp}{\par\gml@vskip\gml@itemskip}
+\gmldefend{lp}{\par}
+% terms: a box in the hanging indent, or a line of its own if too wide
+\def\gml@termstart#1{\par\gml@vskip\gml@itemskip\noindent\hskip-\gml@listind
+  \setbox\gml@dtbox\hbox\bgroup\gml@setfont{\gml@hi{#1}}}
+\def\gml@termend{\unskip\egroup\gml@dimb\gml@listind\advance\gml@dimb-\gml@chwidth
+  \ifx\gml@dlbreak\empty\else\gml@dimb\z@\fi
+  \ifdim\wd\gml@dtbox>\gml@dimb\box\gml@dtbox\par
+  \else\hbox to\gml@listind{\box\gml@dtbox\hss}\kern1sp\fi}
+\gmldefstart{dt}{\gml@termstart\gml@termhi}
+\gmldefend{dt}{\gml@termend}
+\gmldefstart{dthd}{\gml@termstart\gml@headhi}
+\gmldefend{dthd}{\gml@termend}
+\gmldefstart{dd}{}
+\gmldefend{dd}{\par}
+\gmldefstart{ddhd}{\gml@setfont{\gml@hi{\gml@headhi}}}
+\gmldefend{ddhd}{\par}
+\let\gml@dlbreak\empty
+\gmldefstart{gt}{\par\gml@vskip\gml@itemskip\noindent\gml@setfont{\gml@hi{\gml@termhi}}}
+\gmldefend{gt}{\unskip\/\kern1sp}
+\gmldefstart{gd}{\ifhmode\ifdim\lastkern=1sp\unkern:\enspace\fi\fi}
+\gmldefend{gd}{\par}
+
+% ---- figures ---------------------------------------------------------------------------------------
+% frame=rule (default): rules above and below; box; none; any other value:
+% a line of that string.  place=inline: \midinsert, else \topinsert (plain
+% TeX has no bottom floats).  The body is in format-off mode.
+\def\gml@charrule#1{\hbox to\hsize{\xleaders\hbox{#1}\hfil}}
+\gmldefstart{fig}{\par\gml@aget{place}\gml@tv
+  \ifx\gml@tv\gml@inlinestr\midinsert\else\topinsert\fi
+  \gml@aget{frame}\gml@figframe\ifx\gml@figframe\empty\let\gml@figframe\gml@rulestr\fi
+  \setbox\gml@figbox\vbox\bgroup
+  \ifx\gml@figframe\gml@boxstr\advance\gml@elemhsize-2\gml@figpad
+    \advance\gml@elemhsize-.8pt\fi
+  \advance\gml@elemleft2\gml@chwidth\advance\gml@elemright2\gml@chwidth
+  \gml@setfill{no}{left}\gml@apply}
+\gmldefend{fig}{\par\egroup
+  \ifx\gml@figframe\gml@rulestr\hrule\kern\gml@figpad\box\gml@figbox\kern\gml@figpad\hrule
+  \else\ifx\gml@figframe\gml@boxstr\vbox{\hrule\hbox{\vrule\kern\gml@figpad
+      \vbox{\kern\gml@figpad\box\gml@figbox\kern\gml@figpad}\kern\gml@figpad\vrule}\hrule}%
+  \else\ifx\gml@figframe\gml@nonestr\box\gml@figbox
+  \else\gml@charrule\gml@figframe\box\gml@figbox\gml@charrule\gml@figframe
+  \fi\fi\fi\endinsert}
+\gmldefstart{figcap}{\gml@vskip\baselineskip\gml@setfill{yes}{left}\gml@apply\noindent}
+\gmldefend{figcap}{\gml@aget{desc}\gml@tv\ifx\gml@tv\gml@yes\unskip\kern1sp\else\par\fi}
+\gmldefnum{figcap}#1{\setbox\gml@box\hbox{{\bf#1}\enspace}\global\gml@capind\wd\gml@box
+  \hangindent\gml@capind\hangafter\@ne\box\gml@box}
+\gmldefstart{figdesc}{\gml@setfill{yes}{left}\gml@apply
+  \ifhmode\ifdim\lastkern=1sp\unkern\fi:\ \ \hangindent\gml@capind\hangafter\@ne
+  \else\gml@vskip\baselineskip\noindent\fi}
+\gmldefend{figdesc}{\par}
+
+% ---- footnotes -------------------------------------------------------------------------------------------
+\def\gml@vfootnote#1{\insert\footins\bgroup
+  \interlinepenalty\interfootnotelinepenalty
+  \splittopskip\ht\strutbox\splitmaxdepth\dp\strutbox\floatingpenalty\@MM
+  \leftskip\z@skip\rightskip\z@skip\spaceskip\z@skip\xspaceskip\z@skip
+  \parindent1.5em\textindent{#1}\footstrut\futurelet\next\fo@t}
+\def\gml@footnote#1{\let\@sf\empty\ifhmode\edef\@sf{\spacefactor\the\spacefactor}\/\fi
+  #1\@sf\gml@vfootnote{#1}}
+\def\gml@fnsetup{\gml@elemleft\z@\gml@elemright\z@\gml@elemhsize\hsize}
+\gmldefstart{fn}{\gml@aget{num}\gml@tv\gml@aget{callout}\gml@tmpb
+  \edef\gml@tmpc{\noexpand\gml@fnmark{\gml@tv}}%
+  \ifx\gml@tmpb\gml@no\let\gml@fncmd\gml@vfootnote\else\let\gml@fncmd\gml@footnote\fi
+  \expandafter\gml@fncmd\expandafter{\gml@tmpc}\bgroup\gml@fnsetup}
+\gmldefend{fn}{\egroup}
+\gmldefnum{fn}#1{}
+\gmldefstart{gml:fn}{\gml@aget{kind}\gml@fnkind
+  \ifx\gml@fnkind\gml@leaderstr\global\gml@userleadertrue
+    \global\setbox\gml@fnleader\vbox\bgroup\gml@runsetup
+  \else\gml@vfootnote{}\bgroup\gml@fnsetup\fi}
+\gmldefend{gml:fn}{\ifx\gml@fnkind\gml@leaderstr\par\egroup\else\egroup\fi}
+\let\gml@plainfootnoterule\footnoterule
+\def\footnoterule{\ifgml@userleader\copy\gml@fnleader\kern2pt
+  \else\gml@plainfootnoterule\fi}
+
+% ---- table of contents, list of illustrations ---------------------------------------------------
+\def\gml@tocind#1{\ifnum#1<2 \gml@dima\z@\else\gml@cnta#1\advance\gml@cnta\m@ne
+  \multiply\gml@cnta\tw@\gml@dima\gml@cnta\gml@chwidth\fi}
+\def\gml@leaderline#1#2#3{% num text page
+  \leftskip\gml@dima\rightskip\gml@tocpage plus1fil\parfillskip-\rightskip
+  \def\gml@tmpd{#1}\ifx\gml@tmpd\empty\else
+    \setbox\gml@box\hbox{#1\enspace}\hangindent\wd\gml@box\hangafter\@ne\fi
+  \noindent\ifx\gml@tmpd\empty\else\box\gml@box\fi #2\nobreak
+  \leaders\hbox to.75em{\hss.\hss}\hfill\nobreak\hbox to\gml@tocpage{\hss#3}\par}
+\def\gmltocbegin#1{\gml@sectionhead{#1}\begingroup\hyphenpenalty\@M}
+\def\gmltocentry#1#2#3#4{\def\gml@tattrs{#1}\gml@get\gml@tattrs{level}\gml@tv
+  \ifx\gml@tv\empty\def\gml@tv{1}\fi
+  \par\ifnum\gml@tv<2 \gml@vskip\baselineskip\fi
+  \begingroup\gml@tocind\gml@tv\advance\gml@dima\gml@elemleft
+  \ifnum\gml@tv<2 \bf\fi\gml@leaderline{#2}{#3}{#4}\endgroup}
+\def\gmltocend{\par\endgroup\gml@apply\gml@newpage}
+\let\gmlfiglistbegin\gmltocbegin
+\def\gmlfiglistentry#1#2#3#4{\par\gml@vskip{.5\baselineskip}%
+  \begingroup\gml@dima\gml@elemleft\gml@leaderline{#2}{#3}{#4}\endgroup}
+\let\gmlfiglistend\gmltocend
+
+% ---- index -----------------------------------------------------------------------------------------------
+% \gmlindexcolumns = 1 or 2 (default 2, as DSMINDEX); two columns are
+% balanced with \vsplit.
+\def\gmlindexbegin#1{\gml@sectionhead{#1}\begingroup\hyphenpenalty\@M
+  \ifnum\gmlindexcolumns>\@ne
+    \gml@dima\hsize\advance\gml@dima-\gml@colsep\divide\gml@dima\tw@
+    \setbox\gml@ixbox\vbox\bgroup\hsize\gml@dima\gml@elemhsize\gml@dima\gml@apply
+  \fi}
+\def\gmlindexend{\par\ifnum\gmlindexcolumns>\@ne\egroup\gml@ixsplit\fi\endgroup\gml@apply}
+\def\gml@ixsplit{\begingroup\splittopskip\baselineskip\splitmaxdepth\maxdepth
+  \vbadness\@M\gml@cntb\z@
+  \loop\ifdim\ht\gml@ixbox>\z@\advance\gml@cntb\@ne
+    \endgraf\penalty\@M
+    \ifdim\pagegoal=\maxdimen\gml@dima\vsize
+    \else\gml@dima\pagegoal\advance\gml@dima-\pagetotal\advance\gml@dima-\baselineskip\fi
+    \ifdim\gml@dima<2\baselineskip\vfill\penalty-\@M\gml@dima\vsize\fi
+    \gml@dimb\ht\gml@ixbox\advance\gml@dimb\dp\gml@ixbox\divide\gml@dimb\tw@
+    \advance\gml@dimb\baselineskip
+    \ifdim\gml@dimb>\gml@dima\gml@dimb\gml@dima\fi
+    \setbox\z@\vsplit\gml@ixbox to\gml@dimb
+    \setbox\tw@\vsplit\gml@ixbox to\gml@dimb
+    \hbox to\hsize{\vbox to\gml@dimb{\unvbox\z@\vss}\hfil\vbox to\gml@dimb{\unvbox\tw@\vss}}%
+    \ifnum\gml@cntb>500 \setbox\gml@ixbox\box\voidb@x\fi
+  \repeat\endgroup}
+\def\gmlindexgroup#1{\par\gml@vskip\baselineskip\def\gml@tmpd{#1}%
+  \ifx\gml@tmpd\empty\else\noindent{\bf#1}\par\nobreak\fi}
+\def\gmlindexentry#1#2#3{\par\begingroup\gml@cnta#1\relax\advance\gml@cnta\m@ne
+  \gml@dima\gml@cnta\gml@chwidth\multiply\gml@dima\tw@\advance\leftskip\gml@dima
+  \rightskip\z@ plus3em\hangindent4\gml@chwidth\hangafter\@ne
+  \noindent#2#3\par\endgroup}
+\def\gmlindexfirst{,\ }
+\def\gmlindexsep{,\ }
+\def\gmlindexrangesep{--}
+\def\gmlindexref#1#2{\def\gml@xattrs{#2}\gml@get\gml@xattrs{text}\gml@tv
+  \gml@get\gml@xattrs{major}\gml@tu
+  \ifx\gml@tv\empty\ifx\gml@tu\gml@yes{\bf\gml@pagenumber{#1}}\else\gml@pagenumber{#1}\fi
+  \else\gml@tv\fi}
+\def\gmlsee#1#2#3{\unskip.\ {\it#2}\ #3}
+
+% ---- the document --------------------------------------------------------------------------------------
+\def\gmlbegindocument{\gml@readrefs\gml@tabdefault
+  \everypar{\gml@everypar}\rm\gml@apply}
+\def\gmlenddocument{\par\vfill\supereject\gml@checkrefs}
+
+% ---- local overrides -------------------------------------------------------------------------------------
+\openin\gml@in=gmllocal.tex
+\ifeof\gml@in\closein\gml@in\else\closein\gml@in\input gmllocal \fi
+\catcode`\@=\gmlatcode
+\endinput

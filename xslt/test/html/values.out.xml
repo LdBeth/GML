@@ -1,0 +1,38 @@
+<!DOCTYPE HTML><html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="GML html.xsl">
+<title>Document</title>
+<link rel="stylesheet" href="gml.css">
+</head>
+<body class="gml">
+<main class="gml-doc">
+<p>a<br>zero is the initial value
+<span class="gml-scope" style="display: block; margin-left: calc(4ch + 1in); padding-left: 2ch; text-indent: -2ch; max-width: 6in">three hints, one break
+</span><span class="gml-scope" style="display: block; margin-left: calc(4ch + 1in); padding-left: 2ch; text-indent: -2ch; max-width: calc(var(--gml-measure) + 1in)">relative to default
+</span><span class="gml-scope" style="display: block; margin-left: calc(4ch + 1in); padding-left: 2ch; text-indent: -2ch">default again
+<span class="gml-sp" style="display: block; height: 1lh"></span></span><span class="gml-scope" style="display: block; margin-left: calc(4ch + 1in); margin-right: 2ch; padding-left: 2ch; text-indent: -2ch">after a space: no extra break
+</span><span class="gml-scope" style="display: block; margin-left: calc(4ch + 1in); margin-right: 2ch; padding-left: 2ch; text-indent: -2ch; tab-size: 5" data-gml-tb="5ch 10ch 15ch">tabs
+</span><span class="gml-scope" style="display: block; margin-left: calc(4ch + 1in); margin-right: 2ch; padding-left: 2ch; text-indent: -2ch" data-gml-tb="5ch 15ch">minus one
+</span><span class="gml-scope" style="display: block; margin-left: calc(4ch + 1in); margin-right: 2ch; padding-left: 2ch; text-indent: -2ch" data-gml-tb="5ch 15ch 30ch">plus one
+</span><span class="gml-scope" style="display: block; margin-left: calc(4ch + 1in); margin-right: 2ch; padding-left: 2ch; text-indent: -2ch">reset
+<span class="gml-scope gml-font gml-font-hi2" data-font="hi2">two fonts
+</span><span class="gml-scope gml-font gml-font-hi1" data-font="hi1">back to hi1
+</span>initial
+</span><span class="gml-scope" style="display: block; margin-left: calc(4ch + 1in); margin-right: 2ch; padding-left: 2ch; text-indent: -2ch; line-height: calc(var(--gml-leading) * 3)">double spaced <span class="gml-scope" data-gml-ws="by 1.5">wide words
+</span></span><span class="gml-scope" style="display: block; margin-left: calc(4ch + 1in); margin-right: 2ch; padding-left: 2ch; text-indent: -2ch">normal
+hy options only: an event
+<span class="gml-scope" style="hyphens: auto">hyphenation on
+temporary: an event
+<span class="gml-lines gml-ce" style="display: block; text-align: center; white-space: pre-line">centered <span class="gml-scope gml-font gml-font-hi3" data-font="hi3">line
+</span></span></span><span class="gml-scope gml-font gml-font-hi3" style="hyphens: auto" data-font="hi3">after the lines
+</span></span><span class="gml-scope" style="display: block; margin-left: 3ch; margin-right: 2ch; padding-left: 2ch; text-indent: -2ch"><span class="gml-scope gml-font gml-font-hi3" style="hyphens: auto" data-font="hi3">
+<span class="gml-pa" style="display: block; break-before: page"></span>end</span></span></p>
+<section class="gml-footnotes" role="doc-endnotes">
+<ol class="gml-footnote-list">
+<li class="gml-footnote gml-fn-unnumbered">footnote 
+<div class="gml-scope" style="margin-left: 3ch">text</div></li></ol></section>
+</main>
+</body>
+</html>

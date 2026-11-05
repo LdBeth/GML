@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?><!-- headings in every section; toc collects h0-h4 outside frontm --><gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><frontm><toc><gml:toc-entries title="Table of Contents"><gml:toc-entry level="0" refid="gml-h0-1" section="body"><gml:entry-text>Part One</gml:entry-text><gml:pageref refid="gml-h0-1"/></gml:toc-entry><gml:toc-entry level="1" refid="intro" section="body" num="3.0"><gml:num>3.0</gml:num><gml:entry-text>Introduction</gml:entry-text><gml:pageref refid="intro"/></gml:toc-entry><gml:toc-entry level="2" refid="gml-h2-1" section="body" num="3.1"><gml:num>3.1</gml:num><gml:entry-text>Scope</gml:entry-text><gml:pageref refid="gml-h2-1"/></gml:toc-entry><gml:toc-entry level="2" refid="terms" section="body" num="3.2"><gml:num>3.2</gml:num><gml:entry-text>Terms</gml:entry-text><gml:pageref refid="terms"/></gml:toc-entry><gml:toc-entry level="1" refid="gml-h1-3" section="body" num="4.0"><gml:num>4.0</gml:num><gml:entry-text>Second <hp1>chapter</hp1></gml:entry-text><gml:pageref refid="gml-h1-3"/></gml:toc-entry><gml:toc-entry level="2" refid="gml-h2-3" section="body" num="4.1"><gml:num>4.1</gml:num><gml:entry-text>After</gml:entry-text><gml:pageref refid="gml-h2-3"/></gml:toc-entry><gml:toc-entry level="1" refid="appa" section="appendix" num="A"><gml:num>Appendix A.</gml:num><gml:entry-text>First appendix</gml:entry-text><gml:pageref refid="appa"/></gml:toc-entry><gml:toc-entry level="2" refid="gml-h2-4" section="appendix" num="A.1"><gml:num>A.1</gml:num><gml:entry-text>Appendix sub</gml:entry-text><gml:pageref refid="gml-h2-4"/></gml:toc-entry><gml:toc-entry level="1" refid="gml-h1-5" section="appendix" num="B"><gml:num>Appendix B.</gml:num><gml:entry-text>Second appendix</gml:entry-text><gml:pageref refid="gml-h1-5"/></gml:toc-entry><gml:toc-entry level="1" refid="gml-h1-6" section="backm"><gml:entry-text>Glossary</gml:entry-text><gml:pageref refid="gml-h1-6"/></gml:toc-entry></gml:toc-entries></toc><preface><h1 anchor="gml-h1-1">Preface</h1>
+<p>x</p></preface></frontm><body><h0 anchor="gml-h0-1">Part One</h0>
+<h1 id="intro" num="3.0" anchor="intro"><gml:num>3.0</gml:num>Introduction</h1>
+<h2 num="3.1" anchor="gml-h2-1"><gml:num>3.1</gml:num>Scope</h2>
+<h2 id="terms" num="3.2" anchor="terms"><gml:num>3.2</gml:num>Terms</h2>
+<h3 num="3.2.1" anchor="gml-h3-1"><gml:num>3.2.1</gml:num>Detail</h3>
+<h4 num="3.2.1.1" anchor="gml-h4-1"><gml:num>3.2.1.1</gml:num>Deeper</h4>
+<h5 anchor="gml-h5-1">Inline five</h5>
+<h1 num="4.0" anchor="gml-h1-3"><gml:num>4.0</gml:num>Second <hp1>chapter</hp1></h1>
+<h3 num="4.0.1" anchor="gml-h3-2"><gml:num>4.0.1</gml:num>Skipped level</h3>
+<h2 num="4.1" anchor="gml-h2-3"><gml:num>4.1</gml:num>After</h2>
+<h6 anchor="gml-h6-1">Six</h6>
+</body><appendix><h1 id="appa" num="A" anchor="appa"><gml:num>Appendix A.</gml:num>First appendix</h1>
+<h2 num="A.1" anchor="gml-h2-4"><gml:num>A.1</gml:num>Appendix sub</h2>
+<h1 num="B" anchor="gml-h1-5"><gml:num>Appendix B.</gml:num>Second appendix</h1>
+</appendix><backm><h1 anchor="gml-h1-6">Glossary</h1>
+</backm></gdoc></gml:doc>

@@ -1,0 +1,8 @@
+Formatting hints carry the new state: .in +2 after .in 3 gives left="5"
+with the operand as delta; relative changes in another unit give a mixed
+sum; .in alone returns to 0 (p.79).  .fo/.nf/.ju record fill, alignment
+and the overdraw option (p.71-76); .pf names the font it restores.
+
+  $ gml in.gml
+  <?xml version="1.0" encoding="UTF-8"?>
+  <gml:doc xmlns:gml="urn:x-gml:canonical"><gml:in left="3" unit="ch" break="yes"/><gml:in left="5" unit="ch" delta="+2" break="yes"/><gml:in left="4" unit="ch" delta="-1" break="yes"/><gml:in left="4ch+1i" unit="mixed" delta="+1i" break="yes"/><gml:in left="0" unit="ch" break="yes"/><gml:ir right="8" unit="mh" break="yes"/><gml:ir right="11" unit="mh" delta="+3" break="yes"/><gml:of offset="3" unit="ch" break="yes"/><gml:of offset="0" unit="ch" break="yes"/><gml:ll length="8" unit="i" break="yes"/><gml:ll length="6" unit="i" delta="-2" break="yes"/><gml:ll length="default" break="yes"/><gml:ll length="default" delta="+1i" break="yes"/><gml:fo fill="no" align="left" overdraw="extend" break="yes"/><gml:fo fill="yes" align="left" overdraw="extend" break="yes"/><gml:fo fill="yes" align="justify" overdraw="fold" break="yes"/><gml:nf fill="no" align="center" overdraw="fold" break="yes"/><gml:nf fill="yes" align="justify" overdraw="fold" break="yes"/><gml:fo fill="no" align="left" overdraw="fold" break="yes"/><gml:ju fill="no" align="justify" overdraw="fold" break="yes"/><gml:fo fill="yes" align="justify" overdraw="fold" break="yes"/><gml:bf font="hi2" break="no"/><gml:bf font="bold gb12" restart="yes" break="no"/><gml:pf font="hi2" break="no"/><gml:pf initial="yes" break="no"/><gml:pf initial="yes" break="no"/></gml:doc>

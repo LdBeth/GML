@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- state set deep inside nested elements continues after them, at every
+     level up (re-opened scopes); an element inside a scope inherits it;
+     a change back to the initial value inside a scope is written -->
+<gml:doc xmlns:gml="urn:x-gml:canonical"><body><ol><li>one <q>quoted <gml:ir right="3" unit="ch" break="no"/>text</q> after the quote
+</li><li>two
+</li></ol><p>para</p><gml:ir right="0" unit="ch" break="yes"/><p>right margin reset</p><gml:in left="2" unit="ch" break="yes"/><gml:in left="4" unit="ch" break="yes"/><dl><dt>term</dt><dd>desc <gml:in left="0" unit="ch" break="yes"/>back to 0 inside dd
+</dd><dt>next</dt></dl><p>still 0</p><gml:bf font="hi2" break="no"/><gml:in left="1" unit="i" break="yes"/><p>both <gml:fo fill="no" align="left" overdraw="extend" break="yes"/>now no fill
+</p><p>last</p></body></gml:doc>

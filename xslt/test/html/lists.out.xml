@@ -1,0 +1,64 @@
+<!DOCTYPE HTML><html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="GML html.xsl">
+<title>Lists</title>
+<link rel="stylesheet" href="gml.css">
+</head>
+<body class="gml">
+<main class="gml-doc">
+<article class="gml-gdoc">
+<section class="gml-body">
+<h1 id="gml-h1-1" class="gml-h1">Lists</h1>
+<ol class="gml-ol gml-nest-1">
+<li id="one"><span class="gml-label">1.</span> First
+</li>
+<li><span class="gml-label">2.</span> Second
+</li>
+<li class="gml-lp">A list part.
+</li>
+<li><span class="gml-label">3.</span> Third
+<ol class="gml-ol gml-compact gml-nest-2">
+<li id="sub"><span class="gml-label">a.</span> Nested a
+</li>
+<li><span class="gml-label">b.</span> Nested b
+</li></ol></li></ol>
+<ul class="gml-ul gml-compact gml-nest-1">
+<li><span class="gml-label">•</span> Bullet
+<ul class="gml-ul gml-nest-2">
+<li><span class="gml-label">–</span> Inner bullet
+</li></ul></li></ul>
+<ul class="gml-sl">
+<li>Simple
+</li>
+<li>List
+</li></ul>
+<dl class="gml-dl">
+<dt class="gml-dthd">Term
+</dt>
+<dd class="gml-ddhd">Description
+</dd>
+<dt>GML</dt>
+<dd>Generalized Markup Language.
+</dd>
+<dt>DCF</dt>
+<dd>Document Composition Facility.
+</dd></dl>
+<dl class="gml-dl gml-compact gml-break">
+<dt>Compact</dt>
+<dd>Compact definition list.
+</dd></dl>
+<dl class="gml-gl">
+<dt class="gml-gt">glossary</dt>
+<dd class="gml-gd">A list of terms.
+</dd></dl>
+<dl class="gml-gl gml-compact">
+<dt class="gml-gt">compact</dt>
+<dd class="gml-gd">Tight.
+</dd></dl>
+<p>See item <a class="gml-liref" href="#sub">a.</a> and <a class="gml-liref" href="#one">1.</a>.
+</p></section></article>
+</main>
+</body>
+</html>

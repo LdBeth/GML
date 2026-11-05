@@ -1,0 +1,25 @@
+.* every unit form of SH35-0069 Figure 3 (p.46)
+.sp 2
+.sp 1,5
+.sp .75
+.sp 3.5i
+.sp 6,5i
+.sp 4.25cm
+.sp 2,54cm
+.sp 12.7mm
+.sp 10dv
+.sp 1mv
+.sp p6
+.sp 3p2
+.sp p1.5
+.sp c12
+.sp 2c3
+.sp c1.5
+.in 5
+.in 6mh
+.in 6m
+.in .33m
+.in 10dh
+.in 15cm
+.sp 1.234
+.sp 2x

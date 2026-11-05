@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><body><h1 anchor="gml-h1-1">Hints</h1>
+<p>First line.
+<gml:br break="yes"/>Second line after a break.
+<gml:sp n="2" unit="line" break="yes"/>After two blank lines.
+<gml:sp n="1" unit="i" break="yes"/>After an inch.
+<gml:lines word="ce" n="1" break="yes">Centered line</gml:lines>
+<gml:lines word="us" n="on" break="no">underlined text
+</gml:lines><gml:lines word="up" n="1" break="no">uppercase line</gml:lines>
+<gml:lines word="ri" n="1" break="yes">right line</gml:lines>
+<gml:pa break="yes"/>New page.
+<gml:cp n="5" unit="line" break="yes"/>Conditional page.
+<gml:h level="2" break="yes">A control word heading</gml:h>
+Text under it.
+<gml:rh>Running head
+</gml:rh><gml:rf>Running foot
+</gml:rf><gml:raw backend="html">&lt;b&gt;raw html&lt;/b&gt;</gml:raw><gml:raw backend="tex">\relax</gml:raw><gml:raw backend="fo">&lt;fo:block/&gt;</gml:raw></p><p>Between paragraphs:
+<gml:sp n="3" unit="line" break="yes"/></p><p>after space.
+<gml:pa break="yes"/></p><p>After a page eject.
+<widget kind="demo">unknown element
+</widget><widget>another
+</widget><gadget/></p></body></gdoc></gml:doc>

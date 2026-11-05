@@ -1,0 +1,22 @@
+#!/usr/local/plan9/bin/rc
+# check - run the structural XSL-FO checks (check.xsl) on FO files.
+#
+#   xslt/test/fo/check [file.fo...]
+#
+# With no arguments: every fixture output of the fo and fo-vendor-ah
+# stages.  Prints the errors of each file, then ok/N errors.  The fixtures
+# also run the checks themselves (check=test/fo/check.xsl in their
+# .params: an error is an xsl:message, so the test fails on its .err).
+
+if(~ $#SAXON 0) SAXON=/usr/local/bin/transform
+here=`{cd `{/usr/local/plan9/bin/basename -d $0} && pwd}
+files=($*)
+if(~ $#files 0) files=($here/*.out.xml $here/../fo-vendor-ah/*.out.xml)
+fail=0
+for(f in $files){
+	r=`{$SAXON -s:$f -xsl:$here/check.xsl 'allow-ns=http://www.antennahouse.com/names/XSL/Extensions' | tail -1}
+	echo $f: $r
+	if(! ~ $r(1) ok:) fail=1
+}
+if(~ $fail 1) exit fail
+exit ''

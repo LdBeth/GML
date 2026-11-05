@@ -1,0 +1,246 @@
+/* gml.css - the default stylesheet of xslt/html.xsl (GML Starter Set).
+ *
+ * Linked as "gml.css" by default (html.xsl parameter css=...), or embedded
+ * with css-inline=yes.  Light and dark themes follow prefers-color-scheme.
+ *
+ * Custom properties a user stylesheet can set:
+ *   --gml-measure   the default line length (.ll default)        44rem
+ *   --gml-leading   the line height (the "line" unit is 1lh)       1.5
+ *   --gml-justify   what DCF "justify" (.ju on, the default) means:
+ *                   start (ragged right) here; set it to justify for DCF
+ *   --gml-tsize     the term width of a :dl (set from tsize=)     10ch
+ *
+ * Class names: every element html.xsl writes is gml-NAME after its GML
+ * tag (gml-h1, gml-note, gml-figcap ...); gml-font-NAME for a .bf font.
+ */
+
+:root {
+  color-scheme: light dark;
+  --gml-measure: 44rem;
+  --gml-leading: 1.5;
+  --gml-justify: start;
+  --gml-tsize: 10ch;
+
+  --gml-fg: #1d1d1f;
+  --gml-bg: #fdfdfc;
+  --gml-muted: #5f6368;
+  --gml-rule: #c9ccd1;
+  --gml-accent: #1a5fb4;
+  --gml-code-bg: #f3f4f6;
+  --gml-sec: #a51d2d;
+
+  --gml-body-font: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+  --gml-head-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --gml-mono-font: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --gml-fg: #e3e3e0;
+    --gml-bg: #17181a;
+    --gml-muted: #a0a4a9;
+    --gml-rule: #3d4045;
+    --gml-accent: #8ab4f8;
+    --gml-code-bg: #222326;
+    --gml-sec: #ff7b72;
+  }
+}
+
+/* ---- page --------------------------------------------------------------- */
+html { background: var(--gml-bg); }
+body.gml {
+  margin: 0;
+  padding: 2rem 1rem 4rem;
+  color: var(--gml-fg);
+  background: var(--gml-bg);
+  font-family: var(--gml-body-font);
+  font-size: 1.0625rem;
+  line-height: var(--gml-leading);
+  text-align: var(--gml-justify);
+  hyphens: manual;
+  overflow-wrap: break-word;
+}
+.gml-doc { max-width: var(--gml-measure); margin: 0 auto; }
+a { color: var(--gml-accent); text-decoration-thickness: 0.06em; text-underline-offset: 0.15em; }
+a:hover { text-decoration-thickness: 0.12em; }
+:target { scroll-margin-top: 1rem; }
+
+p { margin: 0 0 0.75em; }
+.gml-pc { text-indent: 0; }
+
+/* ---- sections and title page ---------------------------------------------- */
+.gml-sec { color: var(--gml-sec); font-family: var(--gml-head-font); font-weight: 700;
+           text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.8rem;
+           text-align: right; margin: 0 0 1rem; }
+.gml-titlep { margin: 1rem 0 3rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--gml-rule);
+              text-align: right; }
+.gml-title { font-family: var(--gml-head-font); font-size: 2.1rem; line-height: 1.2;
+             margin: 0 0 0.25rem; text-align: right; }
+.gml-title + .gml-title { font-size: 1.5rem; font-weight: 500; }
+.gml-docnum, .gml-date { color: var(--gml-muted); margin: 0.25rem 0; }
+.gml-docnum { font-family: var(--gml-mono-font); font-size: 0.9em; }
+.gml-author { margin: 0.75rem 0 0; font-weight: 600; }
+.gml-author + .gml-author { margin-top: 0; }
+.gml-address { font-style: normal; color: var(--gml-muted); margin-top: 0.5rem; }
+.gml-abstract, .gml-preface { margin: 2rem 0; }
+.gml-abstract { font-size: 0.95em; }
+.gml-appendix, .gml-backm { margin-top: 3rem; }
+
+/* ---- headings ------------------------------------------------------------- */
+h1, h2, h3, h4, h5, h6, .gml-h {
+  font-family: var(--gml-head-font);
+  line-height: 1.25;
+  text-align: left;
+  hyphens: manual;
+  break-after: avoid-page;
+}
+.gml-h0 { font-size: 2.2rem; margin: 3rem 0 1.5rem; padding: 0.75rem 0;
+          border-top: 3px solid var(--gml-fg); border-bottom: 1px solid var(--gml-rule); }
+.gml-h1, .gml-section-title, .gml-toc-title, .gml-figlist-title, .gml-index-title
+        { font-size: 1.75rem; margin: 2.5rem 0 1rem; }
+.gml-h2 { font-size: 1.35rem; margin: 2rem 0 0.75rem; }
+.gml-h3 { font-size: 1.15rem; margin: 1.5rem 0 0.5rem; }
+.gml-h4 { font-size: 1rem; margin: 1.25rem 0 0.5rem; }
+.gml-h5 { font-size: 1rem; font-weight: 600; font-style: italic; margin: 1rem 0 0.25rem; }
+.gml-h6 { font-size: 0.95rem; font-weight: 600; font-style: italic; margin: 1rem 0 0.25rem; }
+.gml-num { font-variant-numeric: tabular-nums; }
+h1 > .gml-num, h2 > .gml-num, h3 > .gml-num, h4 > .gml-num { color: var(--gml-muted); margin-right: 0.35em; }
+
+/* ---- phrases -------------------------------------------------------------- */
+.gml-hp0 { font-style: normal; font-weight: normal; }
+.gml-hp1 { font-style: italic; }
+.gml-hp2 { font-weight: 700; }
+.gml-hp3, .gml-hp3 > em { font-weight: 700; font-style: italic; }
+.gml-cit { font-style: italic; }
+q { quotes: "\201C" "\201D" "\2018" "\2019"; }
+.gml-note { padding: 0.6em 0.9em; border-left: 3px solid var(--gml-accent);
+            background: var(--gml-code-bg); border-radius: 0 4px 4px 0; }
+.gml-note-label { font-weight: 700; }
+.gml-lq { margin: 1em 2.5em; color: var(--gml-fg); font-size: 0.97em; }
+.gml-unknown { outline: 1px dashed var(--gml-sec); outline-offset: 1px; }
+.gml-unresolved { color: var(--gml-sec); }
+
+/* ---- lists: the labels are written by html.xsl ---------------------------- */
+.gml-ol, .gml-ul, .gml-sl, .gml-l { list-style: none; margin: 0.5em 0 0.75em; padding-left: 2.5em; }
+.gml-ol > li, .gml-ul > li, .gml-l > li { position: relative; margin-bottom: 0.4em; }
+.gml-sl > li { margin-bottom: 0.4em; }
+.gml-compact > li { margin-bottom: 0; }
+.gml-label { position: absolute; right: calc(100% + 0.5em); white-space: nowrap;
+             font-variant-numeric: tabular-nums; }
+.gml-ul > li > .gml-label, .gml-l > li > .gml-label { color: var(--gml-muted); }
+li > p:last-child, dd > p:last-child { margin-bottom: 0; }
+.gml-lp { margin: 0.4em 0 0.4em -1.5em; }
+
+.gml-dl { display: grid; grid-template-columns: minmax(auto, var(--gml-tsize)) 1fr;
+          column-gap: 1.25em; row-gap: 0.4em; margin: 0.5em 0 0.75em; }
+.gml-dl > dt { grid-column: 1; font-weight: 700; }
+.gml-dl > dd { grid-column: 2; margin: 0; }
+.gml-dl.gml-compact { row-gap: 0; }
+.gml-dl.gml-break { display: block; }
+.gml-dl.gml-break > dd { margin: 0 0 0.4em 2.5em; }
+.gml-dl > .gml-dthd { font-weight: 700; font-style: italic; border-bottom: 1px solid var(--gml-rule); }
+.gml-dl > .gml-ddhd { font-weight: 700; font-style: italic; border-bottom: 1px solid var(--gml-rule); }
+.gml-dl > .gml-dthd, .gml-dl > .gml-ddhd { font-weight: 700; }
+.gml-termhi-0 > dt { font-weight: normal; font-style: normal; }
+.gml-termhi-1 > dt { font-weight: normal; font-style: italic; }
+.gml-termhi-2 > dt { font-weight: 700; font-style: normal; }
+.gml-termhi-3 > dt { font-weight: 700; font-style: italic; }
+.gml-gl { margin: 0.5em 0 0.75em; }
+.gml-gl > dt { font-weight: 700; display: inline; }
+.gml-gl > dt::after { content: ":"; }
+.gml-gl > dd { display: inline; margin: 0 0 0 0.35em; }
+.gml-gl > dd::after { content: ""; display: block; margin-bottom: 0.4em; }
+.gml-gl.gml-compact > dd::after { margin-bottom: 0; }
+
+/* ---- examples and figures -------------------------------------------------- */
+pre, .gml-xmp { font-family: var(--gml-mono-font); font-size: 0.875em; line-height: 1.45;
+                background: var(--gml-code-bg); padding: 0.75em 1em; border-radius: 4px;
+                overflow-x: auto; text-align: left; margin: 0.75em 0 1em; }
+.gml-fig { margin: 1.25em 0; padding: 0.75em 1em; text-align: left; }
+.gml-frame-rule { border-top: 1px solid var(--gml-fg); border-bottom: 1px solid var(--gml-fg); }
+.gml-frame-box { border: 1px solid var(--gml-fg); }
+.gml-frame-none { padding: 0; }
+.gml-frame-chars { white-space: nowrap; overflow: hidden; font-family: var(--gml-mono-font);
+                   color: var(--gml-muted); line-height: 1; user-select: none; }
+.gml-figbody { white-space: pre-wrap; }
+.gml-fig > figcaption { margin-top: 0.75em; font-size: 0.95em; }
+.gml-figcap { font-weight: 600; }
+.gml-figcap > .gml-num { font-weight: 700; }
+.gml-figdesc { margin-top: 0.25em; color: var(--gml-muted); }
+
+/* ---- footnotes ------------------------------------------------------------- */
+.gml-fn-callout, .gml-fnref { line-height: 0; font-size: 0.75em; }
+.gml-fn-callout > a, .gml-fnref > a { text-decoration: none; padding: 0 0.1em; }
+.gml-footnotes { margin-top: 2.5rem; font-size: 0.9em; }
+.gml-footnotes::before { content: ""; display: block; width: 8rem; margin-bottom: 0.75rem;
+                         border-top: 1px solid var(--gml-rule); }
+.gml-footnotes-title { font-size: 1rem; margin: 0 0 0.5rem; }
+.gml-footnote-list { list-style: none; margin: 0; padding-left: 2em; }
+.gml-footnote { position: relative; margin-bottom: 0.35em; }
+.gml-fn-num { position: absolute; right: calc(100% + 0.5em); font-variant-numeric: tabular-nums; }
+.gml-fn-num > a { text-decoration: none; }
+.gml-footnote:target { background: var(--gml-code-bg); }
+
+/* ---- table of contents, figure list, index -------------------------------- */
+.gml-toc, .gml-figlist { margin: 2rem 0; text-align: left; }
+.gml-toc-list, .gml-figlist-list { list-style: none; margin: 0; padding: 0; }
+.gml-toc-list .gml-toc-list { padding-left: 1.5em; }
+.gml-toc-entry { margin: 0.2em 0; }
+.gml-toc-l0 > a { font-weight: 700; font-size: 1.05em; }
+.gml-toc-l1 > a { font-weight: 600; }
+.gml-toc-entry > a, .gml-figlist-entry > a { text-decoration: none; color: inherit; }
+.gml-toc-entry > a:hover, .gml-figlist-entry > a:hover { color: var(--gml-accent); text-decoration: underline; }
+.gml-toc-entry .gml-num { color: var(--gml-muted); margin-right: 0.15em; }
+.gml-figlist-entry { margin: 0.2em 0; }
+.gml-figlist-entry .gml-num { font-weight: 600; }
+
+.gml-index { text-align: left; }
+.gml-index-group { break-inside: avoid; }
+.gml-index-letter { font-size: 1.1rem; margin: 1.25rem 0 0.25rem; color: var(--gml-muted); }
+.gml-index-list { list-style: none; margin: 0; padding: 0; }
+.gml-index-list .gml-index-list { padding-left: 1.5em; }
+.gml-index-entry { margin: 0.1em 0; }
+.gml-index-ref { font-variant-numeric: tabular-nums; }
+.gml-see-label { font-style: italic; }
+@media (min-width: 48rem) {
+  .gml-index { columns: 2; column-gap: 2.5rem; }
+  .gml-index-title { column-span: all; }
+}
+
+/* ---- control word headings and hints --------------------------------------- */
+.gml-h { font-size: 1.1rem; margin: 1.25em 0 0.5em; }
+.gml-h-0, .gml-h-1 { font-size: 1.6rem; }
+.gml-h-2 { font-size: 1.3rem; }
+.gml-sp { display: block; }
+.gml-pa, .gml-cp, .gml-cc, .gml-cb { display: block; height: 0; }
+.gml-hr { border: 0; border-top: 1px solid var(--gml-rule); margin: 0.75em 0; display: block; }
+.gml-sx { gap: 0.5em; }
+.gml-sx-fill { flex: 1; border-bottom: 1px dotted var(--gml-muted); margin-bottom: 0.35em; }
+.gml-rc { border-left: 2px solid var(--gml-sec); padding-left: 0.25em; }
+.gml-scope { /* the state is inline style */ }
+
+/* .bf fonts: the Starter Set highlight and heading fonts (IG Figure 6, page
+   printer column) */
+.gml-font-initial { font-style: normal; font-weight: normal; font-family: var(--gml-body-font); }
+.gml-font-hi0 { font-style: normal; font-weight: normal; }
+.gml-font-hi1 { font-style: italic; }
+.gml-font-hi2 { font-weight: 700; }
+.gml-font-hi3 { font-weight: 700; font-style: italic; }
+.gml-font-hd0, .gml-font-hd2 { font-weight: 700; font-style: italic; }
+.gml-font-hd1, .gml-font-hd3, .gml-font-hd4, .gml-font-hd5 { font-weight: 700; }
+.gml-font-hd6 { font-weight: 700; font-style: italic; }
+.gml-font-xmpfont { font-family: var(--gml-mono-font); }
+.gml-font-althi1 { text-decoration: underline; }
+.gml-font-althi2 { text-transform: uppercase; }
+.gml-font-althi3 { text-decoration: underline; text-transform: uppercase; }
+
+/* ---- print ------------------------------------------------------------------ */
+@media print {
+  :root { --gml-fg: #000; --gml-bg: #fff; --gml-accent: #000; --gml-code-bg: #f4f4f4; }
+  body.gml { padding: 0; font-size: 10.5pt; }
+  .gml-doc { max-width: none; }
+  .gml-h0, .gml-body > .gml-h1, .gml-appendix > .gml-h1, .gml-backm > .gml-h1,
+  .gml-abstract, .gml-preface, .gml-toc, .gml-index { break-before: page; }
+  a { text-decoration: none; }
+  .gml-fig, .gml-xmp { break-inside: avoid; }
+}

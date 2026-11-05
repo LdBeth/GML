@@ -1,0 +1,31 @@
+<!DOCTYPE HTML><html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="GML html.xsl">
+<title>Text elements</title>
+<link rel="stylesheet" href="gml.css">
+</head>
+<body class="gml">
+<main class="gml-doc">
+<article class="gml-gdoc">
+<section class="gml-body">
+<h1 id="gml-h1-1" class="gml-h1">Text elements</h1>
+<p>A paragraph with <span class="gml-hp0">normal</span>, <em class="gml-hp1">italic</em>, <strong class="gml-hp2">bold</strong>
+and <strong class="gml-hp3"><em>bold italic</em></strong> text, a citation <cite class="gml-cit">The Book</cite>,
+and <q class="gml-q">a quote with <q class="gml-q">a nested quote</q> inside</q>.
+</p>
+<blockquote class="gml-lq">
+<p>A long quotation.
+</p></blockquote>
+<p class="gml-pc">A paragraph continuation.
+</p>
+<p class="gml-note"><span class="gml-note-label">Note:</span>&nbsp;Mind the gap.
+</p>
+<p>Special characters: &lt;tag&gt; &amp; "quotes".
+</p>
+<p>Processed for html only.
+</p></section></article>
+</main>
+</body>
+</html>
