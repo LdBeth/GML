@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc sec="customer"><frontm><titlep><title>Widget Server 4.2</title>
+<title>Release Notes</title>
+<docnum>GC00-4200</docnum>
+<date>November 6th, 2026</date>
+<author>The Widget Team</author>
+</titlep><abstract><p>This document describes Widget Server Version 4.2,
+which runs on z/OS, z/VM, Linux on Z
+</p></abstract><toc/><figlist/></frontm><body><h1 id="over">Overview</h1>
+<p>Widget Server 4.2 is a maintenance release.
+It contains the changes listed in <hdref refid="changes"/>.
+<i1>Widget Server</i1>
+<i2>version 4.2</i2>
+</p><p>Contact your representative for the support schedule.
+</p><h1 id="changes">Changes in 4.2</h1>
+<p>The following changes were made:
+</p><ol><li>Faster start-up<fn id="fn1">Measured on a cold system.</fn>
+</li><li>New <q>quiet</q> start option
+</li><li>Fixes for the problems listed in <figref refid="probs"/>
+</li></ol><p>This release has 3 changes
+(see footnote <fnref refid="fn1"/>).
+</p><warn level="2">Important: Back up the configuration before you upgrade.
+</warn><h2 id="cfg">Configuration</h2>
+<p>The configuration file now accepts these keywords:
+</p><dl><dt>timeout</dt>
+<dd>Seconds to wait for a client (default 30).
+<i1>timeout keyword</i1>
+</dd><dt>quiet</dt>
+<dd>Suppresses the start-up banner.
+<i1>quiet keyword</i1>
+</dd></dl><p>An example:
+</p><xmp xml:space="preserve"><gml:fo fill="no" align="left" overdraw="extend" break="yes"/>  server  main
+    timeout 45
+    quiet
+<gml:fo fill="yes" align="justify" overdraw="extend" break="yes"/></xmp><fig id="probs" frame="box"><ul compact="compact"><li>WS0012: crash on empty request
+</li><li>WS0019: wrong date in log
+</li></ul><figcap>Problems fixed in 4.2</figcap>
+</fig><h2>Platforms</h2>
+<p>Supported platforms:
+</p><sl><li>z/OS
+</li><li>z/VM
+</li><li>Linux on Z
+</li></sl><warn>Note: All platforms need the latest service level.
+</warn></body><backm><index/></backm></gdoc></gml:doc>

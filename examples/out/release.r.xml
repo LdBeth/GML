@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc sec="customer"><frontm><titlep><title>Widget Server 4.2</title>
+<title>Release Notes</title>
+<docnum>GC00-4200</docnum>
+<date>November 6th, 2026</date>
+<author>The Widget Team</author>
+</titlep><abstract><p>This document describes Widget Server Version 4.2,
+which runs on z/OS, z/VM, Linux on Z
+</p></abstract><toc><gml:toc-entries title="Table of Contents"><gml:toc-entry level="1" refid="over" section="body"><gml:entry-text>Overview</gml:entry-text><gml:pageref refid="over"/></gml:toc-entry><gml:toc-entry level="1" refid="changes" section="body"><gml:entry-text>Changes in 4.2</gml:entry-text><gml:pageref refid="changes"/></gml:toc-entry><gml:toc-entry level="2" refid="cfg" section="body"><gml:entry-text>Configuration</gml:entry-text><gml:pageref refid="cfg"/></gml:toc-entry><gml:toc-entry level="2" refid="gml-h2-2" section="body"><gml:entry-text>Platforms</gml:entry-text><gml:pageref refid="gml-h2-2"/></gml:toc-entry></gml:toc-entries></toc><figlist><gml:figlist-entries title="List of Illustrations"><gml:figlist-entry refid="probs" num="1"><gml:num>Figure 1</gml:num><gml:entry-text>Problems fixed in 4.2</gml:entry-text><gml:pageref refid="probs"/></gml:figlist-entry></gml:figlist-entries></figlist></frontm><body><h1 id="over" anchor="over">Overview</h1>
+<p>Widget Server 4.2 is a maintenance release.
+It contains the changes listed in <hdref refid="changes" resolved="yes" target="h1">“Changes in 4.2”<gml:pageref refid="changes" when="auto" label="on page"/></hdref>.
+<i1 anchor="gml-i1-1">Widget Server</i1>
+<i2 anchor="gml-i2-1">version 4.2</i2>
+</p><p>Contact your representative for the support schedule.
+</p><h1 id="changes" anchor="changes">Changes in 4.2</h1>
+<p>The following changes were made:
+</p><ol nest="1"><li num="1"><gml:num>1.</gml:num>Faster start-up<fn id="fn1" num="1" anchor="fn1" callout="no"><gml:num>1</gml:num>Measured on a cold system.</fn>
+</li><li num="2"><gml:num>2.</gml:num>New <q>quiet</q> start option
+</li><li num="3"><gml:num>3.</gml:num>Fixes for the problems listed in <figref refid="probs" resolved="yes" target="fig" num="1">Figure 1<gml:pageref refid="probs" when="auto" label="on page"/></figref>
+</li></ol><p>This release has 3 changes
+(see footnote <fnref refid="fn1" resolved="yes" target="fn" num="1">1</fnref>).
+</p><warn level="2">Important: Back up the configuration before you upgrade.
+</warn><h2 id="cfg" anchor="cfg">Configuration</h2>
+<p>The configuration file now accepts these keywords:
+</p><dl><dt>timeout</dt>
+<dd>Seconds to wait for a client (default 30).
+<i1 anchor="gml-i1-2">timeout keyword</i1>
+</dd><dt>quiet</dt>
+<dd>Suppresses the start-up banner.
+<i1 anchor="gml-i1-3">quiet keyword</i1>
+</dd></dl><p>An example:
+</p><xmp xml:space="preserve"><gml:fo fill="no" align="left" overdraw="extend" break="yes"/>  server  main
+    timeout 45
+    quiet
+<gml:fo fill="yes" align="justify" overdraw="extend" break="yes"/></xmp><fig id="probs" frame="box" num="1" anchor="probs"><ul compact="compact" nest="1"><li>WS0012: crash on empty request
+</li><li>WS0019: wrong date in log
+</li></ul><figcap><gml:num>Figure 1.</gml:num>Problems fixed in 4.2</figcap>
+</fig><h2 anchor="gml-h2-2">Platforms</h2>
+<p>Supported platforms:
+</p><sl><li>z/OS
+</li><li>z/VM
+</li><li>Linux on Z
+</li></sl><warn>Note: All platforms need the latest service level.
+</warn></body><backm><index><gml:index-entries title="Index"><gml:index-group letter="Q"><gml:index-entry level="1"><gml:index-term>quiet keyword</gml:index-term><gml:pageref refid="gml-i1-3"/></gml:index-entry></gml:index-group><gml:index-group letter="T"><gml:index-entry level="1"><gml:index-term>timeout keyword</gml:index-term><gml:pageref refid="gml-i1-2"/></gml:index-entry></gml:index-group><gml:index-group letter="W"><gml:index-entry level="1"><gml:index-term>Widget Server</gml:index-term><gml:pageref refid="gml-i1-1"/><gml:index-entry level="2"><gml:index-term>version 4.2</gml:index-term><gml:pageref refid="gml-i2-1"/></gml:index-entry></gml:index-entry></gml:index-group></gml:index-entries></index></backm></gdoc></gml:doc>

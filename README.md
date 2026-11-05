@@ -150,7 +150,26 @@ The stylesheet parameters (`SYSVARS`/`SYSVARD`/`SYSVART` page layouts,
   `css-file`).
 - **XSLT.** Write a stylesheet that does `xsl:import` of a stage and
   overrides its template rules.  `xslt/fo-vendor-ah.xsl` is the example:
-  it fills the hook modes of fo.xsl with Antenna House extensions.
+  it fills the hook modes of fo.xsl with Antenna House extensions.  An
+  importer of html.xsl that handles its own tags redefines the variable
+  `h:extra-known` (namespace `urn:x-gml:html`) so they are not reported as
+  unknown.
+
+## Example
+
+`examples/release.gml` is a Starter Set document (release notes) that
+also uses the programmable layer: symbols and arithmetic (`&version`,
+`&nextmin`), an array (`&platforms(*)`), a counting macro (`.change`),
+conditional text with `.if`/`.go` driven by `-set audience=internal`, and
+a user-defined tag `:warn level=n` whose APF uses `.gs attval` and `.gs
+insert`, with an `.xd` model.  The tag is styled per backend without
+touching the shipped files: `examples/release-html.xsl` and
+`examples/release-fo.xsl` import html.xsl / fo.xsl, and
+`examples/gmllocal.tex` styles it for TeX.
+
+`examples/build` regenerates everything in `examples/out/`: the engine
+XML (`release.xml`), resolved, scoped and semantic XML, HTML for both
+audiences, XSL-FO, plain TeX and the typeset `release.pdf`.
 
 ## DCF fidelity
 

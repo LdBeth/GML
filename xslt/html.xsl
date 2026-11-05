@@ -148,6 +148,9 @@
   <xsl:variable name="chapter-notes" as="xs:boolean" select="$footnotes = 'chapter'"/>
 
   <!-- ==== the vocabulary ============================================== -->
+  <!-- Element names an importing stylesheet handles itself (user tags):
+       redefine this variable there so they are not reported as unknown. -->
+  <xsl:variable name="h:extra-known" as="xs:string*" select="()"/>
   <xsl:variable name="h:known" select="('gdoc', 'frontm', 'body', 'appendix', 'backm',
       'titlep', 'title', 'docnum', 'date', 'author', 'address', 'aline', 'abstract', 'preface',
       'toc', 'figlist', 'index', 'h0', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
@@ -176,7 +179,7 @@
     <xsl:param name="e" as="element()"/>
     <xsl:sequence select="if (namespace-uri($e) = 'urn:x-gml:canonical')
         then not(local-name($e) = ($h:gml-used, $h:gml-dropped))
-        else namespace-uri($e) != '' or not(local-name($e) = $h:known)"/>
+        else namespace-uri($e) != '' or not(local-name($e) = ($h:known, $h:extra-known))"/>
   </xsl:function>
 
   <xsl:function name="h:no-ns" as="xs:boolean">

@@ -1,0 +1,6 @@
+% gmllocal.tex -- loaded automatically by gml.tex when it is on TEXINPUTS.
+% Adds a style for the user-defined :warn tag of release.gml: a ruled,
+% indented block.  The label ("Note:"/"Important:") is inserted by the APF.
+\gmldefstart{warn}{\par\medskip\hrule\smallskip
+  \advance\leftskip 1em \advance\rightskip 1em \noindent}
+\gmldefend{warn}{\par\smallskip\hrule\medskip}
