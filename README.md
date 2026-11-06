@@ -180,6 +180,47 @@ The stylesheet parameters (`SYSVARS`/`SYSVARD`/`SYSVART` page layouts,
   `h:extra-known` (namespace `urn:x-gml:html`) so they are not reported as
   unknown.
 
+## Emacs
+
+`emacs/gml-mode.el` is a major mode for `.gml` files (Emacs 29 or later):
+
+```elisp
+(add-to-list 'load-path "/path/to/GML/emacs")
+(require 'gml-mode)
+(add-hook 'gml-mode-hook #'flymake-mode)   ; diagnostics from the gml engine
+```
+
+- **Highlighting** of control words by kind (programmable, formatting,
+  file, unknown), macro calls, `.dm`/`.se`/`.aa` definitions, labels,
+  tags and their attributes, symbols (`&x.`, `&*1`, `&L'`), the `;`
+  separator and `:xmp` examples.  `.*` and `.cm` are comments; `M-;`
+  (un)comments whole lines.
+- **Filling** never joins control word lines, never fills `:xmp` or
+  one-line tags (`:h1`, `:dt`, `:i1` ... and any `.xd NAME eol`), never
+  breaks inside a tag or before a `.`, and does not indent, since a
+  leading blank is a break in SCRIPT/VS.
+- **Structure:** `C-c C-t` inserts a tag (and its end tag, wrapping the
+  region), `C-c C-e` closes the innermost open structure (`.aa` tags
+  with an end APF count), `C-c C-d` inserts a `.dm NAME on` ... `.dm off`
+  macro.  Outline and imenu follow the headings; imenu also lists
+  macros, labels, `.aa` tags and ids.
+- **Completion** of tags, attributes, control words, macros and symbols;
+  **eldoc** for control words and Starter Set tags.
+- **xref** (`M-.`) on a macro call, `&symbol`, `.go` label,
+  `refid=` value, tag or `.im` file name.  Definitions are looked up in
+  the buffer, then in the imbedded files and the profile, so `&date`
+  leads to `starter.gml`.
+- **Flymake** runs the engine on the buffer (`-I` the file's directory)
+  and reports its errors and warnings; `C-c C-c` runs `gmlfmt` into
+  `doc.html` (`C-u C-c C-c` asks for the `-to` stage) with the messages
+  in a compilation buffer; `C-c C-v` previews the HTML in a browser.
+
+Inside the project the tools are found automatically: the `gml` built in
+`_build` with `-share share`, and `./gmlfmt`.  Elsewhere set `gml-root`,
+or `gml-program` and `gml-gmlfmt-program`.  `gml-profile` and
+`gml-symbols` (an alist for `-set`, safe as a file-local variable) are
+passed to both.
+
 ## Example
 
 `examples/release.gml` is a Starter Set document (release notes) that
