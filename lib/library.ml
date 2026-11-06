@@ -53,10 +53,9 @@ let member ctx name =
         | None -> None
         | Some p -> (
           match Input.read_file p with
-          | Ok lines -> Some (p, lines)
+          | Ok lines -> Some lines
           | Error e -> Ctx.error ctx "library member %s: %s" m e; None)
       in
-      let r = Option.map snd r in
       Hashtbl.replace ctx.Ctx.lib_members m r;
       r
 

@@ -8,18 +8,11 @@ let parse_int s =
   let n = String.length s in
   let start = if n > 0 && (s.[0] = '+' || s.[0] = '-') then 1 else 0 in
   if start >= n then None
-  else begin
-    let ok = ref true in
-    for i = start to n - 1 do
-      match s.[i] with '0' .. '9' -> () | _ -> ok := false
-    done;
-    if not !ok then None
-    else
-      let digits = String.sub s start (n - start) in
-      match int_of_string_opt digits with
-      | None -> None
-      | Some v -> Some (if s.[0] = '-' then -v else v)
-  end
+  else
+    let digits = String.sub s start (n - start) in
+    if String.for_all (function '0' .. '9' -> true | _ -> false) digits then
+      Option.map (fun v -> if s.[0] = '-' then -v else v) (int_of_string_opt digits)
+    else None
 
 let is_blank c = c = ' ' || c = '\t'
 
@@ -34,6 +27,9 @@ let close_quote s i =
   | Some j -> j
   | None -> String.length s
 
+(* The contents of the delimited string at [i] and the index of its closing quote (or [n]). *)
+let delimited s i = let j = close_quote s i in (String.sub s (i + 1) (j - i - 1), j)
+
 (** Remove the delimiters of every delimited string ('...') in
     [s]; other text is kept as written. *)
 let unquote_all s =
@@ -42,8 +38,8 @@ let unquote_all s =
   let rec go i =
     if i < n then
       if is_quote s.[i] then begin
-        let j = close_quote s i in
-        Buffer.add_string b (String.sub s (i + 1) (max 0 (min j n - i - 1)));
+        let body, j = delimited s i in
+        Buffer.add_string b body;
         go (j + 1)
       end
       else begin
@@ -155,8 +151,8 @@ let se_tokens s =
     let i = !i in
     if i >= n then List.rev acc
     else if is_quote s.[i] then begin
-      let j = close_quote s i in
-      go (j + 1) ((Q (String.sub s (i + 1) (max 0 (min j n - i - 1))), i, min n (j + 1)) :: acc)
+      let body, j = delimited s i in
+      go (j + 1) ((Q body, i, min n (j + 1)) :: acc)
     end
     else begin
       let j = ref i in
@@ -279,9 +275,8 @@ let read_term s i =
   while !i < n && is_blank s.[!i] do incr i done;
   if !i >= n then None
   else if is_quote s.[!i] then begin
-    let j = close_quote s !i in
-    Some { text = String.sub s (!i + 1) (max 0 (min j n - !i - 1));
-           quoted = true; stop = min n (j + 1) }
+    let text, j = delimited s !i in
+    Some { text; quoted = true; stop = min n (j + 1) }
   end
   else begin
     let j = ref !i in
@@ -297,10 +292,11 @@ let compare_strings a b =
   compare (pad a la) (pad b lb)
 
 let compare_terms a b =
-  match (if a.quoted || b.quoted then None else parse_int a.text),
-        (if a.quoted || b.quoted then None else parse_int b.text) with
-  | Some x, Some y -> compare x y
-  | _ -> compare_strings a.text b.text
+  if a.quoted || b.quoted then compare_strings a.text b.text
+  else
+    match parse_int a.text, parse_int b.text with
+    | Some x, Some y -> compare x y
+    | _ -> compare_strings a.text b.text
 
 let test op c =
   match op with

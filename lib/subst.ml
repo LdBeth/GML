@@ -280,8 +280,7 @@ let hex v =
     let b = Buffer.create (n / 2) in
     for i = 0 to n / 2 - 1 do
       let c = int_of_string ("0x" ^ String.sub v (2 * i) 2) in
-      if c < 0x80 then Buffer.add_char b (Char.chr c)
-      else Buffer.add_utf_8_uchar b (Uchar.of_int c)
+      Buffer.add_utf_8_uchar b (Uchar.of_int c)
     done;
     Buffer.contents b
   end
@@ -347,21 +346,21 @@ let attr1 = "ELTVWUARXeltvwuarx"
 let attr2 = [ "dh"; "dv"; "ad"; "sw"; "sd" ]
 
 (* An attribute prefix at [k]: its name and length. *)
-let attr_at st s k =
+let attr_at s k =
   let n = String.length s in
   if k + 3 < n && s.[k + 3] = '\''
      && List.mem (String.lowercase_ascii (String.sub s (k + 1) 2)) attr2 then
     Some (String.uppercase_ascii (String.sub s (k + 1) 2), 4)
   else if k + 2 < n && s.[k + 2] = '\'' && String.contains attr1 s.[k + 1] then
     Some (String.make 1 s.[k + 1], 3)
-  else (ignore st; None)
+  else None
 
 (* The attribute prefix whose operand starts at [k], if any. *)
 let attr_before st s k =
   if k >= 1 && s.[k - 1] = '\'' then
-    if k >= 4 && s.[k - 4] = st.amp && attr_at st s (k - 4) <> None
-       && String.length (fst (Option.get (attr_at st s (k - 4)))) = 2 then Some (k - 4)
-    else if k >= 3 && s.[k - 3] = st.amp && attr_at st s (k - 3) <> None then Some (k - 3)
+    if k >= 4 && s.[k - 4] = st.amp
+       && (match attr_at s (k - 4) with Some (_, 4) -> true | _ -> false) then Some (k - 4)
+    else if k >= 3 && s.[k - 3] = st.amp && attr_at s (k - 3) <> None then Some (k - 3)
     else None
   else None
 
@@ -431,11 +430,7 @@ let eval_attr st s prot a o =
   let device () =
     let name = String.uppercase_ascii name in
     let key = "attribute &" ^ name ^ "'" in
-    if not (Hashtbl.mem st.ctx.Ctx.warned key) then begin
-      Hashtbl.add st.ctx.Ctx.warned key ();
-      report st `Warn
-        (Printf.sprintf "&%s' has no meaning without an output device; 0 is used" name)
-    end;
+    Ctx.warn_once st.ctx key "&%s' has no meaning without an output device; 0 is used" name;
     "0"
   in
   let r =
@@ -464,7 +459,7 @@ let at st s prot k =
       | Some (stop, v) -> Attr (k, stop, v)
       | None -> Nothing
     else
-      match attr_at st s k with
+      match attr_at s k with
       | Some (_, plen) -> eval_attr st s prot k (k + plen)
       | None -> (
         match parse_ref s k with

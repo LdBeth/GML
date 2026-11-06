@@ -127,15 +127,11 @@ let close_top t =
   match t.stack with
   | e :: (parent :: _ as rest) ->
     t.stack <- rest;
-    (match e.kind with
-     | Scope sc when e.children = [] -> ignore sc
-     | Scope sc ->
-       sc.started <- true;
-       parent.children <- Tree.Element (e.name, e.attrs, List.rev e.children)
-                          :: parent.children
-     | Plain ->
-       parent.children <- Tree.Element (e.name, e.attrs, List.rev e.children)
-                          :: parent.children)
+    if not (is_scope e && e.children = []) then begin
+      (match e.kind with Scope sc -> sc.started <- true | Plain -> ());
+      parent.children <- Tree.Element (e.name, e.attrs, List.rev e.children)
+                         :: parent.children
+    end
   | _ -> invalid_arg "Doc.close_top: root"
 
 (* ---- scopes --------------------------------------------------------------- *)
@@ -173,11 +169,13 @@ let suspend_to t word =
   in
   go []
 
+let scope_active t word = List.exists (fun sc -> sc.word = word) (active_scopes t)
+
 (** End the scope of [word] (e.g. [.ce off]); false if none is active.
     The scopes inside it go on. *)
 let close_scope t word =
   if t.mute then true
-  else if not (List.exists (fun sc -> sc.word = word) (active_scopes t)) then false
+  else if not (scope_active t word) then false
   else begin
     resume t (suspend_to t word);
     true
@@ -188,8 +186,6 @@ let open_scope t sc =
   ignore (close_scope t sc.word);
   push_scope t sc
   end
-
-let scope_active t word = List.exists (fun sc -> sc.word = word) (active_scopes t)
 
 (* ---- models ------------------------------------------------------------- *)
 
@@ -275,11 +271,11 @@ let end_element ?(force = false) t name =
       | [] -> []
     in
     let inner = above opened in
-    match List.find_opt (fun n -> not (closable t n)) inner with
-    | Some n when not force -> Mismatch n
+    let forced = List.filter (fun n -> not (closable t n)) inner in
+    match forced with
+    | n :: _ when not force -> Mismatch n
     | _ ->
       let s = suspend t in
-      let forced = List.filter (fun n -> not (closable t n)) inner in
       List.iter (fun _ -> close_top t) inner;
       close_top t;
       resume t s;
@@ -291,7 +287,7 @@ let end_element ?(force = false) t name =
 let set_attr t k v =
   if t.mute then true
   else
-  match List.filter (fun e -> not (is_scope e)) t.stack with
+  match plain_stack t with
   | [ _ ] | [] -> false
   | e :: _ ->
     if k = "id" then check_id t [ (k, v) ];
@@ -331,29 +327,27 @@ let line_end t ~counted ~text =
         (active_scopes t)
   in
   let has_eol = List.exists (fun e -> e.eol_close) t.stack in
-  if not has_eol then begin
-    (* innermost first; the scopes inside an expired one go on *)
-    List.iter (fun sc -> resume t (suspend_to t sc.word)) expired;
-    if text then add t (Tree.Text "\n");
-    List.iter (fun sc -> List.iter (push_scope t) sc.next) (List.rev expired)
-  end
-  else begin
+  if has_eol then begin
     let s = suspend t in
-    if has_eol then begin
-      let rec close_eol () =
-        if List.exists (fun e -> e.eol_close) t.stack then begin
-          close_top t;
-          close_eol ()
-        end
-      in
-      close_eol ()
-    end;
+    let rec close_eol () =
+      if List.exists (fun e -> e.eol_close) t.stack then begin
+        close_top t;
+        close_eol ()
+      end
+    in
+    close_eol ();
     if text then add t (Tree.Text "\n");
     resume t
       (List.concat_map
          (fun sc ->
             match sc.remaining with Some n when n <= 0 -> sc.next | _ -> [ sc ])
          s)
+  end
+  else begin
+    (* innermost first; the scopes inside an expired one go on *)
+    List.iter (fun sc -> resume t (suspend_to t sc.word)) expired;
+    if text then add t (Tree.Text "\n");
+    List.iter (fun sc -> List.iter (push_scope t) sc.next) (List.rev expired)
   end
 
 (** One text line; the line end (the word space) is kept as "\n". *)
@@ -399,11 +393,15 @@ let raw t backend content = if not t.mute then add t (Tree.Raw (backend, content
     names of the elements that had to be closed and are not implicitly
     closable (innermost first), so the caller can diagnose them. *)
 let finish t =
-  let unclosed = ref [] in
-  while List.length t.stack > 1 do
-    let n = (top t).name in
-    if not (is_scope (top t)) && not (closable t n) then unclosed := n :: !unclosed;
-    close_top t
-  done;
+  (* [acc]: the names collected so far, the latest (outermost) first *)
+  let rec close_all acc =
+    match t.stack with
+    | e :: _ :: _ ->
+      let acc = if not (is_scope e) && not (closable t e.name) then e.name :: acc else acc in
+      close_top t;
+      close_all acc
+    | _ -> List.rev acc
+  in
+  let unclosed = close_all [] in
   let r = top t in
-  (Tree.Element (r.name, r.attrs, List.rev r.children), List.rev !unclosed)
+  (Tree.Element (r.name, r.attrs, List.rev r.children), unclosed)

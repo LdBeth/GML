@@ -131,13 +131,17 @@ let zero : sum = []
 
 let of_v (v : v) : sum = if v.h = 0 then [] else [ (v.unit, v.h) ]
 
+(* Every sum (built by [zero], [of_v], [add], [apply]) has unique units
+   and no zero amounts, so only the entry for [unit] can become zero. *)
 let add (s : sum) unit h : sum =
-  let s =
-    if List.mem_assoc unit s then
-      List.map (fun (u, x) -> if u = unit then (u, x + h) else (u, x)) s
-    else s @ [ (unit, h) ]
+  let rec go = function
+    | [] -> if h = 0 then [] else [ (unit, h) ]
+    | (u, x) :: rest when u = unit ->
+      let y = x + h in
+      if y = 0 then rest else (u, y) :: rest
+    | p :: rest -> p :: go rest
   in
-  List.filter (fun (_, x) -> x <> 0) s
+  go s
 
 (** [apply cur o]: an absolute operand replaces, a relative one adds. *)
 let apply (cur : sum) o : sum =
@@ -152,11 +156,10 @@ let attrs ~default name (s : sum) =
   | [] -> [ (name, "0"); ("unit", default) ]
   | [ (u, h) ] -> [ (name, show h); ("unit", u) ]
   | l ->
-    let terms = List.map (fun (u, h) -> show h ^ u) l in
+    (* a "+" between terms; a negative one carries its own "-" *)
     let txt =
-      List.fold_left
-        (fun acc t -> if acc = "" then t else if t.[0] = '-' then acc ^ t else acc ^ "+" ^ t)
-        "" terms
+      String.concat ""
+        (List.mapi (fun i (u, h) -> (if i = 0 || h < 0 then "" else "+") ^ show h ^ u) l)
     in
     [ (name, txt); ("unit", "mixed") ]
 

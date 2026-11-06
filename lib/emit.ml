@@ -41,7 +41,7 @@ let attrs ctx cw s k =
     | Some (a, _) -> Ctx.error ctx ".%s: invalid attribute name %s" cw a
     | None ->
       (* a repeated attribute: the last value wins *)
-      k (List.fold_left (fun acc (a, v) -> List.remove_assoc a acc @ [ (a, v) ]) [] l))
+      k (Tagscan.last_wins l))
 
 let open_list ctx =
   match Doc.open_elements ctx.Ctx.doc with

@@ -44,7 +44,9 @@ let delete (st : store) name =
 (** [.dm name(n) /line] (or [name()]: the next multiple of ten after the
     highest line, p.273); the macro is created if needed. *)
 let set_line (st : store) name ~at sub line =
-  let old = match find st name with Some d -> d.lines | None -> [] in
+  let old, defined_at =
+    match find st name with Some d -> (d.lines, d.defined_at) | None -> ([], at)
+  in
   let n =
     match sub with
     | Some n -> n
@@ -53,7 +55,6 @@ let set_line (st : store) name ~at sub line =
       (top / step + 1) * step
   in
   let lines = List.sort compare ((n, line) :: List.remove_assoc n old) in
-  let defined_at = match find st name with Some d -> d.defined_at | None -> at in
   Hashtbl.replace st (key name) { lines; defined_at }
 
 (** [.dm name(n) off]: remove line n (SH35-0050 p.16).  Returns false if

@@ -112,15 +112,17 @@ let skip_blanks s i =
   while !i < n && is_blank s.[!i] do incr i done;
   !i
 
-(* A quoted value at [i] (s.[i] = '\''): contents and index after it, or
-   None if unterminated. *)
+(* A quoted value at [i], delimited by the quote s.[i] (a doubled quote
+   stands for one): contents and index after it, or None if
+   unterminated. *)
 let quoted s i =
   let n = String.length s in
+  let q = s.[i] in
   let b = Buffer.create 16 in
   let rec go k =
     if k >= n then None
-    else if s.[k] = '\'' then
-      if k + 1 < n && s.[k + 1] = '\'' then (Buffer.add_char b '\''; go (k + 2))
+    else if s.[k] = q then
+      if k + 1 < n && s.[k + 1] = q then (Buffer.add_char b q; go (k + 2))
       else Some (Buffer.contents b, k + 1)
     else (Buffer.add_char b s.[k]; go (k + 1))
   in
@@ -206,20 +208,10 @@ let pairs s =
       else
         let name = String.lowercase_ascii (String.sub s i (!j - i)) in
         let v = !j + 1 in
-        if v < n && (s.[v] = '\'' || s.[v] = '"') then begin
-          let q = s.[v] in
-          let b = Buffer.create 16 in
-          let rec str k =
-            if k >= n then None
-            else if s.[k] = q then
-              if k + 1 < n && s.[k + 1] = q then (Buffer.add_char b q; str (k + 2))
-              else Some (k + 1)
-            else (Buffer.add_char b s.[k]; str (k + 1))
-          in
-          match str (v + 1) with
+        if v < n && (s.[v] = '\'' || s.[v] = '"') then
+          match quoted s v with
           | None -> Error (Printf.sprintf "unterminated string in %s=" name)
-          | Some e -> go e ((name, Buffer.contents b) :: acc)
-        end
+          | Some (value, e) -> go e ((name, value) :: acc)
         else
           let e = ref v in
           while !e < n && not (is_blank s.[!e]) do incr e done;
@@ -227,6 +219,16 @@ let pairs s =
     end
   in
   go 0 []
+
+(** Attribute pairs with repeated names removed: the last value of a name
+    wins, and the pairs stay in the order of the last occurrences.  (The
+    same list as [fold_left (fun acc (k, v) -> remove_assoc k acc @ [(k, v)])],
+    in one pass: a pair is kept exactly when its name does not occur
+    later.) *)
+let last_wins l =
+  List.fold_right
+    (fun (k, v) acc -> if List.mem_assoc k acc then acc else (k, v) :: acc)
+    l []
 
 (** Is [s] usable as an XML element or attribute name (a conservative
     subset: ASCII letter or '_' first, then letters, digits, '_', '-',

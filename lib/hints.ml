@@ -219,8 +219,7 @@ let indent side ctx ops =
                 let st = fmt ctx in
                 let perm = side.get st in
                 let vattrs sum = Units.attrs ~default:"ch" side.attr sum in
-                let lines_of = Option.map Units.lines in
-                let after_n = Option.join (lines_of after) and for_n = Option.join (lines_of for_) in
+                let after_n = Option.bind after Units.lines and for_n = Option.bind for_ Units.lines in
                 let uncounted name = function
                   | Some o when Units.lines o = None -> amount_attrs o |> List.map (fun (k, x) -> ((if k = "n" then name else name ^ "-unit"), x))
                   | _ -> []
@@ -243,7 +242,7 @@ let indent side ctx ops =
                          (scope ~word:cw ~n:(string_of_int n) ~brk:false
                             (("after", "yes") :: vattrs perm) (Some n)))
                     after_n
-                | Some fo -> (
+                | Some _ -> (
                   let temp = Units.add perm o.value.unit (Units.signed o) in
                   let tattrs = vattrs temp @ delta o temp in
                   match for_n with
@@ -256,7 +255,6 @@ let indent side ctx ops =
                             (("after", "yes") :: vattrs perm) (Some a))
                      | None -> Doc.open_scope (doc ctx) s_for)
                   | None ->
-                    ignore fo;
                     emit ctx cw ~brk
                       (tattrs @ uncounted "for" for_ @ uncounted "after" after
                        @ [ ("temporary", "yes") ])))))
@@ -349,19 +347,20 @@ let conditional_eject word ctx ops =
   | _ -> Ctx.error ctx ".%s: one amount expected" word
 
 let page ctx ops =
-  let brk = ref true in
+  let ws = tokens ops in
+  let brk = not (List.exists (fun w -> lc w = "nobreak") ws) in
   let attrs =
     List.map
       (fun w ->
          match lc w with
          | "odd" | "even" -> ("side", lc w)
          | "nostart" -> ("nostart", "yes")
-         | "nobreak" -> brk := false; ("nobreak", "yes")
+         | "nobreak" -> ("nobreak", "yes")
          | "on" | "off" -> ("mode", lc w)
          | _ -> ("page", w))
-      (tokens ops)
+      ws
   in
-  emit ctx "pa" ~brk:!brk attrs
+  emit ctx "pa" ~brk attrs
 
 let keep ctx ops =
   match List.map lc (tokens ops) with
@@ -408,9 +407,10 @@ let begin_font ctx ops =
   let fonts = List.filter (( <> ) "=") ws in
   if fonts = [] then Ctx.error ctx ".bf: font name expected"
   else begin
-    st.fonts <- String.concat " " fonts :: st.fonts;
+    let font = String.concat " " fonts in
+    st.fonts <- font :: st.fonts;
     emit ctx "bf" ~brk:false
-      (("font", String.concat " " fonts) :: (if restart then [ ("restart", "yes") ] else []))
+      (("font", font) :: (if restart then [ ("restart", "yes") ] else []))
   end
 
 let previous_font ctx _ =
@@ -433,9 +433,9 @@ let define_font ctx ops =
 let hyphenate ctx ops =
   let st = fmt ctx in
   let ws = List.map lc (tokens ops) in
-  let mode = List.find_opt (fun w -> w = "on" || w = "off") ws in
+  let modes, opts = List.partition (fun w -> w = "on" || w = "off") ws in
+  let mode = match modes with m :: _ -> Some m | [] -> None in
   Option.iter (fun m -> st.hyph <- m = "on") mode;
-  let opts = List.filter (fun w -> w <> "on" && w <> "off") ws in
   emit ctx "hy" ~brk:false
     ((match mode with Some m -> [ ("mode", m) ] | None -> [])
      @ (if opts = [] then [] else [ ("options", String.concat " " opts) ]))
@@ -527,33 +527,26 @@ let char_operand s =
   else None
 
 let utf8 c =
-  if c < 0x80 then String.make 1 (Char.chr c)
-  else
-    let b = Bytes.create 2 in
-    Bytes.set b 0 (Char.chr (0xC0 lor (c lsr 6)));
-    Bytes.set b 1 (Char.chr (0x80 lor (c land 0x3F)));
-    Bytes.to_string b
+  let b = Buffer.create 2 in
+  Buffer.add_utf_8_uchar b (Uchar.of_int c);
+  Buffer.contents b
 
 (* .tr [c1 c2 ...]: no operands resets the table; an odd last character
    translates to a blank (DCF-VERIFY). *)
 let translate ctx ops =
   let tbl = (doc ctx).Doc.tr in
+  let dst_of = function
+    | None -> Some " "
+    | Some b ->
+      Option.map (function `Char c -> String.make 1 c | `Code c -> utf8 c) (char_operand b)
+  in
   let rec go = function
     | [] -> ()
     | a :: rest -> (
       let b, rest = match rest with b :: r -> (Some b, r) | [] -> (None, []) in
-      match char_operand a, Option.map char_operand b with
-      | Some src, (None | Some (Some _)) ->
+      match char_operand a, dst_of b with
+      | Some src, Some dst ->
         let src = match src with `Char c -> c | `Code c -> Char.chr (c land 0xFF) in
-        let dst =
-          match b with
-          | None -> " "
-          | Some _ -> (
-            match Option.join (Option.map char_operand b) with
-            | Some (`Char c) -> String.make 1 c
-            | Some (`Code c) -> utf8 c
-            | None -> " ")
-        in
         if dst = String.make 1 src then Hashtbl.remove tbl src else Hashtbl.replace tbl src dst;
         go rest
       | _ -> Ctx.error ctx ".tr: invalid character %s" (String.concat " " (a :: Option.to_list b)))

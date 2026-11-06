@@ -151,13 +151,13 @@ let next_text_line ctx d =
 (* ---- elements ------------------------------------------------------------ *)
 
 let xml_attrs ctx tag named vats =
-  let add acc (k, v) =
-    if not (Tagscan.xml_name k) then begin
+  let keep (k, _) =
+    Tagscan.xml_name k
+    || begin
       Ctx.warn ctx "tag %s: attribute %s is not an XML name; left out of the element"
         tag k;
-      acc
+      false
     end
-    else List.remove_assoc k acc @ [ (k, v) ]
   in
   let named = List.map (fun (k, v) -> (String.lowercase_ascii k, v)) named in
   let vats =
@@ -167,7 +167,7 @@ let xml_attrs ctx tag named vats =
          if Tagscan.xml_name k then Some (k, w) else None)
       vats
   in
-  List.fold_left add [] (named @ vats)
+  Tagscan.last_wins (List.filter keep (named @ vats))
 
 let open_auto ctx name named vats =
   if Tagscan.xml_name name then
@@ -199,9 +199,7 @@ let close_auto ctx src name ~has_apf =
 
 let vat_scope vats =
   let scope = Symbols.new_scope () in
-  Symbols.set_in scope "*" (String.concat " " vats);
-  List.iteri (fun i v -> Symbols.set_in scope ("*" ^ string_of_int (i + 1)) v) vats;
-  Symbols.set_in scope "*0" (string_of_int (List.length vats));
+  Macro.bind_args_list scope (String.concat " " vats) vats;
   scope
 
 (* DCF-VERIFY: a native control word as APF receives the value
@@ -337,8 +335,11 @@ and tag ctx d (f : Tagscan.found) apf (rules : Ctx.rules) s ~had_text ~eol =
       (String.sub after 0 n.at, Some (String.sub after n.at (String.length after - n.at)))
     | None -> (after, None)
   in
-  let named = List.filter_map (function Tagscan.Named (k, v) -> Some (k, v) | _ -> None) attrs in
-  let vats = List.filter_map (function Tagscan.Vat w -> Some w | _ -> None) attrs in
+  let named, vats =
+    List.partition_map
+      (function Tagscan.Named (k, v) -> Either.Left (k, v) | Tagscan.Vat w -> Either.Right w)
+      attrs
+  in
   ctx.gml_attrs <- named;
   (* our automatic element *)
   (* an end tag whose rules say noelem leaves the element to its APF
