@@ -255,11 +255,12 @@ pdftex runs have rules of their own.
 `docs/dcf-notes.md` lists the SCRIPT/VS and Starter Set rules checked
 against the manuals.  Each entry has a status (DONE, OK, EXT) and the
 cram test that shows it.  The points that the guides leave open are
-marked `DCF-VERIFY`: 58 in the sources (`lib/`, `share/`, `xslt/`)
-and 21 in the notes.  They include how far an ignored conditional section is
+marked `DCF-VERIFY`: 76 in the sources (`lib/`, `share/`, `xslt/`)
+and 25 in the notes.  They include how far an ignored conditional section is
 "resolved", the input-versus-output line count of `.in … after n`, the
-`.mg` severities, the DSMGML message numbers and wording, `.tr` hex
-codes taken as code points rather than EBCDIC, and APF lookup under
+`.mg` severities, the DSMGML message numbers and wording, the EBCDIC
+code page (037) for hex codes, the neutral values of device system
+symbols, and APF lookup under
 `.ms off`.  Deliberate extensions are marked EXT: the automatic element
 per tag, `&'substr(`-style functions, footnotes inside figures, and
 2-digit years taken as 20xx.
@@ -275,29 +276,39 @@ the formatting hints and the TeX mapping of `gml.tex` end to end.
 The listing is IBM's copyrighted code, so its transcription is kept
 locally in `test/dcf-real/` (gitignored): `members/NAME.scr`, one file
 per library member, and `pages.txt`, a page map with the spots read
-with doubt.  To run it, use the library and the profile, and set the
-system symbols the engine does not provide yet:
+with doubt.  To run it, use the library and the profile:
 
 ```
 gml -share share -lib test/dcf-real/members \
-    -profile test/dcf-real/members/DSMPROF3.scr \
-    -set '$DCF=3' -set '$SYS=CMS' -set '$PASS=1' -set '$TWO=0' \
-    -set '$PDEV=3800' -set '$FNAM=SAMPLE' xslt/test/gml/starter.gml
+    -profile test/dcf-real/members/DSMPROF3.scr xslt/test/gml/starter.gml
 ```
 
-Running it needed DCF's macro libraries (`-lib`, `.ly`, `.dm name lib`,
-`.se name lib`), `.gs args`/`.gs vars`, the `.dc gml : : e` form and
-null array counters; all are implemented, with their own cram tests.
-Still missing, from the latest run:
+Device and command-option system symbols (`&$PDEV`, `&$CHAR`, `&$SYS`,
+`&$PASS`, ...) have neutral defaults (a 3800 with TEXT and BOLD fonts);
+`-set '$NAME=value'` overrides any of them.  Running IBM's macros needed:
 
-- system symbols such as `&$CHAR`, `&$RB`, `&$PDEV`, `&$PASS`, `&$PS`,
-  `&$IN`, `&$SYS` (hence the `-set`s above);
-- `.sa`/`.re` (save and restore the environment), `.fv` and `.ix`;
-- the GML services `.gs hctr` and `.gs qatt` (footnotes need `qatt`);
-- element models: IBM's profile has none, so automatic elements close
-  only at the enclosing end tag;
-- in TeX, EBCDIC code points (`&X'..'`, `.dv` bullets), `.bx` with a
-  named `.dr` rule, and `.df` fonts.
+- DCF's macro libraries (`-lib`, `.ly`, `.dm name lib`, `.se name lib`),
+  `.gs args`/`.gs vars`, the `.dc gml : : e` form, null array counters;
+- the system symbols, `.sa`/`.re`, `.pi`/`.ix`, `.fv`, `.gs hctr`,
+  `.gs qatt`, and `.ct` continuation;
+- EBCDIC (code page 037) for `&X'..'`, `.tr` and `.dc` hex codes;
+- *provisional* elements: a tag with no end APF and no `.xd` model
+  becomes an empty marker unless its own end tag closes it, since IBM's
+  profile defines no element models;
+- in TeX, a *hint mode* (`tex-mode=auto|elements|hints`, chosen
+  automatically when `.df`/`.dh`/`.dr` come before the first element)
+  where the element styles of `gml.tex` step aside and the profile's
+  control words do the formatting; named `.dr` rules in `.bx` and
+  `.hr`; `.df` fonts (overstrike as bold, underscore as italic, `up` as
+  upper case, `type(...)` by family and size); and `.dh`.
+
+All of these have cram tests or XSLT fixtures of their own.  The run
+now ends with one warning (`.sv`) and one error, IBM's own `.sk &@sK@x`
+(symbol names are case-sensitive), and TeX runs without errors.  What
+still differs from IBM's output: `&` (the page number) in running
+footings comes out literally, `.pi`/`.ix` index entries are not yet
+typeset by TeX, `.cd` columns are ignored, and the TOC and some
+quotation marks are not right yet.
 
 The SH35-0070 Language Reference, which defines most of these, has no
 English copy online.  The other references, kept in the project root
@@ -327,7 +338,7 @@ images are readable, though its OCR text is not.
 
   fo.xsl also ignores the temporary `.in`/`.ir` (FOR/AFTER), `.vr`,
   `.ic`, `.ud`, `.dr`, the page-layout words and `.cd`.
-- TeX ignores `.vr .sb .is .ic .ud .dr .mc .dh` with a message, and
+- TeX ignores `.vr .sb .ic .ud .mc .pi .ix` with a message, approximates `.is`, and
   `.cd` multi-column layout gives one column.  `.tc` is ignored: the TOC
   comes from `:toc`.
 - HTML has no pages.  `gml:pageref` is dropped or becomes a link

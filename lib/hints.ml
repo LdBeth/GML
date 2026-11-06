@@ -561,17 +561,39 @@ let hyphenate ctx ops =
 
 (* ---- headings, toc, split text ---------------------------------------------- *)
 
+(* .h0-.h6; a level defined NUM ([.dh n num], SH20-9161-3 p.247) is
+   numbered with the head-level counter ([Headctr]): num="1.0", "1.2". *)
 let heading n ctx ops =
   let d = doc ctx in
+  let num =
+    if n > 0 && Hashtbl.mem ctx.dh_num n then begin
+      Headctr.step ctx.hctr n;
+      [ ("num", Headctr.number ctx.hctr n) ]
+    end
+    else []
+  in
   Doc.start_element ~eol:true d "gml:h"
-    [ ("level", string_of_int n); ("break", "yes") ];
+    ((("level", string_of_int n) :: num) @ [ ("break", "yes") ]);
   if String.trim ops = "" then ignore (Doc.end_element d "gml:h")
   else push_text ctx ops
 
+(* .dh n options: kept as a hint; NUM / NONUM (the last one given) are
+   also recorded for the numbering of .hn. *)
 let define_head ctx ops =
   match first_word ops with
   | "", _ -> Ctx.error ctx ".dh: head level expected"
-  | n, rest -> emit ctx "dh" ~brk:false [ ("level", n); ("spec", rest) ]
+  | n, rest ->
+      Option.iter
+        (fun l ->
+          List.iter
+            (fun w ->
+              match lc w with
+              | "num" -> Hashtbl.replace ctx.dh_num l ()
+              | "nonum" -> Hashtbl.remove ctx.dh_num l
+              | _ -> ())
+            (tokens rest))
+        (int_of_string_opt n);
+      emit ctx "dh" ~brk:false [ ("level", n); ("spec", rest) ]
 
 let toc ctx ops =
   let n, rest = first_word ops in
@@ -619,11 +641,124 @@ let close_flow ctx name =
       Ctx.warn ctx ".%s off: no definition in progress" (String.sub name 4 2)
   | Doc.Mismatch _ -> ()
 
+(* ---- saved environments ------------------------------------------------------ *)
+
+(* The formatting environment that [Ctx.fmt] tracks, with the translate
+   table, is saved by .sa and restored by .re (SH20-9161-3 p.110: "the
+   active environment, the page control area, the .TI and .TR translate
+   tables"; the font stack is in it, SH35-0069 p.179).  The page control
+   area is not tracked.  A footnote saves the environment when it starts
+   and restores it when it ends (SH20-9161-3 p.110). *)
+
+let fn_env = " fn" (* a name no .sa operand can give *)
+
+let save ctx env =
+  ctx.saved <-
+    { env; sfmt = copy_fmt (fmt ctx); str = Hashtbl.copy (doc ctx).Doc.tr }
+    :: ctx.saved
+
+(* Restore [sv]; with [hints], emit for each part that changes the hint
+   that establishes it again (restore="yes"), so a backend that does not
+   know gml:re still follows: .in/.of, .ir, .ll, the format mode, .hy and
+   the fonts (.pf while the saved font stack is a tail of the current
+   one, else .bf of the saved font).  DCF-VERIFY: none of them breaks. *)
+let restore ?(hints = true) ctx sv =
+  let st = fmt ctx and old = sv.sfmt in
+  let tbl = (doc ctx).Doc.tr in
+  Hashtbl.reset tbl;
+  Hashtbl.iter (Hashtbl.replace tbl) sv.str;
+  let re name changed attrs =
+    if hints && changed then
+      emit ctx name ~brk:false (attrs @ [ ("restore", "yes") ])
+  in
+  let cur = copy_fmt st in
+  st.left <- old.left;
+  st.right <- old.right;
+  st.offset <- old.offset;
+  st.ll <- old.ll;
+  st.fill <- old.fill;
+  st.align <- old.align;
+  st.overdraw <- old.overdraw;
+  st.fonts <- old.fonts;
+  st.hyph <- old.hyph;
+  re "in" (cur.left <> old.left) (Units.attrs ~default:"ch" "left" old.left);
+  re "of" (cur.offset <> old.offset)
+    (Units.attrs ~default:"ch" "offset" old.offset);
+  re "ir" (cur.right <> old.right) (Units.attrs ~default:"ch" "right" old.right);
+  re "ll" (cur.ll <> old.ll)
+    (match old.ll with
+    | None -> [ ("length", "default") ]
+    | Some l -> Units.attrs ~default:"ch" "length" l);
+  re "fo"
+    (cur.fill <> old.fill || cur.align <> old.align
+    || cur.overdraw <> old.overdraw)
+    (mode_attrs old);
+  re "hy" (cur.hyph <> old.hyph) [ ("mode", if old.hyph then "on" else "off") ];
+  if cur.fonts <> old.fonts then begin
+    let n = List.length cur.fonts - List.length old.fonts in
+    let rec drop k l = if k = 0 then l else drop (k - 1) (List.tl l) in
+    if n > 0 && drop n cur.fonts = old.fonts then
+      for i = 1 to n do
+        re "pf" true
+          (match drop i cur.fonts with
+          | f :: _ -> [ ("font", f) ]
+          | [] -> [ ("initial", "yes") ])
+      done
+    else
+      re "bf" true
+        (match old.fonts with
+        | f :: _ -> [ ("font", f) ]
+        | [] -> [ ("font", ""); ("initial", "yes") ])
+  end
+
+(* .sa [envname] (SX26-3723: Save Environment) *)
+let save_env ctx ops =
+  let env = String.uppercase_ascii (String.trim ops) in
+  save ctx env;
+  emit ctx "sa" ~brk:false (if env = "" then [] else [ ("name", env) ])
+
+(* .re [envname]: the last environment saved, or the one saved with that
+   name (the ones saved after it are dropped, DCF-VERIFY); a footnote's
+   environment is not restored by .re. *)
+let restore_env ctx ops =
+  let env = String.uppercase_ascii (String.trim ops) in
+  let rec find = function
+    | sv :: _ when sv.env = fn_env -> None
+    | sv :: rest ->
+        if env = "" || sv.env = env then Some (sv, rest) else find rest
+    | [] -> None
+  in
+  match find ctx.saved with
+  | None ->
+      if env = "" then Ctx.warn ctx ".re: no environment saved"
+      else Ctx.warn ctx ".re %s: no environment saved with this name" env
+  | Some (sv, rest) ->
+      ctx.saved <- rest;
+      emit ctx "re" ~brk:false (if env = "" then [] else [ ("name", env) ]);
+      restore ctx sv
+
+(* .fn on saves the environment and clears the offset (SH20-9161-3
+   p.110); .fn off restores it, without hints: the footnote is a flow of
+   its own in the tree. *)
 let footnote ctx ops =
+  let start attrs =
+    save ctx fn_env;
+    (fmt ctx).offset <- Units.zero;
+    Doc.start_element (doc ctx) "gml:fn" attrs
+  in
   match List.map lc (tokens ops) with
-  | [] | [ "on" ] -> Doc.start_element (doc ctx) "gml:fn" []
-  | [ "leader" ] -> Doc.start_element (doc ctx) "gml:fn" [ ("kind", "leader") ]
-  | [ "off" ] -> close_flow ctx "gml:fn"
+  | [] | [ "on" ] -> start []
+  | [ "leader" ] -> start [ ("kind", "leader") ]
+  | [ "off" ] ->
+      close_flow ctx "gml:fn";
+      let rec pop = function
+        | sv :: rest when sv.env = fn_env ->
+            ctx.saved <- rest;
+            restore ~hints:false ctx sv
+        | _ :: rest -> pop rest
+        | [] -> ()
+      in
+      pop ctx.saved
   | _ -> Ctx.error ctx ".fn: ON, OFF or LEADER expected"
 
 let running word ctx ops =
@@ -657,13 +792,15 @@ let revision ctx ops =
 
 (* ---- .tr and .dv --------------------------------------------------------------- *)
 
-(* A character operand: itself, or two hexadecimal digits, taken as the
-   code point U+00hh (modern edge: the manual's codes are EBCDIC). *)
+(* A character operand: one character (in UTF-8) or two hexadecimal
+   digits, an EBCDIC code ([Ebcdic]); its Unicode code point. *)
 let char_operand s =
-  if String.length s = 1 then Some (`Char s.[0])
-  else if String.length s = 2 then
-    Option.map (fun c -> `Code c) (int_of_string_opt ("0x" ^ s))
-  else None
+  if s = "" then None
+  else
+    let d = String.get_utf_8_uchar s 0 in
+    if Uchar.utf_decode_length d = String.length s then
+      Some (Uchar.to_int (Uchar.utf_decode_uchar d))
+    else Option.map Ebcdic.to_unicode (Ebcdic.of_hex s)
 
 let utf8 c =
   let b = Buffer.create 2 in
@@ -674,26 +811,17 @@ let utf8 c =
    translates to a blank (DCF-VERIFY). *)
 let translate ctx ops =
   let tbl = (doc ctx).Doc.tr in
-  let dst_of = function
-    | None -> Some " "
-    | Some b ->
-        Option.map
-          (function `Char c -> String.make 1 c | `Code c -> utf8 c)
-          (char_operand b)
-  in
   let rec go = function
     | [] -> ()
     | a :: rest -> (
         let b, rest =
           match rest with b :: r -> (Some b, r) | [] -> (None, [])
         in
-        match (char_operand a, dst_of b) with
+        let dst = match b with None -> Some 0x20 | Some b -> char_operand b in
+        match (char_operand a, dst) with
         | Some src, Some dst ->
-            let src =
-              match src with `Char c -> c | `Code c -> Char.chr (c land 0xFF)
-            in
-            if dst = String.make 1 src then Hashtbl.remove tbl src
-            else Hashtbl.replace tbl src dst;
+            if dst = src then Hashtbl.remove tbl src
+            else Hashtbl.replace tbl src (utf8 dst);
             go rest
         | _ ->
             Ctx.error ctx ".tr: invalid character %s"
@@ -725,6 +853,109 @@ let define_variable ctx ops =
           match Symbols.set ctx.syms name v with
           | Ok () -> ()
           | Error e -> Ctx.error ctx ".dv: %s" e)
+
+(* ---- index ---------------------------------------------------------------------- *)
+
+(* The fields of a delimited string: the first nonblank character is the
+   delimiter; a delimiter at the end closes the last field.  Returns the
+   fields and the rest after [max] fields. *)
+let delimited ?(max = max_int) s =
+  let s = String.trim s in
+  if s = "" then ([], "")
+  else
+    let d = s.[0] in
+    let rec go i n acc =
+      if n = max then (List.rev acc, String.sub s i (String.length s - i))
+      else
+        match String.index_from_opt s i d with
+        | Some j -> go (j + 1) (n + 1) (String.sub s i (j - i) :: acc)
+        | None ->
+            let last = String.sub s i (String.length s - i) in
+            (List.rev (if last = "" then acc else last :: acc), "")
+    in
+    go 1 0 []
+
+(* .pi [start|end|order|ref] [key /k1/k2/k3/] /t1[/t2[/t3[/page]]]
+   (SH20-9161-3 p.297, SH35-0069 p.213-218): an index entry, the hint
+   gml:pi with the terms t1 t2 t3 and the keys k1 k2 k3 given; a fourth
+   field is the page text: absent or the page number symbol (&$PS) is the
+   current page, null is no page (pageref="no"), anything else is
+   page="text"; REF makes the last term a cross reference (see="term").
+   It is ignored unless &$INDX is 1, the INDEX option (SH35-0069 p.213).
+   resolve.xsl builds the index from these. *)
+let put_index ctx ops =
+  let rec opts acc s =
+    let w, rest = first_word s in
+    match lc w with
+    | ("start" | "end" | "order" | "ref") as o -> opts ((o, "yes") :: acc) rest
+    | "key" ->
+        let keys, rest = delimited ~max:3 rest in
+        let keys =
+          List.mapi (fun i k -> (Printf.sprintf "k%d" (i + 1), k)) keys
+        in
+        opts
+          (List.rev_append (List.filter (fun (_, k) -> k <> "") keys) acc)
+          rest
+    | _ -> (List.rev acc, s)
+  in
+  if Symbols.get ctx.syms "$INDX" = Some "1" then
+    let o, rest = opts [] ops in
+    let fields, _ = delimited rest in
+    let terms, page =
+      match fields with
+      | t1 :: t2 :: t3 :: p :: _ -> ([ t1; t2; t3 ], Some p)
+      | l -> (l, None)
+    in
+    let rec trim = function "" :: l -> trim l | l -> l in
+    let terms = List.rev (trim (List.rev terms)) in
+    let ps = String.make 1 ctx.chars.Chars.ps in
+    let page =
+      match page with
+      | None -> []
+      | Some p when String.trim p = ps -> []
+      | Some "" -> [ ("pageref", "no") ]
+      | Some p -> [ ("page", p) ]
+    in
+    let terms, see =
+      if List.mem_assoc "ref" o then (
+        match List.rev terms with
+        | r :: (_ :: _ as l) -> (List.rev l, [ ("see", r) ])
+        | _ ->
+            Ctx.error ctx ".pi ref: at least two terms expected";
+            (terms, []))
+      else (terms, [])
+    in
+    if terms = [] then Ctx.error ctx ".pi: index term expected"
+    else
+      emit ctx "pi" ~brk:false
+        (List.mapi (fun i t -> (Printf.sprintf "t%d" (i + 1), t)) terms
+        @ List.filter (fun (k, _) -> k.[0] = 'k') o
+        @ List.filter (fun (k, _) -> k <> "ref" && k.[0] <> 'k') o
+        @ see @ page)
+
+(* .ix [n] [name | control | /] (SH20-9161-3 p.291, SH35-0069 p.213):
+   the index of the .pi entries made so far (since the last .ix) goes
+   here: the hint gml:ix, where resolve.xsl puts it.  title= the name
+   (none: the backend's default, DCF's "INDEX"); "/" is title=""; a
+   control word (a leading control word indicator) is processed here
+   instead of the heading, and the hint has title="". *)
+let index ctx ops =
+  let n, rest = first_word ops in
+  let reserve, rest =
+    match int_of_string_opt n with
+    | Some _ -> ([ ("reserve", n) ], rest)
+    | None -> ([], String.trim ops)
+  in
+  let title =
+    if rest = "" then []
+    else if rest = "/" then [ ("title", "") ]
+    else if rest.[0] = ctx.chars.Chars.cw_ind then begin
+      ctx.process ctx (Ctx.Split ctx.line_substituted) rest;
+      [ ("title", "") ]
+    end
+    else [ ("title", rest) ]
+  in
+  emit ctx "ix" ~brk:true (reserve @ title)
 
 (* ---- implicit words ------------------------------------------------------------ *)
 
@@ -828,6 +1059,13 @@ let table =
     row "mc" Yes "" (generic "mc" ~brk:true);
     row "tr" Not_a_hint "pairs of c|hh" translate;
     row "dv" Not_a_hint "name [text|font f] /string" define_variable;
+    row "sa" No "[envname]" save_env;
+    row "re" No "[envname]" restore_env;
+    row "fv" No "top|bottom|center|justify"
+      (generic ~read:plain "fv" ~brk:false);
+    row "pi" No "[start|end|order|ref] [key /k1/k2/k3/] /t1[/t2[/t3[/page]]]"
+      put_index;
+    row "ix" Yes "[n] [name|control|/]" index;
   ]
   @ List.map
       (fun w -> row w Not_a_hint "(ignored)" (device w))

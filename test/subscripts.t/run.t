@@ -1,6 +1,6 @@
 Arrays (SH35-0069 p.254-257): .se x(n), &x(n) with substituted subscripts;
 &x(*) is all elements in index order joined by the array separator
-(", ", .dc asep); &x = &x(0) is the index counter, which follows the
+(", ", .dc asep, whose hex codes are EBCDIC: 40 is a blank); &x = &x(0) is the index counter, which follows the
 element last set; .se x() = v appends; a missing element of an existing
 symbol is null; .se x off drops the whole array.
 

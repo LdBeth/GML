@@ -15,7 +15,7 @@ After delete: [&x(2).], all &x(*)
 .se y(3) = second
 .se y() = third
 Appended: &y(*); counter &y.; element 2 [&y(2).]
-.dc asep 20 / 20
+.dc asep 40 / 40
 Separator: &y(*)
 None: &nosuch(*) &nosuch(1)
 .se z(abc) = 1

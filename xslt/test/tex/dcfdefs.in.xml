@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gml:doc xmlns:gml="urn:x-gml:canonical"><gml:df name="@pi@ul" spec="type('pi font sans serif' 8) codepage aftc0363" break="no"/><gml:dr spec="@figrule" break="no"/><gml:dr spec="@thick weight 0.8mm font &amp;$CHAR(1)" break="no"/><gml:dr spec="@fnldr w 0.2mm" break="no"/><gml:df name="hi0" spec="font &amp;$CHAR(1)" break="no"/><gml:df name="hi1" spec="us" break="no"/><gml:df name="hi2" spec="os rpt 3" break="no"/><gml:df name="hi3" spec="os rpt 3 us" break="no"/><gml:df name="hd1" spec="os rpt 3 us up" break="no"/><gml:df name="hd2" spec="os rpt 3" break="no"/><gml:df name="caps" spec="up" break="no"/><gml:df name="xmpfont" spec="type('prestige elite')" break="no"/><gml:df name="big" spec="type(14 bold" break="no"/><gml:df name="small" spec="type (-2 italic)" break="no"/><gml:df name="side" spec="type('sans serif' 9 bold) codepage x" break="no"/><gml:df name="same" spec="font hi2" break="no"/><gml:dh level="1" spec="nus nohy nup font hd1 nonum spaf 3 pa left sect tfont hd1toc ts" break="no"/><gml:dh level="2" spec="nus nohy up font hd2 skbf p20 spaf 1p6 tfont &amp;$CHAR(1)" break="no"/><gml:dh level="5" spec="nus nohy nup font hi2 nbr" break="no"/><gml:dh level="1" spec="spbf 0" break="no"/><gml:dh level="4" spec="" break="no"/><gml:fn kind="leader"><gml:sp n="1" unit="line" break="yes"/><gml:hr spec="@fnldr 0ch for 16ch" break="yes"/></gml:fn><gdoc><body><h1><gml:pa nostart="yes" break="yes"/>
+<gml:h level="1" break="yes">Defined heading</gml:h>
+<p><gml:sk n="1" unit="line" break="yes"/>Text with <hp1><gml:bf font="hi1 althi1" break="no"/>underscored</hp1><gml:pf font="@rf hi0" break="no"/> and <gml:bf font="caps" break="no"/>upper case words<gml:pf font="@rf hi0" break="no"/>, then <gml:bf font="docnum" restart="yes" break="no"/>a restarted font<gml:pf font="@rf hi0" break="no"/>
+and <gml:bf font="big" break="no"/>big<gml:pf break="no"/>, <gml:bf font="side" break="no"/>sans<gml:pf break="no"/>, <gml:bf font="small" break="no"/>small<gml:pf break="no"/>.
+</p><h2><gml:h level="2" break="yes">Second level</gml:h>
+<dl><dt><dd><gml:lines word="in" n="1" after="yes" left="0" unit="ch" break="no"><gml:bf font="hi2" restart="yes" break="no"/>Term</gml:lines>
+<gml:pf font="@rf hi0" break="no"/><gml:is spec="to 0dh min 1ch" break="no"/>Definition
+</dd></dt></dl><xmp><gml:br break="yes"/><gml:fo fill="no" align="left" overdraw="extend" break="yes"/><gml:bf font="xmpfont" restart="yes" break="no"/><gml:in left="2" unit="ch" delta="+2" break="yes"/>  indented line
+
+last line
+<gml:fo fill="yes" align="justify" overdraw="extend" break="yes"/></xmp><gml:pf font="@rf hi0" break="no"/><fig id="f1" frame="box" num="1" anchor="f1"><gml:bx action="on" spec="@figrule new left right" break="yes"/>Figure content.
+<figcap><gml:num>Figure 1.</gml:num>Figure 1. A caption
+</figcap></fig><gml:bx action="off" break="yes"/><gml:bx action="on" spec="@thick 1ch 30ch" break="yes"/>Boxed with a thick rule.
+<gml:bx action="line" break="yes"/>Second part.
+<gml:bx action="off" break="yes"/><gml:bx action="on" spec="@nosuch left right" break="yes"/><gml:bx action="off" break="yes"/><gml:hr spec="@thick 0ch to 10ch @figrule 12ch for 8ch" break="yes"/><gml:hr spec="left right" break="yes"/><gml:is spec="4ch" break="no"/>Inline space.
+<gml:h level="5" break="yes">Run-in</gml:h>text after a run-in heading.
+<gml:rh action="sup" break="no"/><gml:rh action="res" break="no"/></h2></h1></body></gdoc></gml:doc>

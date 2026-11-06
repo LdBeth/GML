@@ -17,6 +17,11 @@ type t = {
   mutable asep : string;
       (** array separator ([.dc asep]), up to four characters; initially a comma
           and a blank (p.254) *)
+  mutable rb : string;
+      (** the required blank ([.dc rb], [&$RB]), in UTF-8; initially EBCDIC 41,
+          the no-break space (SX26-3723, .DC) *)
+  mutable ps : char;
+      (** the page number symbol ([.dc ps], [&$PS]), initially "&" *)
 }
 
 let create () =
@@ -29,6 +34,8 @@ let create () =
     symbol = '&';
     cont = None;
     asep = ", ";
+    rb = "\xC2\xA0";
+    ps = '&';
   }
 
 (** Characters of GML tag and attribute names: letters, digits, [@ # $]

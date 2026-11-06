@@ -81,6 +81,10 @@ type open_elt = {
   mutable children : Tree.node list;  (** reversed *)
   kind : kind;
   eol_close : bool;
+  provisional : bool;
+      (** an element nothing is known to close ([start_element]): unless its own
+          end tag closes it, it becomes an empty marker followed by its content
+          ([close_top]) *)
 }
 
 type t = {
@@ -96,17 +100,17 @@ type t = {
           elements, hints, raw output and text are dropped, and the tree is left
           as if the section were absent: no implicit closes, no id checks, no
           line-scope counting. *)
-  tr : (char, string) Hashtbl.t;
-      (** the output translate table ([.tr], SH35-0069 p.207): applied to text
-          as it enters the tree. DCF-VERIFY: DCF translates when the line is put
-          out, so a [.tr] change in the middle of an output line would also
-          affect the text before it there. *)
+  tr : (int, string) Hashtbl.t;
+      (** the output translate table ([.tr], SH35-0069 p.207), by Unicode code
+          point: applied to text as it enters the tree. DCF-VERIFY: DCF
+          translates when the line is put out, so a [.tr] change in the middle
+          of an output line would also affect the text before it there. *)
 }
 
 let root_name = "gml:doc"
 
-let elt ?(kind = Plain) ?(eol_close = false) name attrs =
-  { name; attrs; children = []; kind; eol_close }
+let elt ?(kind = Plain) ?(eol_close = false) ?(provisional = false) name attrs =
+  { name; attrs; children = []; kind; eol_close; provisional }
 
 let create () =
   {
@@ -129,12 +133,16 @@ let add t node =
   | _ -> e.children <- node :: e.children
 
 (* Close the top element into its parent; an empty scope piece is
-   dropped. *)
-let close_top t =
+   dropped.  A provisional element closed by anything but its own end tag
+   ([own]) is left empty, its content following it. *)
+let close_top ?(own = false) t =
   match t.stack with
   | e :: (parent :: _ as rest) ->
       t.stack <- rest;
-      if not (is_scope e && e.children = []) then begin
+      if e.provisional && not own then
+        parent.children <-
+          e.children @ (Tree.Element (e.name, e.attrs, []) :: parent.children)
+      else if not (is_scope e && e.children = []) then begin
         (match e.kind with Scope sc -> sc.started <- true | Plain -> ());
         parent.children <-
           Tree.Element (e.name, e.attrs, List.rev e.children) :: parent.children
@@ -241,7 +249,7 @@ let open_elements t =
 let is_open t name = List.mem name (open_elements t)
 let current t = match open_elements t with [] -> None | n :: _ -> Some n
 
-let start_element ?(eol = false) t name attrs =
+let start_element ?(eol = false) ?(provisional = false) t name attrs =
   if not t.mute then begin
     let s = suspend t in
     let rec implicit () =
@@ -254,7 +262,7 @@ let start_element ?(eol = false) t name attrs =
     implicit ();
     check_id t attrs;
     let m = model_or_default t name in
-    t.stack <- elt ~eol_close:(eol || m.eol) name attrs :: t.stack;
+    t.stack <- elt ~eol_close:(eol || m.eol) ~provisional name attrs :: t.stack;
     if m.empty then close_top t;
     resume t s
   end
@@ -281,13 +289,18 @@ let end_element ?(force = false) t name =
       | [] -> []
     in
     let inner = above opened in
-    let forced = List.filter (fun n -> not (closable t n)) inner in
+    let provisional n =
+      List.exists (fun e -> e.name = n && e.provisional) t.stack
+    in
+    let forced =
+      List.filter (fun n -> not (closable t n || provisional n)) inner
+    in
     match forced with
     | n :: _ when not force -> Mismatch n
     | _ ->
         let s = suspend t in
         List.iter (fun _ -> close_top t) inner;
-        close_top t;
+        close_top ~own:true t;
         resume t s;
         Closed forced
   end
@@ -315,12 +328,19 @@ let translate t s =
   if Hashtbl.length t.tr = 0 then s
   else begin
     let b = Buffer.create (String.length s) in
-    String.iter
-      (fun c ->
-        match Hashtbl.find_opt t.tr c with
+    let rec go i =
+      if i < String.length s then begin
+        let d = String.get_utf_8_uchar s i in
+        let n = Uchar.utf_decode_length d in
+        (match
+           Hashtbl.find_opt t.tr (Uchar.to_int (Uchar.utf_decode_uchar d))
+         with
         | Some r -> Buffer.add_string b r
-        | None -> Buffer.add_char b c)
-      s;
+        | None -> Buffer.add_string b (String.sub s i n));
+        go (i + n)
+      end
+    in
+    go 0;
     Buffer.contents b
   end
 
@@ -415,7 +435,8 @@ let finish t =
     match t.stack with
     | e :: _ :: _ ->
         let acc =
-          if (not (is_scope e)) && not (closable t e.name) then e.name :: acc
+          if not (is_scope e || e.provisional || closable t e.name) then
+            e.name :: acc
           else acc
         in
         close_top t;

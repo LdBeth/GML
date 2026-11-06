@@ -1,0 +1,67 @@
+\def\gmlmode{hints}
+\input gml
+\gmlbegindocument%
+\gmlhint{df}{name=@pi@ul,spec=type('pi font sans serif' 8) codepage aftc0363,break=no,face=pi font sans serif,family=pi,size=8}\gmlhint{dr}{spec=@figrule,break=no,rule=@figrule}\gmlhint{dr}{spec=@thick weight 0.8mm font \&\$CHAR(1),break=no,rule=@thick,weight=0.8mm}\gmlhint{dr}{spec=@fnldr w 0.2mm,break=no,rule=@fnldr,weight=0.2mm}\gmlhint{df}{name=hi0,spec=font \&\$CHAR(1),break=no}\gmlhint{df}{name=hi1,spec=us,break=no,us=yes}\gmlhint{df}{name=hi2,spec=os rpt 3,break=no,os=yes}\gmlhint{df}{name=hi3,spec=os rpt 3 us,break=no,os=yes,us=yes}\gmlhint{df}{name=hd1,spec=os rpt 3 us up,break=no,os=yes,us=yes,up=yes}\gmlhint{df}{name=hd2,spec=os rpt 3,break=no,os=yes}\gmlhint{df}{name=caps,spec=up,break=no,up=yes}\gmlhint{df}{name=xmpfont,spec=type('prestige elite'),break=no,face=prestige elite,family=mono}\gmlhint{df}{name=big,spec=type(14 bold,break=no,size=14,bold=yes}\gmlhint{df}{name=small,spec=type (-2 italic),break=no,size=-2,italic=yes}\gmlhint{df}{name=side,spec=type('sans serif' 9 bold) codepage x,break=no,face=sans serif,family=sans,size=9,bold=yes}\gmlhint{df}{name=same,spec=font hi2,break=no,font=hi2}\gmlhint{dh}{level=1,spec=nus nohy nup font hd1 nonum spaf 3 pa left sect tfont hd1toc ts,break=no,us=no,hy=no,up=no,font=hd1,spaf=3line,pa=yes,align=left,tfont=hd1toc}\gmlhint{dh}{level=2,spec=nus nohy up font hd2 skbf p20 spaf 1p6 tfont \&\$CHAR(1),break=no,us=no,hy=no,up=yes,font=hd2,skbf=20pt,spaf=18pt}\gmlhint{dh}{level=5,spec=nus nohy nup font hi2 nbr,break=no,us=no,hy=no,up=no,font=hi2,runin=yes}\gmlhint{dh}{level=1,spec=spbf 0,break=no,spbf=0line}\gmlhint{dh}{level=4,spec=,break=no,reset=yes}\gmlstart{gml:fn}{kind=leader}\gmlhint{sp}{n=1,unit=line,break=yes}%
+\gmlhint{hr}{spec=@fnldr 0ch for 16ch,break=yes}%
+\gmlend{gml:fn}\gmlstart{gdoc}{}%
+\gmlstart{body}{}%
+\gmlstart{h1}{text=Defined heading Text with underscored and upper case words\gmlchar{44} then a restarted font and big\gmlchar{44} sans\gmlchar{44} small. Second level Term Definition indented line last line Figure content. Figure 1. A caption Boxed with a thick rule. Second part. Inline space. Run-intext after a run-in heading.}%
+\gmlhint{pa}{nostart=yes,break=yes}%
+\gmlstart{gml:h}{level=1,break=yes,text=Defined heading}%
+\gmlupword{Defined} \gmlupword{heading}\gmlend{gml:h}%
+\gmlstart{p}{}%
+\gmlhint{sk}{n=1,unit=line,break=yes}%
+Text with \gmlstart{hp1}{}\gmlhint{bf}{font=hi1 althi1,break=no}underscored\gmlend{hp1}\gmlhint{pf}{font=@rf hi0,break=no} and \gmlhint{bf}{font=caps,break=no}\gmlupword{upper} \gmlupword{case} \gmlupword{words}\gmlhint{pf}{font=@rf hi0,break=no}, then \gmlhint{bf}{font=docnum,restart=yes,break=no}a restarted font\gmlhint{pf}{font=@rf hi0,break=no}
+and \gmlhint{bf}{font=big,break=no}big\gmlhint{pf}{break=no}, \gmlhint{bf}{font=side,break=no}sans\gmlhint{pf}{break=no}, \gmlhint{bf}{font=small,break=no}small\gmlhint{pf}{break=no}.
+\gmlend{p}%
+\gmlstart{h2}{text=Second level Term Definition indented line last line Figure content. Figure 1. A caption Boxed with a thick rule. Second part. Inline space. Run-intext after a run-in heading.}%
+\gmlstart{gml:h}{level=2,break=yes,text=Second level}%
+\gmlupword{Second} \gmlupword{level}\gmlend{gml:h}%
+\gmlstart{dl}{}%
+\gmlstart{dt}{}%
+\gmlstart{dd}{}%
+\gmlbeginlines{in}{n=1,after=yes,left=0,unit=ch,break=no}\gmlhint{bf}{font=hi2,restart=yes,break=no}Term\gmlendlines{}\gmlhint{pf}{font=@rf hi0,break=no}\gmlhint{is}{spec=to 0dh min 1ch,break=no}Definition
+\gmlend{dd}%
+\gmlend{dt}%
+\gmlend{dl}%
+\gmlstart{xmp}{}%
+\gmlhint{br}{break=yes}%
+\gmlhint{fo}{fill=no,align=left,overdraw=extend,break=yes}%
+\gmlhint{bf}{font=xmpfont,restart=yes,break=no}\gmlhint{in}{left=2,unit=ch,delta=+2,break=yes}%
+\ \ indented\ line
+
+last\ line
+\gmlhint{fo}{fill=yes,align=justify,overdraw=extend,break=yes}%
+\gmlend{xmp}%
+\gmlhint{pf}{font=@rf hi0,break=no}\gmlstart{fig}{id=f1,frame=box,num=1,anchor=f1}%
+\gmlanchor{f1}\gmlhint{bx}{action=on,spec=@figrule new left right,break=yes}%
+Figure content.
+\gmlstart{figcap}{}%
+\gmlnum{Figure 1.}Figure 1. A caption
+\gmlend{figcap}%
+\gmlend{fig}%
+\gmlhint{bx}{action=off,break=yes}%
+\gmlhint{bx}{action=on,spec=@thick 1ch 30ch,break=yes}%
+Boxed with a thick rule.
+\gmlhint{bx}{action=line,break=yes}%
+Second part.
+\gmlhint{bx}{action=off,break=yes}%
+\gmlhint{bx}{action=on,spec=@nosuch left right,break=yes}%
+\gmlhint{bx}{action=off,break=yes}%
+\gmlhint{hr}{spec=@thick 0ch to 10ch @figrule 12ch for 8ch,break=yes}%
+\gmlhint{hr}{spec=left right,break=yes}%
+\gmlhint{is}{spec=4ch,break=no}Inline space.
+\gmlstart{gml:h}{level=5,break=yes,text=Run-in}%
+Run-in\gmlend{gml:h}%
+text after a run-in heading.
+\gmlstart{gml:rh}{action=sup,break=no}%
+\gmlend{gml:rh}%
+\gmlstart{gml:rh}{action=res,break=no}%
+\gmlend{gml:rh}%
+\gmlend{h2}%
+\gmlend{h1}%
+\gmlend{body}%
+\gmlend{gdoc}%
+%
+\gmlenddocument
+\bye

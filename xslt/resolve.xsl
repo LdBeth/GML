@@ -103,6 +103,17 @@
     text.  see= / seeid= give a "See" reference instead of a page
     reference.  Terms are merged by their exact (whitespace-normalised)
     text and sorted with $collation.
+  Index control words (SH35-0069 pp.213-218): gml:pi (.pi) is one entry,
+    @t1-@t3 the terms, @k1-@k3 explicit sort keys, @start/@end="yes" a
+    range, @order="yes" a major reference, @page a page text,
+    @pageref="no" no page, @see a cross reference; it gets an anchor
+    (gml-pi-n).  Without a key a term is merged by its text in upper case
+    and printed as at its first occurrence (SH35-0069 p.218).  A document with gml:pi takes its index from them only
+    (IBM's index APFs give .pi entries; their tags are left empty).
+    gml:ix (.ix) places the index of the entries since the previous
+    gml:ix: gml:index-entries follows it, @title from its title= (absent:
+    $lit-index).  In a document with a gml:ix the index elements get no
+    entries; otherwise each gets them all.
 
   The output is resolved again unchanged: generated nodes in the input are
   dropped and regenerated (resolve is idempotent).
@@ -167,7 +178,8 @@
                            [..[self::h0 or self::h1 or self::h2 or self::h3 or self::h4 or self::h5 or self::h6
                                or self::fig or self::fn or self::li or self::ol or self::ul
                                or self::i1 or self::i2 or self::i3 or self::ih1 or self::ih2 or self::ih3
-                               or self::iref or self::hdref or self::figref or self::fnref or self::liref]]"/>
+                               or self::iref or self::hdref or self::figref or self::fnref or self::liref
+                               or self::gml:pi]]"/>
 
   <!-- ==== helpers ====================================================== -->
   <xsl:function name="r:section" as="xs:string">
@@ -621,10 +633,53 @@
     </xsl:choose>
   </xsl:function>
 
-  <!-- one record per index tag, in document order:
-       <rec level k1.. d1.. p1.. anchor page="yes|no" major range text see/> -->
+  <!-- the sources of index entries, in document order: the gml:pi of the
+       .pi control word, if any, else the index tags -->
+  <xsl:variable name="ix-sources" as="element()*"
+      select="if (exists(//gml:pi)) then //gml:pi
+              else //(i1 | i2 | i3 | ih1 | ih2 | ih3 | iref)"/>
+
+  <!-- one record per index entry, in document order:
+       <rec seq level k1.. d1.. p1.. anchor page="yes|no" major range text see/> -->
   <xsl:variable name="ix-records" as="element(rec)*">
-    <xsl:for-each select="//(i1 | i2 | i3 | ih1 | ih2 | ih3 | iref)">
+    <xsl:for-each select="$ix-sources">
+      <xsl:choose>
+        <xsl:when test="self::gml:pi"><xsl:sequence select="r:pi-record(., position())"/></xsl:when>
+        <xsl:otherwise><xsl:sequence select="r:tag-record(., position())"/></xsl:otherwise>
+      </xsl:choose>
+    </xsl:for-each>
+  </xsl:variable>
+
+  <!-- the record of a .pi entry -->
+  <xsl:function name="r:pi-record" as="element(rec)">
+    <xsl:param name="e" as="element()"/>
+    <xsl:param name="seq" as="xs:integer"/>
+    <xsl:variable name="ts" select="($e/@t1, $e/@t2, $e/@t3)"/>
+    <rec seq="{$seq}" level="{count($ts)}" anchor="{r:anchor($e)}"
+         page="{if ($e/@see or $e/@pageref = 'no') then 'no' else 'yes'}">
+      <xsl:for-each select="$ts">
+        <xsl:variable name="i" select="position()"/>
+        <xsl:variable name="k" select="$e/@*[local-name() = concat('k', $i)]"/>
+        <xsl:attribute name="k{$i}" select="if ($k) then normalize-space($k)
+                                            else upper-case(normalize-space(.))"/>
+        <xsl:attribute name="d{$i}" select="normalize-space(.)"/>
+        <xsl:attribute name="p{$i}" select="'yes'"/>
+      </xsl:for-each>
+      <xsl:choose>
+        <xsl:when test="$e/@start = 'yes'"><xsl:attribute name="range" select="'start'"/></xsl:when>
+        <xsl:when test="$e/@end = 'yes'"><xsl:attribute name="range" select="'end'"/></xsl:when>
+        <xsl:when test="$e/@order = 'yes'"><xsl:attribute name="major" select="'yes'"/></xsl:when>
+      </xsl:choose>
+      <xsl:if test="$e/@page"><xsl:attribute name="text" select="$e/@page"/></xsl:if>
+      <xsl:if test="$e/@see"><xsl:attribute name="see" select="$e/@see"/></xsl:if>
+    </rec>
+  </xsl:function>
+
+  <!-- the record of an index tag; none if the tag is in error -->
+  <xsl:function name="r:tag-record" as="element(rec)?">
+    <xsl:param name="e" as="element()"/>
+    <xsl:param name="seq" as="xs:integer"/>
+    <xsl:for-each select="$e">
       <xsl:variable name="terms" select="r:ix-terms(.)"/>
       <xsl:if test="exists($terms)">
         <xsl:variable name="pg" select="normalize-space((@pg, @pgref, @pageref)[1])"/>
@@ -646,7 +701,7 @@
             </xsl:when>
           </xsl:choose>
         </xsl:variable>
-        <rec level="{count($terms)}" anchor="{r:anchor(.)}"
+        <rec seq="{$seq}" level="{count($terms)}" anchor="{r:anchor(.)}"
              page="{if (exists($see) or starts-with(local-name(), 'ih')) then 'no' else 'yes'}">
           <xsl:for-each select="$terms">
             <xsl:attribute name="k{position()}" select="@k"/>
@@ -664,7 +719,7 @@
         </rec>
       </xsl:if>
     </xsl:for-each>
-  </xsl:variable>
+  </xsl:function>
 
   <xsl:function name="r:initial" as="xs:string">
     <xsl:param name="k" as="xs:string"/>
@@ -676,19 +731,51 @@
   <xsl:template match="index">
     <xsl:copy>
       <xsl:apply-templates select="@*"/>
-      <gml:index-entries title="{$lit-index}">
-        <xsl:for-each-group select="$ix-records" group-by="r:initial(@k1)" collation="{$group-collation}">
-          <xsl:sort select="current-grouping-key()" collation="{$group-collation}"/>
-          <gml:index-group letter="{current-grouping-key()}">
-            <xsl:call-template name="r:entries">
-              <xsl:with-param name="recs" select="current-group()"/>
-              <xsl:with-param name="level" select="1"/>
-            </xsl:call-template>
-          </gml:index-group>
-        </xsl:for-each-group>
-      </gml:index-entries>
+      <xsl:if test="empty(//gml:ix)">
+        <xsl:call-template name="r:index">
+          <xsl:with-param name="recs" select="$ix-records"/>
+          <xsl:with-param name="title" select="$lit-index"/>
+        </xsl:call-template>
+      </xsl:if>
       <xsl:apply-templates/>
     </xsl:copy>
+  </xsl:template>
+
+  <!-- .pi entries: the anchor of their page reference -->
+  <xsl:template match="gml:pi">
+    <xsl:copy>
+      <xsl:apply-templates select="@*"/>
+      <xsl:attribute name="anchor" select="r:anchor(.)"/>
+    </xsl:copy>
+  </xsl:template>
+
+  <!-- .ix: the index of the entries since the previous .ix -->
+  <xsl:template match="gml:ix">
+    <xsl:variable name="this" select="."/>
+    <xsl:variable name="prev" select="preceding::gml:ix[1]"/>
+    <xsl:variable name="lo" select="if ($prev) then count($ix-sources[. &lt;&lt; $prev]) else 0"/>
+    <xsl:variable name="hi" select="count($ix-sources[. &lt;&lt; $this])"/>
+    <xsl:next-match/>
+    <xsl:call-template name="r:index">
+      <xsl:with-param name="recs" select="$ix-records[xs:integer(@seq) gt $lo and xs:integer(@seq) le $hi]"/>
+      <xsl:with-param name="title" select="string((@title, $lit-index)[1])"/>
+    </xsl:call-template>
+  </xsl:template>
+
+  <xsl:template name="r:index">
+    <xsl:param name="recs" as="element(rec)*"/>
+    <xsl:param name="title" as="xs:string"/>
+    <gml:index-entries title="{$title}">
+      <xsl:for-each-group select="$recs" group-by="r:initial(@k1)" collation="{$group-collation}">
+        <xsl:sort select="current-grouping-key()" collation="{$group-collation}"/>
+        <gml:index-group letter="{current-grouping-key()}">
+          <xsl:call-template name="r:entries">
+            <xsl:with-param name="recs" select="current-group()"/>
+            <xsl:with-param name="level" select="1"/>
+          </xsl:call-template>
+        </gml:index-group>
+      </xsl:for-each-group>
+    </gml:index-entries>
   </xsl:template>
 
   <xsl:template name="r:entries">

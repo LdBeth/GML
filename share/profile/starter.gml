@@ -41,12 +41,13 @@
 .* ---- symbols for text (items 15, 27) -----------------------------------------
 .* &gml. &amp. &semi. are protected by the output translation (SH35-0069
 .* p.259: ".se amp &X'08" with ".tr 08 &"), so they are never read again
-.* as a tag, a symbol or a separator.
+.* as a tag, a symbol or a separator.  Hex codes are EBCDIC: 7a 50 5e are
+.* : & ; and 41 is the required blank.
 .se gml '&X'01.
 .se amp '&X'02.
 .se semi '&X'04.
-.tr 01 3a 02 26 04 3b
-.se rbl '&X'a0.
+.tr 01 7a 02 50 04 5e
+.se rbl '&X'41.
 .se oqq '“
 .se cqq '”
 .se oq '‘

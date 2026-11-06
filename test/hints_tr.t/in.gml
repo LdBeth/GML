@@ -1,8 +1,8 @@
 .tr a A b B
 abc and bob
-.tr 41 *
+.tr c1 *
 Again: abc
-.tr ~ 20 # e2
+.tr ~ 40 # 42
 x~y#z
 .tr a
 abc

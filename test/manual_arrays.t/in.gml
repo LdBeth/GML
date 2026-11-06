@@ -9,7 +9,7 @@ At: &place(*)
 .'se x = ';.br;'
 .dc asep & x .
 At: &place(*)
-.dc asep , 20
+.dc asep , 40
 .* p.256
 .se name(1) = 1
 .se name(47) = 2

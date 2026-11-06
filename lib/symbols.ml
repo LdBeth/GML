@@ -12,7 +12,9 @@
    of the current macro frame, or [base].  Every other name is global.
 
    A name that starts with [$] and is known to the [system] callback is a
-   read-only system symbol whose value is computed on each reference.
+   read-only system symbol whose value is computed on each reference.  A
+   system symbol may be an array ([&$CHAR(n)]): the callback gets the
+   subscript, and element 0 is the number of elements.
 
    Arrays (p.254-257): every symbol is potentially an array; its plain
    value is element 0, the index counter.  [x(n)] for n >= 1 are the
@@ -32,9 +34,10 @@ type t = {
   mutable in_macro : unit -> bool;
       (** is a macro the current input source (undefined locals are null only
           then, p.276) *)
-  mutable system : string -> string option;
-      (** value of a system symbol (normalised name, with the [$]); installed by
-          [Ctx.create] because the values depend on the context *)
+  mutable system : string -> int -> string option;
+      (** value of a system symbol (normalised name, with the [$]) or of one of
+          its elements; installed by [Ctx.create] because the values depend on
+          the context *)
 }
 
 (** DCF limit on symbol name length (p.229). *)
@@ -49,7 +52,7 @@ let create () =
     base;
     local = (fun () -> base);
     in_macro = (fun () -> false);
-    system = (fun _ -> None);
+    system = (fun _ _ -> None);
   }
 
 (** Names beginning with [$] are case-insensitive (p.241). *)
@@ -82,7 +85,7 @@ let set_in (sc : scope) name v =
 
 let is_system t name =
   let n = norm name in
-  n <> "" && n.[0] = '$' && t.system n <> None
+  n <> "" && n.[0] = '$' && t.system n 0 <> None
 
 let find t name = Hashtbl.find_opt (scope_for t name) (norm name)
 
@@ -99,23 +102,30 @@ let defined t name =
     (p.255). *)
 let get ?(sub = 0) t name =
   let n = norm name in
-  if sub = 0 then
-    match if n <> "" && n.[0] = '$' then t.system n else None with
-    | Some _ as v -> v
-    | None -> Option.bind (find t n) (fun s -> s.value)
-  else if not (defined t n) then None
-  else
-    Some
-      (Option.value ~default:""
-         (Option.bind (find t n) (fun s -> Hashtbl.find_opt s.elems sub)))
+  match if n <> "" && n.[0] = '$' then t.system n sub else None with
+  | Some _ as v -> v
+  | None ->
+      if sub = 0 then Option.bind (find t n) (fun s -> s.value)
+      else if not (defined t n) then None
+      else
+        Some
+          (Option.value ~default:""
+             (Option.bind (find t n) (fun s -> Hashtbl.find_opt s.elems sub)))
 
 (** The elements [x(1)...] in ascending subscript order (p.256). *)
 let elements t name =
-  match find t name with
-  | None -> []
-  | Some s ->
-      Hashtbl.fold (fun k v acc -> (k, v) :: acc) s.elems []
-      |> List.sort compare |> List.map snd
+  let n = norm name in
+  if is_system t n then
+    let count =
+      Option.value ~default:0 (Option.bind (t.system n 0) int_of_string_opt)
+    in
+    List.init count (fun i -> Option.value (t.system n (i + 1)) ~default:"")
+  else
+    match find t n with
+    | None -> []
+    | Some s ->
+        Hashtbl.fold (fun k v acc -> (k, v) :: acc) s.elems []
+        |> List.sort compare |> List.map snd
 
 let sym_of t name =
   let sc = scope_for t name and n = norm name in

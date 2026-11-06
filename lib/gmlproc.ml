@@ -168,9 +168,28 @@ let xml_attrs ctx tag named vats =
   in
   Tagscan.last_wins (List.filter keep (named @ vats))
 
+(* A tag with no end tag ([.aa] gives no end APF, there is no direct
+   one, so DCF would reject [:eX]) and no [.xd] model has nothing that
+   could close its element: IBM's profile has no models, and its :figref,
+   :p, :li, :dt ... would hold the rest of the document.  Such an element
+   is provisional ([Doc.start_element]): if an end tag closes it after
+   all (our extension, as before), it holds what came between; if it is
+   closed otherwise (by an enclosing end tag, at the end of the input),
+   it is left empty, a marker, and the APF's output and the text follow
+   it.  DCF-VERIFY: the automatic element is our extension. *)
+let no_end ctx name =
+  match Hashtbl.find_opt ctx.Ctx.assocs name with
+  | Some { Ctx.endapf = None; _ } ->
+      not
+        (Doc.has_model ctx.Ctx.doc name
+        || Doc.closable ctx.Ctx.doc name
+        || fst (lookup ctx ~is_end:true name) <> None)
+  | _ -> false
+
 let open_auto ctx name named vats =
   if Tagscan.xml_name name then
-    Doc.start_element ctx.Ctx.doc name (xml_attrs ctx name named vats)
+    Doc.start_element ~provisional:(no_end ctx name) ctx.Ctx.doc name
+      (xml_attrs ctx name named vats)
   else Ctx.warn ctx "tag %s is not an XML name; no element" name
 
 (* Would the start tag [name] open an element? *)
@@ -194,6 +213,19 @@ let close_auto ctx src name ~has_apf =
           forced
     | Doc.Mismatch _ -> ()
     | Doc.Not_open -> Ctx.warn ctx "end tag %s: element %s is not open" src name
+
+(* An end tag with an APF closes its element after the APF when a flow
+   (.fn, .rh, .rf: gml:fn ...) is open inside it: the APF ends the flow
+   (IBM's DSMEFTNT: ".fn off"), so the element is closed by a [.xe] run
+   after it.  Otherwise the end tag closes it before its APF runs. *)
+let flow_inside ctx name =
+  let rec go = function
+    | n :: _ when n = name -> false
+    | ("gml:fn" | "gml:rh" | "gml:rf") :: _ -> true
+    | _ :: rest -> go rest
+    | [] -> false
+  in
+  Doc.is_open ctx.Ctx.doc name && go (Doc.open_elements ctx.Ctx.doc)
 
 (* ---- APF invocation ------------------------------------------------------ *)
 
@@ -353,8 +385,12 @@ and tag ctx d (f : Tagscan.found) apf (rules : Ctx.rules) s ~had_text ~eol =
   (* our automatic element *)
   (* an end tag whose rules say noelem leaves the element to its APF
      ([.xe]), so that the APF's output can still go inside it *)
+  let deferred =
+    f.is_end && rules.elem && apf <> None && flow_inside ctx f.name
+  in
   if f.is_end then (
-    if rules.elem then close_auto ctx src f.name ~has_apf:(apf <> None))
+    if rules.elem && not deferred then
+      close_auto ctx src f.name ~has_apf:(apf <> None))
   else if rules.elem then open_auto ctx f.name named vats;
   ctx.last_tag <-
     String.sub s (f.after - String.length f.name) (String.length f.name);
@@ -373,6 +409,9 @@ and tag ctx d (f : Tagscan.found) apf (rules : Ctx.rules) s ~had_text ~eol =
     Some
       (Input.push_residual ctx.input residual ctx.loc
          { Input.had_text; eol = eol && remainder = None });
+  if deferred then
+    Input.push_lines ~kind:(Input.Split true) ctx.input
+      [ (Printf.sprintf "%c'xe %s" ctx.chars.Chars.cw_ind f.name, ctx.loc) ];
   (* 4. the APF *)
   Option.iter (fun a -> invoke_apf ctx a vats) apf
 
@@ -648,6 +687,58 @@ let gs_vars ctx names =
           | Error e -> Ctx.error ctx ".gs vars: %s" e))
     names
 
+(* .gs qatt sym name ... (SH20-9161-3 p.266): the attributes in the list
+   that are not in the attribute stack become the elements of [sym].
+   DSMFTNT's ".gs qatt *q id" then tests &E'&*q: so when every attribute
+   is present [sym] is left undefined.  DCF-VERIFY: that, and the names
+   are stored as written. *)
+let qatt ctx = function
+  | [] -> Ctx.error ctx ".gs qatt: symbol name expected"
+  | sym :: names ->
+      Control.check_name ctx ".gs qatt" sym (fun () ->
+          let syms = ctx.Ctx.syms in
+          ignore (Symbols.unset syms sym);
+          List.iter
+            (fun n ->
+              if not (List.mem_assoc (String.uppercase_ascii n) ctx.gml_attrs)
+              then
+                match Symbols.append syms sym n with
+                | Ok () -> ()
+                | Error e -> Ctx.error ctx ".gs qatt: %s" e)
+            names)
+
+(* .gs hctr [n | n1.n2...] (SH20-9161-3 p.266-268, [Headctr]): a single
+   number steps that level, a dotted value sets the counter, nothing
+   reinitialises it.  The symbol &xref gets the counter up to that level
+   ("1.3.2"), its elements &xref(1) ... the positions (DSMHEAD1 prefixes
+   an appendix heading with &xref(1)); with no operand it is null.
+   DCF-VERIFY: the elements. *)
+let hctr ctx args =
+  let c = ctx.Ctx.hctr and syms = ctx.Ctx.syms in
+  let xref n =
+    ignore (Symbols.unset syms "xref");
+    List.iteri
+      (fun i p -> ignore (Symbols.set ~sub:(i + 1) syms "xref" p))
+      (Headctr.parts c n);
+    ignore (Symbols.set syms "xref" (String.concat "." (Headctr.parts c n)))
+  in
+  match args with
+  | [] ->
+      Headctr.reset c;
+      ignore (Symbols.unset syms "xref");
+      ignore (Symbols.set syms "xref" "")
+  | [ v ] -> (
+      let ps = List.map Headctr.position (String.split_on_char '.' v) in
+      match (ps, int_of_string_opt v) with
+      | _, Some n when n >= 1 && n <= Headctr.levels ->
+          Headctr.step c n;
+          xref n
+      | _ when List.length ps <= Headctr.levels && not (List.mem None ps) ->
+          Headctr.set c (List.filter_map Fun.id ps);
+          xref (List.length ps)
+      | _ -> Ctx.error ctx ".gs hctr: invalid value %s" v)
+  | _ -> Ctx.error ctx ".gs hctr: one value expected"
+
 let gs ctx ops =
   match words ops with
   | [] -> Ctx.error ctx ".gs: service required"
@@ -673,6 +764,8 @@ let gs ctx ops =
       | "insert", _ -> insert ctx (after_word ops)
       | "args", _ -> gs_args ctx (after_word ops)
       | "vars", _ -> gs_vars ctx args
+      | "qatt", _ -> qatt ctx args
+      | "hctr", _ -> hctr ctx args
       | s, _ -> Ctx.warn ctx "unsupported .gs service %s" s)
 
 let install ctx =

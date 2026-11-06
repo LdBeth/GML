@@ -157,8 +157,10 @@ let mg ctx ops =
    .dc cont c|off: the continuation character (p.47).
    .dc asep c...: the array separator, up to four characters, each
    written as itself or as two hexadecimal digits (p.254); it takes the
-   rest of the operands.  Modern edge: hexadecimal codes are ASCII (the
-   manual's blank, "40", is EBCDIC; ours is "20").
+   rest of the operands.  Hexadecimal codes are EBCDIC ([Ebcdic]): the
+   Starter Set's ".dc asep , 40" is a comma and a blank.
+   .dc rb c: the required blank (EBCDIC 41, U+00A0); .dc ps c: the page
+   number symbol ("&") (SX26-3723, .DC; &$RB, &$PS).
    The two-character end-tag delimiter may also be written as two
    blank-separated operands, the tag delimiter and the second character:
    the Starter Set's ".dc gml : : e" sets ':' and ':e' (p.289; SH35-0050 p.6
@@ -174,27 +176,23 @@ let dc ctx ops =
   let char_value opt v k =
     if String.lowercase_ascii v = "off" then k None
     else if String.length v = 1 then k (Some v.[0])
-    else if String.length v = 2 then
-      (* two hexadecimal digits (DSMPROF3: .dc cont 03) *)
-      match int_of_string_opt ("0x" ^ v) with
-      | Some c -> k (Some (Char.chr c))
+    else
+      (* two hexadecimal digits (DSMPROF3: .dc cont 03), an EBCDIC code
+         that must be an ASCII character here *)
+      match Option.bind (Ebcdic.of_hex v) Ebcdic.ascii with
+      | Some c -> k (Some c)
       | None -> Ctx.error ctx ".dc %s: invalid value %s" opt v
-    else Ctx.error ctx ".dc %s: invalid value %s" opt v
   in
   let gml_char opt v k =
     if String.length v = 1 && Chars.valid_gml_char v.[0] then k v.[0]
     else Ctx.error ctx ".dc %s: invalid delimiter %s" opt v
   in
+  let asep_char v =
+    if String.length v = 1 then Some v
+    else Option.map Ebcdic.utf8 (Ebcdic.of_hex v)
+  in
   let asep vs =
-    let one v =
-      if String.length v = 1 then Some v
-      else if String.length v = 2 then
-        Option.map
-          (fun c -> String.make 1 (Char.chr c))
-          (int_of_string_opt ("0x" ^ v))
-      else None
-    in
-    let cs = List.map one vs in
+    let cs = List.map asep_char vs in
     if vs = [] then ch.Chars.asep <- (Chars.create ()).asep
     else if List.length vs > 4 then
       Ctx.error ctx ".dc asep: at most four characters"
@@ -214,6 +212,8 @@ let dc ctx ops =
             ch.Chars.gml_delim <- d.gml_delim;
             ch.Chars.gml_end <- d.gml_end
         | "mcs" -> ch.Chars.mcs <- d.mcs
+        | "rb" -> ch.Chars.rb <- d.rb
+        | "ps" -> ch.Chars.ps <- d.ps
         | _ -> Ctx.warn ctx "unsupported .dc option %s" opt)
     | opt :: v :: rest -> (
         match String.lowercase_ascii opt with
@@ -251,6 +251,16 @@ let dc ctx ops =
                     go rest)
         | "mcs" ->
             gml_char opt v (fun c -> ch.Chars.mcs <- c);
+            go rest
+        | "rb" -> (
+            match asep_char v with
+            | Some c ->
+                ch.Chars.rb <- c;
+                go rest
+            | None -> Ctx.error ctx ".dc rb: invalid value %s" v)
+        | "ps" ->
+            char_value opt v (fun c ->
+                Option.iter (fun c -> ch.Chars.ps <- c) c);
             go rest
         | _ ->
             Ctx.warn ctx "unsupported .dc option %s" opt;
@@ -579,12 +589,18 @@ let cs ctx ops =
         ".cs: section number and ON, OFF, IGNORE or INCLUDE expected"
 
 (* .ct [text] (p.48): the text continues the previous text line without a
-   word space; alone, a continuation in effect is cancelled. *)
+   word space; alone, a continuation in effect is cancelled.  The text is
+   an input line: a continuation character at its end continues it in
+   turn (IBM's DSMFDESC: ".ct :&$RB.&$RB.&$CONT"). *)
 let ct ctx ops =
   if ops = "" then Doc.cancel_continuation ctx.Ctx.doc
   else begin
     Doc.join_previous ctx.Ctx.doc;
-    ctx.Ctx.process ctx (Ctx.Residual { Input.had_text = true; eol = true }) ops
+    let n = String.length ops in
+    let continued = ctx.Ctx.chars.Chars.cont = Some ops.[n - 1] in
+    ctx.Ctx.process ctx
+      (Ctx.Residual { Input.had_text = true; eol = not continued })
+      (if continued then String.sub ops 0 (n - 1) else ops)
   end
 
 (* ---- macros ------------------------------------------------------------- *)

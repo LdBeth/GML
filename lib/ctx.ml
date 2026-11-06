@@ -87,6 +87,15 @@ let initial_fmt () =
     hyph = false;
   }
 
+let copy_fmt (f : fmt) = { f with left = f.left }
+
+type saved = {
+  env : string;  (** the [.sa] name, upper case; "" without one *)
+  sfmt : fmt;
+  str : (int, string) Hashtbl.t;  (** the translate table ([.tr]) *)
+}
+(** A saved formatting environment ([.sa], SH20-9161-3 p.110). *)
+
 type cs_entry = { section : int; ignored : bool; cs_from : Loc.t }
 (** The open conditional sections ([.cs n on]), innermost first. *)
 
@@ -99,6 +108,9 @@ type t = {
   mutable sets : (string * string) list;
       (** -set sym=val, in command-line order; [Interp.run] makes them global
           symbols *)
+  mutable sys_sets : (string * string) list;
+      (** -set values of system symbols (normalised names): they override the
+          computed value ([system_symbol]) *)
   words : (string, word) Hashtbl.t;  (** native control words *)
   mutable loc : Loc.t;  (** location of the current line *)
   syms : Symbols.t;
@@ -148,6 +160,10 @@ type t = {
   mutable process : t -> mode -> string -> unit;
       (** the line processor ([Interp.process]) *)
   fmt : fmt;  (** formatting state ([Hints]) *)
+  mutable saved : saved list;
+      (** environments saved by [.sa] (and by [.fn on]), innermost first *)
+  hctr : Headctr.t;  (** the head-level counter ([.gs hctr], [.dh n num]) *)
+  dh_num : (int, unit) Hashtbl.t;  (** head levels defined NUM ([.dh]) *)
   mutable literal : int;
       (** [.li]: input lines still to be taken literally; -1: [.li on] *)
   mutable last_tag : string;  (** [&$TAG] *)
@@ -164,33 +180,102 @@ and word = { run : t -> string -> unit  (** receives the operands *) }
 
 let char_value = function Some c -> String.make 1 c | None -> ""
 
-let system_symbol ctx = function
-  | "$LINE" -> Some (string_of_int ctx.loc.Loc.line)
-  | "$LNUM" ->
-      (* the last line number read: in a macro the line's subscript
-       (SH35-0050 p.16) *)
-      Some
-        (string_of_int
-           (Option.value
-              (Input.current_lnum ctx.input)
-              ~default:ctx.loc.Loc.line))
-  | "$FILE" -> Some ctx.loc.Loc.file
-  | "$RET" -> Some (string_of_int ctx.ret)
-  | "$DATE" -> Some (Symbols.date_string ())
-  | "$TIME" -> Some (Symbols.time_string ())
-  | "$CW" -> Some (char_value ctx.chars.Chars.cw_sep)
-  | "$CONT" -> Some (char_value ctx.chars.Chars.cont)
-  | "$GML" -> Some (char_value ctx.chars.Chars.gml_delim)
-  | "$EGML" -> Some ctx.chars.Chars.gml_end
-  | "$SU" -> Some (if ctx.subst_on then "ON" else "OFF")
-  | "$TAB" -> Some "\t" (* the tab character (SH35-0069 p.85, p.246) *)
-  | "$ENV" -> Some "BODY" (* modern edge: no keeps, floats, footnotes *)
-  | "$PN" -> Some "1" (* modern edge: no pagination *)
-  (* the last GML tag found, as written, and its delimiter (p.251).
-     DCF-VERIFY: the case of the name. *)
-  | "$TAG" -> Some ctx.last_tag
-  | "$TAGD" -> Some ctx.last_tagd
+(* The fonts of the CHARS option of the SCRIPT command, [&$CHAR(n)]
+   (SH35-0069 p.178-179, p.242): -set '$CHAR=f1 f2 ...' gives the list.
+   DCF-VERIFY: without it, two neutral names (font names have 1-4
+   characters, p.242): the text font and the bold font, as on a 3800
+   Model 1 with "two complete upper- and lowercase fonts" (p.178);
+   IBM's DSMPROF3 selects its 3800f2 font set with these. *)
+let fonts ctx =
+  match List.assoc_opt "$CHAR" ctx.sys_sets with
+  | Some v -> List.filter (( <> ) "") (String.split_on_char ' ' v)
+  | None -> [ "TEXT"; "BOLD" ]
+
+(* The current input file name (&$FNAM): the file name without
+   directory and extension, in upper case, like a CMS file name.
+   DCF-VERIFY: no truncation to eight characters. *)
+let file_name ctx =
+  String.uppercase_ascii
+    (Filename.remove_extension (Filename.basename ctx.loc.Loc.file))
+
+let spaces sum = string_of_int (Units.figure_spaces sum)
+
+(* The system symbols (SH35-0069 Figure 15, p.242-244; SX26-3723).
+   There is no output device: the device, command option and page
+   symbols have neutral values, chosen so that IBM's Starter Set runs as
+   on a 3800 printer in one pass under CMS with indexing.  DCF-VERIFY:
+   every one of those values; -set '$NAME=value' overrides any of them. *)
+let system_value ctx name sub =
+  let st = ctx.fmt in
+  let ll = match st.ll with Some l -> spaces l | None -> "65" in
+  match (name, sub) with
+  | "$CHAR", 0 -> Some (string_of_int (List.length (fonts ctx)))
+  | "$CHAR", n ->
+      (* "null values when there is no corresponding font" (SH20-9161 .DH) *)
+      Some (Option.value (List.nth_opt (fonts ctx) (n - 1)) ~default:"")
+  | _, 0 -> (
+      match name with
+      | "$LINE" -> Some (string_of_int ctx.loc.Loc.line)
+      | "$LNUM" ->
+          (* the last line number read: in a macro the line's subscript
+             (SH35-0050 p.16) *)
+          Some
+            (string_of_int
+               (Option.value
+                  (Input.current_lnum ctx.input)
+                  ~default:ctx.loc.Loc.line))
+      | "$FILE" -> Some ctx.loc.Loc.file
+      | "$FNAM" -> Some (file_name ctx)
+      | "$RET" -> Some (string_of_int ctx.ret)
+      | "$DATE" -> Some (Symbols.date_string ())
+      | "$TIME" -> Some (Symbols.time_string ())
+      | "$CW" -> Some (char_value ctx.chars.Chars.cw_sep)
+      | "$CONT" -> Some (char_value ctx.chars.Chars.cont)
+      | "$GML" -> Some (char_value ctx.chars.Chars.gml_delim)
+      | "$EGML" -> Some ctx.chars.Chars.gml_end
+      | "$RB" -> Some ctx.chars.Chars.rb
+      | "$PS" -> Some (String.make 1 ctx.chars.Chars.ps)
+      | "$SU" -> Some (if ctx.subst_on then "ON" else "OFF")
+      | "$TAB" -> Some "\t" (* the tab character (SH35-0069 p.85, p.246) *)
+      | "$BS" -> Some "\b" (* backspace, EBCDIC 16 *)
+      | "$ENV" -> Some "BODY" (* modern edge: no keeps, floats, footnotes *)
+      | "$PN" -> Some "1" (* modern edge: no pagination *)
+      | "$KP" | "$VR" -> Some "OFF"
+      | "$LST" -> Some "0"
+      (* the last GML tag found, as written, and its delimiter (p.251).
+         DCF-VERIFY: the case of the name. *)
+      | "$TAG" -> Some ctx.last_tag
+      | "$TAGD" -> Some ctx.last_tagd
+      (* output device (p.242): a 3800 printer, written to a file *)
+      | "$PDEV" -> Some "3800"
+      | "$LDEV" -> Some "3800N6"
+      | "$OUT" -> Some "FILE"
+      (* SCRIPT command options (p.242): release 3.0 under CMS, one pass,
+         the INDEX option (so .pi is honoured), no bind *)
+      | "$DCF" -> Some "3.0"
+      | "$SYS" -> Some "CMS"
+      | "$PASS" -> Some "1"
+      | "$TWO" | "$UNF" | "$DDUT" | "$BE" | "$BO" -> Some "0"
+      | "$INDX" -> Some "1"
+      | "$LIB" -> Some (if ctx.libs = [] then "0" else "1")
+      | "$PRT" -> Some "ON"
+      | "$PARM" -> Some "DEVICE 3800N6 INDEX"
+      (* page characteristics (p.243): figure spaces and lines *)
+      | "$IN" -> Some (spaces st.left)
+      | "$IR" -> Some (spaces st.right)
+      | "$OF" -> Some (spaces st.offset)
+      | "$LL" | "$CL" -> Some ll
+      | "$PW" -> Some "85"
+      | "$PL" -> Some "66"
+      | "$LC" -> Some "60"
+      | "$TM" | "$BM" | "$FM" | "$RH" | "$RF" -> Some "0"
+      | _ -> None)
   | _ -> None
+
+let system_symbol ctx name sub =
+  match List.assoc_opt name ctx.sys_sets with
+  | Some v when sub = 0 && name <> "$CHAR" -> Some v
+  | _ -> system_value ctx name sub
 
 let create ?(include_path = []) () =
   let ctx =
@@ -201,6 +286,7 @@ let create ?(include_path = []) () =
       diag = Loc.create_diag ();
       include_path;
       sets = [];
+      sys_sets = [];
       words = Hashtbl.create 64;
       loc = Loc.none;
       syms = Symbols.create ();
@@ -241,6 +327,9 @@ let create ?(include_path = []) () =
       residual = None;
       process = (fun _ _ _ -> ());
       fmt = initial_fmt ();
+      saved = [];
+      hctr = Headctr.create ();
+      dh_num = Hashtbl.create 7;
       literal = 0;
       last_tag = "";
       last_tagd = "";

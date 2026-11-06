@@ -23,6 +23,7 @@
 #   G gml/starter.gml          -> resolve/starter.in.xml
 #   G gml/features.gml         -> resolve/features.in.xml
 #   G gml/state.gml            -> scope/state.in.xml
+#   gml gml/index-pi.gml       -> resolve/index-pi.in.xml (no profile)
 #   resolve/features.in.xml | resolve.xsl SYSVARH=yes  -> scope/features.in.xml
 #   scope/state.in.xml | scope.xsl                     -> strip-hints/scoped.in.xml
 #   resolve/xrefs.out.xml, resolve/index.out.xml -> resolve/idempotent*.in.xml
@@ -31,7 +32,8 @@
 #   tex  gmlfmt -to resolved gml/tex-NAME.gml  -> tex/NAME.in.xml
 #        (chars, hints, lines; params and tagset reuse chars);
 #        tex/starter is gml/starter.gml resolved; tex/features =
-#        resolve/features.out.xml
+#        resolve/features.out.xml; tex/dcfdefs is hand-written (a
+#        formatting profile's .df/.dr/.dh, hence hint mode)
 #   html gmlfmt -to scoped gml/html-NAME.gml   -> html/NAME.in.xml
 #        (figs, fn, hints, index, lines, lists, scope, sections, text);
 #        html/starter and html/params are gml/starter.gml scoped,

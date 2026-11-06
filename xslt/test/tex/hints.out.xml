@@ -28,9 +28,9 @@ are centered.\gmlendlines{}
 \gmlbeginlines{ri}{n=on,break=yes}Flush right one
 flush right two
 \gmlendlines{}\gmlhint{fo}{fill=no,align=left,overdraw=extend,break=yes}%
-No fill: this line
-and this line
-  are kept as lines.
+No\ fill:\ this\ line
+and\ this\ line
+\ \ are\ kept\ as\ lines.
 \gmlhint{fo}{fill=yes,align=justify,overdraw=extend,break=yes}%
 \gmlhint{fo}{fill=yes,align=center,overdraw=extend,break=yes}%
 Centered fill mode text.
@@ -54,7 +54,7 @@ Next paragraph still offset by the .of control word, all of its lines.
 \gmlhint{bf}{font=hi2,break=no}Bold from a font change,
 \gmlstart{hp1}{}italic inside it\gmlend{hp1},
 \gmlhint{pf}{initial=yes,break=no}and back to the initial font.
-\gmlhint{df}{name=big,spec=type(bold italic),break=no}\gmlhint{bf}{font=big,break=no}Defined bold italic font.
+\gmlhint{df}{name=big,spec=type(bold italic),break=no,bold=yes,italic=yes}\gmlhint{bf}{font=big,break=no}Defined bold italic font.
 \gmlhint{pf}{initial=yes,break=no}\gmlhint{tp}{action=set,stops=10mh 20mh 30mh,break=no}\gmlhint{fo}{fill=no,align=left,overdraw=extend,break=yes}%
 \gmltabline{Name\gmltab Value\gmltab Note}
 \gmltabline{Apple\gmltab 12\gmltab red}
@@ -83,7 +83,7 @@ A shorter line length of four inches for this paragraph which is long
 enough to wrap at that length.
 \gmlhint{ll}{length=default,break=yes}%
 \gmlstart{gml:fn}{}An unnumbered footnote from .fn on.
-\gmlend{gml:fn}\gmlhint{dh}{level=2,spec=font bold,break=no}\gmlhint{vr}{break=no}\gmlhint{pa}{break=yes}%
+\gmlend{gml:fn}\gmlhint{dh}{level=2,spec=font bold,break=no,font=bold}\gmlhint{vr}{break=no}\gmlhint{pa}{break=yes}%
 \gmlhint{pn}{spec=roman,break=no}After a page eject, roman page numbers.
 \gmlstart{gml:h}{level=2,break=yes,text=A control word heading}%
 A control word heading\gmlend{gml:h}%

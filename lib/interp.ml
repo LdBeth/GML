@@ -290,7 +290,8 @@ let process ctx mode s =
             end
         | Ctx.Raw | Ctx.Force_subst -> substitute_and_dispatch ctx mode s)
 
-(* -set sym=val: global symbols, set before the first line. *)
+(* -set sym=val: global symbols, set before the first line; for a
+   system symbol, the value it has throughout (-set '$PDEV=4250'). *)
 let install_sets ctx =
   List.iter
     (fun (k, v) -> ignore (Symbols.set ctx.Ctx.syms k v))
@@ -298,6 +299,8 @@ let install_sets ctx =
   List.iter
     (fun (k, v) ->
       if Symbols.is_local k then Ctx.error ctx "-set %s: not a global symbol" k
+      else if Symbols.is_system ctx.Ctx.syms k then
+        ctx.Ctx.sys_sets <- (Symbols.norm k, v) :: ctx.Ctx.sys_sets
       else
         Control.check_name ctx "-set" k (fun () ->
             match Symbols.set ctx.Ctx.syms k v with

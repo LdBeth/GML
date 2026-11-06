@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- index-pi: .pi entries (gml:pi) and .ix placement (gml:ix), from gml/index-pi.gml -->
+<gml:doc xmlns:gml="urn:x-gml:canonical"><gml:pi t1="weasels" t2="training" break="no"/>Weasels can be trained.
+<gml:pi t1="weasels" t2="care and feeding" t3="nutrition" break="no"/><gml:pi t1="weasels" t2="care and feeding" t3="nutrition" order="yes" break="no"/><gml:pi t1="melodrama" start="yes" break="no"/><gml:pi t1="melodrama" end="yes" break="no"/><gml:pi t1="circular definition" see="definition, circular" break="no"/><gml:pi t1="Pines" t2="Japanese Black" page="Folio 4" break="no"/><gml:pi t1="McIntosh" k1="Mac" break="no"/><gml:pi t1="walrus" pageref="no" break="no"/><gml:pi t1="Walrus" break="no"/><gml:ix title="Subject Index" break="yes"/><gml:pi t1="aardvark" break="no"/><gml:ix title="" break="yes"/></gml:doc>

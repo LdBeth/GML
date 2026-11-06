@@ -44,15 +44,45 @@
   containing tab characters is \gmltabline{seg\gmltab seg...}.  Words
   inside .us/.up/.uc scopes are \gmlusword{} \gmlupword{} \gmlucword{}.
   Lay-out only: "%" + line end after block elements and breaking hints.
+  Format-off text: text that follows a gml:fo/gml:nf hint with fill="no"
+  (until one with fill="yes") is written like xml:space="preserve" text:
+  DCF keeps the input lines, their leading blanks and blank lines when
+  formatting is off (SH35-0069 .FO), and a real profile (DSMXMP) does not
+  mark its examples xml:space="preserve".
+  Parsed operands: three definition hints get keys parsed from their spec
+  (the spec itself is kept), so gml.tex need not parse DCF syntax:
+    gml:df  os=yes us=yes up=yes (line functions; uc = us+up), font=NAME
+            (FONT operand, left out when it is an unresolved &symbol),
+            and from TYPE(...): face=quoted typeface, family=mono|sans|
+            pi|serif (guessed from the typeface), size=N|+N|-N, bold=yes,
+            italic=yes
+    gml:dh  font= tfont= spbf= skbf= spaf= (vertical: a bare number is
+            lines, p-notation "p14"/"1p6" is points), pa=yes|no,
+            align=left|right|center|inside|outside, runin=yes (NBR) |no
+            (BR), up=yes|no, us=yes|no, hy=yes|no, reset=yes (no options)
+    gml:dr  rule=NAME, weight=h (WEIGHT or W operand)
+  Upper case fonts: words of text whose current font (the first name of
+  the last .bf/.pf font list that a gml:df defined; in a gml:h heading,
+  its .dh font, default hdN) has UP or UC, or in a heading whose .dh says
+  UP, are \gmlupword{} (\gmlucword{} inside .us scopes): plain TeX cannot
+  upper-case text by a font switch.
+  Mode (tex-mode): "hints" writes \def\gmlmode{hints} before \input:
+  gml.tex then leaves the layout to the hints (a real DCF profile such as
+  IBM's DSMPROF3 formats every tag with control words) and styles only
+  gml:h, gml:fn, gml:rh, gml:rf and the fig float.  "auto" (default)
+  chooses hints when a .df/.dh/.dr hint comes before the first source
+  element (a formatting profile), else "elements".
 -->
 <xsl:stylesheet version="3.0"
     xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
     xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:map="http://www.w3.org/2005/xpath-functions/map"
     xmlns:gml="urn:x-gml:canonical"
     xmlns:t="urn:x-gml:tex"
     exclude-result-prefixes="#all">
 
   <xsl:output method="text" encoding="UTF-8"/>
+  <xsl:mode use-accumulators="#all"/>
 
   <!-- the macro package and extra preamble text -->
   <xsl:param name="tex-input" as="xs:string" select="'gml'"/>
@@ -66,6 +96,16 @@
   <xsl:param name="tex-tagset" as="xs:string" select="''"/>
   <!-- title page alignment as SYSVART: right (default) | left | center -->
   <xsl:param name="SYSVART" as="xs:string" select="''"/>
+  <!-- elements | hints | auto (see the header) -->
+  <xsl:param name="tex-mode" as="xs:string" select="'auto'"/>
+
+  <xsl:variable name="root" select="(/gml:doc, /*)[1]"/>
+  <xsl:variable name="first-source" select="($root//*[not(self::gml:*)])[1]"/>
+  <xsl:variable name="mode" as="xs:string" select="
+      if ($tex-mode = ('elements', 'hints')) then $tex-mode
+      else if (exists($root//(gml:df | gml:dh | gml:dr)
+                       [empty($first-source) or . &lt;&lt; $first-source]))
+      then 'hints' else 'elements'"/>
 
   <xsl:variable name="nl" select="'&#10;'"/>
 
@@ -149,6 +189,9 @@
     <xsl:if test="$tex-tagset != ''">
       <xsl:value-of select="concat('\def\gmltagset{', $tex-tagset, '}', $nl)"/>
     </xsl:if>
+    <xsl:if test="$mode = 'hints'">
+      <xsl:value-of select="concat('\def\gmlmode{hints}', $nl)"/>
+    </xsl:if>
     <xsl:text>\input </xsl:text>
     <xsl:value-of select="$tex-input"/>
     <xsl:value-of select="$nl"/>
@@ -197,6 +240,16 @@
     <xsl:value-of select="concat('\gmlhint{', local-name(), '}{', t:attrs(@*, ()), '}')"/>
     <xsl:if test="@break = 'yes'">%&#10;</xsl:if>
     <xsl:apply-templates/>
+  </xsl:template>
+
+  <xsl:template match="gml:df | gml:dh | gml:dr" priority="1">
+    <xsl:variable name="keys" as="xs:string*" select="
+        if (self::gml:df) then t:df-keys(string(@spec))
+        else if (self::gml:dh) then t:dh-keys(string(@spec))
+        else t:dr-keys(string(@spec))"/>
+    <xsl:value-of select="concat('\gmlhint{', local-name(), '}{', t:attrs(@*, ()),
+        string-join(for $k in $keys return ',' || substring-before($k, '=') || '='
+                    || t:attr(substring-after($k, '='))), '}')"/>
   </xsl:template>
 
   <!-- gml:h & co. are elements (another flow), not hints -->
@@ -290,10 +343,187 @@
     <xsl:apply-templates select="gml:index-entry"/>
   </xsl:template>
 
+  <!-- ==== DCF definitions: parsed operands ============================================= -->
+  <!-- the words of a spec, lower case; a quoted string is one word (quotes kept) -->
+  <xsl:function name="t:words" as="xs:string*">
+    <xsl:param name="s" as="xs:string"/>
+    <xsl:sequence select="analyze-string(lower-case($s), &quot;'[^']*'?|[^\s()']+|[()]&quot;)
+                          /*:match/string()"/>
+  </xsl:function>
+
+  <xsl:function name="t:unresolved" as="xs:boolean">
+    <xsl:param name="w" as="xs:string?"/>
+    <xsl:sequence select="empty($w) or $w = '' or starts-with($w, '&amp;')"/>
+  </xsl:function>
+
+  <!-- .df: US UP UC STOP, OS RPT n | OS CHAR c, BOX c, FONT id, TYPE(desc),
+       CODEPAGE cp (SX26-3723 .DF).  DCF-VERIFY: the family is guessed from
+       the typeface name; a size in TYPE is points, signed = relative. -->
+  <xsl:function name="t:df-keys" as="xs:string*">
+    <xsl:param name="spec" as="xs:string"/>
+    <xsl:variable name="w" select="t:words($spec)"/>
+    <xsl:variable name="open" select="index-of($w, '(')[1]"/>
+    <xsl:variable name="tpos" select="index-of($w, 'type')[1]"/>
+    <xsl:variable name="close" select="(index-of($w, ')')[. gt ($open, 0)[1]][1], count($w) + 1)[1]"/>
+    <xsl:variable name="desc" as="xs:string*" select="
+        if (exists($tpos)) then
+          (if ($open = $tpos + 1) then subsequence($w, $open + 1, $close - $open - 1)
+           else $w[$tpos + 1][. != '('])
+        else ()"/>
+    <xsl:variable name="inside" as="xs:integer*" select="
+        if (exists($tpos)) then ($tpos to (if ($open = $tpos + 1) then $close else $tpos + 1)) else ()"/>
+    <xsl:variable name="outer" as="xs:string*" select="
+        for $i in 1 to count($w) return if ($i = $inside) then () else $w[$i]"/>
+    <xsl:variable name="face" select="string-join(for $d in $desc[starts-with(., &quot;'&quot;)]
+                                      return translate($d, &quot;'&quot;, ''), ' ')"/>
+    <xsl:variable name="fonti" select="index-of($outer, 'font')[1]"/>
+    <xsl:sequence select="
+        (if ($outer = 'os') then 'os=yes' else ()),
+        (if ($outer = ('us', 'uc')) then 'us=yes' else ()),
+        (if ($outer = ('up', 'uc')) then 'up=yes' else ()),
+        (if (exists($fonti) and not(t:unresolved($outer[$fonti + 1])))
+         then 'font=' || $outer[$fonti + 1] else ()),
+        (if ($face != '') then ('face=' || $face, 'family=' || t:family($face)) else ()),
+        (for $d in $desc[matches(., '^[+-]?[0-9]*\.?[0-9]+$')][1] return 'size=' || $d),
+        (if ($desc = ('bold', 'semibold', 'demibold', 'heavy', 'black', 'extrabold'))
+         then 'bold=yes' else ()),
+        (if ($desc = ('italic', 'oblique')) then 'italic=yes' else ())"/>
+  </xsl:function>
+
+  <xsl:function name="t:family" as="xs:string">
+    <xsl:param name="face" as="xs:string"/>
+    <xsl:sequence select="
+        if (matches($face, '^pi( |$)|symbol|dingbat')) then 'pi'
+        else if (matches($face, 'courier|prestige|elite|letter gothic|mono|typewriter|orator|(^| )pica( |$)'))
+        then 'mono'
+        else if (matches($face, 'sans|gothic|helvetica|univers|futura|avant')) then 'sans'
+        else 'serif'"/>
+  </xsl:function>
+
+  <!-- a vertical .dh amount: a bare number is lines, p-notation points -->
+  <xsl:function name="t:vdim" as="xs:string">
+    <xsl:param name="v" as="xs:string?"/>
+    <xsl:variable name="m" select="analyze-string(string($v), '^([0-9]*\.?[0-9]*)p([0-9]*\.?[0-9]*)$')/*:match"/>
+    <xsl:sequence select="
+        if (matches(string($v), '^[+-]?[0-9]*\.?[0-9]+$')) then $v || 'line'
+        else if (exists($m) and string($v) != 'p') then
+          string((if ($m/*:group[1] = '') then 0 else number($m/*:group[1])) * 12
+                 + (if ($m/*:group[2] = '') then 0 else number($m/*:group[2]))) || 'pt'
+        else string($v)"/>
+  </xsl:function>
+
+  <!-- .dh n options (SH35-0069 p.152-154; Language Reference not at hand:
+       DCF-VERIFY the option list) -->
+  <xsl:function name="t:dh-keys" as="xs:string*">
+    <xsl:param name="spec" as="xs:string"/>
+    <xsl:variable name="w" select="t:words($spec)[not(. = ('(', ')'))]"/>
+    <xsl:sequence select="if (empty($w)) then 'reset=yes' else t:dh-keys-from($w, 1)"/>
+  </xsl:function>
+
+  <xsl:function name="t:dh-keys-from" as="xs:string*">
+    <xsl:param name="w" as="xs:string*"/>
+    <xsl:param name="i" as="xs:integer"/>
+    <xsl:if test="$i le count($w)">
+      <xsl:variable name="t" select="$w[$i]"/>
+      <xsl:variable name="val" select="$w[$i + 1]"/>
+      <xsl:choose>
+        <xsl:when test="$t = ('font', 'tfont')">
+          <xsl:sequence select="(if (t:unresolved($val)) then () else $t || '=' || $val),
+                                t:dh-keys-from($w, $i + 2)"/>
+        </xsl:when>
+        <xsl:when test="$t = ('spbf', 'skbf', 'spaf')">
+          <xsl:sequence select="(if (empty($val)) then () else $t || '=' || t:vdim($val)),
+                                t:dh-keys-from($w, $i + 2)"/>
+        </xsl:when>
+        <xsl:when test="$t = ('tind', 'tskip', 'tsk')">
+          <xsl:sequence select="t:dh-keys-from($w, $i + 2)"/>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:sequence select="
+              (if ($t = 'pa') then 'pa=yes' else if ($t = 'npa') then 'pa=no'
+               else if ($t = ('left', 'right', 'center', 'centre', 'inside', 'outside'))
+               then 'align=' || replace($t, 'centre', 'center')
+               else if ($t = 'nbr') then 'runin=yes' else if ($t = 'br') then 'runin=no'
+               else if ($t = 'up') then 'up=yes' else if ($t = 'nup') then 'up=no'
+               else if ($t = 'us') then 'us=yes' else if ($t = 'nus') then 'us=no'
+               else if ($t = 'hy') then 'hy=yes' else if ($t = 'nohy') then 'hy=no'
+               else ()),
+              t:dh-keys-from($w, $i + 1)"/>
+        </xsl:otherwise>
+      </xsl:choose>
+    </xsl:if>
+  </xsl:function>
+
+  <!-- .dr rulename [WEIGHT h] [FONT f] (SX26-3723 .DR) -->
+  <xsl:function name="t:dr-keys" as="xs:string*">
+    <xsl:param name="spec" as="xs:string"/>
+    <xsl:variable name="w" select="t:words($spec)"/>
+    <xsl:variable name="wi" select="(index-of($w, 'weight'), index-of($w, 'w'))[1]"/>
+    <xsl:sequence select="(if (exists($w[1])) then 'rule=' || $w[1] else ()),
+        (if (exists($wi) and exists($w[$wi + 1])) then 'weight=' || $w[$wi + 1] else ())"/>
+  </xsl:function>
+
+  <!-- ==== font state, for upper-case fonts ============================================= -->
+  <!-- format mode: the fill= of the last .fo/.nf/.ju hint -->
+  <xsl:accumulator name="t:fill" as="xs:string" initial-value="'yes'">
+    <xsl:accumulator-rule match="gml:fo | gml:nf | gml:ju"
+        select="if (@fill = ('yes', 'no')) then string(@fill) else $value"/>
+  </xsl:accumulator>
+  <!-- the .df names defined so far: name -> has UP/UC -->
+  <xsl:accumulator name="t:dfs" as="map(xs:string, xs:boolean)" initial-value="map{}">
+    <xsl:accumulator-rule match="gml:df"
+        select="map:put($value, lower-case(normalize-space(@name)),
+                        t:df-keys(string(@spec)) = 'up=yes')"/>
+  </xsl:accumulator>
+  <!-- the current .df-defined font: the first defined name of the last .bf
+       or .pf list; a list with none of them leaves it unchanged ("=") -->
+  <xsl:accumulator name="t:font" as="xs:string" initial-value="''">
+    <xsl:accumulator-rule match="gml:bf | gml:pf" select="
+        let $dfs := accumulator-before('t:dfs'),
+            $f := (tokenize(lower-case(normalize-space(@font)), ' ')[map:contains($dfs, .)])[1]
+        return if (exists($f)) then $f
+               else if (self::gml:pf and normalize-space(@font) = '') then ''
+               else $value"/>
+  </xsl:accumulator>
+  <!-- .dh per level: "font" and "up" -> value -->
+  <xsl:accumulator name="t:dh" as="map(xs:string, xs:string)" initial-value="map{}">
+    <xsl:accumulator-rule match="gml:dh" select="
+        let $l := normalize-space(@level), $k := t:dh-keys(string(@spec)),
+            $v := if ($k = 'reset=yes') then map:remove(map:remove($value, $l || 'font'), $l || 'up')
+                  else $value,
+            $font := (for $x in $k[starts-with(., 'font=')] return substring-after($x, '='))[1],
+            $up := (for $x in $k[starts-with(., 'up=')] return substring-after($x, '='))[1],
+            $v2 := if (exists($font)) then map:put($v, $l || 'font', $font) else $v
+        return if (exists($up)) then map:put($v2, $l || 'up', $up) else $v2"/>
+  </xsl:accumulator>
+
+  <xsl:function name="t:upper" as="xs:boolean">
+    <xsl:param name="n" as="node()"/>
+    <xsl:variable name="dfs" select="$n/accumulator-before('t:dfs')"/>
+    <xsl:variable name="h" select="$n/ancestor::gml:h[1]"/>
+    <xsl:choose>
+      <xsl:when test="exists($h) and empty($h//(gml:bf | gml:pf)[. &lt;&lt; $n])">
+        <xsl:variable name="dh" select="$h/accumulator-before('t:dh')"/>
+        <xsl:variable name="l" select="normalize-space($h/@level)"/>
+        <xsl:variable name="font" select="lower-case(($dh($l || 'font'), 'hd' || $l)[1])"/>
+        <xsl:sequence select="$dh($l || 'up') = 'yes' or $dfs($font) = true()"/>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:variable name="f" select="$n/accumulator-before('t:font')"/>
+        <xsl:sequence select="$f != '' and $dfs($f) = true()"/>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:function>
+
   <!-- ==== text ======================================================================= -->
   <xsl:template match="text()">
-    <xsl:variable name="pre" select="string(ancestor::*[@xml:space][1]/@xml:space) = 'preserve'"/>
-    <xsl:variable name="word" select="string(ancestor::gml:lines[1]/@word)"/>
+    <xsl:variable name="pre" select="string(ancestor::*[@xml:space][1]/@xml:space) = 'preserve'
+        or accumulator-before('t:fill') = 'no'"/>
+    <xsl:variable name="lword" select="string(ancestor::gml:lines[1]/@word)"/>
+    <xsl:variable name="word" select="
+        if (not(t:upper(.))) then $lword
+        else if ($lword = ('us', 'uc')) then 'uc'
+        else if ($lword = ('', 'up')) then 'up' else $lword"/>
     <xsl:choose>
       <xsl:when test="not($pre) and normalize-space(.) = ''
           and (t:is-block(preceding-sibling::node()[1]) or t:is-block(following-sibling::node()[1])

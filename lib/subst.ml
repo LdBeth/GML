@@ -300,27 +300,18 @@ let roman ~upper v =
   | _ -> "0"
 
 (* &X' (p.238-239): pairs of hexadecimal digits to characters; an odd
-   number of digits or an invalid digit gives 0.  Modern edge: a code
-   above 7F is taken as a Latin-1 character and written in UTF-8, so the
-   output stays well-formed (DCF codes are EBCDIC). *)
+   number of digits or an invalid digit gives 0.  The codes are EBCDIC,
+   translated to Unicode by [Ebcdic] and written in UTF-8. *)
 let hex v =
   let n = String.length v in
-  let ok =
-    n > 0
-    && n mod 2 = 0
-    && String.for_all
-         (function '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' -> true | _ -> false)
-         v
+  let rec go i acc =
+    if i >= n then Some (String.concat "" (List.rev acc))
+    else
+      match Ebcdic.of_hex (String.sub v i 2) with
+      | Some c -> go (i + 2) (Ebcdic.utf8 c :: acc)
+      | None -> None
   in
-  if not ok then "0"
-  else begin
-    let b = Buffer.create (n / 2) in
-    for i = 0 to (n / 2) - 1 do
-      let c = int_of_string ("0x" ^ String.sub v (2 * i) 2) in
-      Buffer.add_utf_8_uchar b (Uchar.of_int c)
-    done;
-    Buffer.contents b
-  end
+  if n = 0 || n mod 2 <> 0 then "0" else Option.value (go 0 []) ~default:"0"
 
 (* ---- the scanner ---------------------------------------------------------- *)
 
@@ -504,7 +495,15 @@ let eval_attr st s prot a o =
     | "R" -> roman ~upper:true text
     | "r" -> roman ~upper:false text
     | "X" | "x" -> hex text
-    | _ -> device () (* DH DV AD SW SD *)
+    | "DH" | "dh" | "DV" | "dv" -> (
+        let axis =
+          if String.lowercase_ascii name = "dh" then Units.Horizontal
+          else Units.Vertical
+        in
+        match Units.device_units axis (String.trim text) with
+        | Some n -> string_of_int n
+        | None -> "0")
+    | _ -> device () (* AD SW SD *)
   in
   Attr (a, stop, r)
 

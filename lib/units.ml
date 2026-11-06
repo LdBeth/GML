@@ -183,3 +183,57 @@ let lines o =
   if o.sign = None && o.value.unit = "line" && o.value.h mod 100 = 0 then
     Some (o.value.h / 100)
   else None
+
+(** A sum in whole figure spaces, as the system symbols [&$IN], [&$LL] ... give
+    it (SH35-0069 p.243: "represented in character spaces, regardless of the
+    space units used in setting them"). DCF-VERIFY: there is no device, so a
+    figure space is taken as 1/10 inch (the 10-pitch font of the 3800) and an em
+    as one figure space; device units count 0. *)
+let figure_spaces (s : sum) =
+  let per_inch_100 = function
+    | "i" -> Some 100
+    | "cm" -> Some 254
+    | "mm" -> Some 2540
+    | "pt" -> Some 7200
+    | "dd" -> Some 6767 (* 1 Didot point = 1.0640 points *)
+    | _ -> None
+  in
+  let hundredths =
+    List.fold_left
+      (fun acc (u, h) ->
+        match u with
+        | "ch" | "mh" -> acc + h
+        | u -> (
+            match per_inch_100 u with
+            | Some d -> acc + (h * 1000 / d)
+            | None -> acc))
+      0 s
+  in
+  hundredths / 100
+
+(** [&DH'] / [&DV'] (SH35-0069 p.237-238): a dimension in device units.
+    DCF-VERIFY: there is no device; the units are those of a 240-pel page
+    printer (3800 Model 3, 3820): 240 per inch, a figure space or an em 1/10
+    inch (24), a line 1/6 inch (40). *)
+let device_units axis s =
+  match parse axis s with
+  | Error _ -> None
+  | Ok o ->
+      (* device units per unit, as a fraction *)
+      let per =
+        match o.value.unit with
+        | "ch" | "mh" -> Some (24, 1)
+        | "line" | "mv" -> Some (40, 1)
+        | "i" -> Some (240, 1)
+        | "cm" -> Some (24000, 254)
+        | "mm" -> Some (2400, 254)
+        | "pt" -> Some (10, 3)
+        | "dd" -> Some (10640, 3000)
+        | "dh" | "dv" -> Some (1, 1)
+        | _ -> None
+      in
+      Option.map
+        (fun (num, den) ->
+          let n = o.value.h * num / (den * 100) in
+          if o.sign = Some '-' then -n else n)
+        per

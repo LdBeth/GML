@@ -40,7 +40,9 @@ The per-line order is documented at the top of `lib/interp.ml`.
 | `.se x off` = undefined; for an array with no subscript the whole array goes. `.se x =` / `.se x = ''` = null (p.235). | OK |
 | **Arrays (p.254–257):** `&x(*)` = all elements joined by the array separator (`", "`, `.dc asep`), in index order. `&x(0)` = the counter (= `&x`). `.se x() = v` appends at counter+1. A missing element of a defined array is null. Setting element n sets the counter when element 0 is numeric or unset. | DONE (`subscripts.t`, `manual_arrays.t`) |
 | A **null element 0 is counter 0**: `.se x = ''` (or a null from `.gs vars`) then `.se x() = v` sets element 1, and setting element n makes n the counter. A value that is not a number is an error when the counter is needed (p.257). DCF-VERIFY: p.257 does not mention null; the Starter Set's DSMTTLEP nulls `@title`/`@author`/`@address` with `.gs vars` and then appends, which only this reading fits. | DONE (`null_counter.t`) |
-| Attributes `&E' &L' &T' &V' &W' &U' &A'/&a'` (base 26) `&R'/&r'` (roman) `&X'` (hex). `&DH' &DV' &AD' &SW' &SD'` are device-dependent: 0 here, with a one-time warning (p.235–238). | DONE (`attrfuncs.t`) |
+| Attributes `&E' &L' &T' &V' &W' &U' &A'/&a'` (base 26) `&R'/&r'` (roman) `&X'` (hex). `&AD' &SW' &SD'` are device-dependent: 0 here, with a one-time warning (p.235–238). `&DH'`/`&DV'` give device units of a 240-pel page printer: a figure space or em 24, a line 40, an inch 240 (DCF-VERIFY: there is no device; IBM's list and footnote indents are computed with them). | DONE (`attrfuncs.t`) |
+| **Hexadecimal codes are EBCDIC** (`&X'`, the `.tr` operands, the `.dc` values): translated to Unicode with code page 037 (`lib/ebcdic.ml`), so `.dc asep , 40` is a comma and a blank and `&X'41` the required blank.  DCF-VERIFY: CP037 rather than CP500 (they differ in 4A 4F 5A 5F B0 BA BB); B0–B9 are taken as the superscript digits of the 1403/3800 text fonts, which IBM's DSM#SUPR translates footnote numbers to (SH35-0050, "a 1 becomes a hex b1"); DSMPROF3's pi font code page AFTC0363 only matters for characters printed in that font. A `.tr` operand is one (UTF-8) character or two hex digits; the table is by code point. | DONE (`ebcdic.t`, `hints_tr.t`) |
+| **System symbols of the device, the SCRIPT command options and the page** (SH35-0069 Figure 15, p.242–244; SX26-3723): there is no device, so they are neutral, as for a 3800 under CMS, one pass, with the INDEX option: `&$PDEV`=3800 `&$LDEV`=3800N6 `&$OUT`=FILE `&$DCF`=3.0 `&$SYS`=CMS `&$PASS`=1 `&$TWO &$UNF &$BE &$BO`=0 `&$INDX`=1 `&$LIB` (1 with `-lib`) `&$PRT`=ON `&$PARM`; `&$CHAR(n)` the CHARS fonts, an array (element 0 the count, a missing font null): TEXT and BOLD, so DSMPROF3 takes its 3800f2 font set (p.178–179); `&$FNAM` the current file name in upper case without extension; `&$RB` (`.dc rb`, EBCDIC 41 = U+00A0) and `&$PS` (`.dc ps`, `&`); `&$IN &$IR &$OF &$LL &$CL` in figure spaces of 1/10 inch, `&$PL`=66 `&$PW`=85 `&$LC`=60, the margins 0, `&$KP &$VR`=OFF, `&$LST`=0, `&$BS` backspace.  `-set '$NAME=v'` overrides any system symbol (`-set '$CHAR=f1 f2 ...'` the font list), so IBM's Starter Set runs with no `-set`. DCF-VERIFY: every neutral value. | DONE (`sysvars_dcf.t`) |
 | `&SYSYEAR &SYSMONTH &SYSDAYOFM &SYSDAYOFW &SYSDAYOFY &SYSHOUR &SYSMINUTE &SYSSECOND`, zero-padded, settable (p.240–241); `&$GML &$EGML &$CW &$CONT &$SU &$LNUM &$TAB &$ENV`(= BODY) `&$PN`(= 1) (p.246–247). | DONE (`sysvars.t`) |
 | `.se p = &` = the page number (p.254), here 1; `.dv` is not supported. | DONE (`manual_macros.t`, FIGNUM) |
 
@@ -92,6 +94,26 @@ item 34). Values are blank-separated; `'quoted values'` may hold blanks,
 equivalent to" `.se n1 'v1` ...). DCF-VERIFY: blank-only tokenization
 (`-1`, `a-b` stay one value, unlike macro operands), a name beyond the
 last value gets null, `.gs args` alone also undefines `&*0` (`gs_args.t`).
+`.gs qatt sym name ...` (SH20-9161-3 p.266): the listed attributes that
+are not on the attribute stack become the elements of `sym`; when all are
+present `sym` is undefined (DSMFTNT tests `&E'&*q`; DCF-VERIFY)
+(`gs_qatt.t`).  `.gs hctr [n | n1.n2...]` (p.266–268, `lib/headctr.ml`):
+a single number steps that level and resets the ones below, a dotted value
+sets the counter (letters for alphabetic positions, `A.0`) and the next
+heading at its deepest nonzero level takes that value, nothing
+reinitialises it; `&xref` gets the counter to that level, `&xref(n)` each
+position (DSMHEAD1 prefixes appendix headings with `&xref(1)`). DCF-VERIFY:
+that a step at the level just set does not increment (it gives IBM's
+"Appendix A") (`gs_hctr.t`).
+**Provisional elements:** a tag with no end tag (its `.aa` names no end
+APF and there is no `eNAME` APF) and no `.xd` model has nothing to close
+its automatic element (IBM's profile has no models; its `:p :li :dt
+:figref` ... have no end tags).  If it is closed by anything but its own
+end tag it is left empty, a marker, with what followed it after it; an end
+tag that does close it keeps the content inside (DCF-VERIFY)
+(`provisional.t`).  An end tag with an APF closes its element after the
+APF when a `.fn`/`.rh`/`.rf` flow is open inside it, since the APF ends the
+flow (IBM's `:efn` → DSMEFTNT `.fn off`) (`provisional.t`).
 `.gt`/`.ga` are Waterloo SCRIPT, not DCF. `&$TAG`-style attribute access in
 APFs: `.gs attval` sets `&NAME` (uppercase) or the AS name as written.
 
@@ -110,7 +132,13 @@ carrying the new state, the operand and `break="yes|no"`.  The table in
 | Line-counted words (`.ce`, `.ri`, `.us`, `.up`, `.uc`, `.il`, `.un`, `.in/.ir … after n / for n`, `.rc * c`) are `gml:lines` scopes over the input text lines they cover; elements inside a scope split it (`cont="yes"`); FOR/AFTER amounts not in lines stay as attributes. | DONE (`hints_lines.t`) |
 | `.in x after n`: the first n lines keep the old indent (p.79).  DCF-VERIFY: whether lines are input or output lines; here input text lines. | DCF-VERIFY |
 | `.li` (p.89) literal mode: control words, tags and implicit words off; symbols still substituted. | DONE (`hints_li.t`) |
-| `.tr` (p.207) real translate table; a lone char goes to a blank; hex codes are code points written as UTF-8 (DCF: EBCDIC). | DCF-VERIFY (`hints_tr.t`) |
+| `.tr` (p.207) real translate table; a lone char goes to a blank; hex codes are EBCDIC (see Symbols). | DCF-VERIFY (`hints_tr.t`) |
+| `.sa [name]` / `.re [name]` (SH20-9161-3 p.110; SX26-3723): save and restore the environment the engine tracks (indention, offset, line length, format mode, hyphenation, the font stack, SH35-0069 p.179, and the `.tr` table; not the page control area).  Hints `gml:sa`/`gml:re` (with `name`), and after `gml:re` the ordinary hints for each part that changes, with `restore="yes"` (`.pf` for fonts pushed since the `.sa`), so backends need not know `gml:re`.  `.re name` drops the environments saved after it. DCF-VERIFY: none of them breaks; the named form. | DONE (`hints_env.t`) |
+| A footnote saves the environment and clears the offset; `.fn off` restores it, without hints (SH20-9161-3 p.110). | DONE (`hints_env.t`) |
+| `.fv top|bottom|center|justify` (SH35-0069 p.111): hint `gml:fv spec`, no break (DCF-VERIFY). | DONE (`hints_env.t`) |
+| `.pi [start|end|order|ref] [key /k1/k2/k3/] /t1[/t2[/t3[/page]]]` (SH35-0069 p.213–218, SH20-9161-3 p.297): hint `gml:pi` with `t1`–`t3`, `k1`–`k3`, `start/end/order="yes"`, `page="text"` or `pageref="no"` (null fourth term; absent or the page number symbol = current page), `see` (REF: the last term). Ignored unless `&$INDX` = 1. `.ix [n] [name|control|/]` (SH20-9161-3 p.291): hint `gml:ix [reserve] [title]`, a control-word operand is processed in place of the heading. resolve.xsl builds the index from the `gml:pi` (merging terms by their upper case, SH35-0069 p.218) and puts each `.ix`'s entries after its `gml:ix` (fixture `resolve/index-pi`). | DONE (`index_pi.t`) |
+| `.dh n num/nonum` and the head-level counter (SH20-9161-3 p.247, p.266–268): an `.hn` of a NUM level gets `num="1.0"` / `"1.2.1"`; see `.gs hctr`. | DONE (`gs_hctr.t`) |
+| `.ct text`: the text is an input line, so a continuation character at its end continues it (IBM's DSMFDESC `.ct :&$RB.&$RB.&$CONT`, which left a stray `&X'03`, shown as U+FFFD, in the output). | DONE (`ct_cont.t`) |
 | `.h0`–`.h6`: `gml:h level=n` closed at the end of the line. | DONE (`hints_flow.t`) |
 | Device words (`.dd .it .sv .dl .uw .oc .sy .te .lo`) warn once each. | DONE (`hints_flow.t`) |
 | `.mg /id/text/`: severity from the last character of the id (W 4, E 8, S/T stop). | DCF-VERIFY (`starter_context.t`) |
@@ -144,5 +172,6 @@ Points settled while checking it against the scan:
 |---|---|
 | The `index`/`substr` lookup tables in DSM#SETV and the ordinal string in DSM#SETS (1st–31st) are consistent with the transcribed blank and dash counts. | OK |
 | DSMPROF3's `@oquote`/`@cquote` strings are `'` followed by seven `"''` groups (alternating `"` and `'`, single quotes doubled, unclosed string); its `.gs args` is `'"' '''' '"' ''''`. | OK |
-| `.if SYSOUT eq PAGE` (no `&`) in DSMPROF3 and `&@sK@x` in DSMEXMP are as printed. With case-sensitive symbols (p.239) the latter never matches `@sk@x`, so it is taken as a latent bug in IBM's listing and kept. | OK |
+| `.if SYSOUT eq PAGE` (no `&`) in DSMPROF3 and `&@sK@x` in DSMEXMP are as printed. Symbol names are case-sensitive (SH35-0069 p.239: `&libsym` and `&LIBSYM` are "separate and unique symbols"; SH20-9161-3 .SE note 1: "symbol1, Symbol1, and SYMBOl1 are three distinct symbols"; only `$` names are upper case only), so the latter never matches `@sk@x`: a latent bug in IBM's listing, kept (`.sk: invalid space unit`). | OK |
+| With the system symbols, `.sa/.re`, `.pi/.ix`, `.gs qatt/hctr` and the EBCDIC codes, the listing runs with no `-set`; DSMPROF3's `.go &$PDEV.f&$CHAR(0)` finds `3800f2`. The remaining diagnostics are the `.sv` device word and the `&@sK@x` above. | OK |
 | IBM's `.dm NAME off` at the end of a member deletes the macro after use, so the next call reloads it from the library (SH35-0050 p.16). | DONE |
