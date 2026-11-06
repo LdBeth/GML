@@ -115,6 +115,35 @@
     $lit-index).  In a document with a gml:ix the index elements get no
     entries; otherwise each gets them all.
 
+  Tables (SH20-9186-06 ch.7, SH20-9187-06 3.31-3.36): rdef stays in
+    place.  table gets num (only with a tcap), anchor, span (page|column,
+    the engine's span= or the COLUMN/PAGE value attribute), split (yes|no,
+    default no), rotate; its children are thd, tft, then the rows and
+    tnotes in document order, then tcap (with gml:num "Table n.") and
+    tdesc.  Each row (thd and tft hold rows too) is
+      <row rdef cols subrows cwidths split [auto="yes"]> c+ </row>
+    with every cell of its row definition, ordered by (subrow, col):
+      <c n col colspan subrow rowspan hp align valign concat rotate
+         mindepth shade [xml:space="preserve" for concat=no]>
+    The row definition is the row's refid, else the previous row's (the
+    table's for the first); thd/tft likewise among themselves.  ARRANGE
+    lines are split at "/"; a cell number's squares must make a
+    rectangle (else it takes its first square only, with a message);
+    without ARRANGE there is one cell per CWIDTHS value (or one).
+    cwidths has one value per grid column ("*" -> "1*", missing ->
+    "1*").  The k-th value of HP ALIGN VALIGN CONCAT ROTATE MINDEPTH SHADE
+    goes to the k-th cell number in ascending order, the last value
+    repeating; values are expanded from abbreviations (ALIGN=c ->
+    center; DCF-VERIFY: the order).  A :c without a valid number takes
+    the next higher cell number; past the last one a new row
+    (auto="yes") starts at the lowest; a number used again in a row
+    repeats the cell: its occurrences become gml:cpart children.
+    tnote gets gml:num ($lit-tnote).  tref resolves like figref ("Table
+    n" + gml:pageref; the target needs a tcap); tlist gets
+    gml:tlist-entries (@title $lit-tlist; gml:tlist-entry like
+    gml:figlist-entry).  Row definition ids are not document ids: the
+    id key leaves rdef out.
+
   The output is resolved again unchanged: generated nodes in the input are
   dropped and regenerated (resolve is idempotent).
 -->
@@ -153,6 +182,9 @@
   <xsl:param name="lit-toc" as="xs:string" select="'Table of Contents'"/>
   <xsl:param name="lit-figlist" as="xs:string" select="'List of Illustrations'"/>
   <xsl:param name="lit-index" as="xs:string" select="'Index'"/>
+  <xsl:param name="lit-table" as="xs:string" select="'Table'"/>
+  <xsl:param name="lit-tlist" as="xs:string" select="'List of Tables'"/>
+  <xsl:param name="lit-tnote" as="xs:string" select="'Note:'"/>
   <!-- open, close; open, close inside an odd number of :q -->
   <xsl:param name="quotes" as="xs:string" select="'“ ” ‘ ’'"/>
 
@@ -168,17 +200,19 @@
   <xsl:variable name="ol-ids" select="tokenize(normalize-space(translate($ol-identifiers, ',', ' ')), ' ')"/>
   <xsl:variable name="q" select="tokenize(normalize-space(translate($quotes, ',', ' ')), ' ')"/>
 
-  <xsl:key name="id" match="*[@id]" use="string(@id)"/>
+  <!-- the ids of the document; a row definition's id is a name of its own
+       kind (not case sensitive, SH20-9187-06 3.31) -->
+  <xsl:key name="id" match="*[@id][not(self::rdef)]" use="string(@id)"/>
 
   <xsl:mode on-no-match="shallow-copy"/>
 
   <!-- previously generated nodes: dropped, regenerated below -->
-  <xsl:template match="gml:num | gml:toc-entries | gml:figlist-entries | gml:index-entries"/>
+  <xsl:template match="gml:num | gml:toc-entries | gml:figlist-entries | gml:tlist-entries | gml:index-entries"/>
   <xsl:template match="@*[namespace-uri() = '' and local-name() = ('num', 'anchor', 'nest', 'callout', 'resolved', 'target')]
                            [..[self::h0 or self::h1 or self::h2 or self::h3 or self::h4 or self::h5 or self::h6
-                               or self::fig or self::fn or self::li or self::ol or self::ul
+                               or self::fig or self::fn or self::li or self::ol or self::ul or self::table
                                or self::i1 or self::i2 or self::i3 or self::ih1 or self::ih2 or self::ih3
-                               or self::iref or self::hdref or self::figref or self::fnref or self::liref
+                               or self::iref or self::hdref or self::figref or self::fnref or self::liref or self::tref
                                or self::gml:pi]]"/>
 
   <!-- ==== helpers ====================================================== -->
@@ -550,6 +584,416 @@
           </gml:figlist-entry>
         </xsl:for-each>
       </gml:figlist-entries>
+      <xsl:apply-templates/>
+    </xsl:copy>
+  </xsl:template>
+
+  <!-- ==== tables (SH20-9186-06 ch.7; SH20-9187-06 3.31-3.36) ============ -->
+  <!-- The row definition model of an rdef (or of none: $n cells in one
+       line), an element
+         <m cols="" subrows="" cwidths="" [bad="yes"]>
+           <cell n k col colspan subrow rowspan hp align valign concat
+                 rotate mindepth shade/>*        ordered by (subrow, col)
+         </m>
+       k = the position of n among the cell numbers in ascending order: the
+       k-th value of an attribute list applies to it (the last value
+       repeats, extra values are ignored; DCF-VERIFY: "the first value
+       applies to the first cell" read as the lowest cell number).  The
+       diagnostics are given once, by the rdef template (r:rdef-problems). -->
+  <xsl:function name="r:rdef-lines" as="element(line)*">
+    <xsl:param name="rd" as="element()?"/>
+    <xsl:param name="n" as="xs:integer"/>
+    <xsl:choose>
+      <xsl:when test="normalize-space($rd/@arrange) ne ''">
+        <xsl:for-each select="tokenize($rd/@arrange, '/')[normalize-space() ne '']">
+          <line>
+            <xsl:for-each select="tokenize(normalize-space(.), ' ')">
+              <t v="{.}"/>
+            </xsl:for-each>
+          </line>
+        </xsl:for-each>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:variable name="cw" select="count(r:tokens($rd/@cwidths))"/>
+        <line>
+          <xsl:for-each select="1 to (if (exists($rd)) then max(($cw, 1)) else $n)">
+            <t v="{.}"/>
+          </xsl:for-each>
+        </line>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:function>
+
+  <xsl:function name="r:tokens" as="xs:string*">
+    <xsl:param name="s" as="xs:string?"/>
+    <xsl:sequence select="tokenize(normalize-space($s), ' ')[. ne '']"/>
+  </xsl:function>
+
+  <xsl:function name="r:cwidth" as="xs:string">
+    <xsl:param name="w" as="xs:string?"/>
+    <xsl:sequence select="if (empty($w) or $w = '*') then '1*'
+                          else if (matches($w, '^\*')) then concat('1', $w) else $w"/>
+  </xsl:function>
+
+  <!-- attribute values: name -> (default, allowed values; () = any) -->
+  <xsl:variable name="r:cell-attrs" as="map(xs:string, xs:string*)" select="map {
+      'hp': ('0', '0', '1', '2', '3'),
+      'align': ('left', 'left', 'right', 'center', 'inside', 'outside', 'justify'),
+      'valign': ('top', 'top', 'bottom', 'center'),
+      'concat': ('yes', 'yes', 'no'),
+      'rotate': ('0', '0', '90', '180', '270', '-90', '-180', '-270'),
+      'mindepth': ('*'),
+      'shade': ('0', '0', 'xlight', 'light', 'medium', 'dark', 'xdark') }"/>
+  <xsl:variable name="r:cell-attr-names" select="('hp', 'align', 'valign', 'concat', 'rotate', 'mindepth', 'shade')"/>
+
+  <!-- a value expanded: as written if allowed, or the one allowed value it
+       abbreviates (rotate and mindepth are not abbreviated); () if invalid -->
+  <xsl:function name="r:attr-value" as="xs:string?">
+    <xsl:param name="name" as="xs:string"/>
+    <xsl:param name="v" as="xs:string"/>
+    <xsl:variable name="allowed" select="tail($r:cell-attrs($name))"/>
+    <xsl:variable name="lv" select="lower-case($v)"/>
+    <xsl:variable name="pre" select="$allowed[starts-with(., $lv)]"/>
+    <xsl:sequence select="if (empty($allowed)) then $v
+        else if ($lv = $allowed) then $lv
+        else if ($name = ('rotate', 'hp')) then ()
+        else if (count($pre) = 1 and $lv ne '') then $pre else ()"/>
+  </xsl:function>
+
+  <xsl:function name="r:attr-at" as="xs:string">
+    <xsl:param name="rd" as="element()?"/>
+    <xsl:param name="name" as="xs:string"/>
+    <xsl:param name="k" as="xs:integer"/>
+    <xsl:variable name="vs" select="r:tokens($rd/@*[local-name() = $name])"/>
+    <xsl:variable name="v" select="if (empty($vs)) then () else $vs[min(($k, count($vs)))]"/>
+    <xsl:sequence select="(if (exists($v)) then r:attr-value($name, $v) else (),
+                           head($r:cell-attrs($name)))[1]"/>
+  </xsl:function>
+
+  <xsl:function name="r:rdef-model" as="element(m)" cache="yes">
+    <xsl:param name="rd" as="element()?"/>
+    <xsl:param name="n" as="xs:integer"/>
+    <xsl:variable name="lines" select="r:rdef-lines($rd, $n)"/>
+    <xsl:variable name="sq" as="element(sq)*">
+      <xsl:for-each select="$lines">
+        <xsl:variable name="i" select="position()"/>
+        <xsl:for-each select="t">
+          <xsl:if test="@v castable as xs:integer and xs:integer(@v) gt 0">
+            <sq r="{$i}" c="{position()}" n="{xs:integer(@v)}"/>
+          </xsl:if>
+        </xsl:for-each>
+      </xsl:for-each>
+    </xsl:variable>
+    <xsl:variable name="cols" select="max((0, $lines ! count(t)))"/>
+    <xsl:variable name="nums" select="sort(distinct-values($sq/xs:integer(@n)))"/>
+    <xsl:variable name="cw" select="r:tokens($rd/@cwidths)"/>
+    <m cols="{$cols}" subrows="{count($lines)}"
+       cwidths="{string-join(for $j in 1 to $cols return r:cwidth($cw[$j]), ' ')}">
+      <xsl:variable name="cells" as="element(cell)*">
+        <xsl:for-each select="$nums">
+          <xsl:variable name="num" select="."/>
+          <xsl:variable name="s" select="$sq[xs:integer(@n) = $num]"/>
+          <xsl:variable name="r1" select="min($s/xs:integer(@r))"/>
+          <xsl:variable name="c1" select="min($s/xs:integer(@c))"/>
+          <xsl:variable name="rs" select="max($s/xs:integer(@r)) - $r1 + 1"/>
+          <xsl:variable name="cs" select="max($s/xs:integer(@c)) - $c1 + 1"/>
+          <xsl:variable name="rect" select="count($s) = $rs * $cs"/>
+          <xsl:variable name="k" select="position()"/>
+          <cell n="{$num}" k="{$k}"
+                col="{if ($rect) then $c1 else $s[1]/@c}" colspan="{if ($rect) then $cs else 1}"
+                subrow="{if ($rect) then $r1 else $s[1]/@r}" rowspan="{if ($rect) then $rs else 1}">
+            <xsl:if test="not($rect)"><xsl:attribute name="bad" select="'yes'"/></xsl:if>
+            <xsl:for-each select="$r:cell-attr-names">
+              <xsl:attribute name="{.}" select="r:attr-at($rd, ., $k)"/>
+            </xsl:for-each>
+          </cell>
+        </xsl:for-each>
+      </xsl:variable>
+      <xsl:perform-sort select="$cells">
+        <xsl:sort select="xs:integer(@subrow)"/>
+        <xsl:sort select="xs:integer(@col)"/>
+      </xsl:perform-sort>
+    </m>
+  </xsl:function>
+
+  <xsl:function name="r:rdef-problems" as="xs:string*">
+    <xsl:param name="rd" as="element()"/>
+    <xsl:variable name="lines" select="r:rdef-lines($rd, 1)"/>
+    <xsl:variable name="m" select="r:rdef-model($rd, 1)"/>
+    <xsl:variable name="cw" select="r:tokens($rd/@cwidths)"/>
+    <xsl:if test="normalize-space($rd/@id) = ''">without id</xsl:if>
+    <xsl:for-each select="distinct-values($lines/t/@v[not(. castable as xs:integer and xs:integer(.) gt 0)])">
+      <xsl:sequence select="concat('arrange: ', ., ' is not a cell number')"/>
+    </xsl:for-each>
+    <xsl:if test="count(distinct-values($lines ! count(t))) gt 1">
+      <xsl:sequence select="'arrange: the lines are not of the same length'"/>
+    </xsl:if>
+    <xsl:for-each select="$m/cell[@bad]">
+      <xsl:sequence select="concat('arrange: cell ', @n, ' is not a rectangle')"/>
+    </xsl:for-each>
+    <xsl:if test="normalize-space($rd/@arrange) ne '' and exists($cw) and count($cw) ne xs:integer($m/@cols)">
+      <xsl:sequence select="concat('cwidths has ', count($cw), ' values for ', $m/@cols, ' grid columns')"/>
+    </xsl:if>
+    <xsl:for-each select="$cw[not(matches(., '^([0-9]+([.,][0-9]+)?)?\*$')
+                                  or matches(., '^[0-9.,a-zA-Z]*[0-9][0-9.,a-zA-Z]*$'))]">
+      <xsl:sequence select="concat('cwidths: ', ., ' is not a width')"/>
+    </xsl:for-each>
+    <xsl:for-each select="$r:cell-attr-names">
+      <xsl:variable name="name" select="."/>
+      <xsl:for-each select="r:tokens($rd/@*[local-name() = $name])[empty(r:attr-value($name, .))]">
+        <xsl:sequence select="concat($name, ': ', ., ' is not a valid value')"/>
+      </xsl:for-each>
+    </xsl:for-each>
+  </xsl:function>
+
+  <xsl:template match="rdef">
+    <xsl:variable name="rd" select="."/>
+    <xsl:for-each select="r:rdef-problems(.)">
+      <xsl:message select="concat('resolve: rdef id=&quot;', $rd/@id, '&quot;: ', .)"/>
+    </xsl:for-each>
+    <xsl:next-match/>
+  </xsl:template>
+
+  <!-- the row definition named $id in force at $e: the last rdef with that
+       id (not case sensitive) before it -->
+  <xsl:function name="r:rdef-for" as="element()?">
+    <xsl:param name="e" as="element()"/>
+    <xsl:param name="id" as="xs:string"/>
+    <xsl:sequence select="$e/preceding::rdef[upper-case(normalize-space(@id)) = upper-case(normalize-space($id))][1]"/>
+  </xsl:function>
+
+  <xsl:function name="r:yes-no" as="xs:string?">
+    <xsl:param name="v" as="xs:string?"/>
+    <xsl:variable name="l" select="lower-case(normalize-space($v))"/>
+    <xsl:sequence select="if ($l = '') then () else if (starts-with('yes', $l)) then 'yes'
+                          else if (starts-with('no', $l)) then 'no' else ()"/>
+  </xsl:function>
+
+  <xsl:function name="r:table-num" as="xs:string">
+    <xsl:param name="t" as="element()"/>
+    <xsl:sequence select="if ($t/tcap)
+        then string(count($t/(preceding::table | ancestor::table)[tcap]) + 1) else ''"/>
+  </xsl:function>
+
+  <!-- generated attributes of a cell -->
+  <xsl:variable name="r:cell-gen" select="('n', 'col', 'colspan', 'subrow', 'rowspan', $r:cell-attr-names)"/>
+
+  <!-- The rows of one row-like source: its cells (source c elements, each
+       with the nodes that follow it up to the next c), the refid in force
+       ($id, '' = none), the row's own attributes ($src) and whether its
+       first row is an automatic one.  A :c without a valid number takes
+       the next higher cell number; past the last, a new row (auto="yes")
+       with the same definition starts at the lowest.  A cell number used
+       again within a row repeats the cell (gml:cpart). -->
+  <xsl:function name="r:rows" as="element()*">
+    <xsl:param name="src" as="element()"/>
+    <xsl:param name="id" as="xs:string"/>
+    <xsl:param name="split" as="xs:string"/>
+    <xsl:variable name="rd" select="if ($id = '') then () else r:rdef-for($src, $id)"/>
+    <xsl:variable name="cells" select="$src/c"/>
+    <xsl:variable name="m" select="r:rdef-model($rd,
+        max((count($cells), $cells/@n[. castable as xs:integer]/xs:integer(.), 1)))"/>
+    <xsl:variable name="nums" select="$m/cell/xs:integer(@n) => sort()"/>
+    <xsl:variable name="lead" select="$src/node()[empty(preceding-sibling::c) and not(self::c)]
+                                      [not(. instance of text() and normalize-space() = '')]"/>
+    <xsl:if test="exists($lead[. instance of text() or not(self::gml:*)])">
+      <xsl:message select="concat('resolve: ', local-name($src), ': text outside a cell')"/>
+    </xsl:if>
+    <xsl:variable name="acc" as="element(a)*">
+      <xsl:iterate select="$cells">
+        <xsl:param name="cur" as="xs:integer" select="0"/>
+        <xsl:param name="ri" as="xs:integer" select="1"/>
+        <xsl:variable name="g" select="normalize-space(@n)"/>
+        <xsl:variable name="valid" select="$g castable as xs:integer and xs:integer($g) = $nums"/>
+        <xsl:if test="$g ne '' and not($valid)">
+          <xsl:message select="concat('resolve: c n=&quot;', $g, '&quot;: no such cell in row definition &quot;',
+                                      ($rd/@id, $id)[1], '&quot;')"/>
+        </xsl:if>
+        <xsl:variable name="next" select="if ($valid) then xs:integer($g) else $nums[. gt $cur][1]"/>
+        <xsl:variable name="n" select="($next, $nums[1])[1]"/>
+        <xsl:variable name="r" select="if (empty($next)) then $ri + 1 else $ri"/>
+        <a ri="{$r}" n="{$n}" pos="{position()}"/>
+        <xsl:next-iteration>
+          <xsl:with-param name="cur" select="$n"/>
+          <xsl:with-param name="ri" select="$r"/>
+        </xsl:next-iteration>
+      </xsl:iterate>
+    </xsl:variable>
+    <xsl:for-each select="1 to max(($acc/xs:integer(@ri), 1))">
+      <xsl:variable name="ri" select="."/>
+      <row>
+        <xsl:apply-templates select="$src[self::row]/@*[not(local-name() = ('rdef', 'cols', 'subrows', 'cwidths', 'split', 'auto'))]"/>
+        <xsl:attribute name="rdef" select="($rd/@id, $id)[1]"/>
+        <xsl:attribute name="cols" select="$m/@cols"/>
+        <xsl:attribute name="subrows" select="$m/@subrows"/>
+        <xsl:attribute name="cwidths" select="$m/@cwidths"/>
+        <xsl:attribute name="split" select="$split"/>
+        <xsl:if test="$ri gt 1 or $src/@auto = 'yes'"><xsl:attribute name="auto" select="'yes'"/></xsl:if>
+        <xsl:for-each select="$m/cell">
+          <xsl:variable name="mc" select="."/>
+          <xsl:variable name="occ" select="for $a in $acc[xs:integer(@ri) = $ri and xs:integer(@n) = xs:integer($mc/@n)]
+                                           return $cells[xs:integer($a/@pos)]"/>
+          <c>
+            <xsl:apply-templates select="$occ[1]/@*[not(local-name() = ($r:cell-gen, 'space'))]"/>
+            <xsl:copy-of select="@n | @col | @colspan | @subrow | @rowspan | @*[local-name() = $r:cell-attr-names]"/>
+            <xsl:if test="@concat = 'no'"><xsl:attribute name="xml:space" select="'preserve'"/></xsl:if>
+            <xsl:choose>
+              <xsl:when test="count($occ) gt 1">
+                <xsl:for-each select="$occ">
+                  <gml:cpart><xsl:apply-templates select="r:cell-nodes(.)"/></gml:cpart>
+                </xsl:for-each>
+              </xsl:when>
+              <xsl:otherwise>
+                <xsl:if test="$ri = 1 and $occ is $cells[1]">
+                  <xsl:apply-templates select="$lead"/>
+                </xsl:if>
+                <xsl:apply-templates select="$occ ! r:cell-nodes(.)"/>
+              </xsl:otherwise>
+            </xsl:choose>
+          </c>
+        </xsl:for-each>
+      </row>
+    </xsl:for-each>
+  </xsl:function>
+
+  <!-- a source cell's content and the non-blank nodes after it up to the next cell -->
+  <xsl:function name="r:cell-nodes" as="node()*">
+    <xsl:param name="c" as="element()"/>
+    <xsl:variable name="next" select="$c/following-sibling::c[1]"/>
+    <xsl:sequence select="$c/node(), $c/following-sibling::node()[empty($next) or . &lt;&lt; $next]
+                          [not(. instance of text() and normalize-space() = '')]"/>
+  </xsl:function>
+
+  <!-- a message for an unknown refid of a table, row, thd or tft -->
+  <xsl:function name="r:check-refid">
+    <xsl:param name="e" as="element()"/>
+    <xsl:if test="empty(r:rdef-for($e, string($e/@refid)))">
+      <xsl:message select="concat('resolve: ', local-name($e), ' refid=&quot;', $e/@refid,
+                                  '&quot;: no such row definition')"/>
+    </xsl:if>
+  </xsl:function>
+
+  <xsl:template match="table">
+    <xsl:variable name="t" select="."/>
+    <xsl:variable name="num" select="r:table-num(.)"/>
+    <xsl:variable name="split" select="(r:yes-no(@split), 'no')[1]"/>
+    <xsl:if test="normalize-space(@refid) = ''">
+      <xsl:message select="'resolve: table without refid'"/>
+    </xsl:if>
+    <xsl:if test="normalize-space(@refid) ne ''"><xsl:sequence select="r:check-refid(.)"/></xsl:if>
+    <!-- the parts in document order, each row-like one with the row
+         definition in force: its own refid, else that of the previous row
+         ($id) or of the previous header or footer ($hid), the table's at
+         first (SH20-9187-06 3.32.2, 3.32.4, 3.32.5) -->
+    <xsl:variable name="parts" as="node()*">
+      <xsl:iterate select="node()">
+        <xsl:param name="id" as="xs:string" select="normalize-space(@refid)"/>
+        <xsl:param name="hid" as="xs:string" select="normalize-space(@refid)"/>
+        <xsl:variable name="own" select="normalize-space((@refid, @rdef)[1])"/>
+        <xsl:if test="(self::row or self::thd or self::tft) and normalize-space(@refid) ne ''">
+          <xsl:sequence select="r:check-refid(.)"/>
+        </xsl:if>
+        <xsl:choose>
+          <xsl:when test="self::row">
+            <xsl:variable name="eff" select="if ($own ne '') then $own else $id"/>
+            <xsl:sequence select="r:rows(., $eff, (r:yes-no(@split), $split)[1])"/>
+            <xsl:next-iteration><xsl:with-param name="id" select="$eff"/></xsl:next-iteration>
+          </xsl:when>
+          <xsl:when test="self::thd or self::tft">
+            <xsl:variable name="eff" select="if ($own ne '') then $own else $hid"/>
+            <xsl:copy>
+              <xsl:apply-templates select="@*"/>
+              <xsl:choose>
+                <xsl:when test="row">
+                  <xsl:for-each select="row">
+                    <xsl:sequence select="r:rows(., if (normalize-space((@refid, @rdef)[1]) ne '')
+                                                    then normalize-space((@refid, @rdef)[1]) else $eff,
+                                                 (r:yes-no(@split), $split)[1])"/>
+                  </xsl:for-each>
+                </xsl:when>
+                <xsl:otherwise>
+                  <xsl:sequence select="r:rows(., $eff, $split)"/>
+                </xsl:otherwise>
+              </xsl:choose>
+            </xsl:copy>
+            <xsl:next-iteration><xsl:with-param name="hid" select="$eff"/></xsl:next-iteration>
+          </xsl:when>
+          <xsl:when test=". instance of text() and normalize-space() = ''"/>
+          <xsl:when test="self::tnote or self::tcap or self::tdesc or self::rdef or self::gml:*">
+            <xsl:apply-templates select="."/>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:message select="'resolve: table: text outside a row'"/>
+            <xsl:apply-templates select="."/>
+          </xsl:otherwise>
+        </xsl:choose>
+      </xsl:iterate>
+    </xsl:variable>
+    <xsl:copy>
+      <xsl:apply-templates select="@*[not(local-name() = ('column', 'page', 'span', 'split', 'rotate'))]"/>
+      <xsl:if test="$num ne ''"><xsl:attribute name="num" select="$num"/></xsl:if>
+      <xsl:attribute name="anchor" select="r:anchor(.)"/>
+      <xsl:attribute name="span" select="(@span[. = ('page', 'column')],
+                                          if (@column and not(@page)) then 'column' else 'page')[1]"/>
+      <xsl:attribute name="split" select="$split"/>
+      <xsl:attribute name="rotate" select="(r:attr-value('rotate', normalize-space(@rotate)), '0')[1]"/>
+      <xsl:sequence select="$parts[self::thd], $parts[self::tft],
+                            $parts[not(self::thd or self::tft or self::tcap or self::tdesc)],
+                            $parts[self::tcap], $parts[self::tdesc]"/>
+    </xsl:copy>
+  </xsl:template>
+
+  <xsl:template match="table/tcap[1]">
+    <xsl:copy>
+      <xsl:apply-templates select="@*"/>
+      <gml:num><xsl:value-of select="concat($lit-table, $nbsp, r:table-num(..), '.')"/></gml:num>
+      <xsl:apply-templates/>
+    </xsl:copy>
+  </xsl:template>
+
+  <xsl:template match="table/tnote">
+    <xsl:copy>
+      <xsl:apply-templates select="@*"/>
+      <gml:num><xsl:value-of select="$lit-tnote"/></gml:num>
+      <xsl:apply-templates/>
+    </xsl:copy>
+  </xsl:template>
+
+  <xsl:template match="tref">
+    <xsl:variable name="t" select="key('id', string(@refid))[1]"/>
+    <xsl:copy>
+      <xsl:apply-templates select="@*"/>
+      <xsl:choose>
+        <xsl:when test="$t/self::table[tcap]">
+          <xsl:attribute name="resolved" select="'yes'"/>
+          <xsl:attribute name="target" select="'table'"/>
+          <xsl:attribute name="num" select="r:table-num($t)"/>
+          <xsl:value-of select="concat($lit-table, $nbsp, r:table-num($t))"/>
+          <xsl:sequence select="r:pageref(., $t)"/>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:sequence select="r:unresolved(., if ($t/self::table) then 'the table has no tcap'
+                                else if ($t) then concat('refers to a ', local-name($t), ', not a table')
+                                else 'no such id')"/>
+          <xsl:attribute name="resolved" select="'no'"/>
+          <xsl:value-of select="string-join(($lit-table, @refid, $lit-unknown), ' ')"/>
+        </xsl:otherwise>
+      </xsl:choose>
+    </xsl:copy>
+  </xsl:template>
+
+  <xsl:template match="tlist">
+    <xsl:copy>
+      <xsl:apply-templates select="@*"/>
+      <gml:tlist-entries title="{$lit-tlist}">
+        <xsl:for-each select="//table[tcap]">
+          <gml:tlist-entry refid="{r:anchor(.)}" num="{r:table-num(.)}">
+            <gml:num><xsl:value-of select="concat($lit-table, $nbsp, r:table-num(.))"/></gml:num>
+            <gml:entry-text><xsl:sequence select="r:text-of(tcap[1])"/></gml:entry-text>
+            <gml:pageref refid="{r:anchor(.)}"/>
+          </gml:tlist-entry>
+        </xsl:for-each>
+      </gml:tlist-entries>
       <xsl:apply-templates/>
     </xsl:copy>
   </xsl:template>

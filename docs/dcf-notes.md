@@ -105,6 +105,12 @@ reinitialises it; `&xref` gets the counter to that level, `&xref(n)` each
 position (DSMHEAD1 prefixes appendix headings with `&xref(1)`). DCF-VERIFY:
 that a step at the level just set does not increment (it gives IBM's
 "Appendix A") (`gs_hctr.t`).
+`.gs exatt`: an attribute given more than once on a tag is processed once
+for each occurrence, with its own value (`:rdef` repeats ARRANGE, one
+grid row each, SH20-9186-06 p.54; DCF-VERIFY) (`gs_exatt.t`).
+`.xd name noid` (EXT): the element's `id` is not a document id, so it is
+not checked for duplicates (`:rdef id` names a row definition)
+(`tables.t`).
 **Provisional elements:** a tag with no end tag (its `.aa` names no end
 APF and there is no `eNAME` APF) and no `.xd` model has nothing to close
 its automatic element (IBM's profile has no models; its `:p :li :dt
@@ -161,6 +167,26 @@ footnote has its own flag `&@fn` instead of `&@state = N`, so `:fn` is
 allowed inside `:fig`/`:xmp` (DSMFTNT refuses it there because keeps and
 floats exclude footnotes, SH35-0050 p.129; the tree has no such
 conflict) (`starter_nesting.t`).
+
+## Tables (SH20-9186-06 ch. 7, p.51–71; SH20-9187-06 §3.31–3.36)
+The Rel 3.2 tag set: `:rdef :table :thd :tft :row :c :tcap :tdesc :tnote
+:tref :tlist`.  The profile checks attributes and context; `xslt/resolve.xsl`
+assigns cells to the ARRANGE grid (see its header); the backends lay out the
+result.
+
+| Rule | Status |
+|---|---|
+| `:rdef` holds HP ALIGN CONCAT VALIGN ROTATE MINDEPTH ARRANGE CWIDTHS (p.52–54, §3.31.1). Its `id` names a row definition, not a cross-reference target: `.xd rdef noid`, so a table may share it. | DONE (`tables.t`) |
+| ARRANGE may be repeated, one grid row per attribute (p.54, p.66); the engine joins the values with ` / `. A cell number must make a rectangle; otherwise resolve reports it and the cell takes its first square (DCF-VERIFY: what DCF does). | DONE (`tables.t`, `resolve/tables-diag`) |
+| CWIDTHS gives one value per grid column (p.54–55); `*` and `k*` are shares of what is left (DCF-VERIFY: Rel 3.2 lists `*` only for an equal share). No CWIDTHS = one cell, no ARRANGE = one cell per width. | DONE (`resolve/tables`) |
+| The per-cell attributes (HP, ALIGN, ...) take their values in **ascending cell number order** (DCF-VERIFY: the manual says "for each cell"); missing values repeat the last one. Abbreviations (`l c r`, `y n`) are expanded; a bad value is reported and the default used. | DONE (`resolve/tables`) |
+| `:c n` may come out of order; a cell number already filled in the row adds a `gml:cpart` to that cell (separated by a rule); an unnumbered cell takes the next free number; a full row starts an implicit new row (p.56–57). A number not in the row definition is reported and treated as unnumbered. | DONE (`tables.t`, `resolve/tables`) |
+| CONCAT=NO keeps the cell's input lines (p.53): `xml:space="preserve"` and a `.lb` macro while the cell is open, as for `:xmp`; blank lines are dropped (DCF-VERIFY). | DONE (`tables.t`) |
+| `:thd`/`:tft` before the first `:row`; their own REFID chain, apart from the rows' (§3.32.4–5; Rel 3.2 ties them to the table's). The heading repeats on each page, the footing ends each part (p.57). | DONE (`tables.t`) |
+| SPLIT on `:table` and `:row` (p.55–56): no = keep with the previous row. COLUMN/PAGE (p.55) become `span`. ROTATE 0/90/180/270 on the table and cells. | DONE (backends) |
+| `:tcap` (one line, no tags) numbers the table and enters the list of tables; `:tdesc` follows it to `:etable` (p.58). `:tnote` is a full-width row starting "Note:" and ends the row (p.58–59). | DONE (`resolve/tables`) |
+| `:tref refid` exists in Rel 3.2 ("To Tables", ch. 8 p.76; an unmatched reference p.78); `page=` as for `:figref`. `:tlist` lists the captioned tables (§3.34). | DONE (`tables.t`) |
+| SHADE (`xlight light medium dark xdark`, §3.31.1) is Rel 4 only. | EXT |
 
 ## IBM's macro library (SH35-0050-2 Appendix C, local transcription)
 The transcription in `test/dcf-real/` (gitignored, IBM copyright) runs

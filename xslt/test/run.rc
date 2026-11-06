@@ -26,8 +26,10 @@
 #   gml gml/index-pi.gml       -> resolve/index-pi.in.xml (no profile)
 #   resolve/features.in.xml | resolve.xsl SYSVARH=yes  -> scope/features.in.xml
 #   scope/state.in.xml | scope.xsl                     -> strip-hints/scoped.in.xml
-#   resolve/xrefs.out.xml, resolve/index.out.xml -> resolve/idempotent*.in.xml
-#     (their expected output is the input itself)
+#   G gml/tables.gml           -> resolve/tables.in.xml
+#   resolve/xrefs.out.xml, resolve/index.out.xml, resolve/tables.out.xml
+#     -> resolve/idempotent*.in.xml (their expected output is the input
+#     itself); resolve/tables-diag and scope/tables are hand-written
 # The backend inputs, with -set SYSVARP=STAGE (so :psc sections select):
 #   tex  gmlfmt -to resolved gml/tex-NAME.gml  -> tex/NAME.in.xml
 #        (chars, hints, lines; params and tagset reuse chars);
@@ -40,7 +42,8 @@
 #        fn-chapter reuses fn; features, nesting, state, values are
 #        copies of scope/*.out.xml
 #   fo   gmlfmt -to scoped gml/fo-NAME.gml     -> fo/NAME.in.xml
-#        (hints, layout, lists; layout-duplex, layout-offset and
+#        (hints, layout, lists; fo/tables and html/tables are
+#        gml/tables.gml scoped; layout-duplex, layout-offset and
 #        fo-vendor-ah/layout reuse layout); fo/starter and fo/state are
 #        gml/starter.gml and gml/state.gml scoped; fo/features =
 #        scope/features.out.xml

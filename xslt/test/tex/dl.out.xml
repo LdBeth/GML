@@ -1,0 +1,63 @@
+\input gml
+\gmlbegindocument%
+\gmlstart{gdoc}{}%
+\gmlstart{body}{}%
+\gmlstart{h1}{anchor=h,text=Definition lists}%
+\gmlanchor{h}Definition lists\gmlend{h1}%
+\gmlstart{p}{}%
+Default tsize (10 characters), no break:
+\gmlend{p}%
+\gmlstart{dl}{}%
+\gmlstart{dt}{}%
+Ox\gmlend{dt}%
+\gmlstart{dd}{}%
+A short term sits in the hanging indent, and the description begins on the same line.
+\gmlend{dd}%
+\gmlstart{dt}{}%
+Hippopotamus\gmlend{dt}%
+\gmlstart{dd}{}%
+A term longer than the term size is followed by one blank, and the description continues on the same line.
+\gmlend{dd}%
+\gmlend{dl}%
+\gmlstart{p}{}%
+tsize=6 (characters, quoted in the source), break:
+\gmlend{p}%
+\gmlstart{dl}{tsize='6',break=break}%
+\gmlstart{dt}{}%
+Ant\gmlend{dt}%
+\gmlstart{dd}{}%
+Short terms are not affected by break.
+\gmlend{dd}%
+\gmlstart{dt}{}%
+Armadillo\gmlend{dt}%
+\gmlstart{dd}{}%
+With break, the description of a term longer than the term size starts on the next line.
+\gmlend{dd}%
+\gmlend{dl}%
+\gmlstart{p}{}%
+tsize=1.5i, no break; tsize=3p (picas), break:
+\gmlend{p}%
+\gmlstart{dl}{tsize=1.5i}%
+\gmlstart{dt}{}%
+Hippopotamus\gmlend{dt}%
+\gmlstart{dd}{}%
+One and a half inches hold this term.
+\gmlend{dd}%
+\gmlend{dl}%
+\gmlstart{dl}{tsize=3p,compact=compact,break=break}%
+\gmlstart{dt}{}%
+Emu\gmlend{dt}%
+\gmlstart{dd}{}%
+Three picas.
+\gmlend{dd}%
+\gmlstart{dt}{}%
+Cassowary\gmlend{dt}%
+\gmlstart{dd}{}%
+Next line.
+\gmlend{dd}%
+\gmlend{dl}%
+\gmlend{body}%
+\gmlend{gdoc}%
+%
+\gmlenddocument
+\bye

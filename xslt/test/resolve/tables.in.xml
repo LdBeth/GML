@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><frontm><tlist/></frontm><body><h1 id="tabs">Tables</h1>
+<p>The planets are in <tref refid="planets"/>, the timetable is
+<tref refid="sched" page="yes"/>, and <tref refid="steps"/> has no caption.
+<rdef id="planet" hp="2 0" align="l r c" cwidths="6* 3p *"/><rdef id="phead" hp="2" align="c" valign="bot" cwidths="6* 3p *"/></p><table id="planets" refid="planet" split="yes" column="column" span="column"><thd refid="phead"><c>Planet</c><c>Moons</c><c>Notes
+</c></thd><tft refid="phead"><c>Planet</c><c>Moons</c><c>Notes
+</c></tft><row><c>Mercury
+</c><c>0
+</c><c>Closest to the Sun.
+</c></row><row refid="planet"><c>Venus</c><c>0</c><c>It turns the other way.
+</c></row><row split="no"><c n="3">Our home; these cells are given out of order.
+</c><c n="1">Earth
+</c><c n="2">1
+</c></row><row><c>Mars</c><c>2</c><c>Two small moons.<fn>Both were found in 1877.</fn>
+</c><c>Jupiter</c><c>95</c><c>The largest; this row was started by the cell after the last one.
+</c></row><tnote>Moon counts change as new moons are found.
+</tnote><row><c>Saturn</c><c>146
+</c></row><tcap>Some planets of the solar system</tcap>
+<tdesc>Only five of the eight planets are listed;
+the last row leaves its third cell empty.
+</tdesc></table><rdef id="sched" align="c l l r c" concat="y y n y" valign="top top center" arrange="1 1 2 / 3 4 2 / 5 5 5" cwidths="2i 2i 1.5i"/><table id="sched" refid="sched" width="5.5i" span="page"><row><c>Morning session
+</c><c>Afternoon, in room <hp1>4</hp1> only
+</c><c n="4">Lab work
+</c><c n="3" xml:space="preserve">first line
+  second line, indented
+third line
+</c><c n="5">All day: the registration desk is open.
+</c></row><tcap>A timetable with spanning cells</tcap>
+</table><rdef id="two" hp="1 0" cwidths="1i *"/><table id="steps" refid="two" span="page"><row><c n="1">Steps
+</c><c n="2">Unpack the box.
+</c><c n="2">Read the leaflet.
+</c><c n="2">Switch it on.
+</c></row><tnote>The second cell is repeated: its parts are divided by rules.
+</tnote><row><c>Result</c><c>It works.
+</c></row></table><rdef id="wide" hp="1" cwidths="2i *"/><rdef id="four" cwidths="1i 1i * *"/><table refid="wide" width="6i" span="page"><row><c>Two row definitions</c><c>so the grid has the columns of both
+</c></row><row refid="four"><c>a</c><c>b</c><c>c</c><c>d
+</c></row></table><rdef id="bad" arrange="1 2 2 / 2 2 3" cwidths="* * *"/><table refid="bad" span="page"><row><c>one</c><c>two</c><c>three
+</c><c n="9">nine
+</c></row></table></body></gdoc></gml:doc>

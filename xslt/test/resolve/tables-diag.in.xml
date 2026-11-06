@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- table diagnostics: a cell that is not a rectangle, arrangement lines
+     of different lengths, a non-number in ARRANGE, too few CWIDTHS,
+     invalid and abbreviated values, an unknown refid on the table and on
+     a row, a :c number that does not exist, a table without refid, text
+     outside a cell and outside a row; row definitions are found by id
+     regardless of case, the last one before the table wins -->
+<gml:doc xmlns:gml="urn:x-gml:canonical"><body>
+<rdef id="hole" arrange="1 1 2 / 3 1 1" cwidths="* * *"/>
+<rdef id="ragged" arrange="1 2 3 / 4 x" cwidths="1i *"/>
+<rdef id="vals" cwidths="* * * *" hp="1 7" align="ri c x" valign="b" concat="n" shade="l x" rotate="45"/>
+<rdef id="Twice" cwidths="*"/>
+<rdef id="TWICE" cwidths="* *" align="r"/>
+<table refid="hole"><row><c>a</c><c>b</c><c>c</c></row></table>
+<table refid="ragged"><row><c n="4">d</c></row></table>
+<table refid="vals"><row><c>w</c><c>x</c><c>y</c><c>z</c></row></table>
+<table refid="nosuch"><row><c>p</c><c n="2">q</c></row>
+<row refid="twice">stray<c>r</c></row>text
+<row refid="missing"><c n="0">s</c></row></table>
+<table><row><c>t</c></row></table>
+</body></gml:doc>

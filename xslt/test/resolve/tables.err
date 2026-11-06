@@ -1,0 +1,3 @@
+resolve: tref refid="steps": the table has no tcap
+resolve: rdef id="bad": arrange: cell 2 is not a rectangle
+resolve: c n="9": no such cell in row definition "bad"

@@ -5,10 +5,11 @@
    .xe [name]              end element (the innermost one without a name)
    .xa attr=v ...          set attributes of the innermost open element
    .xr backend /text/      raw passthrough for a backend
-   .xd name [closes=a,b] [closedby=x,y] [empty] [eol] [inline|block]
+   .xd name [closes=a,b] [closedby=x,y] [empty] [eol] [noid] [inline|block]
                            element model for the implicit-close engine
                            (eol: closed at the end of the input line it
-                           was opened on)
+                           was opened on; noid: its id attribute is not a
+                           document id, so duplicates are not reported)
 
    Names are case-insensitive (lowercased) and must be XML names.
    Values may be quoted with apostrophes or double quotes. *)
@@ -141,6 +142,7 @@ let xd ctx ops =
                     match lo with
                     | "empty" -> go { m with empty = true } rest
                     | "eol" -> go { m with eol = true } rest
+                    | "noid" -> go { m with noid = true } rest
                     | "inline" -> go { m with display = Doc.Inline } rest
                     | "block" -> go { m with display = Doc.Block } rest
                     | _ -> Ctx.error ctx ".xd %s: unknown option %s" n o))

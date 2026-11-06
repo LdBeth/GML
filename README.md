@@ -71,7 +71,13 @@ gml [-I dir]... [-share dir] [-profile file|name] [-set sym=val]...
 
 - `-profile starter` loads the shipped Starter Set profile from the share
   directory: `-share dir`, else `$GML_SHARE`, else `share/gml` next to the
-  executable, else the share directory of the build.
+  executable, else the share directory of the build.  Its tag set is the
+  Release 3 Starter Set plus the tables of Release 3.2 (SH20-9186-06
+  ch.7): `:rdef` row definitions (CWIDTHS, ARRANGE for spanning cells,
+  per-cell HP/ALIGN/VALIGN/CONCAT/ROTATE/MINDEPTH), `:table :thd :tft
+  :row :c :tnote :tcap :tdesc`, `:tref` and `:tlist`; resolve.xsl works
+  out the cell grid, numbering and captions, and the HTML, XSL-FO and
+  TeX stages draw ruled tables (fixtures from `xslt/test/gml/tables.gml`).
 - `-set SYSVARH=yes` sets a symbol, as DCF's `SYSVAR` options do.
 - `-lib dir` (repeatable, searched in order) adds a symbol and macro
   library, as DCF's `LIB` option does: a member is the file `dir/NAME` or
@@ -149,7 +155,8 @@ The stylesheet parameters (`SYSVARS`/`SYSVARD`/`SYSVART` page layouts,
 - **Elements.** Our output control words are `.xs name a=v` (start),
   `.xe [name]` (end), `.xa a=v` (set attributes) and `.xr backend /text/`
   (raw backend text).  `.xd name [closes=a,b] [closedby=x,y] [empty]
-  [eol] [inline|block]` gives an element model for implicit closing.
+  [eol] [noid] [inline|block]` gives an element model for implicit closing
+  (`noid`: its `id` is not a document id, as for `:rdef`).
 - **TeX.** `share/tex/gml.tex` reads `gmllocal.tex` from TEXINPUTS at
   its end.  Redefine styles there with `\gmldefstart{h1}{...}`,
   `\gmldefend`, `\gmldefhint{sp}{...}`, `\gmldeflines`, `\gmldefnum`,
@@ -255,8 +262,8 @@ pdftex runs have rules of their own.
 `docs/dcf-notes.md` lists the SCRIPT/VS and Starter Set rules checked
 against the manuals.  Each entry has a status (DONE, OK, EXT) and the
 cram test that shows it.  The points that the guides leave open are
-marked `DCF-VERIFY`: 76 in the sources (`lib/`, `share/`, `xslt/`)
-and 25 in the notes.  They include how far an ignored conditional section is
+marked `DCF-VERIFY`: 81 in the sources (`lib/`, `share/`, `xslt/`)
+and 30 in the notes.  They include how far an ignored conditional section is
 "resolved", the input-versus-output line count of `.in … after n`, the
 `.mg` severities, the DSMGML message numbers and wording, the EBCDIC
 code page (037) for hex codes, the neutral values of device system

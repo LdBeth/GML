@@ -244,7 +244,7 @@ Lines that start with one of them are never filled.  Tags given
     ("wz" fmt "on|off" "widow zone")
     ("gs" gml "tag|rules|prefix|exatt|attval|scan|copy|insert ..." "GML services")
     ("xa" gml "a=v..." "set attributes of the open element")
-    ("xd" gml "name [closes=a,b] [closedby=x,y] [empty] [eol] [inline|block]" "element model")
+    ("xd" gml "name [closes=a,b] [closedby=x,y] [empty] [eol] [noid] [inline|block]" "element model")
     ("xe" gml "[name]" "end an element")
     ("xr" gml "backend /text/" "raw backend text")
     ("xs" gml "name a=v..." "start an element"))

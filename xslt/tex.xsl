@@ -19,6 +19,10 @@
       passed; added: text= (plain text of h0-h6, gml:h, title: for the
       running footing), desc=yes on a figcap followed by a figdesc.
       An element with @anchor gets \gmlanchor{anchor} as first content.
+      Tables (rdef table thd tft row c tnote tcap tdesc, and gml:cpart, a
+      part of a cell) are source elements too; gml.tex lays them out from
+      the attributes resolve.xsl puts on row and c.  tcap gets desc=yes
+      when a tdesc follows.
       Index tags (i1 i2 i3 ih1 ih2 ih3 iref) get only the anchor (their
       text is in gml:index-entries).
     hint gml:NAME (empty)  \gmlhint{NAME}{k=v,...}      -> \gml@hint@NAME
@@ -29,6 +33,7 @@
     gml:pageref            \gmlpageref{anchor}{always|auto}{label}
     generated lists        \gmltocbegin{title} \gmltocentry{level=..,..}{num}{text}{\gmlpageref..}
                            \gmlfiglistbegin{title} \gmlfiglistentry{num=..}{label}{text}{page}
+                           \gmltlistbegin{title} \gmltlistentry{...}{label}{text}{page} \gmltlistend
                            \gmlindexbegin{title} \gmlindexgroup{letter}
                            \gmlindexentry{level}{term}{refs} ... \gmlindexend
   Attribute values and text are escaped by t:esc: TeX specials $ & # %
@@ -114,14 +119,16 @@
        'aline', 'abstract', 'preface', 'toc', 'figlist', 'body', 'appendix', 'backm',
        'index', 'h0', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'pc', 'note',
        'ol', 'ul', 'sl', 'l', 'dl', 'gl', 'li', 'lp', 'dthd', 'ddhd', 'dt', 'dd',
-       'gt', 'gd', 'lq', 'xmp', 'fig', 'figcap', 'figdesc', 'gml:h', 'gml:rh', 'gml:rf')"/>
+       'gt', 'gd', 'lq', 'xmp', 'fig', 'figcap', 'figdesc', 'gml:h', 'gml:rh', 'gml:rf',
+       'rdef', 'table', 'thd', 'tft', 'row', 'c', 'tnote', 'tcap', 'tdesc', 'tlist')"/>
   <xsl:variable name="index-tags" as="xs:string*"
       select="('i1', 'i2', 'i3', 'ih1', 'ih2', 'ih3', 'iref')"/>
   <!-- gml:* elements that are not hints -->
   <xsl:variable name="flows" as="xs:string*" select="('h', 'fn', 'rh', 'rf')"/>
   <xsl:variable name="generated" as="xs:string*" select="
       ('doc', 'lines', 'num', 'pageref', 'toc-entries', 'toc-entry', 'entry-text',
-       'figlist-entries', 'figlist-entry', 'index-entries', 'index-group',
+       'figlist-entries', 'figlist-entry', 'tlist-entries', 'tlist-entry',
+       'index-entries', 'index-group',
        'index-entry', 'index-term', 'see')"/>
 
   <!-- ==== escaping ===================================================== -->
@@ -218,7 +225,8 @@
                     or self::h6 or self::gml:h or self::title">
         <xsl:sequence select="'text=' || t:attr(t:plain(.))"/>
       </xsl:if>
-      <xsl:if test="self::figcap and following-sibling::*[1][self::figdesc]">
+      <xsl:if test="(self::figcap and following-sibling::*[1][self::figdesc])
+                    or (self::tcap and following-sibling::*[1][self::tdesc])">
         <xsl:sequence select="'desc=yes'"/>
       </xsl:if>
     </xsl:variable>
@@ -252,8 +260,9 @@
                     || t:attr(substring-after($k, '='))), '}')"/>
   </xsl:template>
 
-  <!-- gml:h & co. are elements (another flow), not hints -->
-  <xsl:template match="gml:h | gml:fn | gml:rh | gml:rf" priority="1">
+  <!-- gml:h & co. are elements (another flow), not hints; gml:cpart (a
+       part of a table cell, :c n repeated) is a block element -->
+  <xsl:template match="gml:h | gml:fn | gml:rh | gml:rf | gml:cpart" priority="1">
     <xsl:call-template name="element"/>
   </xsl:template>
 
@@ -302,6 +311,22 @@
 
   <xsl:template match="gml:figlist-entry">
     <xsl:value-of select="concat('\gmlfiglistentry{', t:attrs(@*, ()), '}{')"/>
+    <xsl:apply-templates select="gml:num/node()"/>
+    <xsl:text>}{</xsl:text>
+    <xsl:apply-templates select="gml:entry-text/node()"/>
+    <xsl:text>}{</xsl:text>
+    <xsl:apply-templates select="gml:pageref"/>
+    <xsl:text>}%&#10;</xsl:text>
+  </xsl:template>
+
+  <xsl:template match="gml:tlist-entries">
+    <xsl:value-of select="concat('\gmltlistbegin{', t:esc(string(@title), false()), '}%', $nl)"/>
+    <xsl:apply-templates select="gml:tlist-entry"/>
+    <xsl:text>\gmltlistend%&#10;</xsl:text>
+  </xsl:template>
+
+  <xsl:template match="gml:tlist-entry">
+    <xsl:value-of select="concat('\gmltlistentry{', t:attrs(@*, ()), '}{')"/>
     <xsl:apply-templates select="gml:num/node()"/>
     <xsl:text>}{</xsl:text>
     <xsl:apply-templates select="gml:entry-text/node()"/>
@@ -525,6 +550,8 @@
         else if ($lword = ('us', 'uc')) then 'uc'
         else if ($lword = ('', 'up')) then 'up' else $lword"/>
     <xsl:choose>
+      <!-- blanks between the parts of a table cell, even in preserved text -->
+      <xsl:when test="normalize-space(.) = '' and parent::c and ../gml:cpart"/>
       <xsl:when test="not($pre) and normalize-space(.) = ''
           and (t:is-block(preceding-sibling::node()[1]) or t:is-block(following-sibling::node()[1])
                or (t:is-block(..) and (empty(preceding-sibling::node()) or empty(following-sibling::node()))))"/>

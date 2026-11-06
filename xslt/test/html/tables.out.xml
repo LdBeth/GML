@@ -1,0 +1,167 @@
+<!DOCTYPE HTML><html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="GML html.xsl">
+<title>Tables</title>
+<link rel="stylesheet" href="gml.css">
+</head>
+<body class="gml">
+<main class="gml-doc">
+<article class="gml-gdoc">
+<section class="gml-frontm">
+<nav class="gml-tlist">
+<h1 class="gml-tlist-title">List of Tables</h1>
+<ol class="gml-tlist-list">
+<li class="gml-tlist-entry"><a href="#planets"><span class="gml-num">Table&nbsp;1</span> Some planets of the solar system</a></li>
+<li class="gml-tlist-entry"><a href="#sched"><span class="gml-num">Table&nbsp;2</span> A timetable with spanning cells</a></li></ol></nav></section>
+<section class="gml-body">
+<h1 id="tabs" class="gml-h1">Tables</h1>
+<p>The planets are in <a class="gml-tref" href="#planets">Table&nbsp;1</a>, the timetable is
+<a class="gml-tref" href="#sched">Table&nbsp;2</a>, and <span class="gml-tref gml-unresolved">Table steps unknown</span> has no caption.
+</p>
+<table id="planets" class="gml-table gml-span-column gml-split-yes">
+<caption class="gml-tcaption"><span class="gml-tcap"><span class="gml-num">Table&nbsp;1.</span> Some planets of the solar system</span><span class="gml-tdesc" style="display: block">Only five of the eight planets are listed;
+the last row leaves its third cell empty.
+</span></caption>
+<colgroup>
+<col style="width: calc((100% - 36pt) * 0.8571)">
+<col style="width: 36pt">
+<col style="width: calc((100% - 36pt) * 0.1429)"></colgroup>
+<thead class="gml-thd">
+<tr class="gml-row gml-split-yes">
+<th class="gml-c gml-hp2" data-cell="1" style="text-align: center; vertical-align: bottom">Planet</th>
+<th class="gml-c gml-hp2" data-cell="2" style="text-align: center; vertical-align: bottom">Moons</th>
+<th class="gml-c gml-hp2" data-cell="3" style="text-align: center; vertical-align: bottom">Notes
+</th></tr></thead>
+<tfoot class="gml-tft">
+<tr class="gml-row gml-split-yes">
+<td class="gml-c gml-hp2" data-cell="1" style="text-align: center; vertical-align: bottom">Planet</td>
+<td class="gml-c gml-hp2" data-cell="2" style="text-align: center; vertical-align: bottom">Moons</td>
+<td class="gml-c gml-hp2" data-cell="3" style="text-align: center; vertical-align: bottom">Notes
+</td></tr></tfoot>
+<tbody>
+<tr class="gml-row gml-split-yes">
+<td class="gml-c gml-hp2" data-cell="1" style="text-align: left; vertical-align: top">Mercury
+</td>
+<td class="gml-c" data-cell="2" style="text-align: right; vertical-align: top">0
+</td>
+<td class="gml-c" data-cell="3" style="text-align: center; vertical-align: top">Closest to the Sun.
+</td></tr>
+<tr class="gml-row gml-split-yes">
+<td class="gml-c gml-hp2" data-cell="1" style="text-align: left; vertical-align: top">Venus</td>
+<td class="gml-c" data-cell="2" style="text-align: right; vertical-align: top">0</td>
+<td class="gml-c" data-cell="3" style="text-align: center; vertical-align: top">It turns the other way.
+</td></tr>
+<tr class="gml-row gml-split-no">
+<td class="gml-c gml-hp2" data-cell="1" style="text-align: left; vertical-align: top">Earth
+</td>
+<td class="gml-c" data-cell="2" style="text-align: right; vertical-align: top">1
+</td>
+<td class="gml-c" data-cell="3" style="text-align: center; vertical-align: top">Our home; these cells are given out of order.
+</td></tr>
+<tr class="gml-row gml-split-yes">
+<td class="gml-c gml-hp2" data-cell="1" style="text-align: left; vertical-align: top">Mars</td>
+<td class="gml-c" data-cell="2" style="text-align: right; vertical-align: top">2</td>
+<td class="gml-c" data-cell="3" style="text-align: center; vertical-align: top">Two small moons.<sup class="gml-fn-callout"><a href="#gml-fn-1" id="gml-fn-1-ref" role="doc-noteref">1</a></sup></td></tr>
+<tr class="gml-row gml-row-auto gml-split-yes">
+<td class="gml-c gml-hp2" data-cell="1" style="text-align: left; vertical-align: top">Jupiter</td>
+<td class="gml-c" data-cell="2" style="text-align: right; vertical-align: top">95</td>
+<td class="gml-c" data-cell="3" style="text-align: center; vertical-align: top">The largest; this row was started by the cell after the last one.
+</td></tr>
+<tr class="gml-tnote">
+<td colspan="3"><strong class="gml-tnote-label">Note:</strong>&nbsp;Moon counts change as new moons are found.
+</td></tr>
+<tr class="gml-row gml-split-yes">
+<td class="gml-c gml-hp2" data-cell="1" style="text-align: left; vertical-align: top">Saturn</td>
+<td class="gml-c" data-cell="2" style="text-align: right; vertical-align: top">146
+</td>
+<td class="gml-c" data-cell="3" style="text-align: center; vertical-align: top"></td></tr></tbody></table>
+<table id="sched" class="gml-table gml-span-page gml-split-no" style="width: 5.5in">
+<caption class="gml-tcaption"><span class="gml-tcap"><span class="gml-num">Table&nbsp;2.</span> A timetable with spanning cells</span></caption>
+<colgroup>
+<col style="width: 2in">
+<col style="width: 2in">
+<col style="width: 1.5in"></colgroup>
+<tbody>
+<tr class="gml-row gml-split-no">
+<td class="gml-c" colspan="2" data-cell="1" style="text-align: center; vertical-align: top">Morning session
+</td>
+<td class="gml-c" rowspan="2" data-cell="2" style="text-align: left; vertical-align: top">Afternoon, in room <em class="gml-hp1">4</em> only
+</td></tr>
+<tr class="gml-row">
+<td class="gml-c" data-cell="3" style="text-align: left; vertical-align: middle; white-space: pre-wrap">first line
+  second line, indented
+third line
+</td>
+<td class="gml-c" data-cell="4" style="text-align: right; vertical-align: middle">Lab work
+</td></tr>
+<tr class="gml-row">
+<td class="gml-c" colspan="3" data-cell="5" style="text-align: center; vertical-align: middle">All day: the registration desk is open.
+</td></tr></tbody></table>
+<table id="steps" class="gml-table gml-span-page gml-split-no">
+<colgroup>
+<col style="width: 1in">
+<col style="width: calc((100% - 1in) * 1)"></colgroup>
+<tbody>
+<tr class="gml-row gml-split-no">
+<td class="gml-c gml-hp1" data-cell="1" style="text-align: left; vertical-align: top">Steps
+</td>
+<td class="gml-c" data-cell="2" style="text-align: left; vertical-align: top"><div class="gml-cpart">Unpack the box.
+</div><div class="gml-cpart">Read the leaflet.
+</div><div class="gml-cpart">Switch it on.
+</div></td></tr>
+<tr class="gml-tnote">
+<td colspan="2"><strong class="gml-tnote-label">Note:</strong>&nbsp;The second cell is repeated: its parts are divided by rules.
+</td></tr>
+<tr class="gml-row gml-split-no">
+<td class="gml-c gml-hp1" data-cell="1" style="text-align: left; vertical-align: top">Result</td>
+<td class="gml-c" data-cell="2" style="text-align: left; vertical-align: top">It works.
+</td></tr></tbody></table>
+<table id="gml-table-4" class="gml-table gml-span-page gml-split-no" style="width: 6in">
+<colgroup>
+<col style="width: 16.67%">
+<col style="width: 16.67%">
+<col style="width: 33.33%">
+<col style="width: 33.33%"></colgroup>
+<tbody>
+<tr class="gml-row gml-split-no">
+<td class="gml-c gml-hp1" colspan="2" data-cell="1" style="text-align: left; vertical-align: top">Two row definitions</td>
+<td class="gml-c gml-hp1" colspan="2" data-cell="2" style="text-align: left; vertical-align: top">so the grid has the columns of both
+</td></tr>
+<tr class="gml-row gml-split-no">
+<td class="gml-c" data-cell="1" style="text-align: left; vertical-align: top">a</td>
+<td class="gml-c" data-cell="2" style="text-align: left; vertical-align: top">b</td>
+<td class="gml-c" data-cell="3" style="text-align: left; vertical-align: top">c</td>
+<td class="gml-c" data-cell="4" style="text-align: left; vertical-align: top">d
+</td></tr></tbody></table>
+<table id="gml-table-5" class="gml-table gml-span-page gml-split-no">
+<colgroup>
+<col style="width: 33.33%">
+<col style="width: 33.33%">
+<col style="width: 33.33%"></colgroup>
+<tbody>
+<tr class="gml-row gml-split-no">
+<td class="gml-c" data-cell="1" style="text-align: left; vertical-align: top">one</td>
+<td class="gml-c" data-cell="2" style="text-align: left; vertical-align: top">two</td>
+<td class="gml-hole"></td></tr>
+<tr class="gml-row">
+<td class="gml-hole"></td>
+<td class="gml-hole"></td>
+<td class="gml-c" data-cell="3" style="text-align: left; vertical-align: top">three
+</td></tr>
+<tr class="gml-row gml-row-auto gml-split-no">
+<td class="gml-c" data-cell="1" style="text-align: left; vertical-align: top">nine
+</td>
+<td class="gml-c" data-cell="2" style="text-align: left; vertical-align: top"></td>
+<td class="gml-hole"></td></tr>
+<tr class="gml-row">
+<td class="gml-hole"></td>
+<td class="gml-hole"></td>
+<td class="gml-c" data-cell="3" style="text-align: left; vertical-align: top"></td></tr></tbody></table></section></article>
+<section class="gml-footnotes" role="doc-endnotes">
+<ol class="gml-footnote-list">
+<li id="gml-fn-1" class="gml-footnote"><span class="gml-fn-num"><a href="#gml-fn-1-ref" role="doc-backlink">1</a></span> Both were found in 1877.</li></ol></section>
+</main>
+</body>
+</html>

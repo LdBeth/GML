@@ -45,6 +45,9 @@ type model = {
   eol : bool;
       (** closed at the end of the input line it was opened on (headings, terms,
           index entries: the text of the tag line) *)
+  noid : bool;
+      (** its [id] is a name of another kind (the Starter Set's row definitions,
+          SH20-9187-06 3.31), not a document id: not checked for duplicates *)
 }
 
 let default_model =
@@ -54,6 +57,7 @@ let default_model =
     empty = false;
     display = Unspecified;
     eol = false;
+    noid = false;
   }
 
 type scope = {
@@ -260,8 +264,8 @@ let start_element ?(eol = false) ?(provisional = false) t name attrs =
       | _ -> ()
     in
     implicit ();
-    check_id t attrs;
     let m = model_or_default t name in
+    if not m.noid then check_id t attrs;
     t.stack <- elt ~eol_close:(eol || m.eol) ~provisional name attrs :: t.stack;
     if m.empty then close_top t;
     resume t s
@@ -313,7 +317,8 @@ let set_attr t k v =
     match plain_stack t with
     | [ _ ] | [] -> false
     | e :: _ ->
-        if k = "id" then check_id t [ (k, v) ];
+        if k = "id" && not (model_or_default t e.name).noid then
+          check_id t [ (k, v) ];
         e.attrs <-
           (if List.mem_assoc k e.attrs then
              List.map

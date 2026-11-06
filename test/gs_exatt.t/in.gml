@@ -22,3 +22,9 @@
 .* a native control word as attribute APF
 .dm fig /.gs exatt ty
 :fig ty='to stderr'.
+.* a repeated attribute: once per occurrence, each with its own value
+.dm arr /[ARR: &*1.]
+.dm fig /.gs exatt arr
+:fig arr=one id=x arr='two too'.
+.dm fig /.gs exatt
+:fig arr=1 arr=2.

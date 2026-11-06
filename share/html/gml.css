@@ -168,6 +168,30 @@ pre, .gml-xmp { font-family: var(--gml-mono-font); font-size: 0.875em; line-heig
 .gml-figcap > .gml-num { font-weight: 700; }
 .gml-figdesc { margin-top: 0.25em; color: var(--gml-muted); }
 
+/* ---- tables (:table, SH20-9186-06 ch.7) ------------------------------------ */
+/* a full grid of rules; the caption and description below the table */
+.gml-table { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 1.25em 0; }
+.gml-table td, .gml-table th { border: 1px solid var(--gml-fg); padding: 0.3em 0.5em;
+                               font-weight: normal; }
+.gml-tcaption { caption-side: bottom; text-align: left; margin-top: 0.6em; font-size: 0.95em; }
+.gml-tcap { font-weight: 600; }
+.gml-tcap > .gml-num { font-weight: 700; }
+.gml-tdesc { margin-top: 0.25em; color: var(--gml-muted); }
+.gml-tnote-label { font-weight: 700; }
+.gml-table .gml-hp2, .gml-table .gml-hp3 { font-weight: 700; }
+.gml-cpart + .gml-cpart { border-top: 1px solid var(--gml-fg); margin-top: 0.3em; padding-top: 0.3em; }
+.gml-table td > p:first-child, .gml-table th > p:first-child { margin-top: 0; }
+.gml-table td > p:last-child, .gml-table th > p:last-child { margin-bottom: 0; }
+.gml-rotate-90, .gml-rotate-m270 { writing-mode: vertical-rl; }
+.gml-rotate-270, .gml-rotate-m90 { writing-mode: vertical-rl; transform: rotate(180deg); }
+.gml-rotate-180, .gml-rotate-m180 { transform: rotate(180deg); }
+/* shade= (Rel 4) */
+.gml-shade-xlight { background: color-mix(in srgb, var(--gml-fg) 6%, transparent); }
+.gml-shade-light  { background: color-mix(in srgb, var(--gml-fg) 12%, transparent); }
+.gml-shade-medium { background: color-mix(in srgb, var(--gml-fg) 25%, transparent); }
+.gml-shade-dark   { background: color-mix(in srgb, var(--gml-fg) 40%, transparent); }
+.gml-shade-xdark  { background: color-mix(in srgb, var(--gml-fg) 55%, transparent); }
+
 /* ---- footnotes ------------------------------------------------------------- */
 .gml-fn-callout, .gml-fnref { line-height: 0; font-size: 0.75em; }
 .gml-fn-callout > a, .gml-fnref > a { text-decoration: none; padding: 0 0.1em; }
@@ -243,4 +267,6 @@ pre, .gml-xmp { font-family: var(--gml-mono-font); font-size: 0.875em; line-heig
   .gml-abstract, .gml-preface, .gml-toc, .gml-index { break-before: page; }
   a { text-decoration: none; }
   .gml-fig, .gml-xmp { break-inside: avoid; }
+  /* split=no: no page break before the row (SH20-9187-06 3.32.2) */
+  .gml-table tr.gml-split-no { break-before: avoid; }
 }

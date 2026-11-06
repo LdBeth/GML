@@ -1,0 +1,14 @@
+resolve: rdef id="hole": arrange: cell 1 is not a rectangle
+resolve: rdef id="ragged": arrange: x is not a cell number
+resolve: rdef id="ragged": arrange: the lines are not of the same length
+resolve: rdef id="ragged": cwidths has 2 values for 3 grid columns
+resolve: rdef id="vals": hp: 7 is not a valid value
+resolve: rdef id="vals": align: x is not a valid value
+resolve: rdef id="vals": rotate: 45 is not a valid value
+resolve: rdef id="vals": shade: x is not a valid value
+resolve: table refid="nosuch": no such row definition
+resolve: row: text outside a cell
+resolve: table: text outside a row
+resolve: row refid="missing": no such row definition
+resolve: c n="0": no such cell in row definition "missing"
+resolve: table without refid

@@ -80,7 +80,9 @@
        group S is constant, so it becomes the ctx of the children,
        which are processed recursively (step 2).
     State is document-global in DCF, but a scope cannot cross an element
-    boundary.  So:
+    boundary.  So (table, thd, tft and row excepted: they are never split
+    by a scope, each child gets their context and the cells scope their
+    own content):
      - a scope opened by a hint inside an element ends with that element;
        the state continues after it, and the next siblings at the parent
        level, whose S still differs from the parent's ctx, are re-opened
@@ -225,6 +227,21 @@
         <xsl:with-param name="nodes" select="node()"/>
         <xsl:with-param name="ctx" select="$ctx"/>
       </xsl:call-template>
+    </xsl:copy>
+  </xsl:template>
+
+  <!-- Tables: no scope may come between a table, its header, footer and
+       rows and their cells, so these containers pass their context on to
+       each child (a state hint directly in them still counts, through the
+       accumulator); a cell compares its content with that context, so the
+       state in force inside a cell is still the DCF state. -->
+  <xsl:template match="table | thd | tft | row">
+    <xsl:param name="ctx" as="map(xs:string, xs:string)" tunnel="yes"/>
+    <xsl:copy>
+      <xsl:apply-templates select="@*"/>
+      <xsl:apply-templates select="node()[not(s:is-state(.))]">
+        <xsl:with-param name="ctx" select="$ctx" tunnel="yes"/>
+      </xsl:apply-templates>
     </xsl:copy>
   </xsl:template>
 

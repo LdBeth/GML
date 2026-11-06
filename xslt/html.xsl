@@ -37,6 +37,8 @@
     lit-footnotes heading of the footnote list ("" = none, the default).
     ul-identifiers  the bullets of :ul by nesting depth (cycling; blanks
                   or commas separate them); l-identifier: the :l label.
+    table-width   the nominal width of a table whose rows use different
+                  cwidths and that has no width= (a DCF width, "6.5i").
 
   Element mapping:
     gml:doc -> html/head/body/main; gdoc -> article (sec= -> p.gml-sec);
@@ -56,6 +58,19 @@
     figref liref -> a href="#anchor"; toc figlist -> nav with nested
     lists of links; index -> section with letter groups; i1-i3 ih1-ih3
     iref -> empty span id=anchor; psc -> its content.
+    table -> table.gml-table (span, split as classes; width= as CSS
+    width) with caption (caption-side bottom: tcap span.gml-tcap +
+    tdesc), colgroup (one col per grid column: absolute widths
+    converted, k* a share of what remains via calc(); when the rows use
+    different cwidths, the union of their column boundaries for a
+    nominal width, width= or $table-width, in percent), thead (thd,
+    cells th), tfoot (tft), tbody (rows, tnote as one full-width td);
+    a row with subrows=k is k tr, cells with rowspan/colspan, empty
+    td.gml-hole for squares no cell covers; cell hp -> class gml-hpN,
+    align/valign -> text-align/vertical-align, concat=no -> white-space:
+    pre-wrap, mindepth -> height, rotate/shade -> classes; gml:cpart ->
+    div.gml-cpart (gml.css rules between them); rdef -> nothing; tref ->
+    a; tlist -> nav like figlist.
 
   Hints
     gml:br       br, only between two pieces of running text (not at the
@@ -142,6 +157,7 @@
   <xsl:param name="lit-footnotes" as="xs:string" select="''"/>
   <xsl:param name="ul-identifiers" as="xs:string" select="'• – ◦'"/>
   <xsl:param name="l-identifier" as="xs:string" select="'*'"/>
+  <xsl:param name="table-width" as="xs:string" select="'6.5i'"/>
 
   <xsl:variable name="nbsp" select="'&#xA0;'"/>
   <xsl:variable name="ul-ids" select="tokenize(normalize-space(translate($ul-identifiers, ',', ' ')), ' ')"/>
@@ -157,11 +173,13 @@
       'p', 'pc', 'note', 'lq', 'q', 'cit', 'hp0', 'hp1', 'hp2', 'hp3',
       'ol', 'ul', 'sl', 'l', 'dl', 'gl', 'li', 'lp', 'dt', 'dd', 'dthd', 'ddhd', 'gt', 'gd',
       'xmp', 'fig', 'figcap', 'figdesc', 'fn', 'fnref', 'hdref', 'figref', 'liref',
-      'i1', 'i2', 'i3', 'ih1', 'ih2', 'ih3', 'iref', 'psc')"/>
+      'i1', 'i2', 'i3', 'ih1', 'ih2', 'ih3', 'iref', 'psc',
+      'rdef', 'table', 'thd', 'tft', 'row', 'c', 'tnote', 'tcap', 'tdesc', 'tref', 'tlist')"/>
   <!-- gml: elements written as something -->
   <xsl:variable name="h:gml-used" select="('doc', 'scope', 'lines', 'br', 'sp', 'sk', 'pa',
       'cp', 'cc', 'cb', 'hr', 'sx', 'h', 'fn', 'rh', 'rf', 'raw', 'num', 'pageref',
       'toc-entries', 'toc-entry', 'entry-text', 'figlist-entries', 'figlist-entry',
+      'tlist-entries', 'tlist-entry', 'cpart',
       'index-entries', 'index-group', 'index-entry', 'index-term', 'see')"/>
   <!-- gml: hints with no HTML meaning: dropped (the state hints too, in
        case the input was not scoped) -->
@@ -173,7 +191,7 @@
   <xsl:variable name="h:index-tags" select="('i1', 'i2', 'i3', 'ih1', 'ih2', 'ih3', 'iref')"/>
   <!-- elements written inline (phrasing) -->
   <xsl:variable name="h:inline-tags" select="('q', 'cit', 'hp0', 'hp1', 'hp2', 'hp3', 'fn',
-      'fnref', 'hdref', 'figref', 'liref', 'i1', 'i2', 'i3', 'ih1', 'ih2', 'ih3', 'iref')"/>
+      'fnref', 'hdref', 'figref', 'liref', 'tref', 'i1', 'i2', 'i3', 'ih1', 'ih2', 'ih3', 'iref')"/>
 
   <xsl:function name="h:unknown" as="xs:boolean">
     <xsl:param name="e" as="element()"/>
@@ -516,9 +534,11 @@
        the raw HTML of gml:raw ==================================== -->
   <xsl:variable name="h:blocks" select="('head', 'body', 'main', 'article', 'section', 'header',
       'nav', 'figure', 'figcaption', 'ul', 'ol', 'dl', 'dt', 'dd', 'li', 'pre', 'p', 'blockquote',
-      'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'address', 'hr', 'meta', 'title', 'link', 'style')"/>
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'address', 'hr', 'meta', 'title', 'link', 'style',
+      'table', 'caption', 'colgroup', 'col', 'thead', 'tfoot', 'tbody', 'tr', 'td', 'th')"/>
   <xsl:variable name="h:containers" select="('html', 'head', 'body', 'main', 'article', 'section',
-      'header', 'nav', 'figure', 'ul', 'ol', 'dl', 'li', 'dd', 'blockquote', 'div', 'address')"/>
+      'header', 'nav', 'figure', 'ul', 'ol', 'dl', 'li', 'dd', 'blockquote', 'div', 'address',
+      'table', 'colgroup', 'thead', 'tfoot', 'tbody', 'tr')"/>
 
   <xsl:mode name="h:out" on-no-match="shallow-copy"/>
   <xsl:template mode="h:out" match="*[local-name() = $h:blocks]">
@@ -925,6 +945,286 @@
     <span class="gml-figdesc" style="display: block"><xsl:apply-templates/></span>
   </xsl:template>
 
+  <!-- ==== tables ========================================================== -->
+  <!-- DCF space units of a width (cwidths, width=, mindepth) -> CSS and
+       nominal points (an inch is 72pt, a pica 12pt, a cicero 12 Didot
+       points of 0.376mm, an em 10pt, a figure space (no unit) 7.2pt, a
+       device unit 1/240 inch).  () if it is not a length. -->
+  <xsl:function name="h:dcf-len" as="xs:anyAtomicType*">
+    <xsl:param name="w" as="xs:string?"/>
+    <xsl:param name="default-unit" as="xs:string"/>
+    <xsl:variable name="v" select="translate(lower-case(normalize-space($w)), ',', '.')"/>
+    <xsl:variable name="num" select="'([0-9]*\.?[0-9]+)'"/>
+    <xsl:choose>
+      <xsl:when test="matches($v, '^' || $num || '$')">
+        <xsl:sequence select="if ($default-unit = 'line') then ($v || 'lh', number($v) * 12)
+                              else ($v || 'ch', number($v) * 7.2)"/>
+      </xsl:when>
+      <xsl:when test="matches($v, '^' || $num || 'i$')">
+        <xsl:variable name="n" select="replace($v, 'i$', '')"/>
+        <xsl:sequence select="$n || 'in', number($n) * 72"/>
+      </xsl:when>
+      <xsl:when test="matches($v, '^' || $num || '(cm|mm)$')">
+        <xsl:variable name="n" select="replace($v, '(cm|mm)$', '')"/>
+        <xsl:sequence select="$v, number($n) * 72 div (if (ends-with($v, 'cm')) then 2.54 else 25.4)"/>
+      </xsl:when>
+      <xsl:when test="matches($v, '^[0-9]*[pc]([0-9]+(\.[0-9])?)?$') and $v ne 'p' and $v ne 'c'">
+        <xsl:variable name="u" select="if (contains($v, 'p')) then 'p' else 'c'"/>
+        <xsl:variable name="a" select="substring-before($v, $u)"/>
+        <xsl:variable name="b" select="substring-after($v, $u)"/>
+        <xsl:variable name="pt" select="(if ($a = '') then 0 else number($a)) * 12
+                                        + (if ($b = '') then 0 else number($b))"/>
+        <xsl:variable name="pt" select="if ($u = 'c') then round($pt * 1.0657, 2) else $pt"/>
+        <xsl:sequence select="string($pt) || 'pt', $pt"/>
+      </xsl:when>
+      <xsl:when test="matches($v, '^' || $num || 'm[hv]?$')">
+        <xsl:variable name="n" select="replace($v, 'm[hv]?$', '')"/>
+        <xsl:sequence select="$n || 'em', number($n) * 10"/>
+      </xsl:when>
+      <xsl:when test="matches($v, '^[0-9]+d[hv]$')">
+        <xsl:variable name="n" select="replace($v, 'd[hv]$', '')"/>
+        <xsl:sequence select="$n || 'px', number($n) * 0.3"/>
+      </xsl:when>
+    </xsl:choose>
+  </xsl:function>
+
+  <!-- the factor of a "k*" width, () for an absolute one -->
+  <xsl:function name="h:star" as="xs:double?">
+    <xsl:param name="w" as="xs:string"/>
+    <xsl:sequence select="if (matches($w, '^[0-9]*([.,][0-9]+)?\*$'))
+        then (if ($w = '*') then 1 else number(translate(substring-before($w, '*'), ',', '.'))) else ()"/>
+  </xsl:function>
+
+  <xsl:function name="h:tokens" as="xs:string*">
+    <xsl:param name="s" as="xs:string?"/>
+    <xsl:sequence select="tokenize(normalize-space($s), ' ')[. ne '']"/>
+  </xsl:function>
+
+  <!-- the column boundaries of a cwidths list, in nominal points, for a
+       table $tw points wide: 0, then the right edge of each column -->
+  <xsl:function name="h:bounds" as="xs:double*">
+    <xsl:param name="cw" as="xs:string"/>
+    <xsl:param name="tw" as="xs:double"/>
+    <xsl:variable name="ws" select="h:tokens($cw)"/>
+    <xsl:variable name="abs" select="sum(for $w in $ws return (if (empty(h:star($w))) then h:dcf-len($w, 'ch')[2] else 0, 0)[1])"/>
+    <xsl:variable name="k" select="sum(for $w in $ws return (h:star($w), 0)[1])"/>
+    <xsl:variable name="unit" select="if ($k = 0) then 0 else max((0, $tw - $abs)) div $k"/>
+    <xsl:variable name="each" select="for $w in $ws return
+        (if (exists(h:star($w))) then h:star($w) * $unit else h:dcf-len($w, 'ch')[2], 0)[1]"/>
+    <xsl:sequence select="0, for $i in 1 to count($each) return round(sum(subsequence($each, 1, $i)), 2)"/>
+  </xsl:function>
+
+  <!-- The column grid of a table: one grid when all its rows share their
+       cwidths (the widths as written: absolute ones converted, k* a share
+       of what remains); else the union of the column boundaries of its
+       row definitions, computed for a nominal width (the table's width=,
+       or $table-width), the widths in percent. -->
+  <xsl:function name="h:grid" as="element(grid)">
+    <xsl:param name="t" as="element()"/>
+    <xsl:variable name="cws" select="distinct-values($t//row/normalize-space(@cwidths))"/>
+    <xsl:variable name="tw" select="(h:dcf-len($t/@width, 'ch')[2], h:dcf-len($table-width, 'ch')[2], 468)[1]"/>
+    <xsl:choose>
+      <xsl:when test="count($cws) le 1">
+        <xsl:variable name="ws" select="h:tokens($cws[1])"/>
+        <xsl:variable name="abs" select="$ws[empty(h:star(.))] ! h:dcf-len(., 'ch')[1]"/>
+        <xsl:variable name="k" select="sum($ws ! (h:star(.), 0)[1])"/>
+        <grid single="yes" n="{max((count($ws), 1))}">
+          <xsl:for-each select="$ws">
+            <xsl:variable name="s" select="h:star(.)"/>
+            <col>
+              <xsl:attribute name="w" select="
+                  if (empty($s)) then (h:dcf-len(., 'ch')[1], 'auto')[1]
+                  else if (empty($abs)) then string(round($s div $k * 100, 2)) || '%'
+                  else 'calc((100% - ' || string-join($abs, ' - ') || ') * ' || string(round($s div $k, 4)) || ')'"/>
+            </col>
+          </xsl:for-each>
+        </grid>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:variable name="b" select="sort(distinct-values(for $c in $cws return h:bounds($c, $tw)))"/>
+        <xsl:variable name="total" select="max(($b[last()], 1))"/>
+        <grid single="no" n="{count($b) - 1}">
+          <xsl:for-each select="2 to count($b)">
+            <col w="{round(($b[current()] - $b[current() - 1]) div $total * 100, 2)}%" at="{$b[current() - 1]}" to="{$b[current()]}"/>
+          </xsl:for-each>
+        </grid>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:function>
+
+  <!-- (first column, number of columns) of a cell in the table grid -->
+  <xsl:function name="h:cell-cols" as="xs:integer+">
+    <xsl:param name="c" as="element()"/>
+    <xsl:param name="grid" as="element(grid)"/>
+    <xsl:param name="tw" as="xs:double"/>
+    <xsl:variable name="col" select="xs:integer($c/@col)"/>
+    <xsl:variable name="span" select="xs:integer($c/@colspan)"/>
+    <xsl:choose>
+      <xsl:when test="$grid/@single = 'yes'"><xsl:sequence select="$col, $span"/></xsl:when>
+      <xsl:otherwise>
+        <xsl:variable name="b" select="h:bounds($c/../@cwidths, $tw)"/>
+        <xsl:variable name="from" select="$b[$col]"/>
+        <xsl:variable name="to" select="$b[$col + $span]"/>
+        <xsl:variable name="first" select="count($grid/col[number(@at) lt $from]) + 1"/>
+        <xsl:sequence select="$first, max((1, count($grid/col[number(@at) ge $from and number(@to) le $to])))"/>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:function>
+
+  <xsl:template match="table">
+    <xsl:variable name="grid" select="h:grid(.)"/>
+    <xsl:variable name="tw" select="(h:dcf-len(@width, 'ch')[2], h:dcf-len($table-width, 'ch')[2], 468)[1]"/>
+    <xsl:variable name="caps" select="tcap | tdesc"/>
+    <table>
+      <xsl:call-template name="h:id"/>
+      <xsl:attribute name="class" select="string-join(('gml-table', 'gml-span-' || (@span, 'page')[1],
+          (@rotate[. ne '0'] ! ('gml-rotate-' || .)), (@split ! ('gml-split-' || .))), ' ')"/>
+      <xsl:if test="h:dcf-len(@width, 'ch')[1]">
+        <xsl:attribute name="style" select="'width: ' || h:dcf-len(@width, 'ch')[1]"/>
+      </xsl:if>
+      <xsl:if test="$caps">
+        <caption class="gml-tcaption">
+          <xsl:apply-templates select="$caps" mode="caption">
+            <xsl:with-param name="ctx" select="'phrasing'" tunnel="yes"/>
+          </xsl:apply-templates>
+        </caption>
+      </xsl:if>
+      <colgroup>
+        <xsl:for-each select="$grid/col">
+          <col style="width: {@w}"/>
+        </xsl:for-each>
+      </colgroup>
+      <xsl:for-each select="thd, tft">
+        <xsl:element name="{if (self::thd) then 'thead' else 'tfoot'}">
+          <xsl:attribute name="class" select="'gml-' || local-name()"/>
+          <xsl:apply-templates select="row">
+            <xsl:with-param name="grid" select="$grid" tunnel="yes"/>
+            <xsl:with-param name="tw" select="$tw" tunnel="yes"/>
+            <xsl:with-param name="cell" select="if (self::thd) then 'th' else 'td'" tunnel="yes"/>
+          </xsl:apply-templates>
+        </xsl:element>
+      </xsl:for-each>
+      <tbody>
+        <xsl:apply-templates select="* except (thd | tft | tcap | tdesc)">
+          <xsl:with-param name="grid" select="$grid" tunnel="yes"/>
+          <xsl:with-param name="tw" select="$tw" tunnel="yes"/>
+          <xsl:with-param name="cell" select="'td'" tunnel="yes"/>
+          <xsl:with-param name="ctx" select="'table'" tunnel="yes"/>
+        </xsl:apply-templates>
+      </tbody>
+    </table>
+  </xsl:template>
+
+  <!-- A row with subrows="k" is k tr; each cell goes in the tr of its
+       first subrow.  The grid squares no cell covers (a cell that is not a
+       rectangle, a row definition narrower than the table grid) get an
+       empty td.gml-hole, so that every cell stays in its column. -->
+  <xsl:template match="table//row">
+    <xsl:param name="grid" as="element(grid)" tunnel="yes"/>
+    <xsl:param name="tw" as="xs:double" tunnel="yes"/>
+    <xsl:param name="cell" as="xs:string" tunnel="yes" select="'td'"/>
+    <xsl:variable name="row" select="."/>
+    <xsl:variable name="place" as="element(p)*">
+      <xsl:for-each select="c">
+        <xsl:variable name="cc" select="h:cell-cols(., $grid, $tw)"/>
+        <p r="{@subrow}" rs="{(@rowspan, 1)[1]}" f="{$cc[1]}" n="{$cc[2]}"/>
+      </xsl:for-each>
+    </xsl:variable>
+    <xsl:for-each select="1 to max((xs:integer(@subrows), 1))">
+      <xsl:variable name="s" select="."/>
+      <tr class="gml-row">
+        <xsl:if test="$s = 1">
+          <xsl:attribute name="class" select="string-join(('gml-row', $row/@auto[. = 'yes'] ! 'gml-row-auto',
+                                                           $row/@split ! ('gml-split-' || .)), ' ')"/>
+        </xsl:if>
+        <xsl:for-each select="1 to xs:integer($grid/@n)">
+          <xsl:variable name="j" select="."/>
+          <xsl:variable name="i" select="index-of($place ! (xs:integer(@r) = $s and xs:integer(@f) = $j), true())[1]"/>
+          <xsl:choose>
+            <xsl:when test="exists($i)">
+              <xsl:apply-templates select="$row/c[$i]"/>
+            </xsl:when>
+            <xsl:when test="$place[xs:integer(@r) le $s and xs:integer(@r) + xs:integer(@rs) gt $s
+                                   and xs:integer(@f) le $j and xs:integer(@f) + xs:integer(@n) gt $j]"/>
+            <xsl:otherwise>
+              <xsl:element name="{$cell}"><xsl:attribute name="class" select="'gml-hole'"/></xsl:element>
+            </xsl:otherwise>
+          </xsl:choose>
+        </xsl:for-each>
+      </tr>
+    </xsl:for-each>
+  </xsl:template>
+
+  <xsl:template match="table//c">
+    <xsl:param name="grid" as="element(grid)" tunnel="yes"/>
+    <xsl:param name="tw" as="xs:double" tunnel="yes"/>
+    <xsl:param name="cell" as="xs:string" tunnel="yes" select="'td'"/>
+    <xsl:variable name="cc" select="h:cell-cols(., $grid, $tw)"/>
+    <xsl:variable name="css" as="xs:string*">
+      <xsl:choose>
+        <xsl:when test="@align = ('left', 'right', 'center', 'justify')">
+          <xsl:sequence select="'text-align: ' || @align"/>
+        </xsl:when>
+        <xsl:when test="@align = 'inside'">text-align: start</xsl:when>
+        <xsl:when test="@align = 'outside'">text-align: end</xsl:when>
+      </xsl:choose>
+      <xsl:sequence select="'vertical-align: ' || (if (@valign = 'center') then 'middle' else (@valign, 'top')[1])"/>
+      <xsl:if test="@concat = 'no'">white-space: pre-wrap</xsl:if>
+      <xsl:if test="h:dcf-len(@mindepth, 'line')[1]">
+        <xsl:sequence select="'height: ' || h:dcf-len(@mindepth, 'line')[1]"/>
+      </xsl:if>
+    </xsl:variable>
+    <xsl:element name="{$cell}">
+      <xsl:call-template name="h:id"/>
+      <xsl:attribute name="class" select="string-join(('gml-c',
+          (@hp[. = ('1', '2', '3')] ! ('gml-hp' || .)),
+          (@rotate[not(. = ('0', ''))] ! ('gml-rotate-' || replace(., '^-', 'm'))),
+          (@shade[not(. = ('0', ''))] ! ('gml-shade-' || .))), ' ')"/>
+      <xsl:if test="$cc[2] gt 1"><xsl:attribute name="colspan" select="$cc[2]"/></xsl:if>
+      <xsl:if test="xs:integer((@rowspan, 1)[1]) gt 1"><xsl:attribute name="rowspan" select="@rowspan"/></xsl:if>
+      <xsl:attribute name="data-cell" select="@n"/>
+      <xsl:attribute name="style" select="string-join($css, '; ')"/>
+      <xsl:apply-templates>
+        <xsl:with-param name="ctx" select="'flow'" tunnel="yes"/>
+      </xsl:apply-templates>
+    </xsl:element>
+  </xsl:template>
+
+  <!-- the parts of a repeated cell, divided by a rule (gml.css) -->
+  <xsl:template match="gml:cpart">
+    <div class="gml-cpart">
+      <xsl:apply-templates>
+        <xsl:with-param name="ctx" select="'flow'" tunnel="yes"/>
+      </xsl:apply-templates>
+    </div>
+  </xsl:template>
+
+  <!-- a table note: a row of one cell as wide as the table -->
+  <xsl:template match="table/tnote">
+    <xsl:param name="grid" as="element(grid)" tunnel="yes"/>
+    <tr class="gml-tnote">
+      <td colspan="{$grid/@n}">
+        <xsl:apply-templates>
+          <xsl:with-param name="ctx" select="'flow'" tunnel="yes"/>
+        </xsl:apply-templates>
+      </td>
+    </tr>
+  </xsl:template>
+  <xsl:template match="tnote/gml:num">
+    <strong class="gml-tnote-label"><xsl:apply-templates/></strong>
+    <xsl:value-of select="$nbsp"/>
+  </xsl:template>
+
+  <!-- the row definitions leave nothing; the caption parts are written by table -->
+  <xsl:template match="rdef"/>
+  <xsl:template match="tcap | tdesc"/>
+  <xsl:template match="tcap" mode="caption">
+    <span class="gml-tcap"><xsl:apply-templates/></span>
+  </xsl:template>
+  <xsl:template match="tdesc" mode="caption">
+    <span class="gml-tdesc" style="display: block"><xsl:apply-templates/></span>
+  </xsl:template>
+
   <!-- ==== footnotes ======================================================= -->
   <xsl:function name="h:section" as="element()?">
     <xsl:param name="n" as="node()"/>
@@ -1019,7 +1319,7 @@
   <xsl:key name="h:id" match="*[@id]" use="string(@id)"/>
 
   <!-- ==== cross-references ================================================ -->
-  <xsl:template match="hdref | figref | liref">
+  <xsl:template match="hdref | figref | liref | tref">
     <xsl:choose>
       <xsl:when test="@resolved = 'yes'">
         <a class="gml-{local-name()}" href="#{@refid}">
@@ -1055,8 +1355,8 @@
   </xsl:template>
 
   <!-- ==== table of contents, figure list ================================== -->
-  <xsl:template match="toc | figlist | index">
-    <xsl:apply-templates select="gml:toc-entries | gml:figlist-entries | gml:index-entries"/>
+  <xsl:template match="toc | figlist | tlist | index">
+    <xsl:apply-templates select="gml:toc-entries | gml:figlist-entries | gml:tlist-entries | gml:index-entries"/>
   </xsl:template>
 
   <xsl:template match="gml:toc-entries">
@@ -1098,13 +1398,14 @@
     <xsl:apply-templates/>
   </xsl:template>
 
-  <xsl:template match="gml:figlist-entries">
-    <nav class="gml-figlist">
-      <h1 class="gml-figlist-title"><xsl:value-of select="@title"/></h1>
-      <xsl:if test="gml:figlist-entry">
-        <ol class="gml-figlist-list">
-          <xsl:for-each select="gml:figlist-entry">
-            <li class="gml-figlist-entry">
+  <xsl:template match="gml:figlist-entries | gml:tlist-entries">
+    <xsl:variable name="k" select="substring-before(local-name(), '-')"/>
+    <nav class="gml-{$k}">
+      <h1 class="gml-{$k}-title"><xsl:value-of select="@title"/></h1>
+      <xsl:if test="gml:figlist-entry | gml:tlist-entry">
+        <ol class="gml-{$k}-list">
+          <xsl:for-each select="gml:figlist-entry | gml:tlist-entry">
+            <li class="gml-{$k}-entry">
               <a href="#{@refid}">
                 <xsl:apply-templates select="gml:num | gml:entry-text">
                   <xsl:with-param name="ctx" select="'phrasing'" tunnel="yes"/>

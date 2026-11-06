@@ -64,6 +64,26 @@
     be an initial child of a block, so a definition inside running text
     attaches to the start of the enclosing block (the paragraph).
 
+  ==== Tables (resolve.xsl's rows and cells) ===========================
+    table -> a block (the current indention; span="all" in two columns
+    for span=page) holding fo:table table-layout="fixed", a full grid
+    of rules (border-collapse), then tcap and tdesc (figcap / figdesc
+    fonts, kept with the table).  fo:table-column: absolute widths in
+    points, k* as proportional-column-width(k); rows of different
+    cwidths share the union of their column boundaries, computed for the
+    table width (width=, else the column).  thd -> fo:table-header, tft
+    -> fo:table-footer (repeated at breaks by the formatter), rows and
+    tnote (one cell spanning the table, "Note:" in hi2) in
+    fo:table-body.  A row is one fo:table-row per subrow where a cell
+    starts, the later ones kept with the first; split="no" keeps a row
+    with the previous one (SH20-9187-06 3.32.1-2).  Cells: column-number,
+    number-columns/rows-spanned, display-align from valign, text-align,
+    the hp font (hi0-hi3), concat=no as no-fill (wrapping),
+    block-progression-dimension.minimum from mindepth, rotate as an
+    fo:block-container reference-orientation (inline-progression-
+    dimension = mindepth for 90/270), shade (Rel 4) as a grey.
+    gml:cpart -> blocks with a rule between them.
+
   ==== Units (DCF dimension -> FO length) ===============================
     Every DCF value is converted to points by this table, except em
     units, which stay em (relative to the font where they are used):
@@ -591,7 +611,7 @@
   <xsl:variable name="f:block-names" select="('p', 'pc', 'note', 'lq', 'xmp', 'fig', 'figcap', 'figdesc',
       'ol', 'ul', 'sl', 'dl', 'gl', 'l', 'li', 'lp', 'dt', 'dd', 'dthd', 'ddhd', 'gt', 'gd',
       'h0', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'titlep', 'title', 'docnum', 'date', 'author',
-      'address', 'aline', 'abstract', 'preface', 'toc', 'figlist', 'index',
+      'address', 'aline', 'abstract', 'preface', 'toc', 'figlist', 'tlist', 'index', 'table',
       'frontm', 'body', 'appendix', 'backm', 'gdoc', 'psc')"/>
   <xsl:variable name="f:anchor-names" select="('i1', 'i2', 'i3', 'ih1', 'ih2', 'ih3', 'iref')"/>
   <xsl:variable name="f:block-hints" select="('h', 'sp', 'sk', 'pa', 'cp', 'cc', 'cb', 'hr', 'sx')"/>
@@ -625,8 +645,9 @@
       </xsl:when>
       <xsl:when test="local-name($n) = $f:block-names"><xsl:sequence select="'block'"/></xsl:when>
       <xsl:when test="local-name($n) = $f:anchor-names"><xsl:sequence select="'anchor'"/></xsl:when>
+      <xsl:when test="local-name($n) = 'rdef'"><xsl:sequence select="'none'"/></xsl:when>
       <xsl:when test="local-name($n) = ('hp0', 'hp1', 'hp2', 'hp3', 'q', 'cit', 'fn',
-                                         'hdref', 'figref', 'fnref', 'liref')">
+                                         'hdref', 'figref', 'fnref', 'liref', 'tref')">
         <xsl:sequence select="'inline'"/>
       </xsl:when>
       <xsl:otherwise>
@@ -1515,7 +1536,8 @@
 
   <xsl:template match="gml:num">
     <xsl:apply-templates/>
-    <xsl:if test="parent::*[matches(local-name(), '^h[0-6]$') or self::figcap or self::gml:toc-entry or self::gml:figlist-entry]">
+    <xsl:if test="parent::*[matches(local-name(), '^h[0-6]$') or self::figcap or self::tcap or self::gml:toc-entry
+                            or self::gml:figlist-entry or self::gml:tlist-entry]">
       <xsl:text>&#xA0; </xsl:text>
     </xsl:if>
   </xsl:template>
@@ -1619,7 +1641,7 @@
   </xsl:template>
 
   <!-- ==== cross-references ============================================= -->
-  <xsl:template match="hdref | figref | liref">
+  <xsl:template match="hdref | figref | liref | tref">
     <xsl:choose>
       <xsl:when test="@resolved = 'yes' and f:citable(., string(@refid))">
         <fo:basic-link internal-destination="{@refid}">
@@ -1836,6 +1858,284 @@
     </fo:block>
   </xsl:template>
 
+  <!-- ==== tables (SH20-9186-06 ch.7; SH20-9187-06 3.31-3.36) ========== -->
+  <!-- A DCF width as written (cwidths, width=, mindepth: "3p", "p6",
+       "2c3", "1.5i", "2cm", "4", "2m") -> the f:dim notation ("36pt",
+       "2c3" as Didot points, a bare number in $default-unit); () if it is
+       not a length. -->
+  <xsl:function name="f:dcf-dim" as="xs:string?">
+    <xsl:param name="w" as="xs:string?"/>
+    <xsl:param name="default-unit" as="xs:string"/>
+    <xsl:variable name="v" select="translate(lower-case(normalize-space($w)), ',', '.')"/>
+    <xsl:choose>
+      <xsl:when test="matches($v, '^[0-9]*\.?[0-9]+$')"><xsl:sequence select="$v || $default-unit"/></xsl:when>
+      <xsl:when test="matches($v, '^[0-9]*\.?[0-9]+(i|cm|mm|mh|mv|m|dh|dv)$')"><xsl:sequence select="$v"/></xsl:when>
+      <xsl:when test="matches($v, '^[0-9]*[pc]([0-9]+(\.[0-9])?)?$') and not($v = ('p', 'c'))">
+        <xsl:variable name="u" select="if (contains($v, 'p')) then 'p' else 'c'"/>
+        <xsl:variable name="a" select="substring-before($v, $u)"/>
+        <xsl:variable name="b" select="substring-after($v, $u)"/>
+        <xsl:sequence select="string((if ($a = '') then 0 else number($a)) * 12 + (if ($b = '') then 0 else number($b)))
+                              || (if ($u = 'p') then 'pt' else 'dd')"/>
+      </xsl:when>
+    </xsl:choose>
+  </xsl:function>
+
+  <xsl:function name="f:star" as="xs:double?">
+    <xsl:param name="w" as="xs:string"/>
+    <xsl:sequence select="if (matches($w, '^[0-9]*([.,][0-9]+)?\*$'))
+        then (if ($w = '*') then 1 else number(translate(substring-before($w, '*'), ',', '.'))) else ()"/>
+  </xsl:function>
+
+  <xsl:function name="f:tokens" as="xs:string*">
+    <xsl:param name="s" as="xs:string?"/>
+    <xsl:sequence select="tokenize(normalize-space($s), ' ')[. ne '']"/>
+  </xsl:function>
+
+  <!-- the column boundaries of a cwidths list for a table $tw points wide -->
+  <xsl:function name="f:bounds" as="xs:double*">
+    <xsl:param name="cw" as="xs:string"/>
+    <xsl:param name="tw" as="xs:double"/>
+    <xsl:variable name="ws" select="f:tokens($cw)"/>
+    <xsl:variable name="abs" select="sum(for $w in $ws return
+        if (exists(f:star($w))) then 0 else f:dim(f:dcf-dim($w, 'ch'))[1])"/>
+    <xsl:variable name="k" select="sum(for $w in $ws return (f:star($w), 0)[1])"/>
+    <xsl:variable name="unit" select="if ($k = 0) then 0 else max((0, $tw - $abs)) div $k"/>
+    <xsl:variable name="each" select="for $w in $ws return
+        if (exists(f:star($w))) then f:star($w) * $unit else f:dim(f:dcf-dim($w, 'ch'))[1]"/>
+    <xsl:sequence select="0, for $i in 1 to count($each) return round(sum(subsequence($each, 1, $i)) * 100) div 100"/>
+  </xsl:function>
+
+  <!-- The column grid: one grid when every row has the same cwidths
+       (absolute widths in points, k* as proportional-column-width(k));
+       otherwise the union of the column boundaries of the row
+       definitions, for the table width ($tw), as points. -->
+  <xsl:function name="f:grid" as="element(grid)">
+    <xsl:param name="t" as="element()"/>
+    <xsl:param name="tw" as="xs:double"/>
+    <xsl:variable name="cws" select="distinct-values($t//row/normalize-space(@cwidths))"/>
+    <xsl:choose>
+      <xsl:when test="count($cws) le 1">
+        <xsl:variable name="ws" select="f:tokens($cws[1])"/>
+        <grid single="yes" n="{max((count($ws), 1))}">
+          <xsl:for-each select="$ws">
+            <col w="{if (exists(f:star(.))) then 'proportional-column-width(' || f:num(f:star(.)) || ')'
+                     else f:len(f:dim(f:dcf-dim(., 'ch')))}"/>
+          </xsl:for-each>
+        </grid>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:variable name="b" select="sort(distinct-values(for $c in $cws return f:bounds($c, $tw)))"/>
+        <grid single="no" n="{count($b) - 1}">
+          <xsl:for-each select="2 to count($b)">
+            <col w="{f:pts($b[current()] - $b[current() - 1])}" at="{$b[current() - 1]}" to="{$b[current()]}"/>
+          </xsl:for-each>
+        </grid>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:function>
+
+  <!-- (first column, number of columns) of a cell in the grid -->
+  <xsl:function name="f:cell-cols" as="xs:integer+">
+    <xsl:param name="c" as="element()"/>
+    <xsl:param name="grid" as="element(grid)"/>
+    <xsl:param name="tw" as="xs:double"/>
+    <xsl:variable name="col" select="xs:integer($c/@col)"/>
+    <xsl:variable name="span" select="xs:integer($c/@colspan)"/>
+    <xsl:choose>
+      <xsl:when test="$grid/@single = 'yes'"><xsl:sequence select="$col, $span"/></xsl:when>
+      <xsl:otherwise>
+        <xsl:variable name="b" select="f:bounds($c/../@cwidths, $tw)"/>
+        <xsl:variable name="from" select="$b[$col]"/>
+        <xsl:variable name="to" select="$b[$col + $span]"/>
+        <xsl:sequence select="count($grid/col[number(@at) lt $from]) + 1,
+                              max((1, count($grid/col[number(@at) ge $from and number(@to) le $to])))"/>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:function>
+
+  <xsl:template match="table">
+    <xsl:param name="st" tunnel="yes" as="map(*)"/>
+    <xsl:variable name="avail" select="$st?W - f:S0($st)[1] - f:E0($st)[1]"/>
+    <xsl:variable name="w" select="f:dcf-dim(@width, 'ch')"/>
+    <xsl:variable name="tw" select="if (exists($w)) then f:dim($w)[1] else $avail"/>
+    <xsl:variable name="grid" select="f:grid(., $tw)"/>
+    <!-- the cells start from the cell edge: no inherited indention -->
+    <xsl:variable name="st2" select="map:merge((map {
+        'L': (0, 0), 'in0': $st?in, 'of': (0, 0), 'R': (0, 0), 'ir0': $st?ir, 'llx': (0, 0),
+        'nofn': true() }, $st), map { 'duplicates': 'use-first' })"/>
+    <fo:block start-indent="{f:start($st)}" end-indent="{f:end($st)}" text-indent="0pt"
+        space-before="{f:lines(1)}" space-after="{f:lines(1)}" space-before.conditionality="discard">
+      <xsl:call-template name="f:block-attrs"/>
+      <xsl:if test="$st?cols gt 1 and @span = 'page' and parent::*[self::body or self::appendix or self::backm]">
+        <xsl:attribute name="span" select="'all'"/>
+      </xsl:if>
+      <xsl:apply-templates select="." mode="f:table-attrs"/>
+      <fo:table table-layout="fixed" width="{if (exists($w)) then f:len(f:dim($w)) else '100%'}"
+          border-collapse="collapse" border="{$rule-width} solid">
+        <xsl:for-each select="$grid/col">
+          <fo:table-column column-number="{position()}" column-width="{@w}"/>
+        </xsl:for-each>
+        <xsl:for-each select="thd, tft">
+          <xsl:element name="{if (self::thd) then 'fo:table-header' else 'fo:table-footer'}" namespace="{$f:fo-ns}">
+            <xsl:attribute name="start-indent" select="'0pt'"/>
+            <xsl:attribute name="end-indent" select="'0pt'"/>
+            <xsl:apply-templates select="row">
+              <xsl:with-param name="st" tunnel="yes" select="$st2"/>
+              <xsl:with-param name="grid" tunnel="yes" select="$grid"/>
+              <xsl:with-param name="tw" tunnel="yes" select="$tw"/>
+            </xsl:apply-templates>
+          </xsl:element>
+        </xsl:for-each>
+        <fo:table-body start-indent="0pt" end-indent="0pt">
+          <xsl:apply-templates select="row | tnote">
+            <xsl:with-param name="st" tunnel="yes" select="$st2"/>
+            <xsl:with-param name="grid" tunnel="yes" select="$grid"/>
+            <xsl:with-param name="tw" tunnel="yes" select="$tw"/>
+          </xsl:apply-templates>
+          <xsl:if test="empty(row | tnote)">
+            <fo:table-row><fo:table-cell><fo:block/></fo:table-cell></fo:table-row>
+          </xsl:if>
+        </fo:table-body>
+      </fo:table>
+      <xsl:apply-templates select="tcap | tdesc">
+        <xsl:with-param name="st" tunnel="yes" select="map:put($st2, 'nofill', false())"/>
+      </xsl:apply-templates>
+    </fo:block>
+  </xsl:template>
+
+  <!-- hook: extra attributes of the block that holds a table -->
+  <xsl:template match="table" mode="f:table-attrs"/>
+
+  <!-- A row is one fo:table-row per subrow in which a cell starts (an
+       fo:table-row needs a cell); the later ones keep with the first.
+       split="no": no break before the row (SH20-9187-06 3.32.2). -->
+  <xsl:template match="table//row">
+    <xsl:param name="grid" tunnel="yes" as="element(grid)"/>
+    <xsl:param name="tw" tunnel="yes" as="xs:double"/>
+    <xsl:variable name="row" select="."/>
+    <xsl:variable name="subs" select="distinct-values(c/xs:integer(@subrow)) => sort()"/>
+    <xsl:for-each select="$subs">
+      <xsl:variable name="s" select="."/>
+      <fo:table-row>
+        <xsl:if test="position() gt 1 or ($row/@split = 'no' and $row/preceding-sibling::*[self::row or self::tnote])">
+          <xsl:attribute name="keep-with-previous.within-column" select="'always'"/>
+        </xsl:if>
+        <xsl:for-each select="$row/c[xs:integer(@subrow) = $s]">
+          <xsl:variable name="r1" select="xs:integer(@subrow)"/>
+          <xsl:variable name="r2" select="$r1 + xs:integer((@rowspan, 1)[1]) - 1"/>
+          <xsl:apply-templates select=".">
+            <xsl:with-param name="rows" select="count($subs[. ge $r1 and . le $r2])"/>
+          </xsl:apply-templates>
+        </xsl:for-each>
+      </fo:table-row>
+    </xsl:for-each>
+  </xsl:template>
+
+  <xsl:template match="table//c">
+    <xsl:param name="st" tunnel="yes" as="map(*)"/>
+    <xsl:param name="grid" tunnel="yes" as="element(grid)"/>
+    <xsl:param name="tw" tunnel="yes" as="xs:double"/>
+    <xsl:param name="rows" as="xs:integer" select="1"/>
+    <xsl:variable name="cc" select="f:cell-cols(., $grid, $tw)"/>
+    <xsl:variable name="nofill" select="@concat = 'no'"/>
+    <xsl:variable name="st2" select="map:put($st, 'nofill', $nofill)"/>
+    <xsl:variable name="rot" select="string((@rotate[. = ('90', '180', '270', '-90', '-180', '-270')], '0')[1])"/>
+    <xsl:variable name="md" select="f:dcf-dim(@mindepth, 'line')"/>
+    <fo:table-cell column-number="{$cc[1]}" border="{$rule-width} solid" padding="2pt"
+        display-align="{if (@valign = 'bottom') then 'after' else if (@valign = 'center') then 'center' else 'before'}">
+      <xsl:if test="$cc[2] gt 1"><xsl:attribute name="number-columns-spanned" select="$cc[2]"/></xsl:if>
+      <xsl:if test="$rows gt 1"><xsl:attribute name="number-rows-spanned" select="$rows"/></xsl:if>
+      <xsl:if test="exists($md) and $rot = ('0', '180', '-180')">
+        <xsl:attribute name="block-progression-dimension.minimum" select="f:len(f:dim($md))"/>
+      </xsl:if>
+      <xsl:if test="@shade = ('xlight', 'light', 'medium', 'dark', 'xdark')">
+        <xsl:attribute name="background-color" select="map { 'xlight': '#f0f0f0', 'light': '#e0e0e0',
+            'medium': '#c0c0c0', 'dark': '#a0a0a0', 'xdark': '#808080' }(string(@shade))"/>
+      </xsl:if>
+      <xsl:variable name="content">
+        <fo:block start-indent="0pt" end-indent="0pt" text-indent="0pt"
+            text-align="{map { 'left': 'start', 'right': 'end', 'center': 'center', 'justify': 'justify',
+                               'inside': 'inside', 'outside': 'outside' }(string((@align, 'left')[1]))}">
+          <xsl:sequence select="f:font('hi' || (@hp[. = ('0', '1', '2', '3')], '0')[1], .)"/>
+          <xsl:if test="$nofill"><xsl:call-template name="f:nofill-attrs"><xsl:with-param name="wrap" select="true()"/></xsl:call-template></xsl:if>
+          <xsl:call-template name="f:blocks">
+            <xsl:with-param name="nodes" select="node()"/>
+            <xsl:with-param name="st" tunnel="yes" select="$st2"/>
+          </xsl:call-template>
+        </fo:block>
+      </xsl:variable>
+      <xsl:choose>
+        <xsl:when test="$rot ne '0'">
+          <fo:block-container reference-orientation="{$rot}">
+            <xsl:if test="exists($md) and not($rot = ('180', '-180'))">
+              <xsl:attribute name="inline-progression-dimension" select="f:len(f:dim($md))"/>
+            </xsl:if>
+            <xsl:sequence select="$content"/>
+          </fo:block-container>
+        </xsl:when>
+        <xsl:otherwise><xsl:sequence select="$content"/></xsl:otherwise>
+      </xsl:choose>
+    </fo:table-cell>
+  </xsl:template>
+
+  <!-- the parts of a repeated cell, divided by a rule -->
+  <xsl:template match="gml:cpart">
+    <fo:block>
+      <xsl:if test="preceding-sibling::gml:cpart">
+        <xsl:attribute name="border-before" select="$rule-width || ' solid'"/>
+        <xsl:attribute name="padding-before" select="'2pt'"/>
+        <xsl:attribute name="space-before" select="'2pt'"/>
+      </xsl:if>
+      <xsl:call-template name="f:blocks">
+        <xsl:with-param name="nodes" select="node()"/>
+      </xsl:call-template>
+    </fo:block>
+  </xsl:template>
+
+  <!-- a table note: a row of one cell as wide as the table, "Note:" in
+       highlight 2 (SH20-9187-06 3.35) -->
+  <xsl:template match="table/tnote">
+    <xsl:param name="grid" tunnel="yes" as="element(grid)"/>
+    <fo:table-row>
+      <xsl:if test="../@split = 'no' and preceding-sibling::*[self::row or self::tnote]">
+        <xsl:attribute name="keep-with-previous.within-column" select="'always'"/>
+      </xsl:if>
+      <fo:table-cell number-columns-spanned="{$grid/@n}" border="{$rule-width} solid" padding="2pt">
+        <fo:block start-indent="0pt" end-indent="0pt" text-indent="0pt" text-align="start">
+          <xsl:call-template name="f:blocks">
+            <xsl:with-param name="nodes" select="node()"/>
+          </xsl:call-template>
+        </fo:block>
+      </fo:table-cell>
+    </fo:table-row>
+  </xsl:template>
+  <xsl:template match="tnote/gml:num">
+    <fo:inline>
+      <xsl:sequence select="f:font('hi2', .)"/>
+      <xsl:apply-templates/>
+    </fo:inline>
+    <xsl:text>&#xA0;</xsl:text>
+  </xsl:template>
+
+  <!-- the caption and description, below the table (they are not part of
+       it: SH20-9186-06 p.58), kept with it -->
+  <xsl:template match="tcap">
+    <fo:block space-before="{f:lines(0.5)}" text-align="start" keep-with-previous.within-column="always">
+      <xsl:sequence select="f:font('figcap', .)"/>
+      <xsl:apply-templates/>
+    </fo:block>
+  </xsl:template>
+  <xsl:template match="tdesc">
+    <fo:block text-align="start" keep-with-previous.within-column="always">
+      <xsl:sequence select="f:font('figdesc', .)"/>
+      <xsl:call-template name="f:blocks">
+        <xsl:with-param name="nodes" select="node()"/>
+      </xsl:call-template>
+    </fo:block>
+  </xsl:template>
+
+  <xsl:template match="rdef"/>
+
   <!-- ==== lists ======================================================== -->
   <!-- the items of a list and the stray nodes among them, through scopes -->
   <xsl:function name="f:list-seq" as="node()*">
@@ -2035,9 +2335,9 @@
   </xsl:template>
 
   <!-- ==== table of contents, figure list ============================== -->
-  <xsl:template match="toc | figlist">
+  <xsl:template match="toc | figlist | tlist">
     <xsl:param name="st" tunnel="yes" as="map(*)"/>
-    <xsl:variable name="title" select="string((gml:toc-entries, gml:figlist-entries)[1]/@title)"/>
+    <xsl:variable name="title" select="string((gml:toc-entries, gml:figlist-entries, gml:tlist-entries)[1]/@title)"/>
     <fo:block break-before="{if ($f:duplex) then 'odd-page' else 'page'}">
       <xsl:call-template name="f:block-attrs"/>
       <fo:block>
@@ -2045,23 +2345,24 @@
         <xsl:call-template name="f:shead"><xsl:with-param name="text" select="$title"/></xsl:call-template>
         <xsl:value-of select="$title"/>
       </fo:block>
-      <xsl:apply-templates select="gml:toc-entries/gml:toc-entry | gml:figlist-entries/gml:figlist-entry">
+      <xsl:apply-templates select="gml:toc-entries/gml:toc-entry | gml:figlist-entries/gml:figlist-entry
+                                   | gml:tlist-entries/gml:tlist-entry">
         <xsl:with-param name="st" tunnel="yes" select="map:put($st, 'noids', true()) => map:put('nofn', true())"/>
       </xsl:apply-templates>
     </fo:block>
   </xsl:template>
 
-  <xsl:template match="gml:toc-entry | gml:figlist-entry">
+  <xsl:template match="gml:toc-entry | gml:figlist-entry | gml:tlist-entry">
     <xsl:param name="st" tunnel="yes" as="map(*)"/>
     <xsl:variable name="level" select="xs:integer((@level[. castable as xs:integer], 2)[1])"/>
     <xsl:variable name="ind" select="f:dim($toc-indent)"/>
     <fo:block text-align="justify" text-align-last="justify" text-indent="0pt"
         start-indent="{f:len(f:add(f:S0($st), ($ind[1] * max((0, $level - 1)), $ind[2] * max((0, $level - 1)))))}"
         end-indent="{f:pts(3 * $f:ch)}" last-line-end-indent="{f:pts(-3 * $f:ch)}">
-      <xsl:if test="self::gml:figlist-entry or $level le 1">
+      <xsl:if test="self::gml:figlist-entry or self::gml:tlist-entry or $level le 1">
         <xsl:attribute name="space-before" select="f:lines(if ($level le 1) then 0.75 else 0.25)"/>
       </xsl:if>
-      <xsl:sequence select="f:font(if (self::gml:figlist-entry) then 'hd2toc' else concat('hd', min(($level, 3)), 'toc'), .)"/>
+      <xsl:sequence select="f:font(if (self::gml:figlist-entry or self::gml:tlist-entry) then 'hd2toc' else concat('hd', min(($level, 3)), 'toc'), .)"/>
       <xsl:apply-templates select="." mode="f:toc-attrs"/>
       <xsl:variable name="link" select="f:citable(., string(@refid))"/>
       <xsl:choose>

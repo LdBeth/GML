@@ -22,6 +22,8 @@
 %   \gmlpageref{anchor}{when}{label}   when = always | auto
 %   \gmltocbegin{title} \gmltocentry{k=v}{num}{text}{page} \gmltocend
 %   \gmlfiglistbegin{title} \gmlfiglistentry{k=v}{label}{text}{page} \gmlfiglistend
+%   \gmltlistbegin{title} \gmltlistentry{k=v}{label}{text}{page} \gmltlistend
+%       (list of tables; tables themselves are elements: see "tables")
 %   \gmlindexbegin{title} \gmlindexgroup{letter}
 %       \gmlindexentry{level}{term}{refs} \gmlindexend
 %       refs: \gmlindexfirst \gmlindexref{anchor}{major=,range=,text=}
@@ -117,6 +119,7 @@
 \newif\ifgml@hintmode \newif\ifgml@infig \newif\ifgml@fontquiet \newif\ifgml@bxrule
 \newdimen\gml@rulewd \newdimen\gml@bxwd \newdimen\gml@hrpos \newdimen\gml@hrstart
 \newcount\gml@bxstate \newcount\gml@hrmode
+\newif\ifgml@celltop  % at the top of a table cell: element skips are dropped
 
 % ---- constants -----------------------------------------------------------
 \def\gml@yes{yes} \def\gml@no{no} \def\gml@mixedstr{mixed}
@@ -349,6 +352,27 @@
 \def\gml@numpart#1{\def\gml@sn{}\edef\gml@tmpt{#1}\expandafter\gml@np@a\gml@tmpt\gml@end}
 \def\gml@np@a#1{\ifx#1\gml@end\let\gml@next\relax\else\let\gml@next\gml@np@a
   \ifnum`#1<`a\relax\edef\gml@sn{\gml@sn#1}\fi\fi\gml@next}
+% a DCF space unit as written in a tag attribute (tsize=, width=,
+% cwidths=, mindepth=): \gml@rawdim{text}{default unit}\register.
+% "5" (default unit: ch across, line down), "1.5i", "2cm", "10mm",
+% "2m" (em), "3p" picas, "p6" points, "3p6" (pica+points), "2c4"
+% (Cicero+Didot points), "120dh"; also any unit of \gml@dimof (pt ch
+% line mh mv dd).  Upper case and quotes (tsize='11') are accepted.
+\def\gml@rawdim#1#2#3{\gml@lower{#1}\def\gml@rd@a{}\def\gml@rd@u{}\def\gml@rd@b{}%
+  \expandafter\gml@rd@scan\gml@tmpl\gml@end
+  \ifx\gml@rd@a\empty\def\gml@rd@a{0}\fi
+  \ifx\gml@rd@b\empty\def\gml@rd@b{0}\fi
+  \ifx\gml@rd@u\empty\gml@dimof\gml@rd@a{#2}#3%
+  \else\def\gml@tmpd{p}\ifx\gml@rd@u\gml@tmpd
+    #3=\gml@rd@a bp#3=12#3\advance#3\gml@rd@b bp%
+  \else\def\gml@tmpd{c}\ifx\gml@rd@u\gml@tmpd
+    #3=\gml@rd@a dd#3=12#3\advance#3\gml@rd@b dd%
+  \else\def\gml@tmpd{m}\ifx\gml@rd@u\gml@tmpd \gml@dimof\gml@rd@a{mh}#3%
+  \else\gml@dimof\gml@rd@a\gml@rd@u#3\fi\fi\fi\fi}
+\def\gml@rd@scan#1{\ifx#1\gml@end\let\gml@next\relax\else\let\gml@next\gml@rd@scan
+  \if#1'\else\ifnum`#1<`a\relax
+    \ifx\gml@rd@u\empty\edef\gml@rd@a{\gml@rd@a#1}\else\edef\gml@rd@b{\gml@rd@b#1}\fi
+  \else\edef\gml@rd@u{\gml@rd@u#1}\fi\fi\fi\gml@next}
 % a hint dimension: \gml@hdim{attr}{unit attr}\register
 \def\gml@hdim#1#2#3{\gml@hget{#1}\gml@tv\gml@hget{#2}\gml@tu\gml@dimof\gml@tv\gml@tu#3}
 
@@ -397,15 +421,15 @@
 \def\gml@everypar{\ifcase\gml@ofstate\or
     \hangindent\gml@ofdim\hangafter\@ne\global\gml@ofstate\tw@
   \or\hangindent\gml@ofdim\hangafter\z@\fi
-  \ifgml@rcon\llap{\gml@rcchar\enspace}\fi}
+  \ifgml@rcon\llap{\gml@rcchar\enspace}\fi\global\gml@celltopfalse}
 \def\gml@rcchar{|}
 
 % ---- vertical space ------------------------------------------------------------
 % \gml@vskip: a DCF skip (.sk): discarded at the top of a page, and
 % consecutive skips do not add up (the larger one counts).
-\def\gml@vskip#1{\par\ifvmode\gml@dimd=#1\relax
+\def\gml@vskip#1{\par\ifvmode\ifgml@celltop\else\gml@dimd=#1\relax
   \ifdim\lastskip<\gml@dimd \ifdim\lastskip>\z@\vskip-\lastskip\fi
-    \ifgml@keep\nobreak\fi\vskip\gml@dimd\fi\fi}
+    \ifgml@keep\nobreak\fi\vskip\gml@dimd\fi\fi\fi}
 % \gml@vspace: a DCF space (.sp): kept at the top of a page
 \def\gml@vspace#1{\par\ifvmode\vglue#1\relax\fi}
 \def\gml@newpage{\par\vfill\penalty-\@M}
@@ -476,8 +500,10 @@
 \def\gml@endlines@a#1{\endgroup\gml@apply\gml@lcall{#1}{post}}
 \def\gml@lmore{\gml@lget{more}\gml@tmpb\ifx\gml@tmpb\gml@yes\else\ifhmode\par\fi\fi}
 
-\def\gmlnum#1{\ifgml@hintmode\else
-  \expandafter\ifx\csname gml@num@\gml@cur\endcsname\relax
+\def\gmlnum#1{\ifgml@hintmode
+    \expandafter\ifx\csname gml@hnum@\gml@cur\endcsname\relax
+    \else\csname gml@hnum@\gml@cur\endcsname{#1}\fi
+  \else\expandafter\ifx\csname gml@num@\gml@cur\endcsname\relax
   #1\enspace\else\csname gml@num@\gml@cur\endcsname{#1}\fi\fi}
 
 % ---- characters ---------------------------------------------------------------------
@@ -1068,7 +1094,7 @@
 \def\gml@defaultrf{\gml@shead\hfil\ifgml@nofolio\else\gml@folio\fi}
 \def\gml@userrh{\ifodd\pageno\copy\gml@rhodd\else\copy\gml@rheven\fi\hss}
 \def\gml@userrf{\ifodd\pageno\copy\gml@rfodd\else\copy\gml@rfeven\fi\hss}
-\output={\hsize\gml@defaulthsize\plainoutput\global\gml@plainpagefalse
+\output={\gml@tbl@output\hsize\gml@defaulthsize\plainoutput\global\gml@plainpagefalse
   \global\gml@chappagefalse
   \ifgml@rhsup\global\gml@rhsuppagetrue\else\global\gml@rhsuppagefalse\fi
   \ifgml@rfsup\global\gml@rfsuppagetrue\else\global\gml@rfsuppagefalse\fi}
@@ -1264,7 +1290,11 @@
 \gmldefstart{sl}{\gml@liststart{sl}{4\gml@chwidth}{.75\baselineskip}}
 \gmldefend{sl}{\gml@listend{.75\baselineskip}}
 \gml@letelement{l}{sl}
-\gmldefstart{dl}{\gml@liststart{dl}{10\gml@chwidth}{\baselineskip}%
+% dl tsize= (default 10 characters, SH20-9187 3.7): the term column and
+% its gutter
+\def\gml@dltsize{\gml@aget{tsize}\gml@tv\ifx\gml@tv\empty\def\gml@tv{10}\fi
+  \gml@rawdim\gml@tv{ch}\gml@dima}
+\gmldefstart{dl}{\gml@dltsize\gml@liststart{dl}{\gml@dima}{\baselineskip}%
   \gml@aget{break}\gml@dlbreak}
 \gmldefend{dl}{\gml@listend\baselineskip}
 \gmldefstart{gl}{\gml@liststart{gl}{\z@}{.75\baselineskip}}
@@ -1278,12 +1308,15 @@
 \gmldefnum{li}#1{\gml@itemlabel{#1}}
 \gmldefstart{lp}{\par\gml@vskip\gml@itemskip}
 \gmldefend{lp}{\par}
-% terms: a box in the hanging indent, or a line of its own if too wide
+% terms: a box in the hanging indent if it fits (with a gutter of one
+% blank); a longer term is followed by one blank and the description
+% runs on, or (dl break) the description starts on the next line
+% (SH20-9187 3.7).  dthd is a term too.
 \def\gml@termstart#1{\par\gml@itembreak\gml@vskip\gml@itemskip\noindent\hskip-\gml@listind
   \setbox\gml@dtbox\hbox\bgroup\gml@setfont{\gml@hi{#1}}}
 \def\gml@termend{\unskip\egroup\gml@dimb\gml@listind\advance\gml@dimb-\gml@chwidth
-  \ifx\gml@dlbreak\empty\else\gml@dimb\z@\fi
-  \ifdim\wd\gml@dtbox>\gml@dimb\box\gml@dtbox\par
+  \ifdim\wd\gml@dtbox>\gml@dimb
+    \ifx\gml@dlbreak\empty\box\gml@dtbox\ \kern1sp\else\box\gml@dtbox\par\fi
   \else\hbox to\gml@listind{\box\gml@dtbox\hss}\kern1sp\fi}
 \gmldefstart{dt}{\gml@termstart\gml@termhi}
 \gmldefend{dt}{\gml@termend}
@@ -1335,6 +1368,354 @@
   \else\gml@vskip\baselineskip\noindent\fi}
 \gmldefend{figdesc}{\par}
 
+% ---- tables ------------------------------------------------------------------------------------------
+% Starter Set tables (SH20-9186 ch. 7), as resolve.xsl gives them:
+%   table{width= span= split= rotate=}  thd{row}  tft{row}  row ... tnote
+%   row{cols= subrows= cwidths= split=}  c{col= colspan= subrow= rowspan=
+%   hp= align= valign= concat= mindepth= rotate= shade=}  gml:cpart
+%   tcap{gml:num text}  tdesc
+% Our own grid, no \halign: every width is declared (absolute DCF units
+% or k* shares of what the absolute ones leave of the table width) and a
+% row is laid out on its own.  The table is width= wide, else the line
+% length at the current left margin (page and column alike: one column).
+% DCF-VERIFY: the guides never say what happens when the widths do not
+% add up.  A row of absolute widths only is as wide as their sum (not
+% stretched to the table), and absolute widths wider than the table
+% leave k* columns 0 wide.  Squares of a non-rectangular cell (reported
+% by resolve.xsl) are left blank without a frame.
+% Grid: column k runs from x(k-1) to x(k) and owns the rule at its left
+% edge; the last rule lies inside the table.  A cell is a \vbox as wide
+% as its columns minus the rules and \gml@cellhpad on each side, so any
+% element works inside it (the element state is reset: margins 0,
+% \gml@elemhsize = the cell).  Sub-row heights: by bottom sub-row, each
+% one is as tall as the most any cell ending there exceeds the sub-rows
+% above it in its span (a cell: its content, at least one line, plus
+% \gml@cellvpad above and below, at least mindepth); valign places the
+% content in the height it gets.  Every cell is framed, so the rules form
+% DCF's full grid; gml:cpart parts are separated by a rule.
+% A row is one box on the page (rows overlap by the rule weight; the
+% \vskip that does it vanishes at a page break, so both pages get a
+% closed frame).  Rows that may not be split before (split=no on the row,
+% or on the table when the row says nothing) are boxed together with the
+% rows before them, so such a group moves to the next page as a whole;
+% a group taller than a page is unboxed and may break before any of its
+% rows (DCF: a warning, then as many rows as fit).
+% thd is set at the top and kept; tft at the end.  Both repeat: a table
+% with either puts \mark{n} after its heading row and \mark{-} at its end,
+% and \output (\gml@tbl@output) adds the heading at the top of a page
+% that begins inside a table (\topmark) and the footing at the bottom of
+% one that ends inside it; what then no longer fits is \vsplit off and
+% goes back to the next page.  The last four tables keep their boxes
+% (n mod 4).  tnote is a full-width row; tcap/tdesc are styled like
+% figcap/figdesc below the table.  rotate and shade: a message, ignored.
+% Footnotes in cells: the \insert is held apart and put on the page right
+% after the row (or the group of rows) that refers to it; one in thd or
+% tft goes with its first placement only, and one in a row that \output
+% sends on to the next page stays on the page before.
+% Not supported: tables inside table cells.
+% Settings: \gml@tablerule (rule weight), \gml@cellhpad, \gml@cellvpad,
+% \gml@tableskip (space before and after); every step is a \gml@tbl@...
+% macro and every element a \gml@NAME@start/end, so all can be redefined.
+\def\gml@tablerule{.4pt}
+\def\gml@cellhpad{4pt}
+\def\gml@cellvpad{2pt}
+\def\gml@tableskip{\baselineskip}
+\newdimen\gml@tblwd \newdimen\gml@tbloff \newdimen\gml@tblrule
+\newdimen\gml@tA \newdimen\gml@tR \newdimen\gml@tU \newdimen\gml@tS \newdimen\gml@tX
+\newdimen\gml@tW \newdimen\gml@tH \newdimen\gml@tI \newdimen\gml@tY
+\newcount\gml@tblno \newcount\gml@tblncols \newcount\gml@tblncell \newcount\gml@tblS
+\newcount\gml@tblk \newcount\gml@tbli \newcount\gml@tblb \newcount\gml@tK
+\newcount\gml@tblcpart \newcount\gml@tbllaststar
+\newbox\gml@rowbox \newbox\gml@chunk \newbox\gml@tblrest \newbox\gml@tblpg \newbox\gml@tblpart
+\newif\ifgml@tblopen \newif\ifgml@tblfirst \newif\ifgml@tblthd \newif\ifgml@tblmarks
+\newif\ifgml@tblfoot
+% footnotes from cells: \insert nodes held in \gml@tblfns (this row),
+% \gml@chunkfns (the rows of \gml@chunk) and \gml@tftfns (the footing)
+\newbox\gml@tblfns \newbox\gml@chunkfns \newbox\gml@tftfns
+\newif\ifgml@incell \newdimen\gml@tblfnhsize
+\expandafter\newbox\csname gml@thd@0\endcsname \expandafter\newbox\csname gml@tft@0\endcsname
+\expandafter\newbox\csname gml@thd@1\endcsname \expandafter\newbox\csname gml@tft@1\endcsname
+\expandafter\newbox\csname gml@thd@2\endcsname \expandafter\newbox\csname gml@tft@2\endcsname
+\expandafter\newbox\csname gml@thd@3\endcsname \expandafter\newbox\csname gml@tft@3\endcsname
+\def\gml@tblslot{0} \def\gml@tblsplit{no} \def\gml@rowdest{body}
+\let\gml@tblforce\empty
+\def\gml@starstr{*} \def\gml@tbloutstr{-}
+% \gml@tbl@slotof{n}: \gml@tblos := n mod 4
+\def\gml@tbl@slotof#1{\gml@cnta#1\relax\gml@cntb\gml@cnta\divide\gml@cntb4
+  \multiply\gml@cntb4 \advance\gml@cnta-\gml@cntb\edef\gml@tblos{\the\gml@cnta}}
+\def\gml@tbl@box#1#2{\csname gml@#1@#2\endcsname}
+% -- the table
+\def\gml@tbl@warn#1{\gml@aget{#1}\gml@tv\def\gml@tmpd{0}%
+  \ifx\gml@tv\empty\else\ifx\gml@tv\gml@tmpd\else
+  \gml@warnonce{tbl#1}{table #1= is not supported in TeX (ignored)}\fi\fi}
+\gmldefstart{table}{\par\gml@vskip\gml@tableskip
+  \global\advance\gml@tblno\@ne\gml@tbl@slotof\gml@tblno
+  \global\let\gml@tblslot\gml@tblos
+  \global\setbox\gml@tbl@box{thd}\gml@tblslot\box\voidb@x
+  \global\setbox\gml@tbl@box{tft}\gml@tblslot\box\voidb@x
+  \global\setbox\gml@chunk\box\voidb@x
+  \global\setbox\gml@tblfns\box\voidb@x \global\setbox\gml@chunkfns\box\voidb@x
+  \global\setbox\gml@tftfns\box\voidb@x \global\gml@tblfnhsize\hsize
+  \global\gml@tblrule=\gml@tablerule\relax
+  \global\gml@tbloff\gml@elemleft\global\advance\gml@tbloff\gml@hintleft
+  \gml@aget{width}\gml@tv
+  \ifx\gml@tv\empty\gml@dima\hsize\advance\gml@dima-\gml@tbloff
+    \advance\gml@dima-\gml@elemright\advance\gml@dima-\gml@hintright
+  \else\gml@rawdim\gml@tv{ch}\gml@dima\fi
+  \global\gml@tblwd\gml@dima
+  \gml@aget{split}\gml@tv\ifx\gml@tv\empty\def\gml@tv{no}\fi\global\let\gml@tblsplit\gml@tv
+  \gml@tbl@warn{rotate}%
+  \global\gml@tblopentrue\global\gml@tblfirsttrue
+  \global\gml@tblthdfalse\global\gml@tblmarksfalse
+  \def\gml@rowdest{body}}
+\gmldefend{table}{\gml@tbl@finish\par\gml@vskip\gml@tableskip}
+\gmldefstart{thd}{\def\gml@rowdest{thd}}
+\gmldefstart{tft}{\def\gml@rowdest{tft}}
+\gmldefstart{rdef}{}
+% the rows so far, the footing and the end mark (at tcap, tdesc or the end)
+\def\gml@tbl@finish{\ifgml@tblopen\global\gml@tblopenfalse
+  \gml@tbl@flush
+  \expandafter\ifvoid\gml@tbl@box{tft}\gml@tblslot\else
+    \ifgml@tblfirst\ifgml@tblthd\nobreak\vskip-\gml@tblrule\fi
+    \else\nobreak\vskip-\gml@tblrule\fi
+    \nointerlineskip\copy\gml@tbl@box{tft}\gml@tblslot
+    \ifvoid\gml@tftfns\else\unvbox\gml@tftfns\fi\fi
+  \ifgml@tblmarks\mark{-}\fi\prevdepth\z@\fi}
+% -- columns: \gml@tbl@cols{cwidths} sets \gml@tblncols and \gml@tx@k
+% (k = 0..n, the grid positions in sp); k* shares in hundredths
+\def\gml@tbl@cols#1{\gml@tblncols\z@\gml@tA\z@\gml@tK\z@\gml@tbllaststar\z@
+  \gml@forwords{#1}\gml@tbl@colone
+  \gml@tR\gml@tblwd\advance\gml@tR-\gml@tA
+  \ifnum\gml@tK>\z@\ifdim\gml@tR<\z@\gml@tR\z@
+    \gml@warnonce{tblwide}{table cwidths= wider than the table: * cells get no width}\fi
+    \gml@tU\gml@tR\divide\gml@tU\gml@tK\fi
+  \gml@tX\z@\gml@tS\z@\expandafter\def\csname gml@tx@0\endcsname{0}\gml@tblk\z@\gml@tbl@colloop}
+\def\gml@tbl@colone#1{\advance\gml@tblncols\@ne\def\gml@tmpd{#1}\gml@ifin\gml@tmpd*%
+  \ifgml@found\gml@tbl@star#1\gml@nil\ifx\gml@tmpd\empty\def\gml@tmpd{1}\fi
+    \gml@tW\gml@tmpd pt\gml@cnta\gml@tW\divide\gml@cnta655 \advance\gml@tK\gml@cnta
+    \gml@tbllaststar\gml@tblncols
+    \expandafter\edef\csname gml@cw@\the\gml@tblncols\endcsname{s\the\gml@cnta}%
+  \else\gml@rawdim{#1}{ch}\gml@tW\advance\gml@tA\gml@tW
+    \expandafter\edef\csname gml@cw@\the\gml@tblncols\endcsname{a\number\gml@tW}\fi}
+\def\gml@tbl@star#1*#2\gml@nil{\def\gml@tmpd{#1}}
+\def\gml@tbl@colloop{\ifnum\gml@tblk<\gml@tblncols\advance\gml@tblk\@ne
+  \expandafter\expandafter\expandafter\gml@tbl@cw\csname gml@cw@\the\gml@tblk\endcsname\gml@nil
+  \advance\gml@tX\gml@tW
+  \expandafter\edef\csname gml@tx@\the\gml@tblk\endcsname{\number\gml@tX}%
+  \expandafter\gml@tbl@colloop\fi}
+\def\gml@tbl@cw#1#2\gml@nil{\if s#1\ifnum\gml@tblk=\gml@tbllaststar
+    \gml@tW\gml@tR\advance\gml@tW-\gml@tS\else\gml@tW#2\gml@tU\fi\advance\gml@tS\gml@tW
+  \else\gml@tW#2sp\fi}
+\def\gml@tbl@x#1{\csname gml@tx@#1\endcsname sp}
+% -- rows
+\gmldefstart{row}{\gml@aget{cwidths}\gml@tv\gml@aget{subrows}\gml@tsub
+  \gml@aget{split}\gml@trowsplit\gml@tbl@rowbegin}
+\gmldefend{row}{\gml@tbl@rowend}
+\def\gml@tbl@rowbegin{\ifx\gml@tsub\empty\def\gml@tsub{1}\fi\gml@tblS\gml@tsub\relax
+  \ifx\gml@tv\empty\def\gml@tv{1*}\fi
+  \gml@tbl@cols\gml@tv\global\gml@tblncell\z@}
+\def\gml@tbl@rowend{%
+  \gml@tblk\z@\gml@tbl@zeroloop
+  \gml@tblb\@ne\gml@tbl@bloop
+  \expandafter\def\csname gml@ty@0\endcsname{0}\gml@tY\z@
+  \gml@tblk\z@\gml@tbl@yloop
+  \gml@tH\gml@tY\advance\gml@tH\gml@tblrule
+  \gml@tW\gml@tbl@x{\the\gml@tblncols}%
+  \setbox\gml@rowbox\hbox{\kern\gml@tbloff\vbox to\gml@tH{\hbox to\gml@tW{%
+    \gml@tbli\z@\gml@tbl@placeloop\hfil}\vss}}%
+  \csname gml@tbl@dest@\gml@rowdest\endcsname}
+\def\gml@tbl@zeroloop{\ifnum\gml@tblk<\gml@tblS\advance\gml@tblk\@ne
+  \expandafter\def\csname gml@th@\the\gml@tblk\endcsname{0}\expandafter\gml@tbl@zeroloop\fi}
+\def\gml@tbl@bloop{\ifnum\gml@tblb>\gml@tblS\else
+  \gml@tbli\z@\gml@tbl@iloop\advance\gml@tblb\@ne\expandafter\gml@tbl@bloop\fi}
+\def\gml@tbl@iloop{\ifnum\gml@tbli<\gml@tblncell\advance\gml@tbli\@ne
+  \gml@tbl@need\expandafter\gml@tbl@iloop\fi}
+\def\gml@tbl@yloop{\ifnum\gml@tblk<\gml@tblS\advance\gml@tblk\@ne
+  \advance\gml@tY\gml@tblrule\advance\gml@tY\csname gml@th@\the\gml@tblk\endcsname sp
+  \expandafter\edef\csname gml@ty@\the\gml@tblk\endcsname{\number\gml@tY}%
+  \expandafter\gml@tbl@yloop\fi}
+\def\gml@tbl@withmeta#1{\expandafter\expandafter\expandafter#1%
+  \csname gml@cm@\the\gml@tbli\endcsname}
+\def\gml@tbl@cellbox{\csname gml@cb@\the\gml@tbli\endcsname}
+% cell metadata: {X0}{X1}{subrow}{rowspan}{valign}{mindepth} (sp)
+\def\gml@tbl@need{\gml@tbl@withmeta\gml@tbl@need@a}
+\def\gml@tbl@need@a#1#2#3#4#5#6{\gml@cnta#3\advance\gml@cnta#4\advance\gml@cnta\m@ne
+  \ifnum\gml@cnta=\gml@tblb
+    \gml@tH\ht\gml@tbl@cellbox\advance\gml@tH\dp\gml@tbl@cellbox
+    \ifdim\gml@tH<\baselineskip\gml@tH\baselineskip\fi
+    \advance\gml@tH\gml@cellvpad\advance\gml@tH\gml@cellvpad
+    \ifdim\gml@tH<#6sp\gml@tH#6sp\fi
+    \gml@tblk#3\relax\gml@tbl@subloop
+    \ifdim\gml@tH>\csname gml@th@\the\gml@tblb\endcsname sp
+      \expandafter\edef\csname gml@th@\the\gml@tblb\endcsname{\number\gml@tH}\fi
+  \fi}
+\def\gml@tbl@subloop{\ifnum\gml@tblk<\gml@tblb
+  \advance\gml@tH-\csname gml@th@\the\gml@tblk\endcsname sp\advance\gml@tH-\gml@tblrule
+  \advance\gml@tblk\@ne\expandafter\gml@tbl@subloop\fi}
+\def\gml@tbl@placeloop{\ifnum\gml@tbli<\gml@tblncell\advance\gml@tbli\@ne
+  \gml@tbl@withmeta\gml@tbl@place
+  \expandafter\gml@tbl@placeloop\fi}
+\def\gml@tbl@place#1#2#3#4#5#6{%
+  \gml@cnta#3\advance\gml@cnta\m@ne\gml@tY\csname gml@ty@\the\gml@cnta\endcsname sp
+  \advance\gml@cnta#4\gml@tH\csname gml@ty@\the\gml@cnta\endcsname sp
+  \advance\gml@tH\gml@tblrule\advance\gml@tH-\gml@tY
+  \gml@tW#2sp\advance\gml@tW-#1sp
+  \rlap{\kern#1sp\lower\gml@tY\vtop{\kern\z@\gml@tbl@frame{#5}}}}
+% the frame of a cell (\gml@tW x \gml@tH) and its content placed by valign
+\def\gml@tbl@frame#1{\gml@tI\gml@tH\advance\gml@tI-2\gml@tblrule
+  \vbox to\gml@tH{\hrule height\gml@tblrule width\gml@tW
+    \hbox to\gml@tW{\vrule width\gml@tblrule\kern\gml@cellhpad
+      \vbox to\gml@tI{\csname gml@tbl@va@#1\endcsname{\box\gml@tbl@cellbox}}%
+      \hss\vrule width\gml@tblrule}%
+    \hrule height\gml@tblrule width\gml@tW}}
+\def\gml@tbl@va@top#1{\kern\gml@cellvpad#1\vss}
+\def\gml@tbl@va@center#1{\vss#1\vss}
+\def\gml@tbl@va@bottom#1{\vss#1\kern\gml@cellvpad}
+% where a finished row goes
+\def\gml@tbl@dest@thd{\global\setbox\gml@tbl@box{thd}\gml@tblslot\copy\gml@rowbox
+  \nointerlineskip\box\gml@rowbox\gml@tbl@fnout\gml@tblfns
+  \global\gml@tblthdtrue\global\gml@tblmarkstrue}
+\def\gml@tbl@dest@tft{\global\setbox\gml@tbl@box{tft}\gml@tblslot\box\gml@rowbox
+  \gml@tbl@fnadd\gml@tftfns\global\gml@tblmarkstrue}
+\def\gml@tbl@dest@body{\let\gml@tmpd\gml@trowsplit
+  \ifx\gml@tmpd\empty\let\gml@tmpd\gml@tblsplit\fi
+  \ifx\gml@tmpd\gml@yes\gml@tbl@flush\fi
+  \ifvoid\gml@chunk\global\setbox\gml@chunk\vbox{\box\gml@rowbox\unvcopy\gml@tblfns}%
+  \else\global\setbox\gml@chunk\vbox{\unvbox\gml@chunk\penalty9999
+    \vskip-\gml@tblrule\nointerlineskip\box\gml@rowbox\unvcopy\gml@tblfns}\fi
+  \gml@tbl@fnadd\gml@chunkfns}
+% the footnotes of a row: appended to box #1, or put on the page right after
+% the row box (no break can come between, so they go on the row's page).
+% A chunk keeps a copy after each row for when it is unboxed; when it is
+% boxed, those are inert and \gml@chunkfns follows the box instead.
+\def\gml@tbl@fnadd#1{\ifvoid\gml@tblfns\else
+  \global\setbox#1\vbox{\ifvoid#1\else\unvbox#1\fi\unvbox\gml@tblfns}\fi}
+\def\gml@tbl@fnout#1{\ifvoid#1\else\unvbox#1\fi}
+% a group of rows to the page: boxed if it fits on a page
+\def\gml@tbl@flush{\ifvoid\gml@chunk\else
+  \ifgml@tblfirst\global\gml@tblfirstfalse
+    \ifgml@tblmarks\ifgml@tblthd\nobreak\fi\mark{\the\gml@tblno}\nobreak\fi
+    \ifgml@tblthd\vskip-\gml@tblrule\fi
+  \else\penalty\z@\vskip-\gml@tblrule\fi
+  \nointerlineskip\gml@dima\vsize
+  \advance\gml@dima-\ht\gml@tbl@box{thd}\gml@tblslot
+  \advance\gml@dima-\ht\gml@tbl@box{tft}\gml@tblslot
+  \ifdim\ht\gml@chunk>\gml@dima\unvbox\gml@chunk
+    \global\setbox\gml@chunkfns\box\voidb@x
+  \else\box\gml@chunk\gml@tbl@fnout\gml@chunkfns\fi
+  \prevdepth\z@\fi}
+% -- cells
+\gmldefstart{c}{\gml@aget{col}\gml@tc\gml@aget{colspan}\gml@tcs
+  \gml@aget{subrow}\gml@tsr\gml@aget{rowspan}\gml@trs\gml@aget{hp}\gml@thp
+  \gml@aget{align}\gml@tal\gml@aget{valign}\gml@tva\gml@aget{concat}\gml@tcc
+  \gml@aget{mindepth}\gml@tmd\gml@tbl@warn{rotate}\gml@tbl@warn{shade}%
+  \gml@tbl@cellbegin}
+\gmldefend{c}{\gml@tbl@cellend}
+\def\gml@tbl@default#1#2{\ifx#1\empty\edef#1{#2}\fi}
+\def\gml@tbl@cellbegin{\global\advance\gml@tblncell\@ne
+  \gml@cnta\gml@tblncell\gml@tbl@default\gml@tc{\the\gml@cnta}%
+  \gml@tbl@default\gml@tcs1\gml@tbl@default\gml@tsr1\gml@tbl@default\gml@trs1%
+  \gml@tbl@default\gml@thp0\gml@tbl@default\gml@tal{left}%
+  \gml@tbl@default\gml@tva{top}\gml@tbl@default\gml@tcc{yes}%
+  \gml@cnta\gml@tsr\advance\gml@cnta\gml@trs\advance\gml@cnta\m@ne
+  \ifnum\gml@cnta>\gml@tblS\gml@cnta\gml@tblS\advance\gml@cnta-\gml@tsr
+    \advance\gml@cnta\@ne\edef\gml@trs{\the\gml@cnta}\fi
+  \gml@cnta\gml@tc\advance\gml@cnta\m@ne\gml@tX\gml@tbl@x{\the\gml@cnta}%
+  \advance\gml@cnta\gml@tcs
+  \ifnum\gml@cnta<\gml@tblncols\gml@tW\gml@tbl@x{\the\gml@cnta}\advance\gml@tW\gml@tblrule
+  \else\gml@tW\gml@tbl@x{\the\gml@tblncols}\fi
+  \ifx\gml@tmd\gml@starstr\let\gml@tmd\empty\fi
+  \ifx\gml@tmd\empty\gml@tH\z@\else\gml@rawdim\gml@tmd{line}\gml@tH\fi
+  \expandafter\xdef\csname gml@cm@\the\gml@tblncell\endcsname{{\number\gml@tX}%
+    {\number\gml@tW}{\gml@tsr}{\gml@trs}{\gml@tva}{\number\gml@tH}}%
+  \advance\gml@tW-\gml@tX\advance\gml@tW-2\gml@tblrule
+  \advance\gml@tW-\gml@cellhpad\advance\gml@tW-\gml@cellhpad
+  \expandafter\ifx\csname gml@cb@\the\gml@tblncell\endcsname\relax
+    \expandafter\gml@tbl@newbox\csname gml@cb@\the\gml@tblncell\endcsname\fi
+  \global\setbox\csname gml@cb@\the\gml@tblncell\endcsname\vbox\bgroup
+    \hsize\gml@tW\gml@elemhsize\gml@tW\gml@elemleft\z@\gml@elemright\z@\gml@incelltrue
+    \gml@hintleft\z@\gml@hintright\z@\gml@hintll\z@
+    \edef\gml@tmpd{\noexpand\gml@hi{\gml@thp}}\expandafter\gml@setfont\expandafter{\gml@tmpd}%
+    \ifx\gml@tcc\gml@no\gml@setfill{no}\gml@tal\gml@preservetrue
+    \else\gml@setfill{yes}\gml@tal\gml@preservefalse\fi
+    \gml@apply\prevdepth.3\baselineskip\global\gml@celltoptrue\global\gml@tblcpart\z@}
+\def\gml@tbl@newbox{\csname newbox\endcsname}
+\def\gml@tbl@unskip{\ifdim\lastskip>\z@\unskip\expandafter\gml@tbl@unskip\fi}
+% end a cell (part) on a full strut depth
+\def\gml@tbl@depthfix{\ifdim\prevdepth>-\@m\p@
+  \gml@dima.3\baselineskip\advance\gml@dima-\prevdepth
+  \ifdim\gml@dima>\z@\kern\gml@dima\fi\fi}
+\def\gml@tbl@cellend{\par\gml@tbl@unskip\gml@tbl@depthfix\egroup\global\gml@celltopfalse}
+\gmldefstart{gml:cpart}{\global\advance\gml@tblcpart\@ne
+  \ifnum\gml@tblcpart>\@ne\gml@tbl@cpartrule\fi}
+\gmldefend{gml:cpart}{\par}
+\def\gml@tbl@cpartrule{\par\gml@tbl@unskip\gml@tbl@depthfix
+  \gml@dima\hsize\advance\gml@dima\gml@cellhpad\advance\gml@dima\gml@cellhpad
+  \kern\gml@cellvpad\nointerlineskip
+  \hbox to\hsize{\kern-\gml@cellhpad\vrule height\gml@tblrule depth\z@ width\gml@dima
+    \kern-\gml@cellhpad}%
+  \kern\gml@cellvpad\prevdepth.3\baselineskip\global\gml@celltoptrue}
+% -- table note: a row of one full-width cell, "Note:" in hp2
+\gmldefstart{tnote}{\def\gml@tsub{1}\def\gml@tv{1*}\let\gml@trowsplit\empty
+  \gml@tbl@rowbegin
+  \def\gml@tc{1}\def\gml@tcs{1}\def\gml@tsr{1}\def\gml@trs{1}\def\gml@thp{0}%
+  \def\gml@tal{left}\def\gml@tva{top}\def\gml@tcc{yes}\let\gml@tmd\empty
+  \gml@tbl@cellbegin}
+\gmldefend{tnote}{\gml@tbl@cellend\gml@tbl@rowend}
+\gmldefnum{tnote}#1{\leavevmode{\gml@hi{2}#1}\nobreak\ }
+% -- caption and description: as figcap/figdesc, after the table
+\gmldefstart{tcap}{\gml@tbl@finish\gml@figcap@start}
+\expandafter\let\csname gml@tcap@end\expandafter\endcsname\csname gml@figcap@end\endcsname
+\expandafter\let\csname gml@num@tcap\expandafter\endcsname\csname gml@num@figcap\endcsname
+\gmldefstart{tdesc}{\gml@tbl@finish\gml@figdesc@start}
+\expandafter\let\csname gml@tdesc@end\expandafter\endcsname\csname gml@figdesc@end\endcsname
+\gmldefstart{tref}{} \gmldefstart{tlist}{}
+% hint mode: tables are still laid out here (no DCF profile formats them)
+\gml@hkeep{table} \gml@hkeep{thd} \gml@hkeep{tft} \gml@hkeep{row} \gml@hkeep{c}
+\gml@hkeep{gml:cpart} \gml@hkeep{tnote} \gml@hkeep{tcap} \gml@hkeep{tdesc}
+\expandafter\let\csname gml@hnum@tnote\expandafter\endcsname\csname gml@num@tnote\endcsname
+\expandafter\let\csname gml@hnum@tcap\expandafter\endcsname\csname gml@num@tcap\endcsname
+% -- \output: repeat thd at the top and tft at the bottom of a page inside a table
+\def\gml@tbl@output{\global\setbox\gml@tblrest\box\voidb@x
+  \ifx\gml@tblforce\empty\edef\gml@tbltop{\topmark}\else\let\gml@tbltop\gml@tblforce\fi
+  \global\let\gml@tblforce\empty\edef\gml@tblbot{\botmark}%
+  \ifx\gml@tbltop\gml@tbloutstr\let\gml@tbltop\empty\fi
+  \ifx\gml@tblbot\gml@tbloutstr\let\gml@tblbot\empty\fi
+  \ifx\gml@tbltop\empty\ifx\gml@tblbot\empty\else\gml@tbl@surgery\fi
+  \else\gml@tbl@surgery\fi
+  \ifvoid\gml@tblrest\else\unvbox\gml@tblrest\penalty\outputpenalty\fi}
+\def\gml@tbl@surgery{\gml@dima\ht\@cclv
+  \let\gml@tblhdr\empty\let\gml@tblftr\empty
+  \ifx\gml@tbltop\empty\else\gml@tbl@slotof\gml@tbltop
+    \expandafter\ifvoid\gml@tbl@box{thd}\gml@tblos\else\let\gml@tblhdr\gml@tblos\fi\fi
+  \ifx\gml@tblbot\empty\let\gml@tblfn\gml@tbltop\else\let\gml@tblfn\gml@tblbot\fi
+  \gml@tbl@slotof\gml@tblfn
+  \expandafter\ifvoid\gml@tbl@box{tft}\gml@tblos\else\let\gml@tblftr\gml@tblos\fi
+  \gml@dimb\gml@dima
+  \ifx\gml@tblftr\empty\else\advance\gml@dimb-\ht\gml@tbl@box{tft}\gml@tblftr
+    \advance\gml@dimb\gml@tblrule\fi
+  \setbox\gml@tblpg\vbox{\ifx\gml@tblhdr\empty\else
+    \copy\gml@tbl@box{thd}\gml@tblhdr\kern-\gml@tblrule\fi\unvbox\@cclv}%
+  \ifx\gml@tblbot\empty\gml@dimc\gml@dima\else\gml@dimc\gml@dimb\fi
+  \ifdim\ht\gml@tblpg>\gml@dimc
+    \vbadness\@M\splittopskip\topskip\splitmaxdepth\maxdepth
+    \setbox\gml@tblpart\vsplit\gml@tblpg to\gml@dimb
+    % inside a table at the split point: the last mark above it, else the top one
+    \edef\gml@tblfn{\splitbotmark}\ifx\gml@tblfn\empty\let\gml@tblfn\gml@tbltop\fi
+    \ifx\gml@tblfn\gml@tbloutstr\let\gml@tblfn\empty\fi
+    \let\gml@tblftr\empty\ifx\gml@tblfn\empty\else\gml@tbl@slotof\gml@tblfn
+      \expandafter\ifvoid\gml@tbl@box{tft}\gml@tblos\else\let\gml@tblftr\gml@tblos\fi\fi
+    \ifvoid\gml@tblpg\else\global\setbox\gml@tblrest\box\gml@tblpg
+      \global\let\gml@tblforce\gml@tblfn\fi
+    \setbox\gml@tblpg\vbox{\unvbox\gml@tblpart}%
+    \gml@tblfoottrue
+  \else\ifx\gml@tblbot\empty\gml@tblfootfalse\else\gml@tblfoottrue\fi\fi
+  \setbox\@cclv\vbox{\unvbox\gml@tblpg\ifgml@tblfoot\ifx\gml@tblftr\empty\else
+    \kern-\gml@tblrule\nointerlineskip\copy\gml@tbl@box{tft}\gml@tblftr\fi\fi}}
+% lists of tables (tlist): like the list of illustrations
+\def\gmltlistbegin{\gmlfiglistbegin} \def\gmltlistentry{\gmlfiglistentry}
+\def\gmltlistend{\gmlfiglistend}
+
 % ---- footnotes -------------------------------------------------------------------------------------------
 \def\gml@vfootnote#1{\insert\footins\bgroup
   \interlinepenalty\interfootnotelinepenalty
@@ -1346,9 +1727,19 @@
 \def\gml@fnsetup{\gml@elemleft\z@\gml@elemright\z@\gml@elemhsize\hsize}
 \gmldefstart{fn}{\gml@aget{num}\gml@tv\gml@aget{callout}\gml@tmpb
   \edef\gml@tmpc{\noexpand\gml@fnmark{\gml@tv}}%
+  \ifgml@incell\gml@tbl@fnstart\else\let\gml@fnclose\egroup
   \ifx\gml@tmpb\gml@no\let\gml@fncmd\gml@vfootnote\else\let\gml@fncmd\gml@footnote\fi
-  \expandafter\gml@fncmd\expandafter{\gml@tmpc}\bgroup\gml@fnsetup}
-\gmldefend{fn}{\egroup}
+  \expandafter\gml@fncmd\expandafter{\gml@tmpc}\bgroup\gml@fnsetup\fi}
+\gmldefend{fn}{\gml@fnclose}
+% in a table cell the \insert is built in \gml@tblfns, at the width of the
+% text around the table; \gml@tbl@rowend's destination puts it on the page
+\def\gml@tbl@fnstart{\ifx\gml@tmpb\gml@no\else
+    \let\@sf\empty\ifhmode\edef\@sf{\spacefactor\the\spacefactor}\/\fi
+    \gml@tmpc\@sf\fi
+  \def\gml@fnclose{\egroup\egroup}%
+  \global\setbox\gml@tblfns\vbox\bgroup\ifvoid\gml@tblfns\else\unvbox\gml@tblfns\fi
+    \gml@incellfalse\hsize\gml@tblfnhsize
+    \expandafter\gml@vfootnote\expandafter{\gml@tmpc}\bgroup\gml@fnsetup}
 \gmldefnum{fn}#1{}
 \gmldefstart{gml:fn}{\gml@aget{kind}\gml@fnkind
   \ifx\gml@fnkind\gml@leaderstr\global\gml@userleadertrue

@@ -524,28 +524,44 @@ let rec name_as = function
 
 (* .gs exatt [name [as apf]] ...: process stacked attributes by their
    APFs, the value as &*1 (p.292-293).  Processed attributes leave the
-   stack (DCF-VERIFY). *)
+   stack (DCF-VERIFY).  An attribute given more than once is processed
+   once per occurrence, in the order written, each with its own value
+   (the Starter Set's repeated ARRANGE= of :rdef, SH20-9186-06 p.54;
+   DCF-VERIFY). *)
 let exatt ctx args =
   let stack = ctx.Ctx.gml_attrs in
   let selected =
     match name_as args with
-    | [] -> List.map (fun (k, _) -> (k, None)) stack
-    | l -> List.map (fun (k, a) -> (String.uppercase_ascii k, a)) l
+    | [] -> List.map (fun (k, v) -> (k, None, v)) stack
+    | l ->
+        let l = List.map (fun (k, a) -> (String.uppercase_ascii k, a)) l in
+        let l =
+          List.filteri
+            (fun i (k, _) ->
+              not
+                (List.exists (fun (k', _) -> k' = k)
+                   (List.filteri (fun j _ -> j < i) l)))
+            l
+        in
+        (* not specified: skipped (p.293) *)
+        List.concat_map
+          (fun (k, a) ->
+            List.filter_map
+              (fun (k', v) -> if k' = k then Some (k, a, v) else None)
+              stack)
+          l
   in
   let calls =
     List.filter_map
-      (fun (k, a) ->
-        match List.assoc_opt k stack with
-        | None -> None (* not specified: skipped (p.293) *)
-        | Some v -> (
-            let lk = String.lowercase_ascii k in
-            let name = Option.value a ~default:lk in
-            match find_named ctx name with
-            | Some apf -> Some (k, apf, v)
-            | None ->
-                (* a message (SH35-0050 p.9) *)
-                Ctx.warn ctx ".gs exatt: no APF %s for attribute %s" name lk;
-                None))
+      (fun (k, a, v) ->
+        let lk = String.lowercase_ascii k in
+        let name = Option.value a ~default:lk in
+        match find_named ctx name with
+        | Some apf -> Some (k, apf, v)
+        | None ->
+            (* a message (SH35-0050 p.9) *)
+            Ctx.warn ctx ".gs exatt: no APF %s for attribute %s" name lk;
+            None)
       selected
   in
   ctx.gml_attrs <-
