@@ -3,9 +3,26 @@
 % plain TeX's accents and ligatures work), Computer Modern Typewriter for
 % examples.  Close to the Century faces of IBM page-printer manuals.
 % Needs the TeX Live "ncntrsbk" package (in scheme-basic).
-\gmlfontname{rm}{pncr7t}  \gmlfontname{it}{pncri7t}
-\gmlfontname{sl}{pncro7t} \gmlfontname{bf}{pncb7t}
-\gmlfontname{bi}{pncbi7t} \gmlfontname{hd}{pncb7t}
-\gmlfontname{tt}{cmtt10}
+%
+% To switch a face, change its line.  The NCS faces:
+%   pncr7t  roman        pncri7t  italic       pncro7t  slanted
+%   pncb7t  bold         pncbi7t  bold italic  pncbo7t  bold slanted
+% Other PSNFSS families are named alike when their TeX Live package is
+% installed: ptm (Times, "times"), phv (Helvetica, "helvetic"), ppl
+% (Palatino, "palatino"), e.g. phvb7t for Helvetica bold.  The sizes come
+% from gml.tex.  Sans serif installed with TeX Live basic: cmssbx10 (CM
+% Sans bold extended, OT1 like pncb7t), cmssdc10 (CM Sans demi condensed).
+%
+% body text (10pt)
+\gmlfontname{rm}{pncr7t}    % roman
+\gmlfontname{it}{pncri7t}   % italic (:hp1)
+\gmlfontname{sl}{pncro7t}   % slanted
+\gmlfontname{bf}{pncb7t}    % bold (:hp2)
+\gmlfontname{bi}{pncbi7t}   % bold italic (:hp3)
+\gmlfontname{tt}{cmtt10}    % examples (:xmp), monospace
+% display
+\gmlfontname{hd}{cmssbx10}  % headings :h0-:h4 and the section titles
+                            % (1.2x-2.488x): CM Sans bold extended
+\gmlfontname{ti}{cmssbx10}  % the :title (2.986x): CM Sans bold extended
 \gmlfontsize{10pt}
 \endinput

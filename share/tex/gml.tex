@@ -127,9 +127,10 @@
 %   \gmlfontname{SLOT}{SPEC}  SPEC is what follows \font\x= : a TFM name
 %       for tex/pdftex; for luatex/xetex any name the engine (and its
 %       font loader) accepts, e.g. "[file.otf]" or "Family:mapping=tex-text".
-%       Slots: rm it sl bf bi tt (body, 1x), hd (headings and title,
-%       scaled 1.2x-2.986x), and optional rm7 rm5 bf7 bf5 for the script
-%       sizes (default: rm/bf at 7/10 and 5/10 of the body size).
+%       Slots: rm it sl bf bi tt (body, 1x), hd (headings, scaled
+%       1.2x-2.488x), and the optional ti (the :title, 2.986x; default:
+%       hd) and rm7 rm5 bf7 bf5 for the script sizes (default: rm/bf at
+%       7/10 and 5/10 of the body size).
 %   \gmlfontsize{10pt}        body size
 % \gmlusefonts{NAME} reads gmlfont-NAME-ENGINE.tex if there is one, else
 % gmlfont-NAME.tex (ENGINE = \gmlengine: tex, pdftex, luatex or xetex),
@@ -141,6 +142,8 @@
 %   \gmlusefonts{NAME} in gmllocal.tex, tex-preamble, or the source
 %       (.xr tex /\gmlusefonts{NAME}/ before the first text)
 % Choosing per engine: put a gmlfont-NAME-ENGINE.tex on TEXINPUTS.
+% Changing one slot of the scheme (e.g. the title face), in gmllocal.tex,
+% tagset.tex or tex-preamble:  \gmlfontname{ti}{pncbi7t}\gmlusefonts{}
 \def\gmlengine{tex}
 \ifx\pdfoutput\undefined\else\def\gmlengine{pdftex}\fi
 \ifx\XeTeXversion\undefined\else\def\gmlengine{xetex}\fi
@@ -151,6 +154,7 @@
 \def\gmlusefonts#1{\edef\gml@fscheme{#1}%
   \ifx\gml@fscheme\empty\else
     \gml@fclear{rm7}\gml@fclear{rm5}\gml@fclear{bf7}\gml@fclear{bf5}%
+    \gml@fclear{ti}%
     \openin\gml@in=gmlfont-\gml@fscheme-\gmlengine.tex\relax
     \ifeof\gml@in\closein\gml@in
       \openin\gml@in=gmlfont-\gml@fscheme.tex\relax
@@ -176,7 +180,7 @@
   \gml@fload\tentt{tt}{tt}{1}\gml@fload\gml@tenbi{bi}{bi}{1}%
   \gml@fload\gml@hdfontA{hd}{hd}{2.488}\gml@fload\gml@hdfontB{hd}{hd}{2.074}%
   \gml@fload\gml@hdfontC{hd}{hd}{1.728}\gml@fload\gml@hdfontD{hd}{hd}{1.2}%
-  \gml@fload\gml@titlefnt{hd}{hd}{2.986}%
+  \gml@fload\gml@titlefnt{ti}{hd}{2.986}%
   \textfont0=\tenrm \scriptfont0=\sevenrm \scriptscriptfont0=\fiverm
   \textfont\bffam=\tenbf \scriptfont\bffam=\sevenbf
   \scriptscriptfont\bffam=\fivebf

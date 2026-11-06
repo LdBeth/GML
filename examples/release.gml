@@ -65,6 +65,13 @@ It contains the changes listed in :hdref refid=changes..
 (see footnote :fnref refid=fn1.).
 :warn level=2.Back up the configuration before you upgrade.
 :ewarn.
+:p.:hp2.All:ehp2. :hp1.of
+this sentence is high:hp3.light:ehp3.ed:ehp1..
+Be careful when placing the high:hp3.
+light
+:ehp3.ed
+phrase tags in your text or you :hp1.will:ehp1. get
+unexpected spacing results.
 :h2 id=cfg.Configuration
 :p.The configuration file now accepts these keywords:
 :dl

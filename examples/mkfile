@@ -1,0 +1,66 @@
+# mkfile - every output of release.gml, in out/ (Plan 9 mk, recipes in rc).
+#
+#   cd examples && mk          all of them (only what is out of date)
+#   mk -a                      all of them, again
+#   mk out/release.html        one of them
+#   mk clean                   remove the TeX by-products
+#
+# The rules are the project's (../mkfile), with the notes tag set
+# (notes/: the Starter Set plus :warn, with its own html.xsl, fo.xsl and
+# tagset.tex) and out/ as OUTDIR.  The project's variables can be
+# overridden in the same way (mk SAXON=... GML=...); PDFTEX is the pdftex
+# for out/release.pdf.
+
+MKSHELL=/usr/local/plan9/bin/rc
+ROOT=`{cd .. && pwd}
+TAGSET=$ROOT/examples/notes
+OUTDIR=out/
+PDFTEX=/Library/TeX/texbin/pdftex
+
+OUT=\
+	out/release.xml\
+	out/release.r.xml\
+	out/release.sem.xml\
+	out/release.s.xml\
+	out/release.tex\
+	out/release.html\
+	out/release.fo\
+	out/release.pdf\
+	out/release-internal.xml\
+	out/release-internal.r.xml\
+	out/release-internal.s.xml\
+	out/release-internal.html\
+	out/gml.css
+
+all:V: $OUT
+
+<$ROOT/mkfile
+
+out/release.xml: $TAGSET/profile.gml
+
+# the internal edition: release.gml with -set audience=internal; the later
+# stages (out/release-internal.s.xml, .html) come from the project's rules
+out/release-internal.xml: release.gml $TAGSET/profile.gml
+	st=()
+	$GML -profile $GMLPROFILE $GMLFLAGS -set audience=internal release.gml > $target.tmp || st=$status
+	if(! ~ $st '' 4) { rm -f $target.tmp; exit $st }
+	mv $target.tmp $target
+
+out/gml.css: $ROOT/share/html/gml.css
+	cp $prereq $target
+
+# release.tex loads notes/tagset.tex by absolute path, so only share/tex
+# goes on TEXINPUTS; two runs so that the page references settle.  (The
+# .tex macro files are not prerequisites: mk would try to make them with
+# the %.tex rule; mk -a after changing them.)
+out/release.pdf: out/release.tex
+	cd out
+	for(pass in 1 2){
+		TEXINPUTS=$ROOT/share/tex: $PDFTEX -interaction=nonstopmode release.tex > /dev/null || {
+			echo mk: pdftex failed, see out/release.log >[1=2]
+			exit 1
+		}
+	}
+
+clean:V:
+	rm -f out/*.log out/*.aux out/*.ref out/*.tmp

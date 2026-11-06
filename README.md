@@ -73,6 +73,11 @@ gml [-I dir]... [-share dir] [-profile file|name] [-set sym=val]...
   directory: `-share dir`, else `$GML_SHARE`, else `share/gml` next to the
   executable, else the share directory of the build.
 - `-set SYSVARH=yes` sets a symbol, as DCF's `SYSVAR` options do.
+- `-lib dir` (repeatable, searched in order) adds a symbol and macro
+  library, as DCF's `LIB` option does: a member is the file `dir/NAME` or
+  `dir/NAME.scr` (NAME in upper case), used by `.dm name lib`,
+  `.se name lib`, and with `.ly on|mac|sym` for unresolved macros, APFs
+  and symbols.
 - The return code follows DCF: 0, or 4 after warnings, 8 after errors.
 
 From the source tree:
@@ -157,7 +162,11 @@ The stylesheet parameters (`SYSVARS`/`SYSVARD`/`SYSVART` page layouts,
   `\def\gmlfonts{cm}` before `\input gml`, or `\gmlusefonts{cm}` in
   `gmllocal.tex`.  Per engine: a file `gmlfont-NAME-ENGINE.tex`
   (ENGINE = `tex`, `pdftex`, `luatex`, `xetex`) is preferred over
-  `gmlfont-NAME.tex` when present.
+  `gmlfont-NAME.tex` when present.  The slots are `rm it sl bf bi tt`
+  (body), `hd` (headings) and `ti` (the `:title`, default `hd`);
+  `gmlfont-ncs.tex` lists one per line, so a face is switched by editing
+  its line.  One slot can also be changed on top of a scheme, e.g. in
+  `gmllocal.tex`: `\gmlfontname{ti}{pncbi7t}\gmlusefonts{}`.
 - **Tag sets.** A tag set bundle is a directory (`share/tagset/NAME`, or
   any path given to `gmlfmt -tagset`) holding `profile.gml` (required:
   the gml profile, e.g. `.im starter` and then the bundle's own tags;
@@ -229,13 +238,17 @@ also uses the programmable layer: symbols and arithmetic (`&version`,
 conditional text with `.if`/`.go` driven by `-set audience=internal`, and
 a user-defined tag `:warn level=n` whose APF uses `.gs attval` and `.gs
 insert`, with an `.xd` model.  The tag is styled per backend without
-touching the shipped files: `examples/release-html.xsl` and
-`examples/release-fo.xsl` import html.xsl / fo.xsl, and
-`examples/gmllocal.tex` styles it for TeX.
+touching the shipped files, by the tag set `examples/notes/`: its
+`profile.gml` defines the tag, its stylesheets import the stock stages
+and add rules for it, and `tagset.tex` styles it for TeX.
 
-`examples/build` regenerates everything in `examples/out/`: the engine
-XML (`release.xml`), resolved, scoped and semantic XML, HTML for both
-audiences, XSL-FO, plain TeX and the typeset `release.pdf`.
+`examples/mkfile` makes everything in `examples/out/` (`cd examples &&
+mk`, or `mk -a` to redo it all): the engine XML (`release.xml`),
+resolved, scoped and semantic XML, HTML for both audiences, XSL-FO, plain
+TeX and the typeset `release.pdf`.  It sets `ROOT`, `TAGSET=notes` and
+`OUTDIR=out/`, then includes the project's `mkfile` for the rules; only
+the internal edition (`-set audience=internal`), `gml.css` and the
+pdftex runs have rules of their own.
 
 ## DCF fidelity
 
