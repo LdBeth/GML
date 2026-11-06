@@ -96,10 +96,10 @@ open Ctx
 
 let doc ctx = ctx.Ctx.doc
 let fmt ctx = ctx.Ctx.fmt
-
 let yn b = if b then "yes" else "no"
 
-let emit ctx name ~brk attrs = Doc.hint (doc ctx) name (attrs @ [ ("break", yn brk) ])
+let emit ctx name ~brk attrs =
+  Doc.hint (doc ctx) name (attrs @ [ ("break", yn brk) ])
 
 (* Operand words; a lone sign is joined to the next word ("+ 1i"). *)
 let tokens s =
@@ -142,12 +142,14 @@ let read_spec ?(lead = []) ?(after = []) start ops =
   let rec go mode lead acc = function
     | [] -> List.rev acc
     | w :: rest -> (
-      match List.assoc_opt (lc w) after with
-      | Some m -> go m [] (w :: acc) rest
-      | None ->
-        let r, lead = match lead with r :: l -> (r, l) | [] -> (mode, []) in
-        let w' = match r with Dim a -> norm a w | Plain -> w in
-        go mode lead (w' :: acc) rest)
+        match List.assoc_opt (lc w) after with
+        | Some m -> go m [] (w :: acc) rest
+        | None ->
+            let r, lead =
+              match lead with r :: l -> (r, l) | [] -> (mode, [])
+            in
+            let w' = match r with Dim a -> norm a w | Plain -> w in
+            go mode lead (w' :: acc) rest)
   in
   String.concat " " (go start lead [] (tokens ops))
 
@@ -155,41 +157,74 @@ let spec axis ops = read_spec (Dim axis) ops
 
 let push_text ctx text =
   ignore
-    (Input.push_residual ctx.input text ctx.loc { Input.had_text = false; eol = true })
+    (Input.push_residual ctx.input text ctx.loc
+       { Input.had_text = false; eol = true })
 
 (* ---- line scopes ------------------------------------------------------------ *)
 
 let scope ?(next = []) ~word ~n ~brk attrs remaining =
-  { Doc.word; first = (("n", n) :: attrs) @ [ ("break", yn brk) ];
-    rest = ("cont", "yes") :: attrs; remaining; started = false; next }
+  {
+    Doc.word;
+    first = (("n", n) :: attrs) @ [ ("break", yn brk) ];
+    rest = ("cont", "yes") :: attrs;
+    remaining;
+    started = false;
+    next;
+  }
 
 (* [n|on|off|text]: no operand is one line; 0 or OFF ends the scope. *)
 let counted ?(attrs = []) ~brk word ctx ops =
-  let open_n n = Doc.open_scope (doc ctx) (scope ~word ~n:(string_of_int n) ~brk attrs (Some n)) in
+  let open_n n =
+    Doc.open_scope (doc ctx)
+      (scope ~word ~n:(string_of_int n) ~brk attrs (Some n))
+  in
   match lc (String.trim ops) with
   | "" -> open_n 1
   | "on" -> Doc.open_scope (doc ctx) (scope ~word ~n:"on" ~brk attrs None)
   | "off" -> ignore (Doc.close_scope (doc ctx) word)
   | s -> (
-    match int_of_string_opt s with
-    | Some 0 -> ignore (Doc.close_scope (doc ctx) word)
-    | Some n when n > 0 -> open_n n
-    | _ -> open_n 1; push_text ctx ops)
+      match int_of_string_opt s with
+      | Some 0 -> ignore (Doc.close_scope (doc ctx) word)
+      | Some n when n > 0 -> open_n n
+      | _ ->
+          open_n 1;
+          push_text ctx ops)
 
 (* ---- indention ----------------------------------------------------------- *)
 
-type side = { word : string; attr : string;
-              get : Ctx.fmt -> Units.sum; set : Ctx.fmt -> Units.sum -> unit }
+type side = {
+  word : string;
+  attr : string;
+  get : Ctx.fmt -> Units.sum;
+  set : Ctx.fmt -> Units.sum -> unit;
+}
 
-let left_side = { word = "in"; attr = "left"; get = (fun f -> f.left); set = (fun f v -> f.left <- v) }
-let right_side = { word = "ir"; attr = "right"; get = (fun f -> f.right); set = (fun f v -> f.right <- v) }
+let left_side =
+  {
+    word = "in";
+    attr = "left";
+    get = (fun f -> f.left);
+    set = (fun f v -> f.left <- v);
+  }
+
+let right_side =
+  {
+    word = "ir";
+    attr = "right";
+    get = (fun f -> f.right);
+    set = (fun f v -> f.right <- v);
+  }
 
 let delta (o : Units.operand) sum =
   match o.sign with
   | None -> []
   | Some _ ->
-    let u = match sum with [ (u, _) ] -> u | _ -> "" in
-    [ ("delta", Units.show_operand o ^ (if o.value.unit = u then "" else o.value.unit)) ]
+      let u = match sum with [ (u, _) ] -> u | _ -> "" in
+      [
+        ( "delta",
+          Units.show_operand o ^ if o.value.unit = u then "" else o.value.unit
+        );
+      ]
 
 (* .in [h] [after v] [for v] [nobreak] (p.78-82): absolute or relative;
    with FOR the change is temporary: the margin is the permanent one
@@ -211,70 +246,95 @@ let indent side ctx ops =
   match parse None None None false (tokens ops) with
   | Error w -> Ctx.error ctx ".%s: unexpected operand %s" cw w
   | Ok (v, a, f, nb) ->
-    let brk = not nb in
-    let opt s k = match s with None -> k None | Some s -> dim ctx cw Units.Vertical s (fun o -> k (Some o)) in
-    dim ctx cw Units.Horizontal (Option.value v ~default:"0") (fun o ->
-        opt a (fun after ->
-            opt f (fun for_ ->
-                let st = fmt ctx in
-                let perm = side.get st in
-                let vattrs sum = Units.attrs ~default:"ch" side.attr sum in
-                let after_n = Option.bind after Units.lines and for_n = Option.bind for_ Units.lines in
-                let uncounted name = function
-                  | Some o when Units.lines o = None -> amount_attrs o |> List.map (fun (k, x) -> ((if k = "n" then name else name ^ "-unit"), x))
-                  | _ -> []
-                in
-                match for_ with
-                | None ->
-                  let now = Units.apply perm o in
-                  side.set st now;
-                  let of_end =
-                    if cw = "in" && st.offset <> Units.zero then begin
-                      st.offset <- Units.zero;
-                      [ ("offset", "0") ]
-                    end
-                    else []
+      let brk = not nb in
+      let opt s k =
+        match s with
+        | None -> k None
+        | Some s -> dim ctx cw Units.Vertical s (fun o -> k (Some o))
+      in
+      dim ctx cw Units.Horizontal (Option.value v ~default:"0") (fun o ->
+          opt a (fun after ->
+              opt f (fun for_ ->
+                  let st = fmt ctx in
+                  let perm = side.get st in
+                  let vattrs sum = Units.attrs ~default:"ch" side.attr sum in
+                  let after_n = Option.bind after Units.lines
+                  and for_n = Option.bind for_ Units.lines in
+                  let uncounted name = function
+                    | Some o when Units.lines o = None ->
+                        amount_attrs o
+                        |> List.map (fun (k, x) ->
+                            ((if k = "n" then name else name ^ "-unit"), x))
+                    | _ -> []
                   in
-                  emit ctx cw ~brk (vattrs now @ delta o now @ of_end @ uncounted "after" after);
-                  Option.iter
-                    (fun n ->
-                       Doc.open_scope (doc ctx)
-                         (scope ~word:cw ~n:(string_of_int n) ~brk:false
-                            (("after", "yes") :: vattrs perm) (Some n)))
-                    after_n
-                | Some _ -> (
-                  let temp = Units.add perm o.value.unit (Units.signed o) in
-                  let tattrs = vattrs temp @ delta o temp in
-                  match for_n with
-                  | Some n ->
-                    let s_for = scope ~word:cw ~n:(string_of_int n) ~brk:(brk && after_n = None) tattrs (Some n) in
-                    (match after_n with
-                     | Some a ->
-                       Doc.open_scope (doc ctx)
-                         (scope ~next:[ s_for ] ~word:cw ~n:(string_of_int a) ~brk
-                            (("after", "yes") :: vattrs perm) (Some a))
-                     | None -> Doc.open_scope (doc ctx) s_for)
+                  match for_ with
                   | None ->
-                    emit ctx cw ~brk
-                      (tattrs @ uncounted "for" for_ @ uncounted "after" after
-                       @ [ ("temporary", "yes") ])))))
+                      let now = Units.apply perm o in
+                      side.set st now;
+                      let of_end =
+                        if cw = "in" && st.offset <> Units.zero then begin
+                          st.offset <- Units.zero;
+                          [ ("offset", "0") ]
+                        end
+                        else []
+                      in
+                      emit ctx cw ~brk
+                        (vattrs now @ delta o now @ of_end
+                       @ uncounted "after" after);
+                      Option.iter
+                        (fun n ->
+                          Doc.open_scope (doc ctx)
+                            (scope ~word:cw ~n:(string_of_int n) ~brk:false
+                               (("after", "yes") :: vattrs perm)
+                               (Some n)))
+                        after_n
+                  | Some _ -> (
+                      let temp = Units.add perm o.value.unit (Units.signed o) in
+                      let tattrs = vattrs temp @ delta o temp in
+                      match for_n with
+                      | Some n -> (
+                          let s_for =
+                            scope ~word:cw ~n:(string_of_int n)
+                              ~brk:(brk && after_n = None)
+                              tattrs (Some n)
+                          in
+                          match after_n with
+                          | Some a ->
+                              Doc.open_scope (doc ctx)
+                                (scope ~next:[ s_for ] ~word:cw
+                                   ~n:(string_of_int a) ~brk
+                                   (("after", "yes") :: vattrs perm)
+                                   (Some a))
+                          | None -> Doc.open_scope (doc ctx) s_for)
+                      | None ->
+                          emit ctx cw ~brk
+                            (tattrs @ uncounted "for" for_
+                           @ uncounted "after" after
+                            @ [ ("temporary", "yes") ])))))
 
 (* .il h / .un h: the next line only, moved right / left (p.80). *)
 let one_line word sign ctx ops =
-  dim ctx word Units.Horizontal (if String.trim ops = "" then "0" else ops) (fun o ->
+  dim ctx word Units.Horizontal
+    (if String.trim ops = "" then "0" else ops)
+    (fun o ->
       let st = fmt ctx in
       let h = Units.signed o * sign in
       let sum = Units.add st.left o.value.unit h in
       Doc.open_scope (doc ctx)
-        (scope ~word ~n:"1" ~brk:true (Units.attrs ~default:"ch" "left" sum) (Some 1)))
+        (scope ~word ~n:"1" ~brk:true
+           (Units.attrs ~default:"ch" "left" sum)
+           (Some 1)))
 
 (* .of [h] (p.84) and .ll [h] (p.122). *)
 let offset ctx ops =
   let st = fmt ctx in
-  dim ctx "of" Units.Horizontal (if String.trim ops = "" then "0" else ops) (fun o ->
+  dim ctx "of" Units.Horizontal
+    (if String.trim ops = "" then "0" else ops)
+    (fun o ->
       let now = Units.apply st.offset o in
       st.offset <- now;
-      emit ctx "of" ~brk:true (Units.attrs ~default:"ch" "offset" now @ delta o now))
+      emit ctx "of" ~brk:true
+        (Units.attrs ~default:"ch" "offset" now @ delta o now))
 
 let line_length ctx ops =
   let st = fmt ctx in
@@ -284,14 +344,19 @@ let line_length ctx ops =
   end
   else
     dim ctx "ll" Units.Horizontal ops (fun o ->
-        match o.sign, st.ll with
+        match (o.sign, st.ll) with
         | Some _, None ->
-          (* relative to the device default: left as a change *)
-          emit ctx "ll" ~brk:true [ ("length", "default"); ("delta", Units.show_operand o ^ o.value.unit) ]
+            (* relative to the device default: left as a change *)
+            emit ctx "ll" ~brk:true
+              [
+                ("length", "default");
+                ("delta", Units.show_operand o ^ o.value.unit);
+              ]
         | _ ->
-          let now = Units.apply (Option.value st.ll ~default:Units.zero) o in
-          st.ll <- Some now;
-          emit ctx "ll" ~brk:true (Units.attrs ~default:"ch" "length" now @ delta o now))
+            let now = Units.apply (Option.value st.ll ~default:Units.zero) o in
+            st.ll <- Some now;
+            emit ctx "ll" ~brk:true
+              (Units.attrs ~default:"ch" "length" now @ delta o now))
 
 (* ---- format mode ----------------------------------------------------------- *)
 
@@ -305,17 +370,33 @@ let format nf ctx ops =
   let st = fmt ctx in
   let cw = if nf then "nf" else "fo" in
   let ws = List.map lc (tokens ops) in
-  let ws = if List.exists (fun w -> w = "on" || w = "off" || List.mem w aligns) ws then ws else "on" :: ws in
+  let ws =
+    if List.exists (fun w -> w = "on" || w = "off" || List.mem w aligns) ws then
+      ws
+    else "on" :: ws
+  in
   let ok =
     List.for_all
       (fun w ->
-         match w with
-         | "on" -> st.fill <- not nf; st.align <- (if nf then "left" else "justify"); true
-         | "off" -> st.fill <- nf; st.align <- (if nf then "justify" else "left"); true
-         | a when List.mem a aligns -> st.fill <- not nf; st.align <- a; true
-         | "extend" | "fold" | "trunc" | "truncate" ->
-           st.overdraw <- (if w = "truncate" then "trunc" else w); true
-         | _ -> Ctx.error ctx ".%s: unknown operand %s" cw w; false)
+        match w with
+        | "on" ->
+            st.fill <- not nf;
+            st.align <- (if nf then "left" else "justify");
+            true
+        | "off" ->
+            st.fill <- nf;
+            st.align <- (if nf then "justify" else "left");
+            true
+        | a when List.mem a aligns ->
+            st.fill <- not nf;
+            st.align <- a;
+            true
+        | "extend" | "fold" | "trunc" | "truncate" ->
+            st.overdraw <- (if w = "truncate" then "trunc" else w);
+            true
+        | _ ->
+            Ctx.error ctx ".%s: unknown operand %s" cw w;
+            false)
       ws
   in
   if ok then emit ctx cw ~brk:true (mode_attrs st)
@@ -324,26 +405,37 @@ let format nf ctx ops =
 let justify ctx ops =
   let st = fmt ctx in
   (match lc (String.trim ops) with
-   | "" | "on" -> st.align <- "justify"
-   | "off" -> if st.align = "justify" then st.align <- "left"
-   | o -> Ctx.error ctx ".ju: ON or OFF expected, not %s" o);
+  | "" | "on" -> st.align <- "justify"
+  | "off" -> if st.align = "justify" then st.align <- "left"
+  | o -> Ctx.error ctx ".ju: ON or OFF expected, not %s" o);
   emit ctx "ju" ~brk:true (mode_attrs st)
 
 (* ---- vertical space and ejects -------------------------------------------- *)
 
 let space word ctx ops =
   let ws = tokens ops in
-  let flags, amounts = List.partition (fun w -> List.mem (lc w) [ "a"; "c" ]) ws in
-  let fl = List.map (fun w -> if lc w = "a" then ("absolute", "yes") else ("conditional", "yes")) flags in
+  let flags, amounts =
+    List.partition (fun w -> List.mem (lc w) [ "a"; "c" ]) ws
+  in
+  let fl =
+    List.map
+      (fun w ->
+        if lc w = "a" then ("absolute", "yes") else ("conditional", "yes"))
+      flags
+  in
   match amounts with
   | [] -> emit ctx word ~brk:true ([ ("n", "1"); ("unit", "line") ] @ fl)
-  | [ a ] -> dim ctx word Units.Vertical a (fun o -> emit ctx word ~brk:true (amount_attrs o @ fl))
+  | [ a ] ->
+      dim ctx word Units.Vertical a (fun o ->
+          emit ctx word ~brk:true (amount_attrs o @ fl))
   | _ -> Ctx.error ctx ".%s: one amount expected" word
 
 let conditional_eject word ctx ops =
   match tokens ops with
   | [] -> emit ctx word ~brk:true []
-  | [ a ] -> dim ctx word Units.Vertical a (fun o -> emit ctx word ~brk:true (amount_attrs o))
+  | [ a ] ->
+      dim ctx word Units.Vertical a (fun o ->
+          emit ctx word ~brk:true (amount_attrs o))
   | _ -> Ctx.error ctx ".%s: one amount expected" word
 
 let page ctx ops =
@@ -352,12 +444,12 @@ let page ctx ops =
   let attrs =
     List.map
       (fun w ->
-         match lc w with
-         | "odd" | "even" -> ("side", lc w)
-         | "nostart" -> ("nostart", "yes")
-         | "nobreak" -> ("nobreak", "yes")
-         | "on" | "off" -> ("mode", lc w)
-         | _ -> ("page", w))
+        match lc w with
+        | "odd" | "even" -> ("side", lc w)
+        | "nostart" -> ("nostart", "yes")
+        | "nobreak" -> ("nobreak", "yes")
+        | "on" | "off" -> ("mode", lc w)
+        | _ -> ("page", w))
       ws
   in
   emit ctx "pa" ~brk attrs
@@ -365,38 +457,62 @@ let page ctx ops =
 let keep ctx ops =
   match List.map lc (tokens ops) with
   | [] | [ "on" ] -> emit ctx "kp" ~brk:true [ ("mode", "on") ]
-  | [ ("off" | "float" | "delay") as m ] -> emit ctx "kp" ~brk:true [ ("mode", m) ]
+  | [ (("off" | "float" | "delay") as m) ] ->
+      emit ctx "kp" ~brk:true [ ("mode", m) ]
   | [ "inline" ] -> emit ctx "kp" ~brk:false [ ("mode", "inline") ]
   | _ ->
-    (* .kp v / .kp v + v: an inline keep of that depth, no break (p.198) *)
-    emit ctx "kp" ~brk:false [ ("mode", "inline"); ("depth", spec Units.Vertical ops) ]
+      (* .kp v / .kp v + v: an inline keep of that depth, no break (p.198) *)
+      emit ctx "kp" ~brk:false
+        [ ("mode", "inline"); ("depth", spec Units.Vertical ops) ]
 
 (* ---- generic ---------------------------------------------------------------- *)
 
 let generic ?(read = spec Units.Horizontal) word ~brk ctx ops =
-  emit ctx word ~brk (if String.trim ops = "" then [] else [ ("spec", read ops) ])
+  emit ctx word ~brk
+    (if String.trim ops = "" then [] else [ ("spec", read ops) ])
 
 let vertical = spec Units.Vertical
 let plain = read_spec Plain
-let factors = [ ("by", Plain); ("skip", Plain); ("space", Plain); ("text", Plain) ]
-let line_spacing = read_spec (Dim Units.Vertical) ~after:(("normal", Dim Units.Vertical) :: factors)
-let word_spacing = read_spec (Dim Units.Horizontal) ~after:[ ("normal", Dim Units.Horizontal); ("by", Plain) ]
+
+let factors =
+  [ ("by", Plain); ("skip", Plain); ("space", Plain); ("text", Plain) ]
+
+let line_spacing =
+  read_spec (Dim Units.Vertical)
+    ~after:(("normal", Dim Units.Vertical) :: factors)
+
+let word_spacing =
+  read_spec (Dim Units.Horizontal)
+    ~after:[ ("normal", Dim Units.Horizontal); ("by", Plain) ]
+
 let columns = read_spec ~lead:[ Plain ] (Dim Units.Horizontal)
 
 let box ctx ops =
   match tokens ops with
   | [] -> emit ctx "bx" ~brk:true [ ("action", "line") ]
-  | w :: rest when List.mem (lc w) [ "off"; "can"; "new"; "set"; "add"; "char" ] ->
-    emit ctx "bx" ~brk:true
-      (("action", lc w) :: (if rest = [] then [] else [ ("spec", spec Units.Horizontal (String.concat " " rest)) ]))
-  | _ -> emit ctx "bx" ~brk:true [ ("action", "on"); ("spec", spec Units.Horizontal ops) ]
+  | w :: rest when List.mem (lc w) [ "off"; "can"; "new"; "set"; "add"; "char" ]
+    ->
+      emit ctx "bx" ~brk:true
+        (("action", lc w)
+        ::
+        (if rest = [] then []
+         else [ ("spec", spec Units.Horizontal (String.concat " " rest)) ]))
+  | _ ->
+      emit ctx "bx" ~brk:true
+        [ ("action", "on"); ("spec", spec Units.Horizontal ops) ]
 
 let tabs word ctx ops =
   match tokens ops with
   | [] -> emit ctx word ~brk:false [ ("action", "reset") ]
   | w :: rest when List.mem (lc w) [ "add"; "del"; "set" ] ->
-    emit ctx word ~brk:false [ ("action", lc w); ("stops", spec Units.Horizontal (String.concat " " rest)) ]
-  | _ -> emit ctx word ~brk:false [ ("action", "set"); ("stops", spec Units.Horizontal ops) ]
+      emit ctx word ~brk:false
+        [
+          ("action", lc w);
+          ("stops", spec Units.Horizontal (String.concat " " rest));
+        ]
+  | _ ->
+      emit ctx word ~brk:false
+        [ ("action", "set"); ("stops", spec Units.Horizontal ops) ]
 
 (* ---- fonts -------------------------------------------------------------------- *)
 
@@ -417,13 +533,16 @@ let previous_font ctx _ =
   let st = fmt ctx in
   (match st.fonts with _ :: rest -> st.fonts <- rest | [] -> ());
   emit ctx "pf" ~brk:false
-    (match st.fonts with f :: _ -> [ ("font", f) ] | [] -> [ ("initial", "yes") ])
+    (match st.fonts with
+    | f :: _ -> [ ("font", f) ]
+    | [] -> [ ("initial", "yes") ])
 
 let first_word s =
   let s = String.trim s in
   match String.index_opt s ' ' with
   | None -> (s, "")
-  | Some i -> (String.sub s 0 i, String.trim (String.sub s i (String.length s - i)))
+  | Some i ->
+      (String.sub s 0 i, String.trim (String.sub s i (String.length s - i)))
 
 let define_font ctx ops =
   match first_word ops with
@@ -438,14 +557,16 @@ let hyphenate ctx ops =
   Option.iter (fun m -> st.hyph <- m = "on") mode;
   emit ctx "hy" ~brk:false
     ((match mode with Some m -> [ ("mode", m) ] | None -> [])
-     @ (if opts = [] then [] else [ ("options", String.concat " " opts) ]))
+    @ if opts = [] then [] else [ ("options", String.concat " " opts) ])
 
 (* ---- headings, toc, split text ---------------------------------------------- *)
 
 let heading n ctx ops =
   let d = doc ctx in
-  Doc.start_element ~eol:true d "gml:h" [ ("level", string_of_int n); ("break", "yes") ];
-  if String.trim ops = "" then ignore (Doc.end_element d "gml:h") else push_text ctx ops
+  Doc.start_element ~eol:true d "gml:h"
+    [ ("level", string_of_int n); ("break", "yes") ];
+  if String.trim ops = "" then ignore (Doc.end_element d "gml:h")
+  else push_text ctx ops
 
 let define_head ctx ops =
   match first_word ops with
@@ -455,10 +576,16 @@ let define_head ctx ops =
 let toc ctx ops =
   let n, rest = first_word ops in
   let reserve, title =
-    match int_of_string_opt n with Some _ -> ([ ("reserve", n) ], rest) | None -> ([], String.trim ops)
+    match int_of_string_opt n with
+    | Some _ -> ([ ("reserve", n) ], rest)
+    | None -> ([], String.trim ops)
   in
   emit ctx "tc" ~brk:true
-    (reserve @ (if title = "" then [] else if title = "/" then [ ("title", "") ] else [ ("title", title) ]))
+    (reserve
+    @
+    if title = "" then []
+    else if title = "/" then [ ("title", "") ]
+    else [ ("title", title) ])
 
 (* .sx [f] [c] /left/fill/right/ (p.76) *)
 let split_text ctx ops =
@@ -474,7 +601,8 @@ let split_text ctx ops =
   else
     let d = s.[0] in
     match String.split_on_char d (String.sub s 1 (String.length s - 1)) with
-    | l :: f :: r :: _ -> emit ctx "sx" ~brk:true ([ ("left", l); ("fill", f); ("right", r) ] @ fl)
+    | l :: f :: r :: _ ->
+        emit ctx "sx" ~brk:true ([ ("left", l); ("fill", f); ("right", r) ] @ fl)
     | _ -> Ctx.error ctx ".sx: three delimited fields expected"
 
 (* ---- footnotes, running headings ----------------------------------------------- *)
@@ -482,9 +610,13 @@ let split_text ctx ops =
 let close_flow ctx name =
   match Doc.end_element ~force:true (doc ctx) name with
   | Doc.Closed forced ->
-    List.iter (fun n -> Ctx.warn ctx "element %s implicitly closed by .%s off" n
-                  (String.sub name 4 2)) forced
-  | Doc.Not_open -> Ctx.warn ctx ".%s off: no definition in progress" (String.sub name 4 2)
+      List.iter
+        (fun n ->
+          Ctx.warn ctx "element %s implicitly closed by .%s off" n
+            (String.sub name 4 2))
+        forced
+  | Doc.Not_open ->
+      Ctx.warn ctx ".%s off: no definition in progress" (String.sub name 4 2)
   | Doc.Mismatch _ -> ()
 
 let footnote ctx ops =
@@ -498,21 +630,28 @@ let running word ctx ops =
   let name = "gml:" ^ word in
   match List.map lc (tokens ops) with
   | [ "off" ] -> close_flow ctx name
-  | [ ("cancel" | "sup" | "res" | "execute") as a ] -> emit ctx word ~brk:false [ ("action", a) ]
+  | [ (("cancel" | "sup" | "res" | "execute") as a) ] ->
+      emit ctx word ~brk:false [ ("action", a) ]
   | [] | [ "on" ] -> Doc.start_element (doc ctx) name []
-  | [ ("odd" | "even") as p ] | [ ("odd" | "even") as p; "on" ] ->
-    Doc.start_element (doc ctx) name [ ("page", p) ]
-  | _ -> Ctx.error ctx ".%s: [ODD|EVEN] ON, OFF, CANCEL, SUP, RES or EXECUTE expected" word
+  | [ (("odd" | "even") as p) ] | [ (("odd" | "even") as p); "on" ] ->
+      Doc.start_element (doc ctx) name [ ("page", p) ]
+  | _ ->
+      Ctx.error ctx
+        ".%s: [ODD|EVEN] ON, OFF, CANCEL, SUP, RES or EXECUTE expected" word
 
 (* ---- revision codes ------------------------------------------------------------ *)
 
 let revision ctx ops =
   match tokens ops with
-  | "*" :: c :: _ -> Doc.open_scope (doc ctx) (scope ~word:"rc" ~n:"1" ~brk:false [ ("char", c) ] (Some 1))
+  | "*" :: c :: _ ->
+      Doc.open_scope (doc ctx)
+        (scope ~word:"rc" ~n:"1" ~brk:false [ ("char", c) ] (Some 1))
   | w :: rest when lc w = "adjust" ->
-    emit ctx "rc" ~brk:false [ ("adjust", spec Units.Horizontal (String.concat " " rest)) ]
+      emit ctx "rc" ~brk:false
+        [ ("adjust", spec Units.Horizontal (String.concat " " rest)) ]
   | [ n ] -> emit ctx "rc" ~brk:false [ ("code", n); ("char", " ") ]
-  | [ n; m ] when lc m = "on" || lc m = "off" -> emit ctx "rc" ~brk:false [ ("code", n); ("mode", lc m) ]
+  | [ n; m ] when lc m = "on" || lc m = "off" ->
+      emit ctx "rc" ~brk:false [ ("code", n); ("mode", lc m) ]
   | [ n; c ] -> emit ctx "rc" ~brk:false [ ("code", n); ("char", c) ]
   | _ -> Ctx.error ctx ".rc: invalid operands %s" ops
 
@@ -538,22 +677,29 @@ let translate ctx ops =
   let dst_of = function
     | None -> Some " "
     | Some b ->
-      Option.map (function `Char c -> String.make 1 c | `Code c -> utf8 c) (char_operand b)
+        Option.map
+          (function `Char c -> String.make 1 c | `Code c -> utf8 c)
+          (char_operand b)
   in
   let rec go = function
     | [] -> ()
     | a :: rest -> (
-      let b, rest = match rest with b :: r -> (Some b, r) | [] -> (None, []) in
-      match char_operand a, dst_of b with
-      | Some src, Some dst ->
-        let src = match src with `Char c -> c | `Code c -> Char.chr (c land 0xFF) in
-        if dst = String.make 1 src then Hashtbl.remove tbl src else Hashtbl.replace tbl src dst;
-        go rest
-      | _ -> Ctx.error ctx ".tr: invalid character %s" (String.concat " " (a :: Option.to_list b)))
+        let b, rest =
+          match rest with b :: r -> (Some b, r) | [] -> (None, [])
+        in
+        match (char_operand a, dst_of b) with
+        | Some src, Some dst ->
+            let src =
+              match src with `Char c -> c | `Code c -> Char.chr (c land 0xFF)
+            in
+            if dst = String.make 1 src then Hashtbl.remove tbl src
+            else Hashtbl.replace tbl src dst;
+            go rest
+        | _ ->
+            Ctx.error ctx ".tr: invalid character %s"
+              (String.concat " " (a :: Option.to_list b)))
   in
-  match Control.words ops with
-  | [] -> Hashtbl.reset tbl
-  | ws -> go ws
+  match Control.words ops with [] -> Hashtbl.reset tbl | ws -> go ws
 
 (* .dv name [text | font f] /string (p.258): the symbol gets the
    string.  DCF-VERIFY: the font is ignored; the value is not protected
@@ -567,8 +713,9 @@ let define_variable ctx ops =
       match lc w with
       | "text" -> r
       | "font" ->
-        Ctx.warn_once ctx "dv-font" ".dv: the font of a defined variable is ignored";
-        snd (first_word r)
+          Ctx.warn_once ctx "dv-font"
+            ".dv: the font of a defined variable is ignored";
+          snd (first_word r)
       | _ -> rest
     in
     if rest = "" then Ctx.error ctx ".dv %s: /string expected" name
@@ -602,7 +749,8 @@ type row = {
 let row name brk grammar run = { name; brk; grammar; run }
 
 let table =
-  [ row "br" Yes "" break_;
+  [
+    row "br" Yes "" break_;
     row "lb" Yes "(leading blank)" break_;
     row "lt" Yes "(leading tab)" break_;
     row "bl" Yes "(blank line)" blank_line;
@@ -620,8 +768,10 @@ let table =
     row "un" Yes "h" (one_line "un" (-1));
     row "of" Yes "[h]" offset;
     row "ll" Yes "[h]" line_length;
-    row "fo" Yes "[on|off|left|right|center|inside|outside] [extend|fold|trunc]" (format false);
-    row "nf" Yes "[on|off|left|right|center|inside|outside] [extend|fold|trunc]" (format true);
+    row "fo" Yes "[on|off|left|right|center|inside|outside] [extend|fold|trunc]"
+      (format false);
+    row "nf" Yes "[on|off|left|right|center|inside|outside] [extend|fold|trunc]"
+      (format true);
     row "ju" Yes "[on|off]" justify;
     row "pa" Varies "[n|odd|even|nostart|nobreak] [on|off]" page;
     row "cp" Yes "[v]" (conditional_eject "cp");
@@ -650,11 +800,13 @@ let table =
     row "pf" No "" previous_font;
     row "df" No "name spec" define_font;
     row "hy" No "[on|off] [options]" hyphenate;
-    row "hw" No "word" (fun ctx ops -> emit ctx "hw" ~brk:false [ ("word", String.trim ops) ]);
+    row "hw" No "word" (fun ctx ops ->
+        emit ctx "hw" ~brk:false [ ("word", String.trim ops) ]);
     row "rc" No "n [on|off|c] | adjust h | * c" revision;
     row "bc" No "on|off" (generic ~read:plain "bc" ~brk:false);
     row "fl" No "on|off|dump ..." (generic ~read:plain "fl" ~brk:false);
-    row "ls" No "[v] | normal v | by f | skip|space|text f [f]" (generic ~read:line_spacing "ls" ~brk:false);
+    row "ls" No "[v] | normal v | by f | skip|space|text f [f]"
+      (generic ~read:line_spacing "ls" ~brk:false);
     row "sb" No "[v]" (generic ~read:vertical "sb" ~brk:false);
     row "ws" No "normal h | by f" (generic ~read:word_spacing "ws" ~brk:false);
     row "es" No "normal h | by f" (generic ~read:word_spacing "es" ~brk:false);
@@ -663,7 +815,8 @@ let table =
     row "ic" No "..." (generic "ic" ~brk:false);
     row "ud" No "on|off|rule v" (generic ~read:vertical "ud" ~brk:false);
     row "dr" No "name spec" (generic "dr" ~brk:false);
-    row "pn" No "on|off|offno|roman|arabic|alpha|... | n | pref x" (generic ~read:plain "pn" ~brk:false);
+    row "pn" No "on|off|offno|roman|arabic|alpha|... | n | pref x"
+      (generic ~read:plain "pn" ~brk:false);
     row "pl" No "[v]" (generic ~read:vertical "pl" ~brk:false);
     row "pw" No "[h]" (generic "pw" ~brk:false);
     row "pm" No "[nobind] h [h]" (generic "pm" ~brk:false);
@@ -674,9 +827,11 @@ let table =
     row "sc" Yes "" (generic "sc" ~brk:true);
     row "mc" Yes "" (generic "mc" ~brk:true);
     row "tr" Not_a_hint "pairs of c|hh" translate;
-    row "dv" Not_a_hint "name [text|font f] /string" define_variable ]
-  @ List.map (fun w -> row w Not_a_hint "(ignored)" (device w))
-    [ "dd"; "it"; "sv"; "dl"; "uw"; "oc"; "sy"; "te"; "lo" ]
+    row "dv" Not_a_hint "name [text|font f] /string" define_variable;
+  ]
+  @ List.map
+      (fun w -> row w Not_a_hint "(ignored)" (device w))
+      [ "dd"; "it"; "sv"; "dl"; "uw"; "oc"; "sy"; "te"; "lo" ]
 
 let install ctx = List.iter (fun r -> Ctx.register ctx r.name r.run) table
 

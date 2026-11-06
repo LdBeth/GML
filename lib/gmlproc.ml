@@ -46,28 +46,26 @@
    (p.294); the residual text then ends the line.  An empty residual
    ends the line only if text came before the tag on that line. *)
 
-type apf =
-  | Apf_macro of string * Macro.def
-  | Apf_word of string * Ctx.word
+type apf = Apf_macro of string * Macro.def | Apf_word of string * Ctx.word
 
 (* ---- rules -------------------------------------------------------------- *)
 
 let apply_rules (r : Ctx.rules) kws =
   List.fold_left
     (fun acc kw ->
-       Result.bind acc (fun (r : Ctx.rules) ->
-           match String.lowercase_ascii kw with
-           | "att" -> Ok { r with att = true }
-           | "noatt" -> Ok { r with att = false }
-           | "vat" -> Ok { r with vat = true }
-           | "novat" -> Ok { r with vat = false }
-           | "stop" -> Ok { r with stop = true }
-           | "step" -> Ok { r with stop = false }
-           | "msg" -> Ok { r with msg = true }
-           | "nomsg" -> Ok { r with msg = false }
-           | "elem" -> Ok { r with elem = true }
-           | "noelem" -> Ok { r with elem = false }
-           | _ -> Error kw))
+      Result.bind acc (fun (r : Ctx.rules) ->
+          match String.lowercase_ascii kw with
+          | "att" -> Ok { r with att = true }
+          | "noatt" -> Ok { r with att = false }
+          | "vat" -> Ok { r with vat = true }
+          | "novat" -> Ok { r with vat = false }
+          | "stop" -> Ok { r with stop = true }
+          | "step" -> Ok { r with stop = false }
+          | "msg" -> Ok { r with msg = true }
+          | "nomsg" -> Ok { r with msg = false }
+          | "elem" -> Ok { r with elem = true }
+          | "noelem" -> Ok { r with elem = false }
+          | _ -> Error kw))
     (Ok r) kws
 
 let rules_or_base base kws = Result.value (apply_rules base kws) ~default:base
@@ -84,13 +82,13 @@ let find_named ctx name =
   match Macro.find ctx.Ctx.macros name with
   | Some m -> Some (Apf_macro (String.lowercase_ascii name, m))
   | None -> (
-    let k = String.lowercase_ascii name in
-    match Hashtbl.find_opt ctx.Ctx.words k with
-    | Some w -> Some (Apf_word (k, w))
-    | None ->
-      (* neither a macro nor native: the macro library, with .ly on|mac
+      let k = String.lowercase_ascii name in
+      match Hashtbl.find_opt ctx.Ctx.words k with
+      | Some w -> Some (Apf_word (k, w))
+      | None ->
+          (* neither a macro nor native: the macro library, with .ly on|mac
          ([Library]); an [.aa] APF of the Starter Set comes from there *)
-      Option.map (fun m -> Apf_macro (k, m)) (Library.find_macro ctx name))
+          Option.map (fun m -> Apf_macro (k, m)) (Library.find_macro ctx name))
 
 (** APF and rules for tag [name] (lowercase). *)
 let lookup ctx ~is_end name =
@@ -107,11 +105,12 @@ let lookup ctx ~is_end name =
     (* DCF-VERIFY: an explicit APF that does not exist is not replaced
        by the class or direct mapping *)
     | None -> (
-      let dname = if is_end then "e" ^ name else name in
-      let cls =
-        Option.bind ctx.Ctx.prefix (fun c -> find_named ctx (String.make 1 c ^ dname))
-      in
-      match cls with Some _ -> cls | None -> find_named ctx dname)
+        let dname = if is_end then "e" ^ name else name in
+        let cls =
+          Option.bind ctx.Ctx.prefix (fun c ->
+              find_named ctx (String.make 1 c ^ dname))
+        in
+        match cls with Some _ -> cls | None -> find_named ctx dname)
   in
   (apf, rules)
 
@@ -122,7 +121,6 @@ let is_blank_string s = String.for_all Tagscan.is_blank s
 (* DCF-VERIFY: a line taken as markup continuation or residual text is
    substituted on its own, without the extended symbol rule. *)
 let substitute ctx s = if ctx.Ctx.subst_on then Subst.string ctx s else s
-
 let warn_on ctx = ctx.Ctx.tag_scan = Ctx.Tags_on
 
 (* The tag as written, for messages. *)
@@ -136,17 +134,18 @@ let next_text_line ctx d =
   match Input.peek_in_frame ctx.Ctx.input with
   | None -> None
   | Some (raw, loc) -> (
-    match Line.classify ctx.Ctx.chars raw with
-    | Line.Control _ | Line.Comment _ | Line.Label _ -> None
-    | Line.Text _ ->
-      if is_blank_string raw then None
-      (* DCF-VERIFY: a blank line ends the markup *)
-      else if Tagscan.tag_at d raw (Tagscan.skip_blanks raw 0) <> None then None
-      else begin
-        ignore (Input.next_line ctx.Ctx.input);
-        ctx.Ctx.loc <- loc;
-        Some (substitute ctx raw)
-      end)
+      match Line.classify ctx.Ctx.chars raw with
+      | Line.Control _ | Line.Comment _ | Line.Label _ -> None
+      | Line.Text _ ->
+          if is_blank_string raw then
+            None (* DCF-VERIFY: a blank line ends the markup *)
+          else if Tagscan.tag_at d raw (Tagscan.skip_blanks raw 0) <> None then
+            None
+          else begin
+            ignore (Input.next_line ctx.Ctx.input);
+            ctx.Ctx.loc <- loc;
+            Some (substitute ctx raw)
+          end)
 
 (* ---- elements ------------------------------------------------------------ *)
 
@@ -154,8 +153,8 @@ let xml_attrs ctx tag named vats =
   let keep (k, _) =
     Tagscan.xml_name k
     || begin
-      Ctx.warn ctx "tag %s: attribute %s is not an XML name; left out of the element"
-        tag k;
+      Ctx.warn ctx
+        "tag %s: attribute %s is not an XML name; left out of the element" tag k;
       false
     end
   in
@@ -163,8 +162,8 @@ let xml_attrs ctx tag named vats =
   let vats =
     List.filter_map
       (fun w ->
-         let k = String.lowercase_ascii w in
-         if Tagscan.xml_name k then Some (k, w) else None)
+        let k = String.lowercase_ascii w in
+        if Tagscan.xml_name k then Some (k, w) else None)
       vats
   in
   Tagscan.last_wins (List.filter keep (named @ vats))
@@ -187,13 +186,14 @@ let opens_element ctx name =
 let close_auto ctx src name ~has_apf =
   if has_apf && not (opens_element ctx name) then ()
   else
-  match Doc.end_element ~force:true ctx.Ctx.doc name with
-  | Doc.Closed forced ->
-    List.iter
-      (fun n -> Ctx.warn ctx "element %s implicitly closed by end tag %s" n src)
-      forced
-  | Doc.Mismatch _ -> ()
-  | Doc.Not_open -> Ctx.warn ctx "end tag %s: element %s is not open" src name
+    match Doc.end_element ~force:true ctx.Ctx.doc name with
+    | Doc.Closed forced ->
+        List.iter
+          (fun n ->
+            Ctx.warn ctx "element %s implicitly closed by end tag %s" n src)
+          forced
+    | Doc.Mismatch _ -> ()
+    | Doc.Not_open -> Ctx.warn ctx "end tag %s: element %s is not open" src name
 
 (* ---- APF invocation ------------------------------------------------------ *)
 
@@ -215,29 +215,32 @@ let schedule_apf ctx apf args =
   match apf with
   | Apf_macro _ -> invoke_apf ctx apf args
   | Apf_word (name, _) ->
-    let ch = ctx.Ctx.chars in
-    let line = Printf.sprintf "%c'%s %s" ch.Chars.cw_ind name (String.concat " " args) in
-    Input.push_lines ~kind:(Input.Split true) ctx.input [ (line, ctx.loc) ]
+      let ch = ctx.Ctx.chars in
+      let line =
+        Printf.sprintf "%c'%s %s" ch.Chars.cw_ind name (String.concat " " args)
+      in
+      Input.push_lines ~kind:(Input.Split true) ctx.input [ (line, ctx.loc) ]
 
 (* ---- text lines ------------------------------------------------------------ *)
 
-type decision =
-  | As_text
-  | Tag of Tagscan.found * apf option * Ctx.rules
+type decision = As_text | Tag of Tagscan.found * apf option * Ctx.rules
 
 let undefined ctx s (f : Tagscan.found) rules =
   let src = written s f in
   match ctx.Ctx.undef_tags with
   | Ctx.Undef_text ->
-    (* an error message and the tag is text (SH35-0050 p.8; SH35-0069
+      (* an error message and the tag is text (SH35-0050 p.8; SH35-0069
        p.295 says a warning); none under .gs tag onno (p.295) *)
-    if warn_on ctx then Ctx.error ctx "no APF for tag %s; treated as text" src;
-    As_text
-  | Ctx.Undef_error -> Ctx.error ctx "no APF for tag %s" src; As_text
+      if warn_on ctx then Ctx.error ctx "no APF for tag %s; treated as text" src;
+      As_text
+  | Ctx.Undef_error ->
+      Ctx.error ctx "no APF for tag %s" src;
+      As_text
   (* also under .gs tag onno *)
   | Ctx.Undef_element ->
-    if warn_on ctx then Ctx.warn ctx "no APF for tag %s; emitted as an element" src;
-    Tag (f, None, rules)
+      if warn_on ctx then
+        Ctx.warn ctx "no APF for tag %s; emitted as an element" src;
+      Tag (f, None, rules)
 
 (* With a two-character end-tag delimiter such as ":e", every name after
    it is an end tag (SH35-0050 p.6): there is no fallback to a start tag
@@ -246,8 +249,8 @@ let decide ctx s (f : Tagscan.found) =
   match lookup ctx ~is_end:f.is_end f.name with
   | (Some _ as apf), rules -> Tag (f, apf, rules)
   | None, rules ->
-    if f.is_end && Doc.is_open ctx.Ctx.doc f.name then Tag (f, None, rules)
-    else undefined ctx s f rules
+      if f.is_end && Doc.is_open ctx.Ctx.doc f.name then Tag (f, None, rules)
+      else undefined ctx s f rules
 
 (* The end of a piece of text: [eol] if it ends its input line, then
    with "\n" — always for a [plain] input line, otherwise if it is not
@@ -257,11 +260,12 @@ let final ctx ~plain (p : Input.piece) seg =
   else if plain || seg <> "" || p.had_text then Doc.text ctx.Ctx.doc seg
   else Doc.end_line ctx.Ctx.doc
 
-(** Process text (already substituted): an input line ([plain]), or a
-    piece of one after a tag (see [Input.piece]). *)
+(** Process text (already substituted): an input line ([plain]), or a piece of
+    one after a tag (see [Input.piece]). *)
 let rec text ctx ~plain (p : Input.piece) s =
   let d =
-    if ctx.Ctx.tag_scan = Ctx.Tags_off then None else Tagscan.delims_of ctx.Ctx.chars
+    if ctx.Ctx.tag_scan = Ctx.Tags_off then None
+    else Tagscan.delims_of ctx.Ctx.chars
   in
   match d with
   | None -> final ctx ~plain p s
@@ -271,13 +275,13 @@ and scan ctx d ~plain p s start pos =
   match Tagscan.find_tag d s pos with
   | None -> final ctx ~plain p (String.sub s start (String.length s - start))
   | Some f -> (
-    match decide ctx s f with
-    | As_text -> scan ctx d ~plain p s start f.after
-    | Tag (f, apf, rules) ->
-      let before = String.sub s start (f.at - start) in
-      Doc.text_inline ctx.Ctx.doc before;
-      tag ctx d f apf rules s ~eol:p.eol
-        ~had_text:(p.had_text || not (is_blank_string before)))
+      match decide ctx s f with
+      | As_text -> scan ctx d ~plain p s start f.after
+      | Tag (f, apf, rules) ->
+          let before = String.sub s start (f.at - start) in
+          Doc.text_inline ctx.Ctx.doc before;
+          tag ctx d f apf rules s ~eol:p.eol
+            ~had_text:(p.had_text || not (is_blank_string before)))
 
 (* The markup of tag [f] (from [f.after] on line [s]): its attributes,
    what follows the markup on the line where it ends, and whether the
@@ -294,20 +298,22 @@ and markup ctx d (f : Tagscan.found) (rules : Ctx.rules) s =
   end
   else begin
     let rec go s i acc =
-      let r = Tagscan.attributes d ~att:rules.att ~vat:rules.vat ~stop:rules.stop s i in
+      let r =
+        Tagscan.attributes d ~att:rules.att ~vat:rules.vat ~stop:rules.stop s i
+      in
       if rules.msg then
         List.iter
           (fun a ->
-             Ctx.warn ctx "tag %s: invalid attribute %s%s" src a
-               (if rules.stop then " (treated as text)" else " (ignored)"))
+            Ctx.warn ctx "tag %s: invalid attribute %s%s" src a
+              (if rules.stop then " (treated as text)" else " (ignored)"))
           r.invalid;
       let acc = acc @ r.attrs in
       match r.stop with
       | Tagscan.Eol -> (
-        (* the scan goes on over the following lines (p.289) *)
-        match next_text_line ctx d with
-        | Some s2 -> go s2 0 acc
-        | None -> (acc, "", true))
+          (* the scan goes on over the following lines (p.289) *)
+          match next_text_line ctx d with
+          | Some s2 -> go s2 0 acc
+          | None -> (acc, "", true))
       | Tagscan.Mcs k -> (acc, rest s k, k = String.length s)
       | Tagscan.Next_tag k | Tagscan.Invalid k -> (acc, rest s k, false)
     in
@@ -332,19 +338,23 @@ and tag ctx d (f : Tagscan.found) apf (rules : Ctx.rules) s ~had_text ~eol =
   let residual, remainder =
     match Tagscan.find_tag d after 0 with
     | Some n ->
-      (String.sub after 0 n.at, Some (String.sub after n.at (String.length after - n.at)))
+        ( String.sub after 0 n.at,
+          Some (String.sub after n.at (String.length after - n.at)) )
     | None -> (after, None)
   in
   let named, vats =
     List.partition_map
-      (function Tagscan.Named (k, v) -> Either.Left (k, v) | Tagscan.Vat w -> Either.Right w)
+      (function
+        | Tagscan.Named (k, v) -> Either.Left (k, v)
+        | Tagscan.Vat w -> Either.Right w)
       attrs
   in
   ctx.gml_attrs <- named;
   (* our automatic element *)
   (* an end tag whose rules say noelem leaves the element to its APF
      ([.xe]), so that the APF's output can still go inside it *)
-  if f.is_end then (if rules.elem then close_auto ctx src f.name ~has_apf:(apf <> None))
+  if f.is_end then (
+    if rules.elem then close_auto ctx src f.name ~has_apf:(apf <> None))
   else if rules.elem then open_auto ctx f.name named vats;
   ctx.last_tag <-
     String.sub s (f.after - String.length f.name) (String.length f.name);
@@ -355,13 +365,14 @@ and tag ctx d (f : Tagscan.found) apf (rules : Ctx.rules) s ~had_text ~eol =
      text, are processed after the APF *)
   Option.iter
     (fun r ->
-       ignore
-         (Input.push_residual ctx.input r ctx.loc
-            { Input.had_text = had_text || not (is_blank_string residual); eol }))
+      ignore
+        (Input.push_residual ctx.input r ctx.loc
+           { Input.had_text = had_text || not (is_blank_string residual); eol }))
     remainder;
   ctx.residual <-
-    Some (Input.push_residual ctx.input residual ctx.loc
-            { Input.had_text; eol = eol && remainder = None });
+    Some
+      (Input.push_residual ctx.input residual ctx.loc
+         { Input.had_text; eol = eol && remainder = None });
   (* 4. the APF *)
   Option.iter (fun a -> invoke_apf ctx a vats) apf
 
@@ -380,10 +391,13 @@ let items s =
     else if s.[i] = '(' then
       match String.index_from_opt s i ')' with
       | None -> Error "missing )"
-      | Some e -> go (e + 1) (G (words (String.sub s (i + 1) (e - i - 1))) :: acc)
+      | Some e ->
+          go (e + 1) (G (words (String.sub s (i + 1) (e - i - 1))) :: acc)
     else begin
       let j = ref i in
-      while !j < n && not (Tagscan.is_blank s.[!j]) && s.[!j] <> '(' do incr j done;
+      while !j < n && (not (Tagscan.is_blank s.[!j])) && s.[!j] <> '(' do
+        incr j
+      done;
       go !j (W (String.sub s i (!j - i)) :: acc)
     end
   in
@@ -395,7 +409,9 @@ let check_rules ctx cw g k =
   | Error kw -> Ctx.error ctx ".%s: unknown rule %s" cw kw
 
 let valid_tag_name t =
-  match Tagscan.tag_name t 0 with Some j -> j = String.length t | None -> false
+  match Tagscan.tag_name t 0 with
+  | Some j -> j = String.length t
+  | None -> false
 
 (* .aa tag [apf] [(rules)] [endapf] [(rules)]   (p.291, p.295)
    .aa tag alone removes the association (DCF-VERIFY). *)
@@ -405,23 +421,23 @@ let aa ctx ops =
   | Ok [] -> Ctx.error ctx ".aa: tag name required"
   | Ok (G _ :: _) -> Ctx.error ctx ".aa: tag name required"
   | Ok (W t :: rest) ->
-    if not (valid_tag_name t) then Ctx.error ctx ".aa: invalid tag name %s" t
-    else begin
-      let key = String.lowercase_ascii t in
-      let take_w = function W a :: r -> (Some a, r) | r -> (None, r) in
-      let take_g = function G g :: r -> (g, r) | r -> ([], r) in
-      let apf, r = take_w rest in
-      let arules, r = take_g r in
-      let endapf, r = take_w r in
-      let endrules, r = take_g r in
-      if r <> [] then Ctx.error ctx ".aa %s: too many operands" t
-      else if rest = [] then Hashtbl.remove ctx.Ctx.assocs key
-      else
-        check_rules ctx "aa" arules (fun () ->
-            check_rules ctx "aa" endrules (fun () ->
-                Hashtbl.replace ctx.Ctx.assocs key
-                  { Ctx.apf; arules; endapf; endrules }))
-    end
+      if not (valid_tag_name t) then Ctx.error ctx ".aa: invalid tag name %s" t
+      else begin
+        let key = String.lowercase_ascii t in
+        let take_w = function W a :: r -> (Some a, r) | r -> (None, r) in
+        let take_g = function G g :: r -> (g, r) | r -> ([], r) in
+        let apf, r = take_w rest in
+        let arules, r = take_g r in
+        let endapf, r = take_w r in
+        let endrules, r = take_g r in
+        if r <> [] then Ctx.error ctx ".aa %s: too many operands" t
+        else if rest = [] then Hashtbl.remove ctx.Ctx.assocs key
+        else
+          check_rules ctx "aa" arules (fun () ->
+              check_rules ctx "aa" endrules (fun () ->
+                  Hashtbl.replace ctx.Ctx.assocs key
+                    { Ctx.apf; arules; endapf; endrules }))
+      end
 
 (* .gs rules (tag rules) (end-tag rules) (p.291).  The keywords change
    the current rules one by one (DCF-VERIFY: unnamed rules keep their
@@ -430,28 +446,41 @@ let gs_rules ctx ops =
   match items ops with
   | Error e -> Ctx.error ctx ".gs rules: %s" e
   | Ok its ->
-    let groups = List.filter_map (function G g -> Some g | W _ -> None) its in
-    if List.exists (function W _ -> true | G _ -> false) its || groups = []
-       || List.length groups > 2
-    then Ctx.error ctx ".gs rules: (tag rules) [(end-tag rules)] expected"
-    else begin
-      let set get put g =
-        match apply_rules (get ()) g with
-        | Ok r -> put r
-        | Error kw -> Ctx.error ctx ".gs rules: unknown rule %s" kw
+      let groups =
+        List.filter_map (function G g -> Some g | W _ -> None) its
       in
-      (match groups with
-       | g :: _ -> set (fun () -> ctx.Ctx.tag_rules) (fun r -> ctx.Ctx.tag_rules <- r) g
-       | [] -> ());
-      match groups with
-      | [ _; g ] -> set (fun () -> ctx.Ctx.end_rules) (fun r -> ctx.Ctx.end_rules <- r) g
-      | _ -> ()
-    end
+      if
+        List.exists (function W _ -> true | G _ -> false) its
+        || groups = []
+        || List.length groups > 2
+      then Ctx.error ctx ".gs rules: (tag rules) [(end-tag rules)] expected"
+      else begin
+        let set get put g =
+          match apply_rules (get ()) g with
+          | Ok r -> put r
+          | Error kw -> Ctx.error ctx ".gs rules: unknown rule %s" kw
+        in
+        (match groups with
+        | g :: _ ->
+            set
+              (fun () -> ctx.Ctx.tag_rules)
+              (fun r -> ctx.Ctx.tag_rules <- r)
+              g
+        | [] -> ());
+        match groups with
+        | [ _; g ] ->
+            set
+              (fun () -> ctx.Ctx.end_rules)
+              (fun r -> ctx.Ctx.end_rules <- r)
+              g
+        | _ -> ()
+      end
 
 (* "name [as x] name [as x] ..." *)
 let rec name_as = function
   | [] -> []
-  | n :: a :: x :: rest when String.lowercase_ascii a = "as" -> (n, Some x) :: name_as rest
+  | n :: a :: x :: rest when String.lowercase_ascii a = "as" ->
+      (n, Some x) :: name_as rest
   | n :: rest -> (n, None) :: name_as rest
 
 (* .gs exatt [name [as apf]] ...: process stacked attributes by their
@@ -467,21 +496,23 @@ let exatt ctx args =
   let calls =
     List.filter_map
       (fun (k, a) ->
-         match List.assoc_opt k stack with
-         | None -> None   (* not specified: skipped (p.293) *)
-         | Some v -> (
-           let lk = String.lowercase_ascii k in
-           let name = Option.value a ~default:lk in
-           match find_named ctx name with
-           | Some apf -> Some (k, apf, v)
-           | None ->
-             (* a message (SH35-0050 p.9) *)
-             Ctx.warn ctx ".gs exatt: no APF %s for attribute %s" name lk;
-             None))
+        match List.assoc_opt k stack with
+        | None -> None (* not specified: skipped (p.293) *)
+        | Some v -> (
+            let lk = String.lowercase_ascii k in
+            let name = Option.value a ~default:lk in
+            match find_named ctx name with
+            | Some apf -> Some (k, apf, v)
+            | None ->
+                (* a message (SH35-0050 p.9) *)
+                Ctx.warn ctx ".gs exatt: no APF %s for attribute %s" name lk;
+                None))
       selected
   in
   ctx.gml_attrs <-
-    List.filter (fun (k, _) -> not (List.exists (fun (k', _, _) -> k' = k) calls)) stack;
+    List.filter
+      (fun (k, _) -> not (List.exists (fun (k', _, _) -> k' = k) calls))
+      stack;
   List.iter (fun (_, apf, v) -> schedule_apf ctx apf [ v ]) (List.rev calls)
 
 (* .gs attval name [as sym] ...: the symbol &NAME, the attribute name in
@@ -492,12 +523,15 @@ let exatt ctx args =
 let attval ctx args =
   List.iter
     (fun (k, a) ->
-       let v = Option.value (List.assoc_opt (String.uppercase_ascii k) ctx.Ctx.gml_attrs)
-           ~default:"" in
-       let sym = Option.value a ~default:(String.uppercase_ascii k) in
-       match Symbols.set ctx.Ctx.syms sym v with
-       | Ok () -> ()
-       | Error e -> Ctx.error ctx ".gs attval: %s" e)
+      let v =
+        Option.value
+          (List.assoc_opt (String.uppercase_ascii k) ctx.Ctx.gml_attrs)
+          ~default:""
+      in
+      let sym = Option.value a ~default:(String.uppercase_ascii k) in
+      match Symbols.set ctx.Ctx.syms sym v with
+      | Ok () -> ()
+      | Error e -> Ctx.error ctx ".gs attval: %s" e)
     (name_as args)
 
 (* The residual text of the current tag, if not yet processed. *)
@@ -516,12 +550,12 @@ let set_sym ctx cw sym v =
 let scan_copy ctx cw ~remove args =
   match args with
   | [ sym ] -> (
-    match residual ctx with
-    | Some l ->
-      let t, loc, k = l.Input.src.(0) in
-      set_sym ctx cw sym t;
-      if remove then l.src.(0) <- ("", loc, k)
-    | None -> set_sym ctx cw sym "")
+      match residual ctx with
+      | Some l ->
+          let t, loc, k = l.Input.src.(0) in
+          set_sym ctx cw sym t;
+          if remove then l.src.(0) <- ("", loc, k)
+      | None -> set_sym ctx cw sym "")
   | _ -> Ctx.error ctx ".gs %s: one symbol name expected" cw
 
 (* .gs insert text: before the residual text, with continuation (no
@@ -529,8 +563,8 @@ let scan_copy ctx cw ~remove args =
 let insert ctx text =
   match residual ctx with
   | Some l ->
-    let t, loc, k = l.Input.src.(0) in
-    l.src.(0) <- (text ^ t, loc, k)
+      let t, loc, k = l.Input.src.(0) in
+      l.src.(0) <- (text ^ t, loc, k)
   | None -> Ctx.warn ctx ".gs insert: no residual text to insert before"
 
 (* The operand string after the first word. *)
@@ -538,7 +572,9 @@ let after_word s =
   let i = Tagscan.skip_blanks s 0 in
   let n = String.length s in
   let j = ref i in
-  while !j < n && not (Tagscan.is_blank s.[!j]) do incr j done;
+  while !j < n && not (Tagscan.is_blank s.[!j]) do
+    incr j
+  done;
   let k = if !j < n then !j + 1 else !j in
   String.sub s k (n - k)
 
@@ -566,20 +602,28 @@ let args_tokens s =
       go j (v :: acc)
     else begin
       let j = ref i in
-      while !j < n && not (Tagscan.is_blank s.[!j]) do incr j done;
+      while !j < n && not (Tagscan.is_blank s.[!j]) do
+        incr j
+      done;
       go !j (String.sub s i (!j - i) :: acc)
     end
   in
   go 0 []
 
 let is_arg_key k =
-  String.length k >= 2 && k.[0] = '*'
-  && String.for_all (function '0' .. '9' -> true | _ -> false)
+  String.length k >= 2
+  && k.[0] = '*'
+  && String.for_all
+       (function '0' .. '9' -> true | _ -> false)
        (String.sub k 1 (String.length k - 1))
 
 let gs_args ctx ops =
   let scope = ctx.Ctx.syms.Symbols.local () in
-  let old = Hashtbl.fold (fun k _ acc -> if is_arg_key k then k :: acc else acc) scope [] in
+  let old =
+    Hashtbl.fold
+      (fun k _ acc -> if is_arg_key k then k :: acc else acc)
+      scope []
+  in
   List.iter (Hashtbl.remove scope) old;
   let ops = String.trim ops in
   let toks = args_tokens ops in
@@ -594,39 +638,42 @@ let gs_args ctx ops =
 let gs_vars ctx names =
   List.iteri
     (fun i name ->
-       let v =
-         Option.value ~default:"" (Symbols.get ctx.Ctx.syms ("*" ^ string_of_int (i + 1)))
-       in
-       Control.check_name ctx ".gs vars" name (fun () ->
-           match Symbols.set ctx.Ctx.syms name v with
-           | Ok () -> ()
-           | Error e -> Ctx.error ctx ".gs vars: %s" e))
+      let v =
+        Option.value ~default:""
+          (Symbols.get ctx.Ctx.syms ("*" ^ string_of_int (i + 1)))
+      in
+      Control.check_name ctx ".gs vars" name (fun () ->
+          match Symbols.set ctx.Ctx.syms name v with
+          | Ok () -> ()
+          | Error e -> Ctx.error ctx ".gs vars: %s" e))
     names
 
 let gs ctx ops =
   match words ops with
   | [] -> Ctx.error ctx ".gs: service required"
   | w :: args -> (
-    match (String.lowercase_ascii w, List.map String.lowercase_ascii args) with
-    | "tag", [ "on" ] -> ctx.Ctx.tag_scan <- Ctx.Tags_on
-    | "tag", [ "onno" ] -> ctx.tag_scan <- Ctx.Tags_onno
-    | "tag", [ "off" ] -> ctx.tag_scan <- Ctx.Tags_off
-    | "tag", _ -> Ctx.error ctx ".gs tag: ON, ONNO or OFF expected"
-    | "rules", _ -> gs_rules ctx (after_word ops)
-    | "prefix", ([] | [ "off" ]) -> ctx.prefix <- None
-    (* DCF-VERIFY: .gs prefix without operand / OFF ends class mapping *)
-    | "prefix", [ c ] when String.length c = 1 -> ctx.prefix <- Some c.[0]
-    | "prefix", _ -> Ctx.error ctx ".gs prefix: one character expected"
-    | "exatt", _ -> exatt ctx args
-    | "attval", _ ->
-      if args = [] then Ctx.error ctx ".gs attval: attribute name expected"
-      else attval ctx args
-    | "scan", _ -> scan_copy ctx "scan" ~remove:true args
-    | "copy", _ -> scan_copy ctx "copy" ~remove:false args
-    | "insert", _ -> insert ctx (after_word ops)
-    | "args", _ -> gs_args ctx (after_word ops)
-    | "vars", _ -> gs_vars ctx args
-    | s, _ -> Ctx.warn ctx "unsupported .gs service %s" s)
+      match
+        (String.lowercase_ascii w, List.map String.lowercase_ascii args)
+      with
+      | "tag", [ "on" ] -> ctx.Ctx.tag_scan <- Ctx.Tags_on
+      | "tag", [ "onno" ] -> ctx.tag_scan <- Ctx.Tags_onno
+      | "tag", [ "off" ] -> ctx.tag_scan <- Ctx.Tags_off
+      | "tag", _ -> Ctx.error ctx ".gs tag: ON, ONNO or OFF expected"
+      | "rules", _ -> gs_rules ctx (after_word ops)
+      | "prefix", ([] | [ "off" ]) -> ctx.prefix <- None
+      (* DCF-VERIFY: .gs prefix without operand / OFF ends class mapping *)
+      | "prefix", [ c ] when String.length c = 1 -> ctx.prefix <- Some c.[0]
+      | "prefix", _ -> Ctx.error ctx ".gs prefix: one character expected"
+      | "exatt", _ -> exatt ctx args
+      | "attval", _ ->
+          if args = [] then Ctx.error ctx ".gs attval: attribute name expected"
+          else attval ctx args
+      | "scan", _ -> scan_copy ctx "scan" ~remove:true args
+      | "copy", _ -> scan_copy ctx "copy" ~remove:false args
+      | "insert", _ -> insert ctx (after_word ops)
+      | "args", _ -> gs_args ctx (after_word ops)
+      | "vars", _ -> gs_vars ctx args
+      | s, _ -> Ctx.warn ctx "unsupported .gs service %s" s)
 
 let install ctx =
   Ctx.register ctx "gs" gs;

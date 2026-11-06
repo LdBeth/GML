@@ -89,8 +89,8 @@ let dm_operands ctx s =
 let ends_definition ctx s =
   match Line.classify ctx.Ctx.chars s with
   | Line.Control c ->
-    c.name = "dm" && (not c.quoted)
-    && String.lowercase_ascii (String.trim (Line.operands c)) = "off"
+      c.name = "dm" && (not c.quoted)
+      && String.lowercase_ascii (String.trim (Line.operands c)) = "off"
   | _ -> false
 
 let starts_definition ctx s =
@@ -104,13 +104,15 @@ let skip_line ctx s =
   let ch = ctx.Ctx.chars in
   match Option.map Macro.parse_dm (dm_operands ctx s) with
   | Some (Macro.Begin name) ->
-    ctx.capture <-
-      Some { Ctx.cname = name; cbody = []; cfrom = ctx.loc; discard = true }
+      ctx.capture <-
+        Some { Ctx.cname = name; cbody = []; cfrom = ctx.loc; discard = true }
   | _ ->
-    let s, rest = Line.split ch ~is_cw:(is_cw ctx) s in
-    Option.iter (fun r -> Input.push_back ctx.input ~kind:(Input.Split false) r ctx.loc) rest;
-    if Control.opens_group ch s then ctx.skip <- ctx.skip + 1
-    else if Control.closes_group ch s then ctx.skip <- ctx.skip - 1
+      let s, rest = Line.split ch ~is_cw:(is_cw ctx) s in
+      Option.iter
+        (fun r -> Input.push_back ctx.input ~kind:(Input.Split false) r ctx.loc)
+        rest;
+      if Control.opens_group ch s then ctx.skip <- ctx.skip + 1
+      else if Control.closes_group ch s then ctx.skip <- ctx.skip - 1
 
 (* ---- step 6: dispatch -------------------------------------------------------- *)
 
@@ -124,8 +126,9 @@ let library_macro ctx (c : Line.control) =
   if ctx.Ctx.ms_on && ctx.ly_mac && not c.Line.quoted then
     match c.Line.long with
     | Some name when not (Ctx.is_cw_name ctx name) ->
-      Option.map (fun m -> (name, m, Line.drop_blank c.Line.long_args))
-        (Library.find_macro ctx name)
+        Option.map
+          (fun m -> (name, m, Line.drop_blank c.Line.long_args))
+          (Library.find_macro ctx name)
     | _ -> None
   else None
 
@@ -139,9 +142,9 @@ let control ctx (c : Line.control) =
   | Some (name, m, ops) -> Control.invoke ctx name m ops
   | None when ignoring && c.name <> "cs" -> ()
   | None -> (
-    match Hashtbl.find_opt ctx.Ctx.words c.name with
-    | Some w -> w.run ctx (Line.operands c)
-    | None -> Ctx.warn ctx "unsupported control word .%s" c.name)
+      match Hashtbl.find_opt ctx.Ctx.words c.name with
+      | Some w -> w.run ctx (Line.operands c)
+      | None -> Ctx.warn ctx "unsupported control word .%s" c.name)
 
 let plain_text ctx ~eol t =
   Gmlproc.text ctx ~plain:true { Input.had_text = false; eol } t
@@ -158,38 +161,42 @@ let text ctx ~physical ~continued t =
   let continued, t =
     match ctx.Ctx.chars.Chars.cont with
     | Some c when t <> "" && t.[String.length t - 1] = c ->
-      (true, String.sub t 0 (String.length t - 1))
+        (true, String.sub t 0 (String.length t - 1))
     | _ -> (continued, t)
   in
   let eol = not continued in
-  if Control.cs_ignoring ctx then begin
+  if Control.cs_ignoring ctx then
     (* only the GML tags of the line; the document builder is muted
        ([Ctx.sync_mute]), so only their APFs' side effects remain *)
-    if ctx.tag_scan <> Ctx.Tags_off then plain_text ctx ~eol t
-  end
+    begin if ctx.tag_scan <> Ctx.Tags_off then plain_text ctx ~eol t
+    end
   else
-    match (if physical then implicit t else None) with
+    match if physical then implicit t else None with
     | None -> plain_text ctx ~eol t
     | Some w -> (
-      match (if ctx.ms_on then Macro.find ctx.macros w else None) with
-      | Some m ->
-        if w = "lb" || w = "lt" then
-          ignore (Input.push_residual ctx.input t ctx.loc { Input.had_text = true; eol });
-        Control.invoke ctx w m t
-      | None -> (
-        (* natively (p.90-91): .lb/.lt are a break, then the line;
+        match if ctx.ms_on then Macro.find ctx.macros w else None with
+        | Some m ->
+            if w = "lb" || w = "lt" then
+              ignore
+                (Input.push_residual ctx.input t ctx.loc
+                   { Input.had_text = true; eol });
+            Control.invoke ctx w m t
+        | None -> (
+            (* natively (p.90-91): .lb/.lt are a break, then the line;
            .bl is a .sp; .nl only cancels a continuation.  In no-fill
            mode ([.fo off], [.nf on]: every input line is an output
            line) the break is implied, and a blank or null line is kept
            as an empty text line (modern edge for .nl: files written
            by modern editors have null lines where CMS had blank ones;
            DCF-VERIFY). *)
-        let nofill = not ctx.fmt.Ctx.fill in
-        match w with
-        | "lb" | "lt" ->
-          if not nofill then Hints.implicit ctx w "";
-          plain_text ctx ~eol t
-        | _ -> if nofill then plain_text ctx ~eol t else Hints.implicit ctx w t))
+            let nofill = not ctx.fmt.Ctx.fill in
+            match w with
+            | "lb" | "lt" ->
+                if not nofill then Hints.implicit ctx w "";
+                plain_text ctx ~eol t
+            | _ ->
+                if nofill then plain_text ctx ~eol t else Hints.implicit ctx w t
+            ))
 
 (* [.li] (SH35-0069 p.42): literal lines are text even when they begin
    with the control word indicator, a blank or a tab: no control word,
@@ -206,14 +213,15 @@ let li ctx ops =
   | "on" -> ctx.literal <- -1
   | "off" -> ctx.literal <- 0
   | o -> (
-    match int_of_string_opt o with
-    | Some n when n >= 0 -> ctx.literal <- n
-    | _ -> text ctx ~physical:false ~continued:false ops)
+      match int_of_string_opt o with
+      | Some n when n >= 0 -> ctx.literal <- n
+      | _ -> text ctx ~physical:false ~continued:false ops)
 
 let literal_off ctx s =
   match Line.classify ctx.Ctx.chars s with
   | Line.Control c ->
-    c.name = "li" && String.lowercase_ascii (String.trim (Line.operands c)) = "off"
+      c.name = "li"
+      && String.lowercase_ascii (String.trim (Line.operands c)) = "off"
   | _ -> false
 
 (* Steps 3, 5 and 6 of a line that is substituted already (or not to be
@@ -223,71 +231,78 @@ let dispatch ctx ~physical ~substituted s =
   match Line.classify ch s with
   | Line.Comment _ | Line.Label _ -> ()
   | Line.Control _ | Line.Text _ -> (
-    let head, rest = Line.split ch ~is_cw:(is_cw ctx) s in
-    Option.iter
-      (fun r -> Input.push_back ctx.input ~kind:(Input.Split substituted) r ctx.loc)
-      rest;
-    ctx.line_substituted <- substituted;
-    match Line.classify ch head with
-    | Line.Comment _ | Line.Label _ -> ()
-    | Line.Control c -> control ctx c
-    | Line.Text t -> text ctx ~physical ~continued:(rest <> None) t)
+      let head, rest = Line.split ch ~is_cw:(is_cw ctx) s in
+      Option.iter
+        (fun r ->
+          Input.push_back ctx.input ~kind:(Input.Split substituted) r ctx.loc)
+        rest;
+      ctx.line_substituted <- substituted;
+      match Line.classify ch head with
+      | Line.Comment _ | Line.Label _ -> ()
+      | Line.Control c -> control ctx c
+      | Line.Text t -> text ctx ~physical ~continued:(rest <> None) t)
 
 (* Step 4, then the rest. *)
 let substitute_and_dispatch ctx mode s =
   match Line.classify ctx.Ctx.chars s with
-  | Line.Comment _ | Line.Label _ -> ()   (* step 3: never substituted *)
-  | Line.Control _ | Line.Text _ ->
-    let force = mode = Ctx.Force_subst in
-    let on = force || ctx.subst_on in
-    if mode = Ctx.Raw && ctx.su_lines > 0 then begin
-      ctx.su_lines <- ctx.su_lines - 1;
-      if ctx.su_lines = 0 then ctx.subst_on <- false
-    end;
-    if not on then dispatch ctx ~physical:(mode = Ctx.Raw) ~substituted:false s
-    else
-      match Subst.line ctx s with
-      | [] -> ()
-      | first :: more ->
-        Input.push_back_list ctx.input
-          (List.map (fun l -> (l, ctx.loc, Input.Split true)) more);
-        dispatch ctx ~physical:(mode = Ctx.Raw) ~substituted:true first
+  | Line.Comment _ | Line.Label _ -> () (* step 3: never substituted *)
+  | Line.Control _ | Line.Text _ -> (
+      let force = mode = Ctx.Force_subst in
+      let on = force || ctx.subst_on in
+      if mode = Ctx.Raw && ctx.su_lines > 0 then begin
+        ctx.su_lines <- ctx.su_lines - 1;
+        if ctx.su_lines = 0 then ctx.subst_on <- false
+      end;
+      if not on then
+        dispatch ctx ~physical:(mode = Ctx.Raw) ~substituted:false s
+      else
+        match Subst.line ctx s with
+        | [] -> ()
+        | first :: more ->
+            Input.push_back_list ctx.input
+              (List.map (fun l -> (l, ctx.loc, Input.Split true)) more);
+            dispatch ctx ~physical:(mode = Ctx.Raw) ~substituted:true first)
 
 let process ctx mode s =
   match ctx.Ctx.capture with
   | Some cap ->
-    if mode = Ctx.Raw && ends_definition ctx s then Control.end_capture ctx cap
-    else if mode = Ctx.Raw && starts_definition ctx s then begin
-      Control.end_capture ctx cap;
-      ctx.process ctx mode s
-    end
-    else if not cap.discard then cap.cbody <- s :: cap.cbody
+      if mode = Ctx.Raw && ends_definition ctx s then
+        Control.end_capture ctx cap
+      else if mode = Ctx.Raw && starts_definition ctx s then begin
+        Control.end_capture ctx cap;
+        ctx.process ctx mode s
+      end
+      else if not cap.discard then cap.cbody <- s :: cap.cbody
   | None -> (
-    if ctx.Ctx.skip > 0 then (match mode with Ctx.Residual _ -> () | _ -> skip_line ctx s)
-    else
-      match mode with
-      | Ctx.Residual p ->
-        if not (Control.cs_ignoring ctx) then Gmlproc.text ctx ~plain:false p s
-      | Ctx.Split b -> dispatch ctx ~physical:false ~substituted:b s
-      | Ctx.Raw | Ctx.Force_subst when ctx.literal <> 0 ->
-        if literal_off ctx s then ctx.literal <- 0
-        else begin
-          if ctx.literal > 0 then ctx.literal <- ctx.literal - 1;
-          literal_line ctx s
-        end
-      | Ctx.Raw | Ctx.Force_subst -> substitute_and_dispatch ctx mode s)
+      if ctx.Ctx.skip > 0 then
+        match mode with Ctx.Residual _ -> () | _ -> skip_line ctx s
+      else
+        match mode with
+        | Ctx.Residual p ->
+            if not (Control.cs_ignoring ctx) then
+              Gmlproc.text ctx ~plain:false p s
+        | Ctx.Split b -> dispatch ctx ~physical:false ~substituted:b s
+        | (Ctx.Raw | Ctx.Force_subst) when ctx.literal <> 0 ->
+            if literal_off ctx s then ctx.literal <- 0
+            else begin
+              if ctx.literal > 0 then ctx.literal <- ctx.literal - 1;
+              literal_line ctx s
+            end
+        | Ctx.Raw | Ctx.Force_subst -> substitute_and_dispatch ctx mode s)
 
 (* -set sym=val: global symbols, set before the first line. *)
 let install_sets ctx =
-  List.iter (fun (k, v) -> ignore (Symbols.set ctx.Ctx.syms k v)) (Symbols.date_symbols ());
+  List.iter
+    (fun (k, v) -> ignore (Symbols.set ctx.Ctx.syms k v))
+    (Symbols.date_symbols ());
   List.iter
     (fun (k, v) ->
-       if Symbols.is_local k then Ctx.error ctx "-set %s: not a global symbol" k
-       else
-         Control.check_name ctx "-set" k (fun () ->
-             match Symbols.set ctx.Ctx.syms k v with
-             | Ok () -> ()
-             | Error e -> Ctx.error ctx "-set: %s" e))
+      if Symbols.is_local k then Ctx.error ctx "-set %s: not a global symbol" k
+      else
+        Control.check_name ctx "-set" k (fun () ->
+            match Symbols.set ctx.Ctx.syms k v with
+            | Ok () -> ()
+            | Error e -> Ctx.error ctx "-set: %s" e))
     ctx.Ctx.sets
 
 let check_balance ctx =
@@ -299,12 +314,14 @@ let check_balance ctx =
       ".do begin without .do end (skipped to end of input)";
   Option.iter
     (fun cap ->
-       Ctx.error_at ctx cap.Ctx.cfrom ".dm %s on without .dm off (definition ignored)"
-         cap.Ctx.cname)
+      Ctx.error_at ctx cap.Ctx.cfrom
+        ".dm %s on without .dm off (definition ignored)" cap.Ctx.cname)
     ctx.capture;
   List.iter
-    (fun e -> Ctx.warn ctx ".cs %d on without .cs %d off (opened at %s)" e.Ctx.section
-        e.Ctx.section (Loc.to_string e.Ctx.cs_from))
+    (fun e ->
+      Ctx.warn ctx ".cs %d on without .cs %d off (opened at %s)" e.Ctx.section
+        e.Ctx.section
+        (Loc.to_string e.Ctx.cs_from))
     (List.rev ctx.cs_open);
   ctx.capture <- None;
   ctx.skip <- 0;
@@ -317,22 +334,22 @@ let run ctx =
   let rec loop () =
     match Input.next_line ctx.Ctx.input with
     | None -> (
-      (* the epifile: the rest of the profile after its .ef (p.51) *)
-      match ctx.epifile with
-      | Some (path, lines, idx) ->
-        ctx.epifile <- None;
-        Input.push_file_at ctx.input path lines idx;
-        loop ()
-      | None -> ())
+        (* the epifile: the rest of the profile after its .ef (p.51) *)
+        match ctx.epifile with
+        | Some (path, lines, idx) ->
+            ctx.epifile <- None;
+            Input.push_file_at ctx.input path lines idx;
+            loop ()
+        | None -> ())
     | Some (s, loc, kind) ->
-      ctx.loc <- loc;
-      process ctx
-        (match kind with
-         | Input.Source -> Ctx.Raw
-         | Input.Residual p -> Ctx.Residual p
-         | Input.Split b -> Ctx.Split b)
-        s;
-      loop ()
+        ctx.loc <- loc;
+        process ctx
+          (match kind with
+          | Input.Source -> Ctx.Raw
+          | Input.Residual p -> Ctx.Residual p
+          | Input.Split b -> Ctx.Split b)
+          s;
+        loop ()
   in
   loop ();
   check_balance ctx
@@ -352,6 +369,7 @@ let create ?include_path () =
 let finish ctx =
   let root, unclosed = Doc.finish ctx.Ctx.doc in
   (* elements that are implicitly closable ([.xd]) close silently *)
-  List.iter (fun n -> Ctx.warn ctx "element %s not closed at end of input" n)
+  List.iter
+    (fun n -> Ctx.warn ctx "element %s not closed at end of input" n)
     unclosed;
   root

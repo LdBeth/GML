@@ -53,7 +53,7 @@ out/gml.css: $ROOT/share/html/gml.css
 # goes on TEXINPUTS; two runs so that the page references settle.  (The
 # .tex macro files are not prerequisites: mk would try to make them with
 # the %.tex rule; mk -a after changing them.)
-out/release.pdf: out/release.tex
+out/release.pdf:Q: out/release.tex
 	cd out
 	for(pass in 1 2){
 		TEXINPUTS=$ROOT/share/tex: $PDFTEX -interaction=nonstopmode release.tex > /dev/null || {

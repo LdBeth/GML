@@ -12,19 +12,19 @@
 
 type control = {
   name : string;
-  (** lowercase control word name: the first two name characters (one
-      if only one is there) *)
-  quoted : bool;    (** [.'xx] form: no macro search, no separator scan *)
-  args : string;    (** everything after [name], unmodified *)
+      (** lowercase control word name: the first two name characters (one if
+          only one is there) *)
+  quoted : bool;  (** [.'xx] form: no macro search, no separator scan *)
+  args : string;  (** everything after [name], unmodified *)
   long : string option;
-  (** lowercase macro name candidate: the whole run of name characters
-      when it is at most ten long and ended by a blank or the end *)
+      (** lowercase macro name candidate: the whole run of name characters when
+          it is at most ten long and ended by a blank or the end *)
   long_args : string;  (** everything after [long] *)
 }
 
 type t =
-  | Comment of string            (** [.*] text *)
-  | Label of string * string     (** [...name] and the rest of the line *)
+  | Comment of string  (** [.*] text *)
+  | Label of string * string  (** [...name] and the rest of the line *)
   | Control of control
   | Text of string
 
@@ -34,7 +34,6 @@ let is_name_char = function
   | _ -> false
 
 let is_blank c = c = ' ' || c = '\t'
-
 let max_macro_name = 10
 
 let index_from_opt s i c =
@@ -54,7 +53,9 @@ let classify (ch : Chars.t) s =
     let quoted = n >= 2 && s.[1] = '\'' in
     let start = if quoted then 2 else 1 in
     let j = ref start in
-    while !j < n && is_name_char s.[!j] do incr j done;
+    while !j < n && is_name_char s.[!j] do
+      incr j
+    done;
     if !j = start then Text s
     else begin
       let k = min !j (start + 2) in
@@ -64,16 +65,19 @@ let classify (ch : Chars.t) s =
         else None
       in
       Control
-        { name = String.lowercase_ascii (String.sub s start (k - start));
+        {
+          name = String.lowercase_ascii (String.sub s start (k - start));
           quoted;
           args = String.sub s k (n - k);
           long;
-          long_args = String.sub s !j (n - !j) }
+          long_args = String.sub s !j (n - !j);
+        }
     end
   end
 
 (** Label name of a line, if it is a label line (for [Input.label_index]). *)
-let label_of ch s = match classify ch s with Label (n, _) -> Some n | _ -> None
+let label_of ch s =
+  match classify ch s with Label (n, _) -> Some n | _ -> None
 
 (** [s] without the single blank that separates operands from a name. *)
 let drop_blank a =
@@ -87,55 +91,181 @@ let operands c = drop_blank c.args
    splits it only when a control word follows (p.41), whether or not we
    implement that word. *)
 let dcf_names =
-  [ "aa"; "an"; "ap"; "bc"; "bf"; "bl"; "br"; "bt"; "bx"; "cb"; "cc"; "cd";
-    "ce"; "cg"; "cl"; "cm"; "co"; "cp"; "cs"; "ct"; "dc"; "dd"; "df"; "dh";
-    "dl"; "dm"; "do"; "ds"; "du"; "dv"; "ec"; "ef"; "el"; "em"; "eq"; "fi";
-    "fl"; "fm"; "fn"; "fo"; "fs"; "ft"; "go"; "gs"; "h0"; "h1"; "h2"; "h3";
-    "h4"; "h5"; "h6"; "hm"; "hn"; "hs"; "hw"; "hy"; "ie"; "if"; "il"; "im";
-    "in"; "ir"; "is"; "it"; "ix"; "kp"; "lb"; "li"; "ll"; "ln"; "ls"; "lt";
-    "ly"; "mc"; "me"; "mg"; "ms"; "nl"; "oc"; "of"; "or"; "pa"; "pf"; "pi";
-    "pl"; "pm"; "pn"; "pp"; "pt"; "pw"; "px"; "qq"; "qu"; "rc"; "rd"; "re";
-    "rf"; "rh"; "ri"; "rn"; "rt"; "rv"; "sa"; "sc"; "se"; "sk"; "sl"; "sp";
-    "ss"; "su"; "sv"; "sx"; "sy"; "tb"; "tc"; "te"; "th"; "ti"; "tm"; "tp";
-    "tr"; "ts"; "tu"; "ty"; "uc"; "ud"; "un"; "up"; "ur"; "us"; "vr"; "wf";
-    "wz" ]
+  [
+    "aa";
+    "an";
+    "ap";
+    "bc";
+    "bf";
+    "bl";
+    "br";
+    "bt";
+    "bx";
+    "cb";
+    "cc";
+    "cd";
+    "ce";
+    "cg";
+    "cl";
+    "cm";
+    "co";
+    "cp";
+    "cs";
+    "ct";
+    "dc";
+    "dd";
+    "df";
+    "dh";
+    "dl";
+    "dm";
+    "do";
+    "ds";
+    "du";
+    "dv";
+    "ec";
+    "ef";
+    "el";
+    "em";
+    "eq";
+    "fi";
+    "fl";
+    "fm";
+    "fn";
+    "fo";
+    "fs";
+    "ft";
+    "go";
+    "gs";
+    "h0";
+    "h1";
+    "h2";
+    "h3";
+    "h4";
+    "h5";
+    "h6";
+    "hm";
+    "hn";
+    "hs";
+    "hw";
+    "hy";
+    "ie";
+    "if";
+    "il";
+    "im";
+    "in";
+    "ir";
+    "is";
+    "it";
+    "ix";
+    "kp";
+    "lb";
+    "li";
+    "ll";
+    "ln";
+    "ls";
+    "lt";
+    "ly";
+    "mc";
+    "me";
+    "mg";
+    "ms";
+    "nl";
+    "oc";
+    "of";
+    "or";
+    "pa";
+    "pf";
+    "pi";
+    "pl";
+    "pm";
+    "pn";
+    "pp";
+    "pt";
+    "pw";
+    "px";
+    "qq";
+    "qu";
+    "rc";
+    "rd";
+    "re";
+    "rf";
+    "rh";
+    "ri";
+    "rn";
+    "rt";
+    "rv";
+    "sa";
+    "sc";
+    "se";
+    "sk";
+    "sl";
+    "sp";
+    "ss";
+    "su";
+    "sv";
+    "sx";
+    "sy";
+    "tb";
+    "tc";
+    "te";
+    "th";
+    "ti";
+    "tm";
+    "tp";
+    "tr";
+    "ts";
+    "tu";
+    "ty";
+    "uc";
+    "ud";
+    "un";
+    "up";
+    "ur";
+    "us";
+    "vr";
+    "wf";
+    "wz";
+  ]
 
-(** The control word separator rule (SH35-0069 p.40-41), applied to a
-    line after symbol substitution.  Returns the line up to the split
-    and the rest, which becomes the next input line.
+(** The control word separator rule (SH35-0069 p.40-41), applied to a line after
+    symbol substitution. Returns the line up to the split and the rest, which
+    becomes the next input line.
 
-    - A control word line is split at the first separator, unless it has
-      the [.'] modifier; an empty rest is dropped.
-    - A text line is split only at a separator followed by the control
-      word indicator (optionally the modifier) and a two-character
-      control word name ([is_cw] decides); the part before it is text
-      with continuation.  Any other separator is text. *)
+    - A control word line is split at the first separator, unless it has the
+      [.'] modifier; an empty rest is dropped.
+    - A text line is split only at a separator followed by the control word
+      indicator (optionally the modifier) and a two-character control word name
+      ([is_cw] decides); the part before it is text with continuation. Any other
+      separator is text. *)
 let split (ch : Chars.t) ~is_cw s =
   match ch.cw_sep with
   | None -> (s, None)
   | Some sep -> (
-    let n = String.length s in
-    let cut i = (String.sub s 0 i, Some (String.sub s (i + 1) (n - i - 1))) in
-    match classify ch s with
-    | Control c when c.quoted -> (s, None)
-    | Comment _ | Label _ -> (s, None)   (* the whole line is ignored, p.44 *)
-    | Control _ -> (
-      match String.index_opt s sep with
-      | None -> (s, None)
-      | Some i ->
-        let h, r = cut i in
-        (h, if r = Some "" then None else r))
-    | Text _ ->
-      let names_cw i =
-        let j = if i < n && s.[i] = '\'' then i + 1 else i in
-        j + 2 <= n && is_name_char s.[j] && is_name_char s.[j + 1]
-        && is_cw (String.lowercase_ascii (String.sub s j 2))
-      in
-      let rec go i =
-        match index_from_opt s i sep with
-        | None -> (s, None)
-        | Some k ->
-          if k + 1 < n && s.[k + 1] = ch.cw_ind && names_cw (k + 2) then cut k
-          else go (k + 1)
-      in
-      go 0)
+      let n = String.length s in
+      let cut i = (String.sub s 0 i, Some (String.sub s (i + 1) (n - i - 1))) in
+      match classify ch s with
+      | Control c when c.quoted -> (s, None)
+      | Comment _ | Label _ -> (s, None) (* the whole line is ignored, p.44 *)
+      | Control _ -> (
+          match String.index_opt s sep with
+          | None -> (s, None)
+          | Some i ->
+              let h, r = cut i in
+              (h, if r = Some "" then None else r))
+      | Text _ ->
+          let names_cw i =
+            let j = if i < n && s.[i] = '\'' then i + 1 else i in
+            j + 2 <= n
+            && is_name_char s.[j]
+            && is_name_char s.[j + 1]
+            && is_cw (String.lowercase_ascii (String.sub s j 2))
+          in
+          let rec go i =
+            match index_from_opt s i sep with
+            | None -> (s, None)
+            | Some k ->
+                if k + 1 < n && s.[k + 1] = ch.cw_ind && names_cw (k + 2) then
+                  cut k
+                else go (k + 1)
+          in
+          go 0)

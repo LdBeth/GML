@@ -22,18 +22,17 @@
 
 type delims = {
   tag : char;
-  etag : string;   (** one or two characters *)
+  etag : string;  (** one or two characters *)
   mcs : char;
 }
 
 let delims_of (ch : Chars.t) =
-  Option.map (fun tag -> { tag; etag = ch.Chars.gml_end; mcs = ch.Chars.mcs })
+  Option.map
+    (fun tag -> { tag; etag = ch.Chars.gml_end; mcs = ch.Chars.mcs })
     ch.Chars.gml_delim
 
 let max_name = 8
-
 let is_blank c = c = ' ' || c = '\t'
-
 let is_digit c = c >= '0' && c <= '9'
 
 let starts_with s i p =
@@ -43,7 +42,9 @@ let starts_with s i p =
 let name_end s i =
   let n = String.length s in
   let j = ref i in
-  while !j < n && Chars.is_tag_char s.[!j] do incr j done;
+  while !j < n && Chars.is_tag_char s.[!j] do
+    incr j
+  done;
   !j
 
 (* A tag name at [i]: its end, if valid. *)
@@ -55,10 +56,10 @@ let tag_name s i =
   else None
 
 type found = {
-  at : int;          (** index of the delimiter *)
+  at : int;  (** index of the delimiter *)
   is_end : bool;
-  name : string;     (** lowercase *)
-  after : int;       (** index after the name *)
+  name : string;  (** lowercase *)
+  after : int;  (** index after the name *)
 }
 
 (** A tag (start or end) beginning exactly at [i]. *)
@@ -68,8 +69,12 @@ let tag_at d s i =
       let k = i + String.length p in
       Option.map
         (fun j ->
-           { at = i; is_end; name = String.lowercase_ascii (String.sub s k (j - k));
-             after = j })
+          {
+            at = i;
+            is_end;
+            name = String.lowercase_ascii (String.sub s k (j - k));
+            after = j;
+          })
         (tag_name s k)
     else None
   in
@@ -91,25 +96,27 @@ let find_tag d s i =
 (* ---- attributes --------------------------------------------------------- *)
 
 type attr =
-  | Named of string * string   (** name (uppercase), value *)
-  | Vat of string              (** value attribute, as written *)
+  | Named of string * string  (** name (uppercase), value *)
+  | Vat of string  (** value attribute, as written *)
 
 type stop =
-  | Mcs of int        (** ended by the MCS; index after it *)
-  | Eol               (** end of the line, no MCS *)
-  | Next_tag of int   (** another tag starts here *)
-  | Invalid of int    (** invalid attribute here (rule [stop]) *)
+  | Mcs of int  (** ended by the MCS; index after it *)
+  | Eol  (** end of the line, no MCS *)
+  | Next_tag of int  (** another tag starts here *)
+  | Invalid of int  (** invalid attribute here (rule [stop]) *)
 
 type result = {
   attrs : attr list;
   stop : stop;
-  invalid : string list;   (** invalid attributes met (for [msg]) *)
+  invalid : string list;  (** invalid attributes met (for [msg]) *)
 }
 
 let skip_blanks s i =
   let n = String.length s in
   let i = ref i in
-  while !i < n && is_blank s.[!i] do incr i done;
+  while !i < n && is_blank s.[!i] do
+    incr i
+  done;
   !i
 
 (* A quoted value at [i], delimited by the quote s.[i] (a doubled quote
@@ -122,9 +129,13 @@ let quoted s i =
   let rec go k =
     if k >= n then None
     else if s.[k] = q then
-      if k + 1 < n && s.[k + 1] = q then (Buffer.add_char b q; go (k + 2))
+      if k + 1 < n && s.[k + 1] = q then (
+        Buffer.add_char b q;
+        go (k + 2))
       else Some (Buffer.contents b, k + 1)
-    else (Buffer.add_char b s.[k]; go (k + 1))
+    else (
+      Buffer.add_char b s.[k];
+      go (k + 1))
   in
   go (i + 1)
 
@@ -133,20 +144,24 @@ let quoted s i =
 let bare ~mcs s i =
   let n = String.length s in
   let j = ref i in
-  while !j < n && not (is_blank s.[!j]) && s.[!j] <> mcs do incr j done;
+  while !j < n && (not (is_blank s.[!j])) && s.[!j] <> mcs do
+    incr j
+  done;
   !j
 
 type token =
   | T_named of string * string * int
   | T_vat of string * int
-  | T_bad of int   (** end of the invalid token *)
+  | T_bad of int  (** end of the invalid token *)
 
 let token d s i =
   let n = String.length s in
   let j = name_end s i in
   let bad () =
     let k = ref i in
-    while !k < n && not (is_blank s.[!k]) && s.[!k] <> d.mcs do incr k done;
+    while !k < n && (not (is_blank s.[!k])) && s.[!k] <> d.mcs do
+      incr k
+    done;
     T_bad (max !k (i + 1))
   in
   if j = i then bad ()
@@ -163,13 +178,13 @@ let token d s i =
         let e = bare ~mcs:d.mcs s v in
         if e = v then bad () else T_named (name, String.sub s v (e - v), e)
     end
-    else if j >= n || is_blank s.[j] || s.[j] = d.mcs || tag_at d s j <> None then
-      T_vat (String.sub s i (j - i), j)
+    else if j >= n || is_blank s.[j] || s.[j] = d.mcs || tag_at d s j <> None
+    then T_vat (String.sub s i (j - i), j)
     else bad ()
   end
 
-(** Scan the attributes of a tag from [i] under the rules [att], [vat],
-    [stop]. *)
+(** Scan the attributes of a tag from [i] under the rules [att], [vat], [stop].
+*)
 let attributes d ~att ~vat ~stop s i =
   let n = String.length s in
   let rec go i acc bad =
@@ -185,7 +200,8 @@ let attributes d ~att ~vat ~stop s i =
         else go e acc (tok :: bad)
       in
       match token d s i with
-      | T_named (nm, v, e) -> if att then go e (Named (nm, v) :: acc) bad else invalid e
+      | T_named (nm, v, e) ->
+          if att then go e (Named (nm, v) :: acc) bad else invalid e
       | T_vat (w, e) -> if vat then go e (Vat w :: acc) bad else invalid e
       | T_bad e -> invalid e
   in
@@ -193,8 +209,9 @@ let attributes d ~att ~vat ~stop s i =
 
 (* ---- name=value operands (for .xs / .xa) -------------------------------- *)
 
-(** [name=value] pairs separated by blanks; values may be quoted with apostrophes or
-    double quotes; an unquoted value ends at a blank.  Names are lowercased. *)
+(** [name=value] pairs separated by blanks; values may be quoted with
+    apostrophes or double quotes; an unquoted value ends at a blank. Names are
+    lowercased. *)
 let pairs s =
   let n = String.length s in
   let rec go i acc =
@@ -202,9 +219,13 @@ let pairs s =
     if i >= n then Ok (List.rev acc)
     else begin
       let j = ref i in
-      while !j < n && s.[!j] <> '=' && not (is_blank s.[!j]) do incr j done;
+      while !j < n && s.[!j] <> '=' && not (is_blank s.[!j]) do
+        incr j
+      done;
       if !j >= n || s.[!j] <> '=' || !j = i then
-        Error (Printf.sprintf "name=value expected at '%s'" (String.sub s i (n - i)))
+        Error
+          (Printf.sprintf "name=value expected at '%s'"
+             (String.sub s i (n - i)))
       else
         let name = String.lowercase_ascii (String.sub s i (!j - i)) in
         let v = !j + 1 in
@@ -214,30 +235,30 @@ let pairs s =
           | Some (value, e) -> go e ((name, value) :: acc)
         else
           let e = ref v in
-          while !e < n && not (is_blank s.[!e]) do incr e done;
+          while !e < n && not (is_blank s.[!e]) do
+            incr e
+          done;
           go !e ((name, String.sub s v (!e - v)) :: acc)
     end
   in
   go 0 []
 
-(** Attribute pairs with repeated names removed: the last value of a name
-    wins, and the pairs stay in the order of the last occurrences.  (The
-    same list as [fold_left (fun acc (k, v) -> remove_assoc k acc @ [(k, v)])],
-    in one pass: a pair is kept exactly when its name does not occur
-    later.) *)
+(** Attribute pairs with repeated names removed: the last value of a name wins,
+    and the pairs stay in the order of the last occurrences. (The same list as
+    [fold_left (fun acc (k, v) -> remove_assoc k acc @ [(k, v)])], in one pass:
+    a pair is kept exactly when its name does not occur later.) *)
 let last_wins l =
   List.fold_right
     (fun (k, v) acc -> if List.mem_assoc k acc then acc else (k, v) :: acc)
     l []
 
-(** Is [s] usable as an XML element or attribute name (a conservative
-    subset: ASCII letter or '_' first, then letters, digits, '_', '-',
-    '.'). *)
+(** Is [s] usable as an XML element or attribute name (a conservative subset:
+    ASCII letter or '_' first, then letters, digits, '_', '-', '.'). *)
 let xml_name s =
   s <> ""
   && (match s.[0] with 'a' .. 'z' | 'A' .. 'Z' | '_' -> true | _ -> false)
   && String.for_all
-    (function
-      | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' | '-' | '.' -> true
-      | _ -> false)
-    s
+       (function
+         | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' | '-' | '.' -> true
+         | _ -> false)
+       s

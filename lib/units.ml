@@ -25,12 +25,12 @@
 
 type axis = Horizontal | Vertical
 
-(** A dimension: [hundredths] of [unit]. *)
 type v = { h : int; unit : string }
+(** A dimension: [hundredths] of [unit]. *)
 
 type operand = {
-  sign : char option;   (** ['+'] or ['-'] if relative *)
-  value : v;            (** the magnitude (non-negative) *)
+  sign : char option;  (** ['+'] or ['-'] if relative *)
+  value : v;  (** the magnitude (non-negative) *)
 }
 
 let default_unit = function Horizontal -> "ch" | Vertical -> "line"
@@ -41,14 +41,21 @@ let number ?(dec = 2) s =
   let ip, fp =
     match String.index_opt s '.' with
     | None -> (s, "")
-    | Some i -> (String.sub s 0 i, String.sub s (i + 1) (String.length s - i - 1))
+    | Some i ->
+        (String.sub s 0 i, String.sub s (i + 1) (String.length s - i - 1))
   in
   let digits t = String.for_all (fun c -> c >= '0' && c <= '9') t in
-  if (ip = "" && fp = "") || not (digits ip && digits fp) || String.length fp > dec
+  if
+    (ip = "" && fp = "")
+    || (not (digits ip && digits fp))
+    || String.length fp > dec
   then None
   else
     let i = if ip = "" then 0 else int_of_string ip in
-    let f = if fp = "" then 0 else int_of_string fp * (if String.length fp = 1 then 10 else 1) in
+    let f =
+      if fp = "" then 0
+      else int_of_string fp * if String.length fp = 1 then 10 else 1
+    in
     Some ((i * 100) + f)
 
 let integer s =
@@ -66,15 +73,16 @@ let chop s k = String.sub s 0 (String.length s - k)
 let compound c s =
   match String.index_opt s c with
   | None -> None
-  | Some i ->
-    let a = String.sub s 0 i and b = String.sub s (i + 1) (String.length s - i - 1) in
-    if a = "" && b = "" then None
-    else
-      let whole = if a = "" then Some 0 else integer a in
-      let pts = if b = "" then Some 0 else number ~dec:1 b in
-      match whole, pts with
-      | Some w, Some p -> Some ((w * 12) + p)
-      | _ -> None
+  | Some i -> (
+      let a = String.sub s 0 i
+      and b = String.sub s (i + 1) (String.length s - i - 1) in
+      if a = "" && b = "" then None
+      else
+        let whole = if a = "" then Some 0 else integer a in
+        let pts = if b = "" then Some 0 else number ~dec:1 b in
+        match (whole, pts) with
+        | Some w, Some p -> Some ((w * 12) + p)
+        | _ -> None)
 
 let magnitude axis s =
   let s = String.lowercase_ascii s in
@@ -86,7 +94,9 @@ let magnitude axis s =
   else if ends s "dh" then mk "dh" (integer (chop s 2))
   else if ends s "dv" then mk "dv" (integer (chop s 2))
   else if ends s "m" then
-    mk (match axis with Horizontal -> "mh" | Vertical -> "mv") (number (chop s 1))
+    mk
+      (match axis with Horizontal -> "mh" | Vertical -> "mv")
+      (number (chop s 1))
   else if ends s "i" then mk "i" (number (chop s 1))
   else if String.contains s 'p' then mk "pt" (compound 'p' s)
   else if String.contains s 'c' then mk "dd" (compound 'c' s)
@@ -112,7 +122,8 @@ let show h =
   let a = abs h in
   let i = a / 100 and f = a mod 100 in
   let fs =
-    if f = 0 then "" else if f mod 10 = 0 then Printf.sprintf ".%d" (f / 10)
+    if f = 0 then ""
+    else if f mod 10 = 0 then Printf.sprintf ".%d" (f / 10)
     else Printf.sprintf ".%02d" f
   in
   (if neg then "-" else "") ^ string_of_int i ^ fs
@@ -121,14 +132,13 @@ let show h =
 let show_operand o =
   (match o.sign with Some c -> String.make 1 c | None -> "") ^ show o.value.h
 
-let signed o = match o.sign with Some '-' -> - o.value.h | _ -> o.value.h
+let signed o = match o.sign with Some '-' -> -o.value.h | _ -> o.value.h
 
-(** A sum of dimensions in several units (the result of relative
-    changes in different units), kept per unit in order of appearance. *)
 type sum = (string * int) list
+(** A sum of dimensions in several units (the result of relative changes in
+    different units), kept per unit in order of appearance. *)
 
 let zero : sum = []
-
 let of_v (v : v) : sum = if v.h = 0 then [] else [ (v.unit, v.h) ]
 
 (* Every sum (built by [zero], [of_v], [add], [apply]) has unique units
@@ -137,8 +147,8 @@ let add (s : sum) unit h : sum =
   let rec go = function
     | [] -> if h = 0 then [] else [ (unit, h) ]
     | (u, x) :: rest when u = unit ->
-      let y = x + h in
-      if y = 0 then rest else (u, y) :: rest
+        let y = x + h in
+        if y = 0 then rest else (u, y) :: rest
     | p :: rest -> p :: go rest
   in
   go s
@@ -149,19 +159,21 @@ let apply (cur : sum) o : sum =
   | None -> of_v o.value
   | Some _ -> add cur o.value.unit (signed o)
 
-(** Attributes for a sum: [name="5" unit="ch"]; zero is ["0"] in the
-    default unit; a mixed sum is written ["3ch+1i"] with [unit="mixed"]. *)
+(** Attributes for a sum: [name="5" unit="ch"]; zero is ["0"] in the default
+    unit; a mixed sum is written ["3ch+1i"] with [unit="mixed"]. *)
 let attrs ~default name (s : sum) =
   match s with
   | [] -> [ (name, "0"); ("unit", default) ]
   | [ (u, h) ] -> [ (name, show h); ("unit", u) ]
   | l ->
-    (* a "+" between terms; a negative one carries its own "-" *)
-    let txt =
-      String.concat ""
-        (List.mapi (fun i (u, h) -> (if i = 0 || h < 0 then "" else "+") ^ show h ^ u) l)
-    in
-    [ (name, txt); ("unit", "mixed") ]
+      (* a "+" between terms; a negative one carries its own "-" *)
+      let txt =
+        String.concat ""
+          (List.mapi
+             (fun i (u, h) -> (if i = 0 || h < 0 then "" else "+") ^ show h ^ u)
+             l)
+      in
+      [ (name, txt); ("unit", "mixed") ]
 
 (** A dimension written as one token: "5ch", "2.5i". *)
 let token (v : v) = show v.h ^ v.unit
