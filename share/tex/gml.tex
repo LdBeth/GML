@@ -1,6 +1,6 @@
 % gml.tex - plain TeX macros for the GML backend (xslt/tex.xsl).
 %
-% Works with Knuth's tex (DVI) and pdftex in plain mode.  No LaTeX.
+% Works with Knuth's tex (DVI), pdftex and luatex in plain mode.  No LaTeX.
 % The document written by tex.xsl uses only these public commands:
 %
 %   \gmlbegindocument ... \gmlenddocument      around the whole document
@@ -48,7 +48,7 @@
 % on after the paragraph and a :hp1 inside a .bf region is still italic.
 %
 % DCF units (\gml@dimof{n}{unit}\register): ch = width of "0" in the
-% initial font (cmr10: 5pt); line = \baselineskip; i cm mm; pt = DCF
+% body font (\tenrm; cmr10: 5pt); line = \baselineskip; i cm mm; pt = DCF
 % (pica) points = 1/72in = TeX bp; dd = Didot points; mh/mv = em of the
 % current font (\fontdimen6; DCF's em-height is the font size, so mv is
 % also the em, not the ex-height); dh/dv = device units of 1/240in (3820
@@ -90,6 +90,7 @@
 \newcount\gml@cnta \newcount\gml@cntb \newcount\gml@refcount
 \newcount\gml@qdepth \newcount\gml@tabidx \newcount\gml@ofstate
 \newcount\gmlindexcolumns
+\newcount\gml@itemno   % items so far in the current list (local to the list)
 \newbox\gml@box \newbox\gml@figbox \newbox\gml@dtbox
 \newbox\gml@rhodd \newbox\gml@rheven \newbox\gml@rfodd \newbox\gml@rfeven
 \newbox\gml@fnleader \newbox\gml@ixbox
@@ -97,6 +98,7 @@
 \newif\ifgml@plainpage \newif\ifgml@keep \newif\ifgml@aftertitle
 \newif\ifgml@userrh \newif\ifgml@userrf \newif\ifgml@rhsup \newif\ifgml@rfsup
 \newif\ifgml@nofolio \newif\ifgml@refschanged \newif\ifgml@reffile
+\newif\ifgml@chappage  % the current page begins with an h0/h1 or section heading
 \newif\ifgml@tabfound \newif\ifgml@tabfirst \newif\ifgml@rcon
 \newif\ifgml@intitlep \newif\ifgml@preserve \newif\ifgml@paoff
 \newif\ifgml@found \newif\ifgml@pnpref \newif\ifgml@bxfirst
@@ -118,12 +120,67 @@
 \def\gml@end{\gml@end}
 
 % ---- fonts ----------------------------------------------------------------
-\font\gml@tenbi=cmbxti10
-\font\gml@hdfontA=cmbx12 scaled\magstep4
-\font\gml@hdfontB=cmbx12 scaled\magstep3
-\font\gml@hdfontC=cmbx12 scaled\magstep2
-\font\gml@hdfontD=cmbx12
-\font\gml@titlefnt=cmbx12 scaled\magstep5
+% Fonts come from a font scheme: a file gmlfont-NAME.tex that fills
+% slots with the public commands
+%   \gmlfontname{SLOT}{SPEC}  SPEC is what follows \font\x= : a TFM name
+%       for tex/pdftex; for luatex/xetex any name the engine (and its
+%       font loader) accepts, e.g. "[file.otf]" or "Family:mapping=tex-text".
+%       Slots: rm it sl bf bi tt (body, 1x), hd (headings and title,
+%       scaled 1.2x-2.986x), and optional rm7 rm5 bf7 bf5 for the script
+%       sizes (default: rm/bf at 7/10 and 5/10 of the body size).
+%   \gmlfontsize{10pt}        body size
+% \gmlusefonts{NAME} reads gmlfont-NAME-ENGINE.tex if there is one, else
+% gmlfont-NAME.tex (ENGINE = \gmlengine: tex, pdftex, luatex or xetex),
+% then (re)loads every font, globally; \gmlusefonts{} only reloads (after
+% changing a slot by hand).  Shipped: ncs (New Century Schoolbook, the
+% default) and cm (Computer Modern).  Choosing per document or run:
+%   gmlfmt -p tex-fonts=NAME   (tex.xsl writes \def\gmlfonts{NAME})
+%   \def\gmlfonts{NAME} before \input gml
+%   \gmlusefonts{NAME} in gmllocal.tex, tex-preamble, or the source
+%       (.xr tex /\gmlusefonts{NAME}/ before the first text)
+% Choosing per engine: put a gmlfont-NAME-ENGINE.tex on TEXINPUTS.
+\def\gmlengine{tex}
+\ifx\pdfoutput\undefined\else\def\gmlengine{pdftex}\fi
+\ifx\XeTeXversion\undefined\else\def\gmlengine{xetex}\fi
+\ifx\directlua\undefined\else\def\gmlengine{luatex}\fi
+\def\gmlfontname#1{\expandafter\def\csname gml@fspec@#1\endcsname}
+\def\gmlfontsize#1{\def\gml@fsize{#1}}
+\gmlfontsize{10pt}
+\def\gmlusefonts#1{\edef\gml@fscheme{#1}%
+  \ifx\gml@fscheme\empty\else
+    \gml@fclear{rm7}\gml@fclear{rm5}\gml@fclear{bf7}\gml@fclear{bf5}%
+    \openin\gml@in=gmlfont-\gml@fscheme-\gmlengine.tex\relax
+    \ifeof\gml@in\closein\gml@in
+      \openin\gml@in=gmlfont-\gml@fscheme.tex\relax
+      \ifeof\gml@in\closein\gml@in
+        \errmessage{gml.tex: no font scheme gmlfont-\gml@fscheme.tex}%
+      \else\closein\gml@in\input gmlfont-\gml@fscheme.tex \fi
+    \else\closein\gml@in\input gmlfont-\gml@fscheme-\gmlengine.tex \fi
+  \fi\gml@loadfonts}
+\def\gml@fclear#1{\expandafter\let\csname gml@fspec@#1\endcsname\relax}
+% \gml@fload\cs{slot}{fallback slot}{factor of the body size}
+\def\gml@fload#1#2#3#4{\gml@dima=\gml@fsize\relax\gml@dima=#4\gml@dima
+  \expandafter\ifx\csname gml@fspec@#2\endcsname\relax
+    \edef\gml@fspec{\csname gml@fspec@#3\endcsname}%
+  \else\edef\gml@fspec{\csname gml@fspec@#2\endcsname}\fi
+  \edef\gml@tmpa{\global\font\noexpand#1=\gml@fspec\space at \the\gml@dima}%
+  \gml@tmpa}
+\def\gml@loadfonts{%
+  \gml@fload\tenrm{rm}{rm}{1}\gml@fload\sevenrm{rm7}{rm}{.7}%
+  \gml@fload\fiverm{rm5}{rm}{.5}%
+  \gml@fload\tenbf{bf}{bf}{1}\gml@fload\sevenbf{bf7}{bf}{.7}%
+  \gml@fload\fivebf{bf5}{bf}{.5}%
+  \gml@fload\tenit{it}{it}{1}\gml@fload\tensl{sl}{sl}{1}%
+  \gml@fload\tentt{tt}{tt}{1}\gml@fload\gml@tenbi{bi}{bi}{1}%
+  \gml@fload\gml@hdfontA{hd}{hd}{2.488}\gml@fload\gml@hdfontB{hd}{hd}{2.074}%
+  \gml@fload\gml@hdfontC{hd}{hd}{1.728}\gml@fload\gml@hdfontD{hd}{hd}{1.2}%
+  \gml@fload\gml@titlefnt{hd}{hd}{2.986}%
+  \textfont0=\tenrm \scriptfont0=\sevenrm \scriptscriptfont0=\fiverm
+  \textfont\bffam=\tenbf \scriptfont\bffam=\sevenbf
+  \scriptscriptfont\bffam=\fivebf
+  \textfont\itfam=\tenit \textfont\slfam=\tensl \textfont\ttfam=\tentt
+  \setbox0\hbox{\tenrm 0}\global\gml@chwidth=\wd0 \rm}
+\ifx\gmlfonts\undefined\gmlusefonts{ncs}\else\gmlusefonts{\gmlfonts}\fi
 \def\gml@bi{\fam\m@ne\gml@tenbi}
 \def\gmldeffont#1{\expandafter\def\csname gml@font@#1\endcsname}
 % DCF / Starter Set font names (SH35-0050 Figure 6, page printers)
@@ -157,7 +214,6 @@
 \tolerance=1000 \emergencystretch=2em \hbadness=5000 \vbadness=5000
 \hyphenpenalty=\@M   % DCF: hyphenation is off until .hy on
 \raggedbottom
-\setbox0\hbox{\tenrm 0}\gml@chwidth=\wd0
 \gml@devunit=1in \divide\gml@devunit by 240
 \gmlindexcolumns=2
 \def\gmltitlealign{right}     % SYSVART: right | left | center
@@ -301,6 +357,13 @@
 % \gml@vspace: a DCF space (.sp): kept at the top of a page
 \def\gml@vspace#1{\par\ifvmode\vglue#1\relax\fi}
 \def\gml@newpage{\par\vfill\penalty-\@M}
+% \gml@chapnewpage: a new page for an h0/h1 or section heading.  Pending
+% floats are flushed first (\supereject: plain's \dosupereject puts them on
+% pages of their own), so a figure of the previous chapter never lands above
+% the new heading; the page is then marked as a chapter page (see fig).
+% The page builder runs synchronously here, so \output has already reset
+% the flag for the pages shipped before it is set.
+\def\gml@chapnewpage{\par\vfill\supereject\global\gml@chappagetrue}
 \def\gml@needspace#1{\par\ifvmode\ifinner\else\gml@dimc=#1\relax\penalty\z@
   \ifdim\pagegoal<\maxdimen \gml@dimb\pagegoal\advance\gml@dimb-\pagetotal
     \ifdim\gml@dimb<\gml@dimc\vfill\penalty-\@M\fi\fi\fi\fi}
@@ -783,7 +846,8 @@
 \def\gml@defaultrf{\gml@shead\hfil\ifgml@nofolio\else\gml@folio\fi}
 \def\gml@userrh{\ifodd\pageno\copy\gml@rhodd\else\copy\gml@rheven\fi\hss}
 \def\gml@userrf{\ifodd\pageno\copy\gml@rfodd\else\copy\gml@rfeven\fi\hss}
-\output={\hsize\gml@defaulthsize\plainoutput\global\gml@plainpagefalse}
+\output={\hsize\gml@defaulthsize\plainoutput\global\gml@plainpagefalse
+  \global\gml@chappagefalse}
 \def\gml@runsetup{\hsize\gml@defaulthsize\gml@elemhsize\hsize
   \gml@elemleft\z@\gml@elemright\z@\def\gml@efont{\rm}\gml@apply}
 \def\gml@runstart#1#2{\gml@aget{page}\gml@runpage
@@ -800,8 +864,8 @@
 
 % ---- headings ------------------------------------------------------------------------------
 % SH35-0050 Figure 6 (fonts) and Figure 14 (spacing, page devices)
-\expandafter\def\csname gml@head@pre@0\endcsname{\gml@newpage\gml@vspace{1.3in}}
-\expandafter\def\csname gml@head@pre@1\endcsname{\gml@newpage\gml@vspace{1.3in}}
+\expandafter\def\csname gml@head@pre@0\endcsname{\gml@chapnewpage\gml@vspace{1.3in}}
+\expandafter\def\csname gml@head@pre@1\endcsname{\gml@chapnewpage\gml@vspace{1.3in}}
 \expandafter\def\csname gml@head@pre@2\endcsname{\gml@vskip{20bp}}
 \expandafter\def\csname gml@head@pre@3\endcsname{\gml@vskip{18bp}}
 \expandafter\def\csname gml@head@pre@4\endcsname{\gml@vskip{14bp}}
@@ -913,13 +977,19 @@
 % SH35-0050 Figure 5: indent / skip  ol ul sl 4 .75, dl 10 1, gl 0 .75
 \def\gml@itemskip{\z@} \def\gml@listtype{} \def\gml@ulnest{1}
 \def\gml@termhi{2} \def\gml@headhi{3}
+% \gml@itembreak: no page break between the first and second item of a list
+% (a club line: a lone first item at the foot of a page)
+\def\gml@itembreak{\global\advance\gml@itemno\@ne
+  \ifnum\gml@itemno=\tw@ \par\nobreak\fi}
+\def\gml@outeritem{0}
 \def\gml@liststart#1#2#3{\gml@vskip{#3}\def\gml@listtype{#1}%
+  \edef\gml@outeritem{\the\gml@itemno}\global\gml@itemno\z@
   \advance\gml@elemleft#2\relax\gml@listind#2\relax
   \gml@aget{compact}\gml@tv\ifx\gml@tv\empty\def\gml@itemskip{#3}\else\def\gml@itemskip{\z@}\fi
   \gml@aget{termhi}\gml@tv\ifx\gml@tv\empty\else\let\gml@termhi\gml@tv\fi
   \gml@aget{headhi}\gml@tv\ifx\gml@tv\empty\else\let\gml@headhi\gml@tv\fi
   \gml@apply}
-\def\gml@listend#1{\gml@vskip{#1}}
+\def\gml@listend#1{\global\gml@itemno\gml@outeritem\relax\gml@vskip{#1}}
 \gmldefstart{ol}{\gml@liststart{ol}{4\gml@chwidth}{.75\baselineskip}}
 \gmldefend{ol}{\gml@listend{.75\baselineskip}}
 \gml@letelement{ul}{ol}
@@ -936,14 +1006,14 @@
 \def\gmlbullet#1{\ifcase#1\or$\bullet$\or---\or$\ast$\else$\bullet$\fi}
 \def\gml@itemlabel#1{\llap{\hbox to\gml@listind{#1\hss}}}
 \def\gml@li@ul{\gml@itemlabel{\gmlbullet\gml@ulnest}}
-\gmldefstart{li}{\par\gml@vskip\gml@itemskip\leavevmode
+\gmldefstart{li}{\par\gml@itembreak\gml@vskip\gml@itemskip\leavevmode
   \csname gml@li@\gml@listtype\endcsname}
 \gmldefend{li}{\par}
 \gmldefnum{li}#1{\gml@itemlabel{#1}}
 \gmldefstart{lp}{\par\gml@vskip\gml@itemskip}
 \gmldefend{lp}{\par}
 % terms: a box in the hanging indent, or a line of its own if too wide
-\def\gml@termstart#1{\par\gml@vskip\gml@itemskip\noindent\hskip-\gml@listind
+\def\gml@termstart#1{\par\gml@itembreak\gml@vskip\gml@itemskip\noindent\hskip-\gml@listind
   \setbox\gml@dtbox\hbox\bgroup\gml@setfont{\gml@hi{#1}}}
 \def\gml@termend{\unskip\egroup\gml@dimb\gml@listind\advance\gml@dimb-\gml@chwidth
   \ifx\gml@dlbreak\empty\else\gml@dimb\z@\fi
@@ -958,7 +1028,7 @@
 \gmldefstart{ddhd}{\gml@setfont{\gml@hi{\gml@headhi}}}
 \gmldefend{ddhd}{\par}
 \let\gml@dlbreak\empty
-\gmldefstart{gt}{\par\gml@vskip\gml@itemskip\noindent\gml@setfont{\gml@hi{\gml@termhi}}}
+\gmldefstart{gt}{\par\gml@itembreak\gml@vskip\gml@itemskip\noindent\gml@setfont{\gml@hi{\gml@termhi}}}
 \gmldefend{gt}{\unskip\/\kern1sp}
 \gmldefstart{gd}{\ifhmode\ifdim\lastkern=1sp\unkern:\enspace\fi\fi}
 \gmldefend{gd}{\par}
@@ -966,10 +1036,14 @@
 % ---- figures ---------------------------------------------------------------------------------------
 % frame=rule (default): rules above and below; box; none; any other value:
 % a line of that string.  place=inline: \midinsert, else \topinsert (plain
-% TeX has no bottom floats).  The body is in format-off mode.
+% TeX has no bottom floats).  On a page that begins with an h0/h1 or
+% section heading a top float would go above that heading, so there it is
+% a \midinsert too: here if it fits, else at the top of the next page.
+% The body is in format-off mode.
 \def\gml@charrule#1{\hbox to\hsize{\xleaders\hbox{#1}\hfil}}
 \gmldefstart{fig}{\par\gml@aget{place}\gml@tv
-  \ifx\gml@tv\gml@inlinestr\midinsert\else\topinsert\fi
+  \ifx\gml@tv\gml@inlinestr\midinsert
+  \else\ifgml@chappage\midinsert\else\topinsert\fi\fi
   \gml@aget{frame}\gml@figframe\ifx\gml@figframe\empty\let\gml@figframe\gml@rulestr\fi
   \setbox\gml@figbox\vbox\bgroup
   \ifx\gml@figframe\gml@boxstr\advance\gml@elemhsize-2\gml@figpad

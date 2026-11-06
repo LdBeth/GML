@@ -145,6 +145,14 @@ The stylesheet parameters (`SYSVARS`/`SYSVARD`/`SYSVART` page layouts,
   `\gmldefend`, `\gmldefhint{sp}{...}`, `\gmldeflines`, `\gmldefnum`,
   `\gmldefchar` and `\gmldeffont`.  The tex.xsl parameters
   `tex-input`/`tex-preamble` load your own macro file or preamble.
+- **TeX fonts.** Fonts come from a scheme file `gmlfont-NAME.tex`
+  (shipped: `ncs` New Century Schoolbook, the default; `cm` Computer
+  Modern) that fills slots with `\gmlfontname{rm}{pncr7t}` ... and
+  `\gmlfontsize{10pt}`.  Per document or run: `gmlfmt -p tex-fonts=cm`,
+  `\def\gmlfonts{cm}` before `\input gml`, or `\gmlusefonts{cm}` in
+  `gmllocal.tex`.  Per engine: a file `gmlfont-NAME-ENGINE.tex`
+  (ENGINE = `tex`, `pdftex`, `luatex`, `xetex`) is preferred over
+  `gmlfont-NAME.tex` when present.
 - **HTML.** Every element has a class `gml-NAME`.  Restyle
   `share/html/gml.css` or replace it (parameters `css`, `css-inline`,
   `css-file`).

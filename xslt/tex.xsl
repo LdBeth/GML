@@ -8,7 +8,8 @@
   element state (see the header of gml.tex).
 
   Output (method text, pure ASCII):
-    \input gml                       ($tex-input), then $tex-preamble
+    [\def\gmlfonts{$tex-fonts}]
+    \input gml ($tex-input), then $tex-preamble
     \gmlbegindocument ... \gmlenddocument \bye
   Dispatch scheme - one rule for source elements, one for generated ones:
     source element NAME (h1, p, ol, fig, gml:h, gml:fn, gml:rh, gml:rf,
@@ -56,6 +57,9 @@
   <!-- the macro package and extra preamble text -->
   <xsl:param name="tex-input" as="xs:string" select="'gml'"/>
   <xsl:param name="tex-preamble" as="xs:string" select="''"/>
+  <!-- font scheme: share/tex/gmlfont-NAME.tex (ncs, cm, ...); empty = the
+       gml.tex default.  Written as \def\gmlfonts{NAME} before \input. -->
+  <xsl:param name="tex-fonts" as="xs:string" select="''"/>
   <!-- title page alignment as SYSVART: right (default) | left | center -->
   <xsl:param name="SYSVART" as="xs:string" select="''"/>
 
@@ -135,6 +139,9 @@
 
   <!-- ==== document ======================================================= -->
   <xsl:template match="/">
+    <xsl:if test="$tex-fonts != ''">
+      <xsl:value-of select="concat('\def\gmlfonts{', $tex-fonts, '}', $nl)"/>
+    </xsl:if>
     <xsl:text>\input </xsl:text>
     <xsl:value-of select="$tex-input"/>
     <xsl:value-of select="$nl"/>
