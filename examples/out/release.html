@@ -5,6 +5,9 @@
 <meta name="generator" content="GML html.xsl">
 <title>Widget Server 4.2</title>
 <link rel="stylesheet" href="gml.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '\\[', right: '\\]', display: true}, {left: '\\(', right: '\\)', display: false}]});"></script>
 </head>
 <body class="gml">
 <main class="gml-doc">
@@ -20,7 +23,7 @@
 <section class="gml-abstract">
 <h1 class="gml-section-title">Abstract</h1>
 <p>This document describes Widget Server Version 4.2,
-which runs on z/OS, z/VM, Linux on Z
+which runs on z/OS, z/VM, Linux on Z.
 </p></section>
 <nav class="gml-toc">
 <h1 class="gml-toc-title">Table of Contents</h1>
@@ -29,7 +32,8 @@ which runs on z/OS, z/VM, Linux on Z
 <li class="gml-toc-entry gml-toc-l1 gml-toc-body"><a href="#changes">Changes in 4.2</a>
 <ol class="gml-toc-list">
 <li class="gml-toc-entry gml-toc-l2 gml-toc-body"><a href="#cfg">Configuration</a></li>
-<li class="gml-toc-entry gml-toc-l2 gml-toc-body"><a href="#gml-h2-2">Platforms</a></li></ol></li></ol></nav>
+<li class="gml-toc-entry gml-toc-l2 gml-toc-body"><a href="#cap">Capacity planning</a></li>
+<li class="gml-toc-entry gml-toc-l2 gml-toc-body"><a href="#gml-h2-3">Platforms</a></li></ol></li></ol></nav>
 <nav class="gml-figlist">
 <h1 class="gml-figlist-title">List of Illustrations</h1>
 <ol class="gml-figlist-list">
@@ -41,7 +45,7 @@ It contains the changes listed in <a class="gml-hdref" href="#changes">“Change
 <span class="gml-ix" id="gml-i1-1"></span>
 <span class="gml-ix" id="gml-i2-1"></span>
 </p>
-<p>Contact your representative for the support schedule.
+<p>Contact your sales representative for the support schedule.
 </p>
 <h1 id="changes" class="gml-h1">Changes in 4.2</h1>
 <p>The following changes were made:
@@ -76,7 +80,24 @@ It contains the changes listed in <a class="gml-hdref" href="#changes">“Change
 </li><li><span class="gml-label">•</span> WS0019: wrong date in log
 </li></ul></div>
 <figcaption><span class="gml-figcap"><span class="gml-num">Figure&nbsp;1.</span> Problems fixed in 4.2</span></figcaption></figure>
-<h2 id="gml-h2-2" class="gml-h2">Platforms</h2>
+<h2 id="cap" class="gml-h2">Capacity planning</h2>
+<p>Each worker thread of Widget Server 4.2 serves about
+<span class="gml-m">\(r = 250\)</span> requests per second, so a server with
+<span class="gml-m">\(w = 8\)</span> workers handles at most
+<span class="gml-fml" style="display: flex; align-items: center; margin: .6em 0;" id="thru"><span class="gml-fml-body" style="flex: 1; text-align: center;">\[T = w \cdot r = 8 \cdot 250 = 2000\]</span><span class="gml-fml-num" style="margin-left: 1em;">(1)</span></span>requests per second, or 172800000 requests a day.
+</p>
+<p>At start-up the 12 cache shards are warmed one after another,
+and shard <span class="gml-m">\(k\)</span> takes <span class="gml-m">\(k\)</span> seconds, so the warm-up takes
+<span class="gml-fml" style="display: flex; align-items: center; margin: .6em 0;" id="warm"><span class="gml-fml-body" style="flex: 1; text-align: center;">\[\sum_{k=1}^{12} k = {12(12+1)\over 2} = 78\ {\rm s}\]</span><span class="gml-fml-num" style="margin-left: 1em;">(2)</span></span>before the server accepts requests.
+</p>
+<p>Plan the offered load <span class="gml-m">\(\lambda\)</span> so that the utilisation
+<span class="gml-m">\(\rho\)</span> stays at or below 0.8.
+With <span class="gml-m">\(\lambda = 1600\)</span> requests per second and <span class="gml-m">\(T\)</span> from
+<a class="gml-fmlref" href="#thru">(1)</a>,
+<span class="gml-fml" style="display: flex; align-items: center; margin: .6em 0;" id="util"><span class="gml-fml-body" style="flex: 1; text-align: center;">\[\rho = {\lambda \over T} = {1600 \over 2000} = 0.80 \le 0.8\]</span><span class="gml-fml-num" style="margin-left: 1em;">(3)</span></span>If <span class="gml-m">\(\rho\)</span> in <a class="gml-fmlref" href="#util">(3)</a> rises above the limit, add workers:
+by <a class="gml-fmlref" href="#thru">(1)</a> each one adds 250 requests per second.
+</p>
+<h2 id="gml-h2-3" class="gml-h2">Platforms</h2>
 <p>Supported platforms:
 </p>
 <ul class="gml-sl">

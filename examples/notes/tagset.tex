@@ -1,0 +1,20 @@
+% notes/tagset.tex -- TeX styles of the notes tag set.  gmlfmt -tagset
+% makes the generated TeX load it (by absolute path, @ a letter) near the
+% end of gml.tex, before gmllocal.tex.  Styles :warn as a ruled, indented
+% block; the label ("Note:"/"Important:") is inserted by the APF.
+\gmldefstart{warn}{\par\medskip\hrule\smallskip
+  \advance\leftskip 1em \advance\rightskip 1em \noindent}
+\gmldefend{warn}{\par\smallskip\hrule\medskip}
+%
+% Math (notes/tex.xsl writes the math text unescaped).  :m. is inline
+% math; :fml. a display inside the current paragraph, numbered with
+% \eqno(n) from its num attribute (num=no: no number, set by resolve.xsl);
+% :fmlref's text "(n)" comes from resolve.xsl.  \gmlstart's group
+% encloses the whole math list, so nothing leaks into or out of it.
+\gmldefstart{m}{$}
+\gmldefend{m}{$}
+\gmldefstart{fml}{\ifvmode\noindent\fi$$}
+\gmldefend{fml}{\gmlattr{num}\gml@fmlnum
+  \ifx\gml@fmlnum\gml@no\else\ifx\gml@fmlnum\empty\else
+    \eqno(\gml@fmlnum)\fi\fi$$}
+\gmldefstart{fmlref}{}

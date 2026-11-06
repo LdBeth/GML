@@ -1,3 +1,4 @@
+\def\gmltagset{/Users/ldbeth/Public/Projects/GML/examples/notes/tagset.tex}
 \input gml
 \gmlbegindocument%
 \gmlstart{gdoc}{sec=customer}%
@@ -17,7 +18,7 @@ The Widget Team\gmlend{author}%
 \gmlstart{abstract}{}%
 \gmlstart{p}{}%
 This document describes Widget Server Version 4.2,
-which runs on z/OS, z/VM, Linux on Z
+which runs on z/OS, z/VM, Linux on Z.
 \gmlend{p}%
 \gmlend{abstract}%
 \gmlstart{toc}{}%
@@ -25,7 +26,8 @@ which runs on z/OS, z/VM, Linux on Z
 \gmltocentry{level=1,refid=over,section=body}{}{Overview}{\gmlpageref{over}{always}{}}%
 \gmltocentry{level=1,refid=changes,section=body}{}{Changes in 4.2}{\gmlpageref{changes}{always}{}}%
 \gmltocentry{level=2,refid=cfg,section=body}{}{Configuration}{\gmlpageref{cfg}{always}{}}%
-\gmltocentry{level=2,refid=gml-h2-2,section=body}{}{Platforms}{\gmlpageref{gml-h2-2}{always}{}}%
+\gmltocentry{level=2,refid=cap,section=body}{}{Capacity planning}{\gmlpageref{cap}{always}{}}%
+\gmltocentry{level=2,refid=gml-h2-3,section=body}{}{Platforms}{\gmlpageref{gml-h2-3}{always}{}}%
 \gmltocend%
 \gmlend{toc}%
 \gmlstart{figlist}{}%
@@ -43,7 +45,7 @@ It contains the changes listed in \gmlstart{hdref}{refid=changes,resolved=yes,ta
 \gmlstart{i1}{anchor=gml-i1-1}\gmlanchor{gml-i1-1}\gmlend{i1}
 \gmlstart{i2}{anchor=gml-i2-1}\gmlanchor{gml-i2-1}\gmlend{i2}\gmlend{p}%
 \gmlstart{p}{}%
-Contact your representative for the support schedule.
+Contact your sales representative for the support schedule.
 \gmlend{p}%
 \gmlstart{h1}{id=changes,anchor=changes,text=Changes in 4.2}%
 \gmlanchor{changes}Changes in 4.2\gmlend{h1}%
@@ -103,8 +105,29 @@ WS0019: wrong date in log
 \gmlstart{figcap}{}%
 \gmlnum{Figure\gmlchar{160}1.}Problems fixed in 4.2\gmlend{figcap}%
 \gmlend{fig}%
-\gmlstart{h2}{anchor=gml-h2-2,text=Platforms}%
-\gmlanchor{gml-h2-2}Platforms\gmlend{h2}%
+\gmlstart{h2}{id=cap,anchor=cap,text=Capacity planning}%
+\gmlanchor{cap}Capacity planning\gmlend{h2}%
+\gmlstart{p}{}%
+Each worker thread of Widget Server 4.2 serves about
+\gmlstart{m}{}r = 250\gmlend{m} requests per second, so a server with
+\gmlstart{m}{}w = 8\gmlend{m} workers handles at most
+\gmlanchor{thru}\gmlstart{fml}{id=thru,num=1}T = w \cdot r = 8 \cdot 250 = 2000 \gmlend{fml}requests per second, or 172800000 requests a day.
+\gmlend{p}%
+\gmlstart{p}{}%
+At start-up the 12 cache shards are warmed one after another,
+and shard \gmlstart{m}{}k\gmlend{m} takes \gmlstart{m}{}k\gmlend{m} seconds, so the warm-up takes
+\gmlanchor{warm}\gmlstart{fml}{id=warm,num=2}\sum_{k=1}^{12} k = {12(12+1)\over 2} = 78\ {\rm s} \gmlend{fml}before the server accepts requests.
+\gmlend{p}%
+\gmlstart{p}{}%
+Plan the offered load \gmlstart{m}{}\lambda\gmlend{m} so that the utilisation
+\gmlstart{m}{}\rho\gmlend{m} stays at or below 0.8.
+With \gmlstart{m}{}\lambda = 1600\gmlend{m} requests per second and \gmlstart{m}{}T\gmlend{m} from
+\gmlstart{fmlref}{refid=thru,resolved=yes,target=fml,num=1}(1)\gmlend{fmlref},
+\gmlanchor{util}\gmlstart{fml}{id=util,num=3}\rho = {\lambda \over T} = {1600 \over 2000} = 0.80 \le 0.8 \gmlend{fml}If \gmlstart{m}{}\rho\gmlend{m} in \gmlstart{fmlref}{refid=util,resolved=yes,target=fml,num=3}(3)\gmlend{fmlref} rises above the limit, add workers:
+by \gmlstart{fmlref}{refid=thru,resolved=yes,target=fml,num=1}(1)\gmlend{fmlref} each one adds 250 requests per second.
+\gmlend{p}%
+\gmlstart{h2}{anchor=gml-h2-3,text=Platforms}%
+\gmlanchor{gml-h2-3}Platforms\gmlend{h2}%
 \gmlstart{p}{}%
 Supported platforms:
 \gmlend{p}%

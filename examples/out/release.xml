@@ -5,13 +5,13 @@
 <date>November 6th, 2026</date>
 <author>The Widget Team</author>
 </titlep><abstract><p>This document describes Widget Server Version 4.2,
-which runs on z/OS, z/VM, Linux on Z
+which runs on z/OS, z/VM, Linux on Z.
 </p></abstract><toc/><figlist/></frontm><body><h1 id="over">Overview</h1>
 <p>Widget Server 4.2 is a maintenance release.
 It contains the changes listed in <hdref refid="changes"/>.
 <i1>Widget Server</i1>
 <i2>version 4.2</i2>
-</p><p>Contact your representative for the support schedule.
+</p><p>Contact your sales representative for the support schedule.
 </p><h1 id="changes">Changes in 4.2</h1>
 <p>The following changes were made:
 </p><ol><li>Faster start-up<fn id="fn1">Measured on a cold system.</fn>
@@ -35,7 +35,24 @@ It contains the changes listed in <hdref refid="changes"/>.
 <gml:fo fill="yes" align="justify" overdraw="extend" break="yes"/></xmp><fig id="probs" frame="box"><ul compact="compact"><li>WS0012: crash on empty request
 </li><li>WS0019: wrong date in log
 </li></ul><figcap>Problems fixed in 4.2</figcap>
-</fig><h2>Platforms</h2>
+</fig><h2 id="cap">Capacity planning</h2>
+<p>Each worker thread of Widget Server 4.2 serves about
+<m>r = 250</m> requests per second, so a server with
+<m>w = 8</m> workers handles at most
+<fml id="thru">T = w \cdot r = 8 \cdot 250 = 2000
+</fml>requests per second, or 172800000 requests a day.
+</p><p>At start-up the 12 cache shards are warmed one after another,
+and shard <m>k</m> takes <m>k</m> seconds, so the warm-up takes
+<fml id="warm">\sum_{k=1}^{12} k = {12(12+1)\over 2} = 78\ {\rm s}
+</fml>before the server accepts requests.
+</p><p>Plan the offered load <m>\lambda</m> so that the utilisation
+<m>\rho</m> stays at or below 0.8.
+With <m>\lambda = 1600</m> requests per second and <m>T</m> from
+<fmlref refid="thru"/>,
+<fml id="util">\rho = {\lambda \over T} = {1600 \over 2000} = 0.80 \le 0.8
+</fml>If <m>\rho</m> in <fmlref refid="util"/> rises above the limit, add workers:
+by <fmlref refid="thru"/> each one adds 250 requests per second.
+</p><h2>Platforms</h2>
 <p>Supported platforms:
 </p><sl><li>z/OS
 </li><li>z/VM

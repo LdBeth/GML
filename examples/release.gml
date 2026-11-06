@@ -1,9 +1,11 @@
 .* release.gml -- an example GML Starter Set document that also uses the
 .* SCRIPT/VS programmable layer: symbols, arithmetic, arrays, macros,
-.* conditional text and a user-defined tag.
+.* conditional text, a loop, and the user-defined tags of the notes tag
+.* set in examples/notes/ (:warn, and math: :m, :fml, :fmlref).
 .*
-.* Build:  ./gmlfmt -to html examples/release.gml
-.*         ./gmlfmt -to html -set audience=internal examples/release.gml
+.* Build:  ./gmlfmt -tagset examples/notes -to html examples/release.gml
+.*         ./gmlfmt -tagset examples/notes -to html -set audience=internal \
+.*                  examples/release.gml
 .*
 .* ---- document symbols --------------------------------------------------
 .se product = 'Widget Server'
@@ -24,21 +26,6 @@
 :li.&*
 .dm off
 .*
-.* ---- a user-defined tag: :warn level=n.text :ewarn. ---------------------
-.* The APF reads its attribute with .gs attval; the element <warn level=..>
-.* is opened automatically and the residual text goes inside it.
-.dm warnapf on
-.gs attval level as *lv
-.if &L'&*lv eq 0 .se *lv = 1
-.if &*lv gt 1 .gs insert Important:&rbl.
-.if &*lv eq 1 .gs insert Note:&rbl.
-.dm off
-.dm ewarnapf on
-.dm off
-.aa warn warnapf ewarnapf
-.* element model: a warning is a block, so it ends an open paragraph
-.xd warn closes=p
-.*
 :gdoc sec='&audience.'
 :frontm
 :titlep
@@ -50,7 +37,7 @@
 :etitlep
 :abstract
 :p.This document describes &product. Version &version.,
-which runs on &platforms(*).
+which runs on &platforms(*)..
 :toc
 :figlist
 :body
@@ -65,7 +52,7 @@ It contains the changes listed in :hdref refid=changes..
 &major..&nextmin is planned for next quarter.
 .go endaud
 ...public
-:p.Contact your representative for the support schedule.
+:p.Contact your sales representative for the support schedule.
 ...endaud
 :h1 id=changes.Changes in &version.
 :p.The following changes were made:
@@ -101,6 +88,42 @@ It contains the changes listed in :hdref refid=changes..
 :eul
 :figcap.Problems fixed in &version.
 :efig
+.* ---- capacity planning: SCRIPT computes the numbers in the formulas ---
+.* .se does integer arithmetic; the .go loop sums the warm-up times
+.* 1+2+...+n, so the formulas show values the formatter computed.
+.se rate = 250
+.se workers = 8
+.se peak = &rate * &workers
+.se load = 1600
+.se util = &load * 100 / &peak
+.se shards = 12
+.se warm = 0
+.se k = 0
+...warmup
+.se k = &k + 1
+.se warm = &warm + &k
+.if &k lt &shards .go warmup
+.se perday = &peak * 86400
+:h2 id=cap.Capacity planning
+:p.Each worker thread of &product. &version. serves about
+:m.r = &rate.:em. requests per second, so a server with
+:m.w = &workers.:em. workers handles at most
+:fml id=thru.T = w \cdot r = &workers. \cdot &rate. = &peak.
+:efml.
+requests per second, or &perday. requests a day.
+:p.At start-up the &shards. cache shards are warmed one after another,
+and shard :m.k:em. takes :m.k:em. seconds, so the warm-up takes
+:fml id=warm.\sum_{k=1}^{&shards.} k = {&shards.(&shards.+1)\over 2} = &warm.\ {\rm s}
+:efml.
+before the server accepts requests.
+:p.Plan the offered load :m.\lambda:em. so that the utilisation
+:m.\rho:em. stays at or below 0.8.
+With :m.\lambda = &load.:em. requests per second and :m.T:em. from
+:fmlref refid=thru.,
+:fml id=util.\rho = {\lambda \over T} = {&load. \over &peak.} = 0.&util. \le 0.8
+:efml.
+If :m.\rho:em. in :fmlref refid=util. rises above the limit, add workers:
+by :fmlref refid=thru. each one adds &rate. requests per second.
 :h2.Platforms
 :p.Supported platforms:
 :sl
