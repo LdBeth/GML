@@ -147,8 +147,16 @@ let mg ctx ops =
    written as itself or as two hexadecimal digits (p.254); it takes the
    rest of the operands.  Modern edge: hexadecimal codes are ASCII (the
    manual's blank, "40", is EBCDIC; ours is "20").
+   The two-character end-tag delimiter may also be written as two
+   blank-separated operands, the tag delimiter and the second character:
+   the Starter Set's ".dc gml : : e" sets ':' and ':e' (p.289; SH35-0050 p.6
+   "the GML end-tag delimiter will be colon-e").
    DCF-VERIFY: without [e], the end-tag delimiter becomes the tag
-   delimiter doubled (the default pair is ':' and '::'). *)
+   delimiter doubled (the default pair is ':' and '::').
+   DCF-VERIFY: an option given last with no value restores its DCF
+   default (the Starter Set's DSM#XLST and DSM#WRIT issue a bare ".dc cw"
+   and ".dc asep" to undo an earlier setting; the .DC reference is in the
+   Language Reference, which we lack). *)
 let dc ctx ops =
   let ch = ctx.Ctx.chars in
   let char_value opt v k =
@@ -173,7 +181,7 @@ let dc ctx ops =
       else None
     in
     let cs = List.map one vs in
-    if vs = [] then Ctx.error ctx ".dc asep: value missing"
+    if vs = [] then ch.Chars.asep <- (Chars.create ()).asep
     else if List.length vs > 4 then Ctx.error ctx ".dc asep: at most four characters"
     else if List.mem None cs then Ctx.error ctx ".dc asep: invalid character in %s"
         (String.concat " " vs)
@@ -182,7 +190,14 @@ let dc ctx ops =
   let rec go = function
     | [] -> ()
     | opt :: rest when String.lowercase_ascii opt = "asep" -> asep rest
-    | [ opt ] -> Ctx.error ctx ".dc %s: value missing" opt
+    | [ opt ] ->
+      let d = Chars.create () in
+      (match String.lowercase_ascii opt with
+       | "cw" -> ch.Chars.cw_sep <- d.cw_sep
+       | "cont" -> ch.Chars.cont <- d.cont
+       | "gml" -> ch.Chars.gml_delim <- d.gml_delim; ch.Chars.gml_end <- d.gml_end
+       | "mcs" -> ch.Chars.mcs <- d.mcs
+       | _ -> Ctx.warn ctx "unsupported .dc option %s" opt)
     | opt :: v :: rest ->
       (match String.lowercase_ascii opt with
        | "cw" -> char_value opt v (fun c -> ch.Chars.cw_sep <- c); go rest
@@ -197,6 +212,11 @@ let dc ctx ops =
              in
              ch.Chars.gml_delim <- Some c;
              match rest with
+             | e1 :: e2 :: rest'
+               when e1 = String.make 1 c && String.length e2 = 1 ->
+               ch.Chars.gml_end <- e1 ^ e2; go rest'
+             | e :: _ when e = String.make 1 c ->
+               Ctx.error ctx ".dc gml: end-tag delimiter %s is the tag delimiter" e
              | e :: rest' when end_ok e -> ch.Chars.gml_end <- e; go rest'
              | _ -> ch.Chars.gml_end <- String.make 2 c; go rest)
        | "mcs" -> gml_char opt v (fun c -> ch.Chars.mcs <- c); go rest
@@ -281,7 +301,14 @@ let se ctx ops =
             set ""
           else if Expr.is_quote rest.[0] then value rest
           else if String.lowercase_ascii (String.trim rest) = "lib" then
-            Ctx.warn ctx ".se %s lib: symbol libraries are not supported" name
+            (* the value is the first line of the library member
+               (p.240, p.282) *)
+            match sub with
+            | `At 0 ->
+              if not (Library.load_symbol ctx name) then
+                Ctx.error ctx ".se %s lib: no member %s in the libraries" name
+                  (Library.member_name name)
+            | _ -> Ctx.error ctx ".se %s lib: a subscript is not allowed" name
           else
             (* DCF-VERIFY: an undelimited value without '=' is taken as
                written *)
@@ -508,6 +535,12 @@ let dm ctx ops =
   | Macro.Begin name ->
     ctx.capture <-
       Some { Ctx.cname = name; cbody = []; cfrom = ctx.loc; discard = false }
+  | Macro.Lib name ->
+    (* searched whatever the setting of .ly; the definition replaces any
+       existing one (p.282) *)
+    if Library.load_macro ctx name = None then
+      Ctx.error ctx ".dm %s lib: no member %s in the libraries" name
+        (Library.member_name name)
   | Macro.End None -> Ctx.error ctx ".dm off without .dm name on"
   | Macro.End (Some name) | Macro.Delete name ->
     (* DCF-VERIFY: deleting an undefined macro is silently accepted *)
@@ -518,6 +551,19 @@ let end_capture ctx (cap : Ctx.capture) =
   ctx.Ctx.capture <- None;
   if not cap.discard then
     Macro.define ctx.macros cap.cname ~at:cap.cfrom (List.rev cap.cbody)
+
+(* .ly on|off|mac|sym (p.240, p.282-283): which unresolved names the
+   libraries are searched for.  ON: macros and symbols; MAC: macros
+   only; SYM: symbols only; OFF: neither (the initial setting).
+   DCF-VERIFY: .ly without an operand is ON. *)
+let ly ctx ops =
+  let set m s = ctx.Ctx.ly_mac <- m; ctx.ly_sym <- s in
+  match String.lowercase_ascii (String.trim ops) with
+  | "" | "on" -> set true true
+  | "off" -> set false false
+  | "mac" -> set true false
+  | "sym" -> set false true
+  | o -> Ctx.error ctx ".ly: ON, OFF, MAC or SYM expected, not %s" o
 
 (* .ms on|off; off initially (p.271). *)
 let ms ctx ops =
@@ -584,7 +630,10 @@ let em ctx ops =
   | name, args -> (
     match Macro.find ctx.Ctx.macros name with
     | Some m -> invoke ctx name m args
-    | None -> Ctx.error ctx ".em: macro %s not defined" name)
+    | None -> (
+      match Library.find_macro ctx name with
+      | Some m -> invoke ctx name m args
+      | None -> Ctx.error ctx ".em: macro %s not defined" name))
 
 (* .ec .xx args (p.277-279): execute the native control word even when a
    macro of that name is defined. *)
@@ -642,6 +691,7 @@ let install ctx =
   r "ct" ct;
   r "dm" dm;
   r "ms" ms;
+  r "ly" ly;
   r "me" me;
   r "em" em;
   r "ec" ec;

@@ -327,6 +327,9 @@ let parse_ref s k =
 
 let lookup st name sub =
   let syms = st.ctx.Ctx.syms in
+  (* an unresolved symbol may come from the library ([.ly on|sym]) *)
+  if st.ctx.Ctx.ly_sym && not (Symbols.defined syms name) then
+    ignore (Library.resolve_symbol st.ctx name);
   let v =
     match sub with
     | Plain -> Symbols.get syms name

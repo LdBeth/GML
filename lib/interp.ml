@@ -41,7 +41,9 @@
       it being text with continuation (no word space).  The rest is the
       next input line.
    6. Dispatch.  A control word line: with [.ms on] and no modifier, the
-      longest name ([Line.control.long]) is tried as a macro first;
+      longest name ([Line.control.long]) is tried as a macro first,
+      then (with [.ly on|mac], when it is not a control word name) as a
+      member of the macro library, which defines it ([Library], p.282);
       otherwise the first two characters are the control word (p.40,
       p.271).  A text line: the continuation character
       ([.dc cont], p.47) is removed from its end; a null line, a blank
@@ -112,9 +114,28 @@ let skip_line ctx s =
 
 (* ---- step 6: dispatch -------------------------------------------------------- *)
 
+(* An unresolved macro from the library ([.ly on|mac], p.282): with
+   [.ms on] and without the modifier, like any macro call, when the long
+   name is not itself a control word name (so [.sp] never searches the
+   library).  The library is searched before the two-character native
+   word: [.dsmgdoc] is the macro DSMGDOC, not [.ds mgdoc].
+   DCF-VERIFY: this order. *)
+let library_macro ctx (c : Line.control) =
+  if ctx.Ctx.ms_on && ctx.ly_mac && not c.Line.quoted then
+    match c.Line.long with
+    | Some name when not (Ctx.is_cw_name ctx name) ->
+      Option.map (fun m -> (name, m, Line.drop_blank c.Line.long_args))
+        (Library.find_macro ctx name)
+    | _ -> None
+  else None
+
 let control ctx (c : Line.control) =
   let ignoring = Control.cs_ignoring ctx in
-  match Ctx.macro_of ctx c with
+  match
+    match Ctx.macro_of ctx c with
+    | Some _ as r -> r
+    | None -> library_macro ctx c
+  with
   | Some (name, m, ops) -> Control.invoke ctx name m ops
   | None when ignoring && c.name <> "cs" -> ()
   | None -> (

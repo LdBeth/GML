@@ -1,4 +1,4 @@
-(* gml [-I dir]... [-share dir] [-profile file|name] [-set sym=val]...
+(* gml [-I dir]... [-lib dir]... [-share dir] [-profile file|name] [-set sym=val]...
        [-maxgo n] [-undef-tags text|element|error] [-o out.xml] input.gml
 
    -profile NAME, when NAME is not a file, is the shipped profile
@@ -6,9 +6,15 @@
    share directory is -share dir, else $GML_SHARE, else ../share/gml
    next to the executable (the installed layout), else the share
    directory of the source tree when run from _build.  Its profile
-   directory is also searched last by .im, so a profile can .im starter. *)
+   directory is also searched last by .im, so a profile can .im starter.
 
-let usage = "usage: gml [-I dir]... [-share dir] [-profile file|name] [-set sym=val]... [-maxgo n] [-undef-tags text|element|error] [-o out.xml] input.gml"
+   -lib DIR (repeatable, searched in order) is a symbol and macro library
+   (SH35-0069 p.281-283): its members are the files DIR/NAME or
+   DIR/NAME.scr, NAME the member name in upper case.  They are used by
+   .dm name lib, .se name lib, and with .ly on|mac|sym for unresolved
+   macros, GML tag APFs and symbols. *)
+
+let usage = "usage: gml [-I dir]... [-lib dir]... [-share dir] [-profile file|name] [-set sym=val]... [-maxgo n] [-undef-tags text|element|error] [-o out.xml] input.gml"
 
 let share_candidates explicit =
   let exe = Sys.executable_name in
@@ -43,6 +49,7 @@ let resolve_profile share p =
 
 let () =
   let includes = ref [] in
+  let libs = ref [] in
   let profile = ref None in
   let share = ref None in
   let sets = ref [] in
@@ -61,6 +68,8 @@ let () =
   let spec =
     [ ("-I", Arg.String (fun d -> includes := d :: !includes),
        "dir  add dir to the .im/.ap search path");
+      ("-lib", Arg.String (fun d -> libs := d :: !libs),
+       "dir  add dir to the macro/symbol libraries (members NAME or NAME.scr)");
       ("-profile", Arg.String (fun f -> profile := Some f),
        "file|name  imbed file before the input; a name (starter) is a shipped profile");
       ("-share", Arg.String (fun d -> share := Some d),
@@ -102,6 +111,12 @@ let () =
   let shipped = match shipped with d :: _ -> [ d ] | [] -> [] in
   let ctx = Gml.Interp.create ~include_path:(List.rev !includes @ shipped) () in
   ctx.sets <- List.rev !sets;
+  ctx.libs <- List.rev !libs;
+  List.iter
+    (fun d ->
+       if not (Sys.file_exists d && Sys.is_directory d) then
+         Gml.Ctx.warn ctx "-lib %s: not a directory" d)
+    ctx.libs;
   Option.iter (fun n -> ctx.max_go <- n) !max_go;
   ctx.undef_tags <- !undef;
   let open_or_fail name =

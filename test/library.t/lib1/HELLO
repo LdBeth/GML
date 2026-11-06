@@ -1,0 +1,3 @@
+.* library macro HELLO: all lines are the body
+hello from lib1 &*1
+second line

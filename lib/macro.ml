@@ -72,6 +72,7 @@ type dm =
   | Begin of string                 (** [.dm name on] *)
   | End of string option            (** [.dm off]; [.dm name off] *)
   | Delete of string                (** [.dm name delete] *)
+  | Lib of string                   (** [.dm name lib]: from the library *)
   | Lines of string * string list   (** [.dm name /l1/l2/] *)
   | Set_line of string * int option * string   (** [.dm name(n) /line] *)
   | Delete_line of string * int     (** [.dm name(n) off] *)
@@ -96,7 +97,8 @@ let skip_blanks s i =
     delimiter is optional (p.272).  An empty piece is an empty line.
     [.dm name on] starts a definition ended by [.dm off] (p.272);
     [.dm name off] deletes the macro (SH35-0050 p.15), as does our
-    synonym [.dm name delete].
+    synonym [.dm name delete].  [.dm name lib] defines it from the
+    macro library ([Library], p.282).
     [.dm name(n) /line] and [.dm name() /line] set one line,
     [.dm name(n) off] removes it (p.273, SH35-0050 p.16).
     DCF-VERIFY: in the subscripted form everything after the delimiter is
@@ -141,6 +143,7 @@ let parse_dm ops =
       | "on" -> Begin name
       | "off" when k > j -> End (Some name)
       | "delete" when k > j -> Delete name
+      | "lib" when k > j -> Lib name
       | "" ->
         if String.lowercase_ascii name = "off" then End None
         else Bad (Printf.sprintf ".dm %s: definition expected" name)
@@ -207,8 +210,9 @@ let tokens s =
     blank that ends the macro name, leading blanks kept), [&*0] = the
     number of tokens, [&*1]... = the tokens (p.253).  There are no
     keyword arguments. *)
-let bind_args scope ops =
-  let toks = tokens ops in
+let bind_args_list scope ops toks =
   Symbols.set_in scope "*" ops;
   List.iteri (fun k v -> Symbols.set_in scope ("*" ^ string_of_int (k + 1)) v) toks;
   Symbols.set_in scope "*0" (string_of_int (List.length toks))
+
+let bind_args scope ops = bind_args_list scope ops (tokens ops)

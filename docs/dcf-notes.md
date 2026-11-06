@@ -21,6 +21,8 @@ The per-line order is documented at the top of `lib/interp.ml`.
 | `.*` ignores the whole line, separators included (p.44). `.cm` is an ordinary control word: its line **is** split at a separator. | DONE (`comments.t`) |
 | Macros are not recognised in text lines; `.em` runs one, also under `.ms off` (p.41, p.278). `.ec` runs the native word (p.277). | DONE (`em.t`, `manual_macros.t`) |
 | Continuation character `.dc cont c` (none initially) and `.ct` (p.47–48). | DONE (`manual_continuation.t`) |
+| `.dc gml c [e]` (p.289): the end-tag delimiter is one character (not a tag name character, `&` or `c`), two characters of which the first is `c` (`.dc gml ! !e`), or those two written as **two operands**, `c` and the second character: the Starter Set's `.dc gml : : e` gives `:` and `:e` (p.289; SH35-0050 p.6 and the DSMPROF3 profile). Without `e` the end-tag delimiter is `c` doubled (DCF-VERIFY); a lone `c` is an error. | DONE (`dc_forms.t`) |
+| `.dc OPTION` with no value, last on the line (`cw`, `cont`, `gml`, `mcs`, `asep`), restores the DCF default (`;`, none, `:`/`::`, `.`, `", "`). DCF-VERIFY: the .DC reference is in the Language Reference, which we lack; the Starter Set (DSM#XLST, DSM#WRIT) issues bare `.dc cw` and `.dc asep` to undo earlier settings, which only this reading fits. | DCF-VERIFY (`dc_forms.t`) |
 | `.lb`/`.lt`/`.nl`/`.bl` implicit words (p.281): natively a leading blank/tab gives a break and the line is text; a macro of that name (with `.ms on`) is invoked with the line as `&*`, and for `.lb`/`.lt` the line is then processed as text (`.dm lb /.*` makes the blank ordinary). | DONE (`manual_implicit.t`) |
 
 ## Symbols (ch. 21)
@@ -37,6 +39,7 @@ The per-line order is documented at the top of `lib/interp.ml`.
 | `.se x = substr STR n [len]` and `.se x = index STR SUB` (p.231). The `&'substr(` function family is not in SH35-0069. | DONE (`manual_se.t`); functions EXT (`functions.t`) |
 | `.se x off` = undefined; for an array with no subscript the whole array goes. `.se x =` / `.se x = ''` = null (p.235). | OK |
 | **Arrays (p.254–257):** `&x(*)` = all elements joined by the array separator (`", "`, `.dc asep`), in index order. `&x(0)` = the counter (= `&x`). `.se x() = v` appends at counter+1. A missing element of a defined array is null. Setting element n sets the counter when element 0 is numeric or unset. | DONE (`subscripts.t`, `manual_arrays.t`) |
+| A **null element 0 is counter 0**: `.se x = ''` (or a null from `.gs vars`) then `.se x() = v` sets element 1, and setting element n makes n the counter. A value that is not a number is an error when the counter is needed (p.257). DCF-VERIFY: p.257 does not mention null; the Starter Set's DSMTTLEP nulls `@title`/`@author`/`@address` with `.gs vars` and then appends, which only this reading fits. | DONE (`null_counter.t`) |
 | Attributes `&E' &L' &T' &V' &W' &U' &A'/&a'` (base 26) `&R'/&r'` (roman) `&X'` (hex). `&DH' &DV' &AD' &SW' &SD'` are device-dependent: 0 here, with a one-time warning (p.235–238). | DONE (`attrfuncs.t`) |
 | `&SYSYEAR &SYSMONTH &SYSDAYOFM &SYSDAYOFW &SYSDAYOFY &SYSHOUR &SYSMINUTE &SYSSECOND`, zero-padded, settable (p.240–241); `&$GML &$EGML &$CW &$CONT &$SU &$LNUM &$TAB &$ENV`(= BODY) `&$PN`(= 1) (p.246–247). | DONE (`sysvars.t`) |
 | `.se p = &` = the page number (p.254), here 1; `.dv` is not supported. | DONE (`manual_macros.t`, FIGNUM) |
@@ -65,6 +68,10 @@ The per-line order is documented at the top of `lib/interp.ml`.
 | `.me [line]`: the line runs in the caller, substituted with the macro's symbols (p.277, SH35-0050 p.17). | DONE (`manual_macros.t`, `manual_implguide.t`) |
 | `.ec .xx`, `.em .xx` (p.277–278). | DONE (`em.t`, `manual_macros.t`) |
 | GML APF lookup finds the macro whatever `.ms` says (a tag is not a control word line). | DCF-VERIFY (`gmlproc.ml`) |
+| **Macro and symbol libraries** (p.239–240, p.281–283): `-lib dir` (repeatable, searched in order; DCF's LIB option takes up to eight). A member is the file `dir/NAME` or `dir/NAME.scr`, NAME the member name in upper case (≤ 8 characters, p.282; a longer name is never searched, DCF-VERIFY). A macro member is the whole body (no `.dm` line, p.283); a symbol member's value is its first line (p.282 note 63), trailing blanks removed (DCF-VERIFY: record padding). | DONE (`library.t`) |
+| `.ly on|off|mac|sym`, initially OFF (p.240, p.282–283): ON searches for unresolved macros and symbols, MAC macros only, SYM symbols only. An unresolved macro is a control word line (`.ms on`, no modifier) whose long name is neither a macro nor a control word name, an `.aa`/class/direct APF that is neither a macro nor native, or the target of `.em`; the library is tried before the two-character native word, so `.dsmgdoc` is the macro DSMGDOC, not `.ds mgdoc` (DCF-VERIFY). Unresolved symbols: global, non-system names during substitution, the member name in upper case (`&libsym` and `&LIBSYM` both come from LIBSYM, p.240). What is found is defined, so the next use does not search (p.282); members are read once and misses are remembered. `.ly` alone = ON (DCF-VERIFY). | DONE (`library.t`) |
+| `.dm name lib` / `.se name lib`: fetched whatever `.ly` says, replacing any definition (p.282); a missing member is an error. | DONE (`library.t`) |
+| `.dm name off` outside a definition **deletes** the macro (SH35-0050 p.16, "Reclaiming Space"): the next call fetches the real macro from the library again, so a member that ends with `.dm name off` runs on every call; one that redefines itself as `.dm name /.*` runs once. | DONE (`library.t`) |
 
 ## Files (ch. 4)
 | Rule | Status |
@@ -76,6 +83,15 @@ The per-line order is documented at the top of `lib/interp.ml`.
 | `.qu` / `.qq` stop processing, also from an imbedded file; the epifile is not processed (p.51). | DONE (`manual_ef.t`) |
 
 ## GML (ch. 24): see the Phase 4 rework (`.aa`, `.gs`, `.dc gml/mcs`)
+`.gs args v1 v2 ...` sets the argument symbols of the current macro (or of
+the file): `&*1 ...`, `&*0` (count), `&*` (the operand string), destroying
+the previous `&*n` (SH35-0050 p.17); `.gs args` alone undefines them (p.29
+item 34). Values are blank-separated; `'quoted values'` may hold blanks,
+`''` is null, a doubled quote is one quote; `.gs args &* x` appends.
+`.gs vars n1 n2 ...` sets n1 to `&*1`, n2 to `&*2` ... (p.17: "totally
+equivalent to" `.se n1 'v1` ...). DCF-VERIFY: blank-only tokenization
+(`-1`, `a-b` stay one value, unlike macro operands), a name beyond the
+last value gets null, `.gs args` alone also undefines `&*0` (`gs_args.t`).
 `.gt`/`.ga` are Waterloo SCRIPT, not DCF. `&$TAG`-style attribute access in
 APFs: `.gs attval` sets `&NAME` (uppercase) or the AS name as written.
 

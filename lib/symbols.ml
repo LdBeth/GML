@@ -129,7 +129,11 @@ let read_only t name =
 let counter_of s =
   match s.value with
   | None -> Some 0
-  | Some v -> int_of_string_opt (String.trim v)
+  | Some v ->
+    (* a null value counts as 0: the Starter Set's DSMTTLEP nulls @title
+       with .gs vars and then appends with .se @title() (DCF-VERIFY) *)
+    let v = String.trim v in
+    if v = "" then Some 0 else int_of_string_opt v
 
 (** Set [name] ([sub] = 0 or absent: the plain value).  Setting element
     n >= 1 makes n the index counter (p.257: "it will be incremented from

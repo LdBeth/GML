@@ -144,6 +144,12 @@ type t = {
   (** [.li]: input lines still to be taken literally; -1: [.li on] *)
   mutable last_tag : string;           (** [&$TAG] *)
   mutable last_tagd : string;          (** [&$TAGD] *)
+  mutable libs : string list;
+  (** [-lib] directories, searched in order ([Library]) *)
+  mutable ly_mac : bool;               (** [.ly on|mac]: search for macros *)
+  mutable ly_sym : bool;               (** [.ly on|sym]: search for symbols *)
+  lib_members : (string, string array option) Hashtbl.t;
+  (** library members read so far, by member name; [None]: not found *)
 }
 
 and word = {
@@ -222,7 +228,11 @@ let create ?(include_path = []) () =
       fmt = initial_fmt ();
       literal = 0;
       last_tag = "";
-      last_tagd = "" }
+      last_tagd = "";
+      libs = [];
+      ly_mac = false;   (* SH35-0069 p.240: the initial setting is OFF *)
+      ly_sym = false;
+      lib_members = Hashtbl.create 16 }
   in
   ctx.syms.Symbols.system <- system_symbol ctx;
   ctx.doc.Doc.report <-

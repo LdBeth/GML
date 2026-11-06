@@ -87,7 +87,10 @@ let find_named ctx name =
     let k = String.lowercase_ascii name in
     match Hashtbl.find_opt ctx.Ctx.words k with
     | Some w -> Some (Apf_word (k, w))
-    | None -> None)
+    | None ->
+      (* neither a macro nor native: the macro library, with .ly on|mac
+         ([Library]); an [.aa] APF of the Starter Set comes from there *)
+      Option.map (fun m -> Apf_macro (k, m)) (Library.find_macro ctx name))
 
 (** APF and rules for tag [name] (lowercase). *)
 let lookup ctx ~is_end name =
@@ -538,6 +541,67 @@ let after_word s =
   let k = if !j < n then !j + 1 else !j in
   String.sub s k (n - k)
 
+(* .gs args v1 v2 ... (SH35-0050 p.17, p.28-29): the operands become
+   the local argument symbols of the current macro (or of the file, when
+   no macro is the source): [&*1], [&*2] ... the values, [&*0] their
+   number, [&*] the operand string; the previous [&*n] are destroyed
+   ("using the .GS ARGS control word destroys the &* array", p.17), so
+   [.gs args] alone undefines them (p.29, item 34).  The values are
+   separated by blanks; a value in single quotation marks may contain
+   blanks, [''] alone is the null string and a doubled quote inside
+   stands for one (DSMPROF3 sets its quotation marks with a quoted
+   double quote and a quoted doubled single quote).  The
+   operands were substituted with the line, so [.gs args &* x y]
+   appends to the current list (DSM#SETS).
+   DCF-VERIFY: the tokenization (blanks only, unlike macro operands,
+   p.276, so [-1] and [a-b] stay one value); the value of [&*]. *)
+let args_tokens s =
+  let n = String.length s in
+  let rec go i acc =
+    let i = Tagscan.skip_blanks s i in
+    if i >= n then List.rev acc
+    else if s.[i] = '\'' then
+      let v, j = Macro.quoted s i in
+      go j (v :: acc)
+    else begin
+      let j = ref i in
+      while !j < n && not (Tagscan.is_blank s.[!j]) do incr j done;
+      go !j (String.sub s i (!j - i) :: acc)
+    end
+  in
+  go 0 []
+
+let is_arg_key k =
+  String.length k >= 2 && k.[0] = '*'
+  && String.for_all (function '0' .. '9' -> true | _ -> false)
+       (String.sub k 1 (String.length k - 1))
+
+let gs_args ctx ops =
+  let scope = ctx.Ctx.syms.Symbols.local () in
+  let old = Hashtbl.fold (fun k _ acc -> if is_arg_key k then k :: acc else acc) scope [] in
+  List.iter (Hashtbl.remove scope) old;
+  let ops = String.trim ops in
+  let toks = args_tokens ops in
+  if toks <> [] then Macro.bind_args_list scope ops toks
+  else Hashtbl.remove scope "*"
+
+(* .gs vars n1 n2 ... (SH35-0050 p.17): symbol n1 gets the value of
+   [&*1], n2 of [&*2] ... (the [.gs args] values): [.gs args 1 2] then
+   [.gs vars a b] is [.se a '1] [.se b '2].  The names are as written
+   (case-sensitive) and may be local ([*t4]).
+   DCF-VERIFY: a name beyond the last value gets the null string. *)
+let gs_vars ctx names =
+  List.iteri
+    (fun i name ->
+       let v =
+         Option.value ~default:"" (Symbols.get ctx.Ctx.syms ("*" ^ string_of_int (i + 1)))
+       in
+       Control.check_name ctx ".gs vars" name (fun () ->
+           match Symbols.set ctx.Ctx.syms name v with
+           | Ok () -> ()
+           | Error e -> Ctx.error ctx ".gs vars: %s" e))
+    names
+
 let gs ctx ops =
   match words ops with
   | [] -> Ctx.error ctx ".gs: service required"
@@ -559,6 +623,8 @@ let gs ctx ops =
     | "scan", _ -> scan_copy ctx "scan" ~remove:true args
     | "copy", _ -> scan_copy ctx "copy" ~remove:false args
     | "insert", _ -> insert ctx (after_word ops)
+    | "args", _ -> gs_args ctx (after_word ops)
+    | "vars", _ -> gs_vars ctx args
     | s, _ -> Ctx.warn ctx "unsupported .gs service %s" s)
 
 let install ctx =
