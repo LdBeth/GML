@@ -66,7 +66,7 @@ lists how each fixture input was generated.
 
 ```
 gml [-I dir]... [-share dir] [-profile file|name] [-set sym=val]...
-    [-maxgo n] [-undef-tags text|element|error] [-o out.xml] input.gml
+    [-lib dir]... [-maxgo n] [-undef-tags text|element|error] [-o out.xml] input.gml
 ```
 
 - `-profile starter` loads the shipped Starter Set profile from the share
@@ -255,14 +255,60 @@ pdftex runs have rules of their own.
 `docs/dcf-notes.md` lists the SCRIPT/VS and Starter Set rules checked
 against the manuals.  Each entry has a status (DONE, OK, EXT) and the
 cram test that shows it.  The points that the guides leave open are
-marked `DCF-VERIFY`: 50 in the sources (`lib/`, `share/`, `xslt/`)
-and 11 in the notes.  They include how far an ignored conditional section is
+marked `DCF-VERIFY`: 58 in the sources (`lib/`, `share/`, `xslt/`)
+and 21 in the notes.  They include how far an ignored conditional section is
 "resolved", the input-versus-output line count of `.in … after n`, the
 `.mg` severities, the DSMGML message numbers and wording, `.tr` hex
 codes taken as code points rather than EBCDIC, and APF lookup under
 `.ms off`.  Deliberate extensions are marked EXT: the automatic element
 per tag, `&'substr(`-style functions, footnotes inside figures, and
 2-digit years taken as 20xx.
+
+## Testing against IBM's Starter Set
+
+Appendix C of the Implementation Guide (SH35-0050-2) prints IBM's whole
+Starter Set macro library: the DSMPROF3 profile and its 123 APFs and
+helper macros.  Unlike `share/profile/starter.gml`, which builds the
+semantic tree, IBM's macros format through control words, so they test
+the formatting hints and the TeX mapping of `gml.tex` end to end.
+
+The listing is IBM's copyrighted code, so its transcription is kept
+locally in `test/dcf-real/` (gitignored): `members/NAME.scr`, one file
+per library member, and `pages.txt`, a page map with the spots read
+with doubt.  To run it, use the library and the profile, and set the
+system symbols the engine does not provide yet:
+
+```
+gml -share share -lib test/dcf-real/members \
+    -profile test/dcf-real/members/DSMPROF3.scr \
+    -set '$DCF=3' -set '$SYS=CMS' -set '$PASS=1' -set '$TWO=0' \
+    -set '$PDEV=3800' -set '$FNAM=SAMPLE' xslt/test/gml/starter.gml
+```
+
+Running it needed DCF's macro libraries (`-lib`, `.ly`, `.dm name lib`,
+`.se name lib`), `.gs args`/`.gs vars`, the `.dc gml : : e` form and
+null array counters; all are implemented, with their own cram tests.
+Still missing, from the latest run:
+
+- system symbols such as `&$CHAR`, `&$RB`, `&$PDEV`, `&$PASS`, `&$PS`,
+  `&$IN`, `&$SYS` (hence the `-set`s above);
+- `.sa`/`.re` (save and restore the environment), `.fv` and `.ix`;
+- the GML services `.gs hctr` and `.gs qatt` (footnotes need `qatt`);
+- element models: IBM's profile has none, so automatic elements close
+  only at the enclosing end tag;
+- in TeX, EBCDIC code points (`&X'..'`, `.dv` bullets), `.bx` with a
+  named `.dr` rule, and `.df` fonts.
+
+The SH35-0070 Language Reference, which defines most of these, has no
+English copy online.  The other references, kept in the project root
+and gitignored, are the Text Programmer's Guide (SH35-0069-3), the
+Implementation Guide (SH35-0050-2), the Text Programmer's Quick
+Reference (SX26-3723-5: control word syntax and system symbols) and
+the Release 2 User's Guide (SH20-9161-3: control word and `.gs`
+service descriptions, before Release 3), all from
+<http://www.bitsavers.org/pdf/ibm/370/DCF/>.  A Hebrew translation of
+SH35-0070-2 is on archive.org (item `ibm-hdcf-3-manual-1986`); its page
+images are readable, though its OCR text is not.
 
 ## Known limitations
 

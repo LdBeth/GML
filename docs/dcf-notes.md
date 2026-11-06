@@ -133,3 +133,16 @@ footnote has its own flag `&@fn` instead of `&@state = N`, so `:fn` is
 allowed inside `:fig`/`:xmp` (DSMFTNT refuses it there because keeps and
 floats exclude footnotes, SH35-0050 p.129; the tree has no such
 conflict) (`starter_nesting.t`).
+
+## IBM's macro library (SH35-0050-2 Appendix C, local transcription)
+The transcription in `test/dcf-real/` (gitignored, IBM copyright) runs
+with `-lib test/dcf-real/members -profile .../DSMPROF3.scr`; README
+"Testing against IBM's Starter Set" has the command and the open gaps.
+Points settled while checking it against the scan:
+
+| Point | Status |
+|---|---|
+| The `index`/`substr` lookup tables in DSM#SETV and the ordinal string in DSM#SETS (1st–31st) are consistent with the transcribed blank and dash counts. | OK |
+| DSMPROF3's `@oquote`/`@cquote` strings are `'` followed by seven `"''` groups (alternating `"` and `'`, single quotes doubled, unclosed string); its `.gs args` is `'"' '''' '"' ''''`. | OK |
+| `.if SYSOUT eq PAGE` (no `&`) in DSMPROF3 and `&@sK@x` in DSMEXMP are as printed. With case-sensitive symbols (p.239) the latter never matches `@sk@x`, so it is taken as a latent bug in IBM's listing and kept. | OK |
+| IBM's `.dm NAME off` at the end of a member deletes the macro after use, so the next call reloads it from the library (SH35-0050 p.16). | DONE |
