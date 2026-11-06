@@ -36,7 +36,9 @@
 %   \gmldefstart{h1}{...}  \gmldefend{h1}{...}  \gmldefhint{sp}{...}
 %   \gmldeflines{ce}{begin}{...}  \gmldefnum{li}#1{...}
 %   \gmldefchar{8364}{EUR}  \gmldeffont{hi1}{\sl}
-% or \catcode`\@=11 and redefine \gml@... directly.
+% or \catcode`\@=11 and redefine \gml@... directly.  A tag set's file
+% (\def\gmltagset{file} before \input gml; gmlfmt -tagset writes it) is
+% \input at the end too, before gmllocal.tex, so the most local wins.
 %
 % Formatting state.  DCF control words are state (set until changed),
 % and so are \leftskip & co. in TeX.  Hints set GLOBAL hint state
@@ -1155,7 +1157,8 @@
   \everypar{\gml@everypar}\rm\gml@apply}
 \def\gmlenddocument{\par\vfill\supereject\gml@checkrefs}
 
-% ---- local overrides -------------------------------------------------------------------------------------
+% ---- tag set and local overrides -----------------------------------------------------------------------
+\ifx\gmltagset\undefined\else\input\gmltagset\relax\fi
 \openin\gml@in=gmllocal.tex
 \ifeof\gml@in\closein\gml@in\else\closein\gml@in\input gmllocal \fi
 \catcode`\@=\gmlatcode

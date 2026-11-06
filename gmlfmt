@@ -2,7 +2,8 @@
 # gmlfmt - run the GML pipeline on one file, result on standard output.
 #
 #   gmlfmt [-to xml|resolved|scoped|semantic|html|tex|fo] [-profile p]
-#          [-set name=value]... [-p name=value]... [-I dir]... in.gml
+#          [-tagset t] [-set name=value]... [-p name=value]... [-I dir]...
+#          in.gml
 #
 #   -to       the stage to stop at (default xml):
 #               xml       gml -profile p              canonical XML
@@ -13,6 +14,14 @@
 #               fo        + xslt/fo.xsl               (from scoped)
 #               tex       + xslt/tex.xsl              (from resolved)
 #   -profile  the gml profile (default starter)
+#   -tagset   a tag set: a bundle directory (t contains a /, or
+#             GMLROOT/share/tagset/t), else a profile name (= -profile t).
+#             A bundle holds profile.gml (required: the profile, unless
+#             -profile is given; the directory is also the last -I),
+#             optionally resolve.xsl scope.xsl strip-hints.xsl html.xsl
+#             fo.xsl tex.xsl (used instead of the stock stage; they
+#             normally xsl:import it) and tagset.tex (tex stage parameter
+#             tex-tagset: gml.tex inputs it before gmllocal.tex).
 #   -set      a symbol for gml (-set) and a parameter for every stylesheet
 #   -p        a parameter for the stylesheets only (e.g. -p h1-prefix=Chapter)
 #   -I        an imbed directory for gml
@@ -24,12 +33,15 @@
 # project root (default: the directory of this script).
 
 fn usage {
-	echo 'usage: gmlfmt [-to xml|resolved|scoped|semantic|html|tex|fo] [-profile p] [-set name=value]... [-p name=value]... [-I dir]... in.gml' >[1=2]
+	echo 'usage: gmlfmt [-to xml|resolved|scoped|semantic|html|tex|fo] [-profile p] [-tagset t] [-set name=value]... [-p name=value]... [-I dir]... in.gml' >[1=2]
 	exit usage
 }
 
 to=xml
 profile=starter
+profileopt=()
+tagset=()
+bundle=()
 sets=()
 params=()
 gmlargs=()
@@ -39,7 +51,9 @@ while(! ~ $#* 0 && ~ $1 -*){
 	case -to
 		to=$2
 	case -profile
-		profile=$2
+		profileopt=$2
+	case -tagset
+		tagset=$2
 	case -set
 		sets=($sets $2)
 	case -p
@@ -62,6 +76,27 @@ if(~ $#SAXON 0) SAXON=/usr/local/bin/transform
 if(~ $#GML 0) gml=(opam exec --switch gml -- dune exec --root $root --display quiet -- gml -share $root/share)
 if not gml=`{echo $GML}
 
+# the tag set (after the option loop: -profile wins in any order)
+if(! ~ $#tagset 0){
+	dir=()
+	if(~ $tagset */*) dir=$tagset
+	if(~ $#dir 0 && test -d $root/share/tagset/$tagset) dir=$root/share/tagset/$tagset
+	if(~ $#dir 0 && test -f $root/share/profile/$tagset.gml) profile=$tagset
+	if(~ $#dir 0 && ! test -f $root/share/profile/$tagset.gml){
+		echo gmlfmt: no tag set $tagset >[1=2]
+		exit 1
+	}
+	if(! ~ $#dir 0){
+		if(! test -d $dir) { echo gmlfmt: no tag set $tagset >[1=2]; exit 1 }
+		bundle=`{cd $dir && pwd}
+		if(~ $#bundle 0) { echo gmlfmt: no tag set $tagset >[1=2]; exit 1 }
+		if(! test -f $bundle/profile.gml) { echo gmlfmt: $bundle/profile.gml missing >[1=2]; exit 1 }
+		profile=$bundle/profile.gml
+		gmlargs=($gmlargs -I $bundle)
+	}
+}
+if(! ~ $#profileopt 0) profile=$profileopt
+
 if(~ $#TMPDIR 0) TMPDIR=/tmp
 tmp=$TMPDIR/gmlfmt.$pid
 fn sigexit { rm -f $tmp.xml $tmp.r.xml $tmp.s.xml }
@@ -72,6 +107,7 @@ for(s in $sets) setargs=($setargs -set $s)
 # xsl stylesheet input [-o:output]
 fn xsl {
 	sheet=$xslt/$1.xsl
+	if(! ~ $#bundle 0 && test -f $bundle/$1.xsl) sheet=$bundle/$1.xsl
 	if(! test -f $sheet) { echo gmlfmt: $sheet not written yet >[1=2]; exit 1 }
 	src=$2
 	shift 2
@@ -99,7 +135,9 @@ case semantic
 	xsl strip-hints $tmp.r.xml
 case tex
 	xsl resolve $tmp.xml -o:$tmp.r.xml
-	xsl tex $tmp.r.xml
+	tagparam=()
+	if(! ~ $#bundle 0 && test -f $bundle/tagset.tex) tagparam=tex-tagset^'='^$bundle/tagset.tex
+	xsl tex $tmp.r.xml $tagparam
 case scoped
 	xsl resolve $tmp.xml -o:$tmp.r.xml
 	xsl scope $tmp.r.xml

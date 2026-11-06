@@ -29,8 +29,9 @@
 #     (their expected output is the input itself)
 # The backend inputs, with -set SYSVARP=STAGE (so :psc sections select):
 #   tex  gmlfmt -to resolved gml/tex-NAME.gml  -> tex/NAME.in.xml
-#        (chars, hints, lines; params reuses chars); tex/starter is
-#        gml/starter.gml resolved; tex/features = resolve/features.out.xml
+#        (chars, hints, lines; params and tagset reuse chars);
+#        tex/starter is gml/starter.gml resolved; tex/features =
+#        resolve/features.out.xml
 #   html gmlfmt -to scoped gml/html-NAME.gml   -> html/NAME.in.xml
 #        (figs, fn, hints, index, lines, lists, scope, sections, text);
 #        html/starter and html/params are gml/starter.gml scoped,

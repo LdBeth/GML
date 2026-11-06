@@ -8,7 +8,7 @@
   element state (see the header of gml.tex).
 
   Output (method text, pure ASCII):
-    [\def\gmlfonts{$tex-fonts}]
+    [\def\gmlfonts{$tex-fonts}] [\def\gmltagset{$tex-tagset}]
     \input gml ($tex-input), then $tex-preamble
     \gmlbegindocument ... \gmlenddocument \bye
   Dispatch scheme - one rule for source elements, one for generated ones:
@@ -60,6 +60,10 @@
   <!-- font scheme: share/tex/gmlfont-NAME.tex (ncs, cm, ...); empty = the
        gml.tex default.  Written as \def\gmlfonts{NAME} before \input. -->
   <xsl:param name="tex-fonts" as="xs:string" select="''"/>
+  <!-- tag-set TeX file (gmlfmt -tagset: BUNDLE/tagset.tex); empty = none.
+       Written as \def\gmltagset{PATH} before \input: gml.tex inputs it
+       at its end, before gmllocal.tex. -->
+  <xsl:param name="tex-tagset" as="xs:string" select="''"/>
   <!-- title page alignment as SYSVART: right (default) | left | center -->
   <xsl:param name="SYSVART" as="xs:string" select="''"/>
 
@@ -141,6 +145,9 @@
   <xsl:template match="/">
     <xsl:if test="$tex-fonts != ''">
       <xsl:value-of select="concat('\def\gmlfonts{', $tex-fonts, '}', $nl)"/>
+    </xsl:if>
+    <xsl:if test="$tex-tagset != ''">
+      <xsl:value-of select="concat('\def\gmltagset{', $tex-tagset, '}', $nl)"/>
     </xsl:if>
     <xsl:text>\input </xsl:text>
     <xsl:value-of select="$tex-input"/>

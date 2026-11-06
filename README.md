@@ -82,7 +82,7 @@ From the source tree:
 
 ```
 ./gmlfmt [-to xml|resolved|scoped|semantic|html|tex|fo] [-profile p]
-         [-set name=value]... [-p name=value]... [-I dir]... in.gml
+         [-tagset t] [-set name=value]... [-p name=value]... [-I dir]... in.gml
 ```
 
 `-set` goes to gml and to every stylesheet.  `-p` goes to the
@@ -90,6 +90,11 @@ stylesheets only, e.g. `./gmlfmt -to html -set SYSVARH=yes -p h1-prefix=Chapter 
 It uses the project's gml with `-share <root>/share`, so edits to
 `share/profile/starter.gml` take effect at once.  Set `GML`, `SAXON` or
 `GMLROOT` to use other tools.
+
+`-tagset t` selects a tag set (see Customising): a bundle directory when
+`t` contains a `/` or `share/tagset/t` exists, otherwise the profile
+`share/profile/t.gml` (the same as `-profile t`).  An explicit
+`-profile` overrides the bundle's `profile.gml`, in either order.
 
 ### `mk`: the pipeline as files
 
@@ -153,6 +158,18 @@ The stylesheet parameters (`SYSVARS`/`SYSVARD`/`SYSVART` page layouts,
   `gmllocal.tex`.  Per engine: a file `gmlfont-NAME-ENGINE.tex`
   (ENGINE = `tex`, `pdftex`, `luatex`, `xetex`) is preferred over
   `gmlfont-NAME.tex` when present.
+- **Tag sets.** A tag set bundle is a directory (`share/tagset/NAME`, or
+  any path given to `gmlfmt -tagset`) holding `profile.gml` (required:
+  the gml profile, e.g. `.im starter` and then the bundle's own tags;
+  the directory is also on the `.im` path, after the `-I` dirs) and
+  optionally stage overrides `resolve.xsl`, `scope.xsl`,
+  `strip-hints.xsl`, `html.xsl`, `fo.xsl`, `tex.xsl`, used instead of
+  the stock stylesheets.  An override normally does `xsl:import` of the
+  stock one by relative path (e.g. `../../xslt/html.xsl` from a bundle
+  in `share/tagset/NAME`) and adds or overrides template rules.  An
+  optional `tagset.tex` is passed to tex.xsl as `tex-tagset`, which
+  writes `\def\gmltagset{path}` before `\input gml`; gml.tex inputs it at
+  its end, before `gmllocal.tex` (so the most local file wins).
 - **HTML.** Every element has a class `gml-NAME`.  Restyle
   `share/html/gml.css` or replace it (parameters `css`, `css-inline`,
   `css-file`).
