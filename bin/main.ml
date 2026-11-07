@@ -1,5 +1,6 @@
 (* gml [-I dir]... [-lib dir]... [-share dir] [-profile file|name] [-set sym=val]...
-       [-maxgo n] [-undef-tags text|element|error] [-o out.xml] input.gml
+       [-maxgo n] [-undef-tags text|element|error] [-o out.xml]
+       [-tex file] [-layout cmd] [-jobname name] [-tex-fonts name] input.gml
 
    -profile NAME, when NAME is not a file, is the shipped profile
    share/profile/NAME.gml ("-profile starter": the GML Starter Set).  The
@@ -12,9 +13,23 @@
    (SH35-0069 p.281-283): its members are the files DIR/NAME or
    DIR/NAME.scr, NAME the member name in upper case.  They are used by
    .dm name lib, .se name lib, and with .ly on|mac|sym for unresolved
-   macros, GML tag APFs and symbols. *)
+   macros, GML tag APFs and symbols.
 
-let usage = "usage: gml [-I dir]... [-lib dir]... [-share dir] [-profile file|name] [-set sym=val]... [-maxgo n] [-undef-tags text|element|error] [-o out.xml] input.gml"
+   -tex FILE writes the document as TeX for share/tex/gml.tex in hint
+   mode (Be_tex: the profile's control words do the layout), "-" for
+   standard output; &$PN and &$LC are constants.  -layout CMD (e.g.
+   "aptex", or "aptex --output-format=pdf": the words are the program
+   and its options) is layout mode (Layout): TeX runs while the document
+   is processed and answers &$PN and &$LC; it writes JOB.dvi or JOB.pdf
+   in the current directory, JOB being -jobname or the input's base
+   name.  With -layout, -tex FILE also keeps the TeX source as sent
+   (with a comment line "%gml:query pn=N" after each query).  With -tex
+   or -layout the XML is written only when -o is given.  -layout-fake
+   (for tests) is layout mode with a fake TeX that answers from the
+   number of lines of TeX source so far (pn = 1 + lines/50, lc = 50 -
+   lines mod 50). *)
+
+let usage = "usage: gml [-I dir]... [-lib dir]... [-share dir] [-profile file|name] [-set sym=val]... [-maxgo n] [-undef-tags text|element|error] [-o out.xml] [-tex file] [-layout cmd] [-jobname name] [-tex-fonts name] input.gml"
 
 let share_candidates explicit =
   let exe = Sys.executable_name in
@@ -56,6 +71,11 @@ let () =
   let output = ref None in
   let max_go = ref None in
   let undef = ref Gml.Ctx.Undef_text in
+  let tex = ref None in
+  let layout = ref None in
+  let fake = ref false in
+  let jobname = ref None in
+  let tex_fonts = ref "" in
   let inputs = ref [] in
   let bad = ref [] in
   let add_set s =
@@ -88,7 +108,16 @@ let () =
                | _ -> Gml.Ctx.Undef_text)),
        "  a GML tag without APF: text (with a message, the DCF way), an element, or an error");
       ("-o", Arg.String (fun f -> output := Some f),
-       "file  write XML to file (default stdout)") ]
+       "file  write XML to file (default stdout, none with -tex or -layout)");
+      ("-tex", Arg.String (fun f -> tex := Some f),
+       "file  write TeX for gml.tex (hint mode) to file (- for stdout)");
+      ("-layout", Arg.String (fun c -> layout := Some c),
+       "cmd  layout mode: run TeX (e.g. aptex) for live &$PN and &$LC");
+      ("-layout-fake", Arg.Set fake, "  layout mode with a fake TeX (for tests)");
+      ("-jobname", Arg.String (fun j -> jobname := Some j),
+       "name  the TeX job name (default: the input's base name)");
+      ("-tex-fonts", Arg.String (fun f -> tex_fonts := f),
+       "name  the gml.tex font scheme (gmlfont-NAME.tex)") ]
   in
   (try Arg.parse_argv Sys.argv spec (fun f -> inputs := f :: !inputs) usage with
    | Arg.Help m -> print_string m; exit 0
@@ -134,12 +163,69 @@ let () =
        | Some f -> ctx.profile_id <- open_or_fail f
        | None -> Gml.Ctx.error ctx "profile %s not found (no file, no shipped profile)" p)
     !profile;
+  let config =
+    { Gml.Be_tex.default_config with
+      fonts = !tex_fonts;
+      title_align =
+        (match List.assoc_opt "SYSVART" ctx.sets with Some v -> v | None -> "") }
+  in
+  let write f s =
+    if f = "-" then print_string s
+    else
+      try Out_channel.with_open_bin f (fun oc -> output_string oc s)
+      with Sys_error e -> Gml.Ctx.error ctx "%s" e
+  in
+  let job =
+    match !jobname with
+    | Some j -> j
+    | None -> Filename.remove_extension (Filename.basename input)
+  in
+  let fake_buf = Buffer.create 4096 in
+  let lay =
+    if !fake || !layout <> None then begin
+      let transport =
+        if !fake then Gml.Layout.fake fake_buf
+        else
+          let share_tex =
+            match
+              List.find_opt
+                (fun d -> Sys.file_exists (Filename.concat d "tex/gml-layout.tex"))
+                (share_candidates !share)
+            with
+            | Some d -> Filename.concat d "tex"
+            | None -> Gml.Ctx.warn ctx "-layout: share/tex/gml-layout.tex not found"; "."
+          in
+          let share_tex =
+            if Filename.is_relative share_tex then Filename.concat (Sys.getcwd ()) share_tex
+            else share_tex
+          in
+          Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
+          Gml.Layout.pipe ~cmd:(Option.get !layout) ~jobname:job ~share_tex
+            ~driver:(Gml.Layout.driver config)
+            ~warn:(fun m -> Gml.Ctx.warn ctx "%s" m) ()
+      in
+      let source = if !tex <> None then Some (Buffer.create 4096) else None in
+      Some (Gml.Layout.install ?source ctx transport, source)
+    end
+    else None
+  in
   if ctx.diag.errors = 0 then Gml.Interp.run ctx;
   let root = Gml.Interp.finish ctx in
-  let xml = Gml.Be_xml.document root in
+  let quiet_xml = !tex <> None || lay <> None in
   (match !output with
-   | None -> print_string xml
-   | Some f -> (
-     try Out_channel.with_open_bin f (fun oc -> output_string oc xml)
-     with Sys_error e -> Gml.Ctx.error ctx "%s" e));
+   | None -> if not quiet_xml then print_string (Gml.Be_xml.document root)
+   | Some f -> write f (Gml.Be_xml.document root));
+  (match lay with
+   | Some (t, source) ->
+     (match Gml.Layout.finish t with
+      | Some 0 | None -> ()
+      | Some n -> Gml.Ctx.warn ctx "-layout: TeX ended with status %d" n);
+     Option.iter
+       (fun b ->
+          write (Option.get !tex)
+            (Gml.Be_tex.preamble config ^ Buffer.contents b
+             ^ "\\gmlenddocument\n\\bye\n"))
+       source
+   | None ->
+     Option.iter (fun f -> write f (Gml.Be_tex.document ~config root)) !tex);
   exit (Gml.Loc.return_code ctx.diag)

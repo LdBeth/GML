@@ -837,6 +837,8 @@
   \ifx\gml@tv\gml@cancelstr\global\csname gml@user#1true\endcsname
     \global\setbox\csname gml@#1odd\endcsname\box\voidb@x
     \global\setbox\csname gml@#1even\endcsname\box\voidb@x
+    \expandafter\global\expandafter\let\csname gml@#1dynodd\endcsname\relax
+    \expandafter\global\expandafter\let\csname gml@#1dyneven\endcsname\relax
   \else\ifx\gml@tv\gml@supstr\global\csname gml@#1suptrue\endcsname
     \global\csname gml@#1suppagetrue\endcsname
   \else\ifx\gml@tv\gml@resstr\global\csname gml@#1supfalse\endcsname\fi\fi\fi}
@@ -920,12 +922,35 @@
 \gmldefhint{is}{\gml@hget{spec}\gml@tv\def\gml@isnext{amount}%
   \let\gml@is@to\empty\let\gml@is@min\empty\let\gml@is@amount\empty
   \gml@forwords\gml@tv\gml@is@tok
+  \ifgml@islab\gml@is@label\else
   \ifx\gml@is@to\empty
     \ifx\gml@is@amount\empty\else\gml@dimtok\gml@is@amount\gml@dima
       \ifvmode\leavevmode\fi\hskip\gml@dima\fi
   \else\ifvmode\leavevmode\gml@dimtok\gml@is@to\gml@dima\hskip\gml@dima
     \else\ifx\gml@is@min\empty\space
-      \else\gml@dimtok\gml@is@min\gml@dima\unskip\hskip\gml@dima\fi\fi\fi}
+      \else\gml@dimtok\gml@is@min\gml@dima\unskip\hskip\gml@dima\fi\fi\fi\fi}
+% TO after a label: tex.xsl writes \gmlislabel before the text of the
+% line so far when it is only text and fonts since the last break (a
+% list identifier, a definition term), so the label is boxed and the tab
+% is exact: TO less the label width (TPG p.89, measured from the start
+% of the output line).  A missed tab (the label plus MIN is wider than
+% TO): BREAK breaks the line, ABSOLUTE backs up, otherwise (BLANK, and
+% DCF-VERIFY without it) a word space.
+\newbox\gml@islab \newif\ifgml@islab
+\def\gmlislabel{\leavevmode\setbox\gml@islab\hbox\bgroup\gml@islabtrue}
+\def\gml@is@label{\unskip
+  \edef\gml@tmpd{\noexpand\gml@is@label@a{\gml@is@to}{\gml@is@min}{\gml@tv}}%
+  \expandafter\egroup\gml@tmpd}
+\def\gml@is@label@a#1#2#3{\gml@apply\def\gml@tv{#1}%
+  \ifx\gml@tv\empty\box\gml@islab
+  \else\gml@dimtok{#1}\gml@dima\advance\gml@dima-\wd\gml@islab
+    \def\gml@tv{#2}\ifx\gml@tv\empty\gml@dimb1sp\else\gml@dimtok{#2}\gml@dimb\fi
+    \box\gml@islab\def\gml@tv{#3}%
+    \ifdim\gml@dima<\gml@dimb
+      \gml@ifin\gml@tv{absolute}\ifgml@found\hskip\gml@dima
+      \else\gml@ifin\gml@tv{break}\ifgml@found\hfil\break
+      \else\space\fi\fi
+    \else\hskip\gml@dima\fi\fi}
 \gmldefhint{hy}{\gml@hget{mode}\gml@tv
   \ifx\gml@tv\gml@onstr\global\hyphenpenalty50
   \else\ifx\gml@tv\gml@offstr\global\hyphenpenalty\@M\fi\fi}
@@ -998,6 +1023,11 @@
 % state again (restore=yes), so nothing to do here.  .fv: page-level
 % vertical justification is TeX's own business.
 \gmldefhint{sa}{} \gmldefhint{re}{} \gmldefhint{fv}{}
+% .pi: an index entry; resolve.xsl gives it an anchor (its page
+% reference target) and puts the index after the .ix, so .ix itself
+% has nothing to do here
+\gmldefhint{pi}{\gml@hget{anchor}\gml@tv\ifx\gml@tv\empty\else\gmlanchor{\gml@tv}\fi}
+\gmldefhint{ix}{}
 \gmldefhint{ic}{\gml@notimpl{ic}}
 \gmldefhint{ud}{\gml@notimpl{ud}}
 
@@ -1092,8 +1122,28 @@
 % heading on the left and the page number on the right at the foot
 \def\gml@defaultrh{\hfil{\gml@hi{2}\gml@sec}\hfil}
 \def\gml@defaultrf{\gml@shead\hfil\ifgml@nofolio\else\gml@folio\fi}
-\def\gml@userrh{\ifodd\pageno\copy\gml@rhodd\else\copy\gml@rheven\fi\hss}
-\def\gml@userrf{\ifodd\pageno\copy\gml@rfodd\else\copy\gml@rfeven\fi\hss}
+\def\gml@userrh{\ifodd\pageno\gml@runput{rh}{odd}\vbox\else\gml@runput{rh}{even}\vbox\fi\hss}
+\def\gml@userrf{\ifodd\pageno\gml@runput{rf}{odd}\vtop\else\gml@runput{rf}{even}\vtop\fi\hss}
+% The page number symbol (.dc PS, default &) in a running heading or
+% footing: tex.xsl writes the content as \gmlrundyn{...} (a .sx with
+% pagesym=, or an & in its text), which is kept as tokens and typeset
+% when each page is shipped out, with \& as the page number.  The hints
+% in it are made local there (\global is \relax) and start from a
+% neutral state (no indention, offset or keep), so the body's formatting
+% state is untouched.  Without the symbol the box made where the heading
+% or footing was defined is used.
+% gml:pageno: the engine splits the page number symbol off the text of
+% a running heading or footing (before .tr translation, so a text "&"
+% made by &amp. stays text, SH35-0069 p.234 and p.259); in \gmlrundyn
+% it is the page being shipped out
+\gmldefhint{pageno}{\gml@folio}
+\newif\ifgml@rundyn
+\long\def\gmlrundyn#1{\gdef\gml@rundyntoks{#1}\global\gml@rundyntrue}
+\def\gml@runput#1#2#3{\expandafter\ifx\csname gml@#1dyn#2\endcsname\relax
+    \copy\csname gml@#1#2\endcsname
+  \else{\let\global\relax\let\&\gml@folio
+    \gml@hintleft\z@\gml@hintright\z@\gml@hintll\z@\gml@ofstate\z@\gml@keepfalse
+    \setbox\gml@box#3{\gml@runsetup\csname gml@#1dyn#2\endcsname\par}\box\gml@box}\fi}
 \output={\gml@tbl@output\hsize\gml@defaulthsize\plainoutput\global\gml@plainpagefalse
   \global\gml@chappagefalse
   \ifgml@rhsup\global\gml@rhsuppagetrue\else\global\gml@rhsuppagefalse\fi
@@ -1107,10 +1157,14 @@
   \setbox\gml@box#2\bgroup\gml@runsetup}
 \def\gml@runend#1{\par\egroup\ifx\gml@runact\empty\gml@runstore{#1}\fi}
 \def\gml@runstore#1{\global\csname gml@user#1true\endcsname
+  \ifgml@rundyn\let\gml@tmpd\gml@rundyntoks\else\let\gml@tmpd\relax\fi
+  \global\gml@rundynfalse
   \ifx\gml@runpage\gml@evenstr\else
-    \global\setbox\csname gml@#1odd\endcsname\copy\gml@box\fi
+    \global\setbox\csname gml@#1odd\endcsname\copy\gml@box
+    \expandafter\global\expandafter\let\csname gml@#1dynodd\endcsname\gml@tmpd\fi
   \ifx\gml@runpage\gml@oddstr\else
-    \global\setbox\csname gml@#1even\endcsname\copy\gml@box\fi}
+    \global\setbox\csname gml@#1even\endcsname\copy\gml@box
+    \expandafter\global\expandafter\let\csname gml@#1dyneven\endcsname\gml@tmpd\fi}
 \gmldefstart{gml:rh}{\gml@runstart{rh}\vbox}
 \gmldefend{gml:rh}{\gml@runend{rh}}
 \gmldefstart{gml:rf}{\gml@runstart{rf}\vtop}
@@ -1721,7 +1775,8 @@
   \interlinepenalty\interfootnotelinepenalty
   \splittopskip\ht\strutbox\splitmaxdepth\dp\strutbox\floatingpenalty\@MM
   \leftskip\z@skip\rightskip\z@skip\spaceskip\z@skip\xspaceskip\z@skip
-  \parindent1.5em\textindent{#1}\footstrut\futurelet\next\fo@t}
+  \ifgml@hintmode\parindent\z@\else\parindent1.5em\fi % hint mode: the profile writes the mark
+  \textindent{#1}\footstrut\futurelet\next\fo@t}
 \def\gml@footnote#1{\let\@sf\empty\ifhmode\edef\@sf{\spacefactor\the\spacefactor}\/\fi
   #1\@sf\gml@vfootnote{#1}}
 \def\gml@fnsetup{\gml@elemleft\z@\gml@elemright\z@\gml@elemhsize\hsize}
@@ -1764,11 +1819,15 @@
   \ifx\gml@tv\empty\def\gml@tv{1}\fi
   \par\ifnum\gml@tv<2 \gml@vskip\baselineskip\fi
   \begingroup\gml@tocind\gml@tv\advance\gml@dima\gml@elemleft
-  \ifnum\gml@tv<2 \bf\fi\gml@leaderline{#2}{#3}{#4}\endgroup}
+  \ifnum\gml@tv<2 \bf\fi\gml@tocnum{#2}{#3}{#4}\endgroup}
+% hint mode: the profile numbers its headings and figures in their text,
+% so the entries print no number of their own (as \gmlnum)
+\def\gml@tocnum#1{\ifgml@hintmode\def\gml@tmpn{}\else\def\gml@tmpn{#1}\fi
+  \expandafter\gml@leaderline\expandafter{\gml@tmpn}}
 \def\gmltocend{\par\endgroup\gml@apply\gml@newpage}
 \let\gmlfiglistbegin\gmltocbegin
 \def\gmlfiglistentry#1#2#3#4{\par\gml@vskip{.5\baselineskip}%
-  \begingroup\gml@dima\gml@elemleft\gml@leaderline{#2}{#3}{#4}\endgroup}
+  \begingroup\gml@dima\gml@elemleft\gml@tocnum{#2}{#3}{#4}\endgroup}
 \let\gmlfiglistend\gmltocend
 
 % ---- index -----------------------------------------------------------------------------------------------

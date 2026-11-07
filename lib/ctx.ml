@@ -174,6 +174,9 @@ type t = {
   mutable ly_sym : bool;  (** [.ly on|sym]: search for symbols *)
   lib_members : (string, string array option) Hashtbl.t;
       (** library members read so far, by member name; [None]: not found *)
+  mutable page_query : string -> string option;
+      (** the live page state for [&$PN] and [&$LC] (the system symbol name)
+          from a layout engine ([Layout]); [None]: the neutral constant *)
 }
 
 and word = { run : t -> string -> unit  (** receives the operands *) }
@@ -239,7 +242,11 @@ let system_value ctx name sub =
       | "$TAB" -> Some "\t" (* the tab character (SH35-0069 p.85, p.246) *)
       | "$BS" -> Some "\b" (* backspace, EBCDIC 16 *)
       | "$ENV" -> Some "BODY" (* modern edge: no keeps, floats, footnotes *)
-      | "$PN" -> Some "1" (* modern edge: no pagination *)
+      | "$PN" -> (
+          (* the layout engine's page, in layout mode ([page_query]) *)
+          match ctx.page_query "$PN" with
+          | Some v -> Some v
+          | None -> Some "1" (* modern edge: no pagination *))
       | "$KP" | "$VR" -> Some "OFF"
       | "$LST" -> Some "0"
       (* the last GML tag found, as written, and its delimiter (p.251).
@@ -267,7 +274,8 @@ let system_value ctx name sub =
       | "$LL" | "$CL" -> Some ll
       | "$PW" -> Some "85"
       | "$PL" -> Some "66"
-      | "$LC" -> Some "60"
+      | "$LC" -> (
+          match ctx.page_query "$LC" with Some v -> Some v | None -> Some "60")
       | "$TM" | "$BM" | "$FM" | "$RH" | "$RF" -> Some "0"
       | _ -> None)
   | _ -> None
@@ -338,8 +346,10 @@ let create ?(include_path = []) () =
       (* SH35-0069 p.240: the initial setting is OFF *)
       ly_sym = false;
       lib_members = Hashtbl.create 16;
+      page_query = (fun _ -> None);
     }
   in
+  ctx.doc.Doc.page_symbol <- (fun () -> Some ctx.chars.Chars.ps);
   ctx.syms.Symbols.system <- system_symbol ctx;
   ctx.doc.Doc.report <-
     (fun m -> Loc.report ctx.diag Loc.Warning ctx.loc "%s" m);

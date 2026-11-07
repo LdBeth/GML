@@ -89,6 +89,13 @@ type open_elt = {
       (** an element nothing is known to close ([start_element]): unless its own
           end tag closes it, it becomes an empty marker followed by its content
           ([close_top]) *)
+  mutable count : int;  (** [List.length children], kept up to date *)
+  mutable contributed : int;
+      (** set by [close_top]: the number of nodes this element added to its
+          parent's children: 0 for a dropped empty scope piece, 1 normally, n+1
+          for a provisional element left empty (its n children follow the
+          marker). -1 while open. For [Be_tex]'s streaming, which follows the
+          live stack. *)
 }
 
 type t = {
@@ -109,12 +116,26 @@ type t = {
           point: applied to text as it enters the tree. DCF-VERIFY: DCF
           translates when the line is put out, so a [.tr] change in the middle
           of an output line would also affect the text before it there. *)
+  mutable page_symbol : unit -> char option;
+      (** the page number symbol ([.dc ps]; [Ctx] installs it): in the text of
+          a running heading or footing ([gml:rh], [gml:rf]) it stands for the
+          page number (SH35-0069 p.125, p.128, p.259) and becomes the hint
+          [gml:pageno] ([text]) *)
 }
 
 let root_name = "gml:doc"
 
 let elt ?(kind = Plain) ?(eol_close = false) ?(provisional = false) name attrs =
-  { name; attrs; children = []; kind; eol_close; provisional }
+  {
+    name;
+    attrs;
+    children = [];
+    kind;
+    eol_close;
+    provisional;
+    count = 0;
+    contributed = -1;
+  }
 
 let create () =
   {
@@ -125,6 +146,7 @@ let create () =
     here = (fun () -> "");
     mute = false;
     tr = Hashtbl.create 8;
+    page_symbol = (fun () -> None);
   }
 
 let top t = List.hd t.stack
@@ -134,7 +156,9 @@ let add t node =
   let e = top t in
   match (node, e.children) with
   | Tree.Text b, Tree.Text a :: rest -> e.children <- Tree.Text (a ^ b) :: rest
-  | _ -> e.children <- node :: e.children
+  | _ ->
+      e.children <- node :: e.children;
+      e.count <- e.count + 1
 
 (* Close the top element into its parent; an empty scope piece is
    dropped.  A provisional element closed by anything but its own end tag
@@ -143,14 +167,19 @@ let close_top ?(own = false) t =
   match t.stack with
   | e :: (parent :: _ as rest) ->
       t.stack <- rest;
-      if e.provisional && not own then
+      if e.provisional && not own then begin
         parent.children <-
-          e.children @ (Tree.Element (e.name, e.attrs, []) :: parent.children)
+          e.children @ (Tree.Element (e.name, e.attrs, []) :: parent.children);
+        e.contributed <- e.count + 1
+      end
       else if not (is_scope e && e.children = []) then begin
         (match e.kind with Scope sc -> sc.started <- true | Plain -> ());
         parent.children <-
-          Tree.Element (e.name, e.attrs, List.rev e.children) :: parent.children
+          Tree.Element (e.name, e.attrs, List.rev e.children) :: parent.children;
+        e.contributed <- 1
       end
+      else e.contributed <- 0;
+      parent.count <- parent.count + e.contributed
   | _ -> invalid_arg "Doc.close_top: root"
 
 (* ---- scopes --------------------------------------------------------------- *)
@@ -251,6 +280,9 @@ let open_elements t =
   List.filteri (fun i _ -> i < n) l |> List.map (fun e -> e.name)
 
 let is_open t name = List.mem name (open_elements t)
+
+(** Is a running heading or footing definition open? *)
+let in_running t = is_open t "gml:rh" || is_open t "gml:rf"
 let current t = match open_elements t with [] -> None | n :: _ -> Some n
 
 let start_element ?(eol = false) ?(provisional = false) t name attrs =
@@ -389,10 +421,25 @@ let line_end t ~counted ~text =
     List.iter (fun sc -> List.iter (push_scope t) sc.next) (List.rev expired)
   end
 
+(* Text enters the tree translated ([.tr]).  In a running heading or
+   footing the page number symbol is split off first, as the hint
+   [gml:pageno]: it is the page number symbol before any translation
+   (SH35-0069 p.259: "&amp." is X'08 translated to "&" on output, a text
+   ampersand). *)
+let add_text t s =
+  match if in_running t then t.page_symbol () else None with
+  | Some c when String.contains s c ->
+      List.iteri
+        (fun i piece ->
+          if i > 0 then add t (Tree.Hint ("pageno", [ ("break", "no") ]));
+          if piece <> "" then add t (Tree.Text (translate t piece)))
+        (String.split_on_char c s)
+  | _ -> add t (Tree.Text (translate t s))
+
 (** One text line; the line end (the word space) is kept as "\n". *)
 let text t s =
   if not t.mute then begin
-    if s <> "" then add t (Tree.Text (translate t s));
+    if s <> "" then add_text t s;
     line_end t ~counted:true ~text:true
   end
 
@@ -402,8 +449,7 @@ let end_line t = if not t.mute then line_end t ~counted:false ~text:false
 
 (** Text without a line end (a piece of a line before a GML tag, or a line with
     continuation). *)
-let text_inline t s =
-  if s <> "" && not t.mute then add t (Tree.Text (translate t s))
+let text_inline t s = if s <> "" && not t.mute then add_text t s
 
 (** [.ct text] (SH35-0069 p.48): the word space after the previous text line
     goes, so [text] continues it. *)
@@ -413,7 +459,11 @@ let join_previous t =
     match e.children with
     | Tree.Text a :: rest when a <> "" && a.[String.length a - 1] = '\n' ->
         let a = String.sub a 0 (String.length a - 1) in
-        e.children <- (if a = "" then rest else Tree.Text a :: rest)
+        if a = "" then begin
+          e.children <- rest;
+          e.count <- e.count - 1
+        end
+        else e.children <- Tree.Text a :: rest
     | _ -> ()
 
 (** [.ct] alone: a continuation in effect (the previous text line ended without

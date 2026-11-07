@@ -3,4 +3,16 @@
  (section share)
  (package gml)
  (files
-  (profile/starter.gml as profile/starter.gml)))
+  (profile/starter.gml as profile/starter.gml)
+  (profile/dcfstarter.gml as profile/dcfstarter.gml)))
+
+; The TeX macros, installed in share/gml/tex/ (gml -layout puts this
+; directory on TEXINPUTS).
+(install
+ (section share)
+ (package gml)
+ (files
+  (tex/gml.tex as tex/gml.tex)
+  (tex/gml-layout.tex as tex/gml-layout.tex)
+  (tex/gmlfont-cm.tex as tex/gmlfont-cm.tex)
+  (tex/gmlfont-ncs.tex as tex/gmlfont-ncs.tex)))

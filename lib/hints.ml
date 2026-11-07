@@ -624,7 +624,19 @@ let split_text ctx ops =
     let d = s.[0] in
     match String.split_on_char d (String.sub s 1 (String.length s - 1)) with
     | l :: f :: r :: _ ->
-        emit ctx "sx" ~brk:true ([ ("left", l); ("fill", f); ("right", r) ] @ fl)
+        (* in a running heading or footing the page number symbol stands for
+           the page number (SH35-0069 p.128: ".sx c //Introduction/Page &/");
+           pagesym= tells the backends which character it is *)
+        let ps = ctx.chars.Chars.ps in
+        let pagesym =
+          if
+            Doc.in_running (doc ctx)
+            && List.exists (fun f -> String.contains f ps) [ l; f; r ]
+          then [ ("pagesym", String.make 1 ps) ]
+          else []
+        in
+        emit ctx "sx" ~brk:true
+          ([ ("left", l); ("fill", f); ("right", r) ] @ fl @ pagesym)
     | _ -> Ctx.error ctx ".sx: three delimited fields expected"
 
 (* ---- footnotes, running headings ----------------------------------------------- *)

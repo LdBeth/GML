@@ -26,6 +26,8 @@
       Index tags (i1 i2 i3 ih1 ih2 ih3 iref) get only the anchor (their
       text is in gml:index-entries).
     hint gml:NAME (empty)  \gmlhint{NAME}{k=v,...}      -> \gml@hint@NAME
+                           (gml:pageno: the page number symbol in the text of
+                           a running heading or footing, SH35-0069 p.128)
     gml:lines              \gmlbeginlines{WORD}{k=v,...[,more=yes]}...\gmlendlines
                            more=yes: the next gml:lines is its cont="yes"
                            continuation (the line does not end here).
@@ -264,6 +266,44 @@
        part of a table cell, :c n repeated) is a block element -->
   <xsl:template match="gml:h | gml:fn | gml:rh | gml:rf | gml:cpart" priority="1">
     <xsl:call-template name="element"/>
+  </xsl:template>
+
+  <!-- a running heading or footing holding the page number symbol (a .sx
+       with pagesym=, or "&" alone in its operands or text: .dc PS
+       default): the content is an argument of \gmlrundyn, typeset by
+       gml.tex on every page -->
+  <xsl:template match="(gml:rh | gml:rf)[.//gml:sx[@pagesym or @left = '&amp;'
+                         or @fill = '&amp;' or @right = '&amp;']
+                         or .//gml:pageno
+                         or .//text()[matches(., '(^|\s)&amp;(\s|$)')]]" priority="2">
+    <xsl:value-of select="concat('\gmlstart{', name(), '}{', t:attrs(@*, ()), '}%', $nl,
+                                 '\gmlrundyn{')"/>
+    <xsl:apply-templates/>
+    <xsl:value-of select="concat('}\gmlend{', name(), '}%', $nl)"/>
+  </xsl:template>
+
+  <!-- .is TO after a label: the text (and .bf/.pf) between the last
+       breaking hint and the gml:is is the start of an output line, so
+       \gmlislabel before it lets gml.tex box and measure it -->
+  <xsl:function name="t:is-label-start" as="xs:boolean">
+    <xsl:param name="n" as="node()"/>
+    <xsl:variable name="is" select="$n/following-sibling::node()
+        [not(self::text() or self::gml:bf or self::gml:pf)][1][self::gml:is]"/>
+    <xsl:variable name="stop" select="$n/preceding-sibling::node()
+        [not(self::text() or self::gml:bf or self::gml:pf)][1]"/>
+    <xsl:sequence select="exists($is)
+        and matches(lower-case(normalize-space($is/@spec)), '^to ')
+        and empty($n/preceding-sibling::node()[1][self::text() or self::gml:bf or self::gml:pf])
+        and ((exists($stop/self::gml:*[@break = 'yes'])
+              and not(local-name($stop) = ($flows, $generated)))
+             or (empty($stop) and t:is-block($n/..)))
+        and normalize-space(string-join($is/preceding-sibling::text()
+              [empty($stop) or . >> $stop])) != ''"/>
+  </xsl:function>
+
+  <xsl:template match="text() | gml:bf | gml:pf" priority="10">
+    <xsl:if test="t:is-label-start(.)">\gmlislabel </xsl:if>
+    <xsl:next-match/>
   </xsl:template>
 
   <!-- ==== generated nodes ======================================================= -->
