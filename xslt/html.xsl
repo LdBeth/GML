@@ -96,7 +96,10 @@
     gml:rh gml:rf (page furniture) dropped; gml:fn -> an unnumbered
     entry of the footnote list.  The device-level events (bx vr kp tc dh
     df hw rc fl is ic dr cl cd sc mc pn pl pw pm tm bm, temporary in/ir,
-    hy options) have no HTML meaning and are dropped.
+    hy options) have no HTML meaning and are dropped, as are sa re (the
+    saved environment) and ix (the place of the index: resolve.xsl put the
+    gml:index-entries after it).  gml:pi (a SCRIPT index entry) is a link
+    target, like the index tags.
 
   Scope properties -> CSS
     in        margin-left   ir  margin-right   (state values are absolute:
@@ -181,7 +184,7 @@
   <xsl:variable name="h:gml-used" select="('doc', 'scope', 'lines', 'br', 'sp', 'sk', 'pa',
       'cp', 'cc', 'cb', 'hr', 'sx', 'h', 'fn', 'rh', 'rf', 'raw', 'num', 'pageref',
       'toc-entries', 'toc-entry', 'entry-text', 'figlist-entries', 'figlist-entry',
-      'tlist-entries', 'tlist-entry', 'cpart', 'dv',
+      'tlist-entries', 'tlist-entry', 'cpart', 'dv', 'pi',
       'index-entries', 'index-group', 'index-entry', 'index-term', 'see')"/>
   <!-- hint mode: a formatting profile wrote the text, numbers and labels
        (gml:hint-mode, common.xsl; as tex.xsl's auto mode) -->
@@ -191,7 +194,7 @@
   <xsl:variable name="h:gml-dropped" select="('bx', 'vr', 'kp', 'tc', 'dh', 'df', 'hw', 'rc',
       'fl', 'is', 'ic', 'dr', 'cl', 'cd', 'sc', 'mc', 'pn', 'pl', 'pw', 'pm', 'tm', 'bm',
       'in', 'ir', 'hy', 'of', 'll', 'fo', 'nf', 'ju', 'tp', 'tb', 'ls', 'wz', 'bc',
-      'bf', 'pf', 'ws', 'es', 'sb', 'ud', 'query', 'tcmark')"/>
+      'bf', 'pf', 'ws', 'es', 'sb', 'ud', 'query', 'tcmark', 'sa', 're', 'ix')"/>
   <xsl:variable name="h:lists" select="('ol', 'ul', 'sl', 'l', 'dl', 'gl')"/>
   <xsl:variable name="h:index-tags" select="('i1', 'i2', 'i3', 'ih1', 'ih2', 'ih3', 'iref')"/>
   <!-- elements written inline (phrasing) -->
@@ -231,6 +234,7 @@
     <xsl:param name="n" as="node()"/>
     <xsl:sequence select="($n instance of text() and normalize-space($n) = '')
         or (h:no-ns($n) and local-name($n) = $h:index-tags)
+        or exists($n/self::gml:pi)
         or ($n/self::fn and not($n/@callout = 'yes'))
         or exists($n/(self::gml:fn | self::gml:rh | self::gml:rf))
         or ($n/self::gml:raw and not($n/@backend = 'html'))
@@ -1365,6 +1369,12 @@
   <xsl:template match="i1 | i2 | i3 | ih1 | ih2 | ih3 | iref">
     <span class="gml-ix" id="{(@anchor, @id)[1]}"/>
   </xsl:template>
+  <!-- a .pi entry (SCRIPT's index word): the same link target; its index
+       is the gml:index-entries resolve.xsl put after the gml:ix (which is
+       only the place, dropped) -->
+  <xsl:template match="gml:pi">
+    <xsl:if test="@anchor"><span class="gml-ix" id="{@anchor}"/></xsl:if>
+  </xsl:template>
 
   <!-- ==== table of contents, figure list ================================== -->
   <xsl:template match="toc | figlist | tlist | index">
@@ -1433,7 +1443,7 @@
   <!-- ==== index =========================================================== -->
   <xsl:template match="gml:index-entries">
     <section class="gml-index">
-      <h1 class="gml-index-title"><xsl:value-of select="@title"/></h1>
+      <xsl:if test="normalize-space(@title)"><h1 class="gml-index-title"><xsl:value-of select="@title"/></h1></xsl:if>
       <xsl:for-each select="gml:index-group">
         <div class="gml-index-group">
           <xsl:if test="@letter != ''">

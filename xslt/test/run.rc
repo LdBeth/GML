@@ -47,7 +47,8 @@
 #        (figs, fn, hints, index, lines, lists, scope, sections, text);
 #        html/starter and html/params are gml/starter.gml scoped,
 #        fn-chapter reuses fn; features, nesting, state, values are
-#        copies of scope/*.out.xml
+#        copies of scope/*.out.xml; html/index-pi is resolve/index-pi.out.xml
+#        | scope.xsl (the .pi entries and .ix placement)
 #        html/dcfstarter-tables: gmlfmt -to scoped -profile dcfstarter
 #        gml/dcfstarter-tables.gml (G dates; hint mode: no gml:num labels)
 
