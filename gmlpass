@@ -1,0 +1,183 @@
+#!/usr/local/plan9/bin/rc
+# gmlpass - format a document in passes, the way SCRIPT/VS does with
+# FPASSES(n) or TWOPASS (SH20-9186-06 p.126, p.129): every pass formats
+# the whole document, only the last one is put out.
+#
+#   gmlpass [-n N] [-tex ENGINE] [-profile p | -tagset t]
+#           [-set name=value]... [-p name=value]... [-o DIR] doc.gml
+#
+#   -n        the number of passes (default 4, IBM's FPASSES limit:
+#             examples/dcfstarter.gml needs 4)
+#   -tex      the TeX engine (default pdftex; aptex, tex): DIR/JOB.pdf, or
+#             DIR/JOB.dvi with tex
+#   -profile  the gml profile (default dcfstarter: a formatting profile;
+#             a semantic one, starter, works too)
+#   -tagset   a tag set, as for gmlfmt (a bundle directory, or a name in
+#             GMLROOT/share/tagset, else a profile name)
+#   -set      a symbol for gml and a parameter for every stylesheet
+#   -p        a parameter for the stylesheets only
+#   -o        the directory for JOB.xml ... JOB.tex, JOB.gmlaux, JOB.sym
+#             and the output (default: the current directory)
+#
+# Pass k of N (JOB is the name of doc.gml without .gml):
+#   1. gml -pass k -passes N -aux JOB.gmlaux -symbols-in JOB.sym
+#      -symbols-out JOB.sym.new, then the stages to JOB.tex: the
+#      project's mkfile rules (mk -a OUTDIR=DIR/ DIR/JOB.tex: JOB.xml,
+#      JOB.r.xml, JOB.tex; GMLPASSFLAGS carries the pass options to the
+#      gml rule);
+#   2. ENGINE on JOB.tex in DIR: gml.tex writes JOB.gmlaux (the pages of
+#      the anchors and the answers to the page questions, lib/aux.ml) and
+#      makes a draft before the last pass (\gmlpass: \pdfdraftmode or
+#      ApTeX's DVI path), real output on the last;
+#   3. JOB.sym.new becomes JOB.sym (the symbols and TOC entries for the
+#      next pass).
+# The first pass starts from nothing (no aux, no symbol file).  After a
+# pass k >= 2 whose JOB.gmlaux and symbol file are those of the pass
+# before (cmp), the next pass would do the same again: the run goes
+# straight to the last pass (numbered N, so that the profile and TeX
+# know it is the last).  A warning when the last pass still changed
+# them.  The date and time are fixed for all passes (SOURCE_DATE_EPOCH,
+# when it is not set already).
+#
+# Tools: GML (default: the dune build through opam, made once before
+# the passes and run with -share GMLROOT/share, as gmlfmt; also the
+# mkfile's GML), mk (/usr/local/plan9/bin/mk) with the project's
+# mkfile, SAXON (default /usr/local/bin/transform); GMLROOT is the
+# project root (default: the directory of this script).  The defaults
+# and the tag set are share/rc/gmlenv.rc, shared with gmlfmt.  Messages
+# of the passes before the last are in DIR/JOB.passK.err.
+
+fn usage {
+	echo 'usage: gmlpass [-n N] [-tex ENGINE] [-profile p | -tagset t] [-set name=value]... [-p name=value]... [-o DIR] doc.gml' >[1=2]
+	exit usage
+}
+
+n=4
+engine=pdftex
+profile=dcfstarter
+profileopt=()
+tagset=()
+sets=()
+params=()
+outdir=.
+while(! ~ $#* 0 && ~ $1 -*){
+	if(~ $#* 1) usage
+	switch($1){
+	case -n
+		n=$2
+	case -tex
+		engine=$2
+	case -profile
+		profileopt=$2
+	case -tagset
+		tagset=$2
+	case -set
+		sets=($sets $2)
+	case -p
+		params=($params $2)
+	case -o
+		outdir=$2
+	case *
+		usage
+	}
+	shift 2
+}
+if(! ~ $#* 1) usage
+in=$1
+if(! ~ $in *.gml) { echo gmlpass: $in: expected a .gml file >[1=2]; exit usage }
+if(! test -f $in) { echo gmlpass: $in: no such file >[1=2]; exit 1 }
+if(! ~ $n [1-9] [1-9][0-9]) { echo gmlpass: -n $n: expected a number of passes >[1=2]; exit usage }
+
+if(~ $#GMLROOT 0) GMLROOT=`{/usr/local/plan9/bin/basename -d $0}
+root=`{cd $GMLROOT && pwd}
+mk=/usr/local/plan9/bin/mk
+# GML or the dune build (made once here, not on every pass), SAXON and
+# the tag set, as gmlfmt
+prog=gmlpass
+. $root/share/rc/gmlenv.rc
+if(! ~ $#profileopt 0) { profile=$profileopt; bundle=() }
+# a shipped profile by its path: gml would take a file of that name in
+# the document's directory first (examples/dcfstarter.gml is one)
+if(! ~ $profile */* && test -f $root/share/profile/$profile.gml) profile=$root/share/profile/$profile.gml
+if not if(! ~ $profile /*) profile=`{pwd}^/$profile
+
+srcdir=`{cd `{/usr/local/plan9/bin/basename -d $in} && pwd}
+job=`{/usr/local/plan9/bin/basename $in .gml}
+if(! test -d $outdir) mkdir -p $outdir
+dir=`{cd $outdir && pwd}
+base=$dir/$job
+out=$base.pdf
+if(~ $engine tex */tex) out=$base.dvi
+
+if(~ $#SOURCE_DATE_EPOCH 0) SOURCE_DATE_EPOCH=`{/bin/date +%s}
+
+# start from nothing: DCF's first pass knows no symbols and no pages
+rm -f $base.gmlaux $base.gmlaux.prev $base.sym $base.sym.new $base.pass*.err
+
+# pass k: the TeX file, from gml with the pass options (the caller
+# redirects the messages); the status is that of the stages
+fn stages {
+	k=$1
+	passflags=(-pass $k -passes $n -aux $base.gmlaux -symbols-out $base.sym.new)
+	if(test -f $base.sym) passflags=($passflags -symbols-in $base.sym)
+	mkvars=(ROOT'='$root OUTDIR'='$dir/ PROFILE'='$profile GML'='$"gml)
+	# (TAGSET also when empty: an mk that runs gmlpass may export one)
+	if(! ~ $#bundle 0) mkvars=($mkvars TAGSET'='$bundle)
+	if not mkvars=($mkvars TAGSET'=')
+	@{
+		cd $srcdir
+		ROOT=$root SAXON=$SAXON SETS=$"sets XSLTFLAGS=$"params GMLPASSFLAGS=$"passflags \
+			$mk -a -f $root/mkfile $mkvars $base.tex > /dev/null
+	}
+}
+
+# a TeX run in DIR; batch mode before the last pass
+fn typeset {
+	k=$1
+	mode=batchmode
+	if(~ $k $n) mode=nonstopmode
+	texinputs=$root/share/tex:
+	if(! ~ $#TEXINPUTS 0) texinputs=$root/share/tex:$TEXINPUTS
+	@{
+		cd $dir
+		TEXINPUTS=$texinputs $engine -interaction $mode $job.tex > /dev/null
+	} || {
+		echo gmlpass: pass $k: $engine failed, see $base.log >[1=2]
+		exit 1
+	}
+}
+
+fn same {
+	cmp -s $1 $2 >[2]/dev/null
+}
+
+k=1
+runs=()
+while(true){
+	runs=($runs x)
+	if(test -f $base.gmlaux) cp $base.gmlaux $base.gmlaux.prev
+	if not rm -f $base.gmlaux.prev
+	# the messages of the last pass on standard error, the others in a
+	# file (shown when the pass fails)
+	if(~ $k $n) stages $k || { echo gmlpass: pass $k failed >[1=2]; exit 1 }
+	if not stages $k >[2]$base.pass$k.err || {
+		cat $base.pass$k.err >[1=2]
+		echo gmlpass: pass $k failed >[1=2]
+		exit 1
+	}
+	typeset $k
+	stable=no
+	if(same $base.gmlaux $base.gmlaux.prev && same $base.sym.new $base.sym) stable=yes
+	mv $base.sym.new $base.sym
+	if(~ $k $n){
+		if(~ $stable no && ! ~ $n 1)
+			echo gmlpass: warning: the pages or symbols still changed on the last pass '('$n'): run with a larger -n' >[1=2]
+		rm -f $base.gmlaux.prev
+		echo gmlpass: $out '('$#runs passes')'
+		exit
+	}
+	if(~ $stable yes && ! ~ $k 1){
+		k=$n
+	}
+	if not k=`{expr $k + 1}
+}

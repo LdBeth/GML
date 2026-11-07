@@ -14,12 +14,13 @@
    The page of an entry is the page its heading is put out on.  The
    heading carries an anchor ([id], the hint gml:tcmark); the entry
    carries [anchor=] and the page is left to TeX (gml.tex's page
-   references, from its .ref file, on a second run).  [Ctx.page_of] is
-   the hook for the planned pass model (an aux file written by TeX in
-   the previous pass): an anchor it knows gives the entry [page=].
+   references, from its .gmlaux file, on a second run).  With the pass
+   model (gml -aux, gmlpass) [Ctx.page_of] knows the anchors of the
+   previous pass (Aux): such an entry gets [page=].
 
-   [previous]: the entries of the previous formatting pass, for a
-   multi-pass run (none yet: the engine makes one pass). *)
+   [previous]: the entries of the previous formatting pass, carried in
+   the symbol file (gml -symbols-in, [dump] and [carried] below); None
+   on a first pass. *)
 
 type level_def = {
   mutable tc : bool;  (** TC / NTC *)
@@ -63,8 +64,7 @@ type t = {
   mutable entries : entry list;  (** this pass, newest first *)
   mutable count : int;
   mutable previous : entry list option;
-      (** the previous pass's entries, in order (DCF-VERIFY: a multi-pass run
-          would set it) *)
+      (** the previous pass's entries, in order (gml -symbols-in) *)
 }
 
 let create () =
@@ -121,3 +121,58 @@ let add t ?page kind text =
 (** The entries a [.tc] prints (p.156). *)
 let printable t =
   match t.previous with Some l -> l | None -> List.rev t.entries
+
+(* ---- carried over between passes --------------------------------------------- *)
+
+(* DCF keeps the DSMUTTOC file from one pass to the next, so that a .tc
+   at the start of the document prints the entries of the previous pass
+   (p.156).  Here they travel in the symbol file of the pass model
+   (gml -symbols-out/-symbols-in, the format in lib/symbols.ml) as the
+   array gml@toc: one element per entry, its value the fields kind, TS,
+   TCIN, TFONT, DOT, anchor and text separated by tabs (the text last:
+   it may hold a tab).  kind is the head level 0-6, "pt" for a .pt
+   line, "cw" for a .pt control word line (its text the line).  After
+   the file is imbedded the array is moved here ([carried]).  The page
+   is not carried: it is the page of the anchor in the previous pass's
+   aux file ([Ctx.page_of]). *)
+
+let to_line n (e : entry) =
+  let kind, text =
+    match e.kind with
+    | Head l -> (string_of_int l, e.text)
+    | Line -> ("pt", e.text)
+    | Control c -> ("cw", c)
+  in
+  let flag b = if b then "1" else "0" in
+  Symbols.se_line ~sub:n Symbols.toc_name
+    (String.concat "\t"
+       [ kind; flag e.skip; e.indent; Option.value e.font ~default:""; flag e.dot; e.id; text ])
+
+(** The [.se gml@toc(n)] lines of this pass's entries, in order. *)
+let dump t = List.mapi (fun i e -> to_line (i + 1) e) (List.rev t.entries)
+
+(** The entry of one element of gml@toc; [None] if it is not one. *)
+let of_value v =
+  match String.split_on_char '\t' v with
+  | kind :: skip :: indent :: font :: dot :: id :: (_ :: _ as rest) ->
+      let text = String.concat "\t" rest in
+      let kind =
+        match kind with
+        | "pt" -> Some Line
+        | "cw" -> Some (Control text)
+        | l -> Option.bind (int_of_string_opt l) (fun l -> if l >= 0 && l <= 6 then Some (Head l) else None)
+      in
+      Option.map
+        (fun kind ->
+          { id; kind; text = (match kind with Control _ -> "" | _ -> text);
+            skip = skip = "1"; indent; font = (if font = "" then None else Some font);
+            dot = dot = "1"; page = None })
+        kind
+  | _ -> None
+
+(** The entries of the previous pass, taken out of the symbol table (the
+    array gml@toc of the symbol file, now undefined). *)
+let carried syms =
+  let es = List.filter_map of_value (Symbols.elements syms Symbols.toc_name) in
+  ignore (Symbols.unset syms Symbols.toc_name);
+  es

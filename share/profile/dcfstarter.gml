@@ -9,9 +9,9 @@
 .* the APFs here do the formatting the DCF way: SCRIPT/VS control words
 .* (SH35-0069-3 Text Programmer's Guide, cited TPG p.n), symbols and
 .* counters, as a real Release 3 profile does.  The result is a stream
-.* of formatting hints that a layout engine (TeX in hint mode: gml -tex,
-.* or tex.xsl, which picks it because .df/.dh/.dr come before the first
-.* element) turns into pages.
+.* of formatting hints that a layout engine (TeX in hint mode: tex.xsl
+.* picks it because .df/.dh/.dr come before the first element) turns
+.* into pages.
 .*
 .* This is NOT IBM's DSMPROF3.  It is written from the documented
 .* behaviour (the IG's descriptions of the formatted result, Figure 5
@@ -33,15 +33,22 @@
 .*    (&f@rm the right one); every structure computes its .in/.ir from
 .*    them and restores them at its end, so nesting does not depend on
 .*    the formatter's own &$IN.
-.*  - Numbers (headings, figures, footnotes, list items) are counted
-.*    here, in one pass, and written into the text.  A reference
-.*    (:hdref :figref :fnref :liref) is resolved from symbols set when
-.*    its target was processed: a backward reference prints the target
-.*    (and "on page n" when the target's &$PN differs from the current
-.*    one, or with page=yes); a FORWARD reference finds no symbol on the
-.*    first pass (&$PASS = 1), gives message DCFS020W and prints the
-.*    Starter Set's "ID unknown" text.  DCF-VERIFY: with TWOPASS the
-.*    symbols of pass 1 would be kept for pass 2; the engine has one pass.
+.*  - Numbers (headings, figures, tables, footnotes, list items) are
+.*    counted here and written into the text.  A reference (:hdref
+.*    :figref :tref :fnref :liref) is resolved from symbols set when its
+.*    target was processed: a backward reference prints the target (and
+.*    "on page n" when the target's &$PN differs from the current one,
+.*    or with page=yes); a FORWARD reference finds no symbol on the
+.*    first pass (&$PASS = 1).  Passes (TWOPASS, FPASSES(n): gml
+.*    -pass/-passes, the driver gmlpass): the symbols of a pass come
+.*    back in the next one (the symbol file, gml -symbols-in), so a
+.*    forward reference is resolved on pass 2; &$PN is a question to
+.*    TeX, answered from the previous pass with the page the place is
+.*    put out on.  DCFS020W and the "ID unknown" text come only on the
+.*    last pass (f@lastpass), the only one put out; an ID defined twice
+.*    is detected per pass (f@dfid).  In one pass, as before: DCFS020W
+.*    and "ID unknown" for every forward reference.  DCF-VERIFY: the
+.*    set of symbols DCF keeps from one pass to the next.
 .*  - Context checking follows the Starter Set's scheme: a tag that is
 .*    valid only inside a structure (:li, :dt, :figcap, :title, :aline
 .*    ...) is mapped to f@cntx until the structure starts and again when
@@ -58,16 +65,20 @@
 .*    the body, appendix and back matter, none in the front matter) and
 .*    .tc prints them (TPG p.151-157), each entry referring to its
 .*    heading's anchor for the page.  A .tc at the front sees only the
-.*    entries of a previous pass, so :toc issues it with TWOPASS
-.*    (&$TWO); in one pass it makes an empty toc element, which
+.*    entries of a previous pass, so :toc issues it with TWOPASS or
+.*    FPASSES (&$TWO; .tc n reserve with f@tcres); in one pass it makes
+.*    an empty toc element, which
 .*    resolve.xsl fills from the h0-h4 elements (the heading APFs wrap
 .*    their .hN in an hN element).  The numbers are in the heading text
 .*    (the profile numbers), so in hint mode the TOC and figure list
 .*    print no numbers of their own.
 .*  - Index: :i1 :i2 :i3 :ih1 :ih2 :ih3 :iref give .pi entries (TPG
 .*    p.213-218); :index places them with .ix.
-.*  - Tables (:table :row :c, Rel 3.2) are not formatted yet: the tags
-.*    are out of context (DCFS002W).  :psc and :l are not done either.
+.*  - Tables (:rdef :table :thd :tft :row :c :tnote :tcap :tdesc, Rel
+.*    3.2; below): the APFs check context, row definitions and cell
+.*    numbers, number the captions and make the table elements; the grid
+.*    is resolve.xsl's, the rows are laid out by TeX.  :psc and :l are
+.*    not done.
 .*
 .* Known limits: an APF's .gs scan takes the residual text up to the
 .* next tag (IG p.9), so a tag inside a heading, title or index term
@@ -108,6 +119,9 @@
 .se f@l@hunk 'Heading ID unknown
 .se f@l@funk 'Figure ID unknown
 .se f@l@lunk 'LI ID unknown
+.se f@l@tbl 'Table
+.se f@l@tunk 'Table ID unknown
+.se f@l@tlist 'List of Tables
 .* a prefix for numbered body :h1 headings ("Chapter"), null: none (IG
 .* p.22 item 17); give it with -set f@bodyh1=Chapter
 .if &E'&f@bodyh1 eq 0 .se f@bodyh1 = ''
@@ -174,6 +188,12 @@
 .* the title page (DCF-VERIFY: the title size) and examples (a mono face)
 .df title type(bold 24)
 .df xmp type('courier')
+.* the body of a figure: DSMPROF3 ships ".*df figfont" commented out (the
+.* body font), and the IG (p.39) activates it with a monospaced face for
+.* page printers (as in the IG itself); here it stays undefined, a diagram
+.* goes in :xmp inside the figure; DSMFIG starts it with ".bf figfont ="
+.* (the current font when it is undefined)
+.*df figfont type('courier')
 .* the raised footnote numbers
 .df f@sup type(7)
 .*
@@ -224,6 +244,7 @@
 .se f@lq = 0
 .se f@inxmp = 0
 .se f@infig = 0
+.se f@figpf = 0
 .se f@incap = 0
 .se f@infn = 0
 .se f@intp = 0
@@ -238,8 +259,21 @@
 .se f@i1 = ''
 .se f@i2 = ''
 .se f@it = ''
+.* tables (below): f@intb an open table, f@tbn the caption counter,
+.* f@nrd the row definitions so far in this pass
+.se f@intb = 0
+.se f@tbn = 0
+.se f@nrd = 0
 .*
 .* ---- messages ---------------------------------------------------------
+.* f@lastpass: 1 on the last formatting pass (the only one without
+.* TWOPASS or FPASSES), 0 before it.  TPG p.247 tests &$TWO and
+.* "&$PASS eq 2"; with FPASSES(n) the last pass is n: &$PASSES (not a
+.* DCF symbol; gml -passes, gmlpass).  DCF puts out only the last pass
+.* (SH20-9186-06 p.126), so a message about a reference that a later
+.* pass resolves (DCFS020W) waits for it.
+.se f@lastpass = 1
+.if &$TWO eq 1 .if &$PASS lt &$PASSES .se f@lastpass = 0
 .* .f@msg n [word...]: a warning (DCF style "DCFSnnnW text").
 .dm f@msg on
 .go m&*1
@@ -270,8 +304,25 @@
 ...m14
 .mg /DCFS014W/A &*2 cannot be nested in a &*3../
 .me
+...m15
+.mg /DCFS015W/Row definition &*2 is not defined./
+.me
+...m16
+.mg /DCFS016W/Cell &*2 is not in row definition &*3../
+.me
+...m17
+.mg /DCFS017W/Tag &$TAGD.&$TAG. must come before the first row of the table./
+.me
+...m18
+.mg /DCFS018W/Value &*2 is not valid for tag &$TAGD.&$TAG../
+.me
+...m19
+.mg /DCFS019W/Row definition &*2 is redefined in an open table./
+.me
 ...m20
-.mg /DCFS020W/Reference to &*2 is undefined or forward (one pass)./
+.if &f@lastpass eq 0 .me
+.if &$TWO eq 1 .mg /DCFS020W/Reference to &*2 is undefined./
+.if &$TWO eq 0 .mg /DCFS020W/Reference to &*2 is undefined or forward (one pass)./
 .me
 .dm off
 .*
@@ -339,6 +390,8 @@
 .if &f@inxmp ne 0 .f@exmp
 .if &f@infig ne 0 .f@msg 3 fig
 .if &f@infig ne 0 .f@efig
+.if &f@intb ne 0 .f@msg 3 table
+.if &f@intb ne 0 .f@etbl
 ...lq
 .if &f@lq eq 0 .go ls
 .f@msg 3 lq
@@ -377,6 +430,7 @@
 .f@rset
 .if &L'&f@sect gt 0 .xe &f@sect
 .se f@sect = ''
+.f@dfclr
 .dm off
 .* .f@tc tc|ntc: table of contents entries for h0-h4 (TPG p.151-157;
 .* none for the front matter, as IBM's DSMFRONT)
@@ -427,16 +481,22 @@
 .dm off
 .dm f@abstr /.f@shd &f@l@abs
 .dm f@pref /.f@shd &f@l@pref
-.* :toc: with TWOPASS (&$TWO) the DCF way, .tc (TPG p.156-157: the
-.* entries of the previous pass); in one pass a .tc here would be empty,
-.* so resolve.xsl writes the list into the toc element instead.
+.* :toc: with TWOPASS or FPASSES (&$TWO) the DCF way, .tc (TPG
+.* p.156-157: the entries of the previous pass, which gml carries in
+.* the symbol file of the pass, with the pages TeX gave their anchors);
+.* in one pass a .tc here would be empty, so resolve.xsl writes the
+.* list into the toc element instead.  f@tcres (-set f@tcres=n) reserves
+.* n page numbers for the table (.tc n, TPG p.157: the page after it
+.* is numbered as on the first pass, where the table is empty); the
+.* Starter Set numbers the body from 1 again, so the default is none.
 .* :figlist: resolve.xsl writes the list into the figlist element.
 .dm f@toc on
 .f@rset
 .pa
 .se f@shead '&f@l@toc
 .f@runf
-.if &$TWO eq 1 .tc &f@l@toc
+.if &E'&f@tcres eq 0 .se f@tcres = ''
+.if &$TWO eq 1 .tc &f@tcres &f@l@toc
 .if &$TWO eq 1 .me
 .xs toc
 .xe toc
@@ -661,7 +721,7 @@
 .if &L'&ID eq 0 .go hd
 .xs h&*l id=&ID
 .se *k = &U'&ID
-.if &E'&fh@&*k eq 1 .f@msg 13 &ID
+.f@dfid h &ID
 .se fh@&*k '&*r
 .se fp@&*k = &$PN
 ...hd
@@ -835,7 +895,7 @@
 .f@lid
 .if &L'&ID eq 0 .go lb
 .se *k = &U'&ID
-.if &E'&fl@&*k eq 1 .f@msg 13 &ID
+.f@dfid l &ID
 .se fl@&*k '&f@lbl
 ...lb
 .if &f@lt(&f@ln) eq s .go s
@@ -955,8 +1015,11 @@
 .* [width=page|column].  A floating keep (inline: a keep) in a fig
 .* element (the float of TeX hint mode, which draws a box frame
 .* itself: frame=box is passed on, and .bx inside a fig is not drawn
-.* there); the body in format off; a rule frame is a .hr above and
-.* below, a string frame a line of it (.sx).
+.* there); the body in format off and in the figure font (figfont, or
+.* the current font: DSMFIG's ".bf figfont =", restored by the caption,
+.* the description or :efig, whichever comes first: f@figpf, as
+.* DSMFIG's @efigpf); a rule frame is a .hr above and below, a string
+.* frame a line of it (.sx).
 .dm f@fig on
 .if &f@infig eq 0 .go ok
 .f@msg 14 fig fig
@@ -985,8 +1048,15 @@
 .se f@tm = &f@tm + 2
 .f@marg
 .fo off
+.bf figfont =
+.se f@figpf = 1
 .aa figcap f@fcap (noatt)
 .aa figdesc f@fdesc (noatt)
+.dm off
+.* .f@figpf: back from the figure font, once
+.dm f@figpf on
+.if &f@figpf eq 1 .pf
+.se f@figpf = 0
 .dm off
 .* .f@ffrm: one side of the frame
 .dm f@ffrm on
@@ -1005,10 +1075,11 @@
 .gs scan *t
 .se f@fign = &f@fign + 1
 .if &L'&f@fid eq 0 .go cap
-.if &E'&fg@&f@fid eq 1 .f@msg 13 &f@fid
+.f@dfid g &f@fid
 .se fg@&f@fid = &f@fign
 .se fq@&f@fid = &$PN
 ...cap
+.f@figpf
 .fo on
 .sk 1
 .xs figcap
@@ -1025,6 +1096,7 @@
 .se f@incap = 2
 .me
 ...nc
+.f@figpf
 .fo on
 .sk 1
 .dm off
@@ -1033,6 +1105,7 @@
 .f@msg 4 fig
 .me
 ...ok
+.f@figpf
 .fo on
 .se f@tm = &f@fo
 .f@marg
@@ -1040,6 +1113,7 @@
 .kp off
 .xe fig
 .se f@infig = 0
+.se f@figpf = 0
 .se f@incap = 0
 .f@fcnx
 .dm off
@@ -1069,7 +1143,7 @@
 .go on
 ...id
 .se *k = &U'&ID
-.if &E'&fn@&*k eq 1 .f@msg 13 &ID
+.f@dfid n &ID
 .se fn@&*k = &f@fnn
 ...on
 .fn on
@@ -1083,6 +1157,407 @@
 ...ok
 .se f@infn = 0
 .fn off
+.dm off
+.*
+.* ---- tables (SH20-9186-06 ch.7; SH20-9187-06 3.31-3.36) ------------------------
+.* The division of the work: here the decisions of the Starter Set -- the
+.* context of the table tags, required attributes, the row definition of
+.* each row and the number of each cell (with their messages), the
+.* caption number, the space around the table (DSMPROF4 &@sk@t,
+.* SH20-9187-06 A.2: DCF-VERIFY its value, 1 line here) and the literal
+.* texts ("Table n." in hp2 before the caption, a colon before the
+.* description: UG p.58; "Note:" in hp2 before a table note: UG p.59).
+.* The elements are made explicitly (.xs/.xe: the default rule is
+.* NOELEM) and are those of starter.gml's DSMRDEF/DSMTABLE, so that
+.* resolve.xsl works out the grid (ARRANGE, spans, CWIDTHS, the per-cell
+.* values, new rows) the same way for both profiles:
+.*   rdef{id hp align concat valign rotate mindepth arrange cwidths shade}
+.*   table{id refid width split rotate span}  thd{refid}  tft{refid}
+.*   row{refid split}  c{n}  tnote  tcap  tdesc
+.* and gml.tex lays the rows out (one box per row, the header and
+.* footer repeated by the output routine, footnotes in cells).  Unlike
+.* starter.gml the cells are ended explicitly (the APF of the tag that
+.* ends a cell, UG p.57, closes it), so a CONCAT=NO cell is a format-off
+.* region (.fo off/.fo on) inside its c element, the DCF way.
+.* The state of row definition X (its ID in upper case, at most 7
+.* characters, UG p.52, so that the names stay within 10): &rp@X the
+.* ordinal of the :rdef that defined it among the row definitions of
+.* the pass (the symbols come back from the previous pass, so their
+.* existence is no test: X is defined in this pass when &rp@X is at
+.* most &f@nrd, the count so far; the pass number would do, but would
+.* change the symbol file on every pass and keep gmlpass from settling);
+.* &rk@X(n) the position of cell number n among the cell numbers in
+.* ascending order (null: no such cell); &rl@X the lowest cell number,
+.* &rn@X(n) the next higher after n; &rc@X the CONCAT values.  The
+.* table: f@intb open, f@tpart the open part element (thd tft row tnote
+.* tdesc, null: none), f@tcop a cell is open, f@tlb it is format off,
+.* f@trows the rows so far, f@tid its ID (upper case), f@tcap a caption
+.* was just made (for the :tdesc colon); f@trd the row definition of
+.* the current row, f@tlrd the one of the last body row, f@thrd of the
+.* last header or footer, f@tcell the current cell number.  The
+.* reference symbols: ft@ID the table number (only a table with a
+.* caption has one, UG p.58), fu@ID the page where the table starts.
+.*
+.* :rdef: a repeated ARRANGE is kept, joined with " / " (one value per
+.* line of the arrangement, as in starter.gml).  The id of rdef is a
+.* name of its own (.xd noid): a table with the same id is no duplicate.
+.xd rdef empty noid
+.dm f@rdef on
+.se f@narr = 0
+.se f@arr = ''
+.gs exatt arrange as f@rarr
+.f@rdf
+.dm off
+.dm f@rarr on
+.se f@narr = &f@narr + 1
+.if &f@narr eq 1 .se f@arr '&*1
+.el .se f@arr '&f@arr / &*1
+.dm off
+.dm f@rdf on
+.gs attval id hp align concat valign rotate mindepth cwidths shade
+.se *a = ''
+.if &L'&ID gt 0 .se *a 'id="&ID."
+.if &L'&HP gt 0 .se *a '&*a hp="&HP."
+.if &L'&ALIGN gt 0 .se *a '&*a align="&ALIGN."
+.if &L'&CONCAT gt 0 .se *a '&*a concat="&CONCAT."
+.if &L'&VALIGN gt 0 .se *a '&*a valign="&VALIGN."
+.if &L'&ROTATE gt 0 .se *a '&*a rotate="&ROTATE."
+.if &L'&MINDEPTH gt 0 .se *a '&*a mindepth="&MINDEPTH."
+.if &f@narr gt 0 .se *a '&*a arrange="&f@arr."
+.if &L'&CWIDTHS gt 0 .se *a '&*a cwidths="&CWIDTHS."
+.if &L'&SHADE gt 0 .se *a '&*a shade="&SHADE."
+.xs rdef &*a
+.if &L'&ID gt 0 .go id
+.f@msg 12 id
+.me
+...id
+.f@rdid &ID
+.if &f@intb eq 0 .go new
+.if &f@rok eq 1 .f@msg 19 &ID
+...new
+.se f@nrd = &f@nrd + 1
+.se rp@&f@ru = &f@nrd
+.se rk@&f@ru off
+.se rn@&f@ru off
+.se rc@&f@ru '&CONCAT
+.* the cell numbers: those of ARRANGE, or 1 to the number of CWIDTHS
+.se *m = 0
+.if &f@narr eq 0 .go cw
+.gs args &f@arr
+.se *i = 0
+...al
+.se *i = &*i + 1
+.if &*i gt &*0 .go pos
+.se *t '&*&*i
+.if &T'&*t ne N .go al
+.if &*t le 0 .go al
+.se rk@&f@ru.(&*t) = 0
+.if &*t gt &*m .se *m = &*t
+.go al
+...cw
+.gs args &CWIDTHS
+.se *m = &*0
+.if &*m eq 0 .se *m = 1
+.se *i = 0
+...cl
+.se *i = &*i + 1
+.if &*i gt &*m .go pos
+.se rk@&f@ru.(&*i) = 0
+.go cl
+.* positions and successors in ascending order
+...pos
+.se *k = 0
+.se *p = 0
+.se *i = 0
+...pl
+.se *i = &*i + 1
+.if &*i gt &*m .me
+.if x&rk@&f@ru.(&*i) eq x .go pl
+.se *k = &*k + 1
+.se rk@&f@ru.(&*i) = &*k
+.if &*p eq 0 .se rl@&f@ru = &*i
+.el .se rn@&f@ru.(&*p) = &*i
+.se *p = &*i
+.go pl
+.dm off
+.* .f@rdid id: &f@ru the identifier as a symbol name part, &f@rok 1 if a
+.* row definition of that name was defined in this pass.  .f@rchk id:
+.* the same, with DCFS015W for an unknown one (&f@ru is then null).
+.dm f@rdid on
+.se f@ru = &U'&*1
+.if &L'&f@ru gt 7 .se f@ru = substr &f@ru 1 7
+.se f@rok = 0
+.if &E'&rp@&f@ru eq 0 .me
+.if &rp@&f@ru le &f@nrd .se f@rok = 1
+.dm off
+.dm f@rchk on
+.f@rdid &*1
+.if &f@rok eq 1 .me
+.f@msg 15 &*1
+.se f@ru = ''
+.dm off
+.*
+.* the table tags outside a table (f@tbcx), the cell tag outside a row
+.dm f@tbcx on
+.aa thd f@cntx
+.aa tft f@cntx
+.aa row f@cntx
+.aa c f@cntx (vat)
+.aa tnote f@cntx (noatt)
+.aa tcap f@cntx (noatt)
+.aa tdesc f@cntx (noatt)
+.dm off
+.* :table [id=] refid= [width=] [split=] [rotate=] [column|page]: the
+.* last of COLUMN/PAGE is span= (UG p.55; one column here, so both are
+.* the line length); a table in a table is not allowed (DCFS014W, the
+.* tag is ignored).
+.dm f@table on
+.if &f@intb eq 0 .go ok
+.f@msg 14 table table
+.me
+...ok
+.se *s = page
+.se *i = 0
+...vat
+.se *i = &*i + 1
+.if &*i gt &*0 .go set
+.se *v = &U'&*&*i
+.if &*v eq COLUMN .se *s = column
+.if &*v eq PAGE .se *s = page
+.if &*v ne COLUMN .if &*v ne PAGE .f@msg 18 &*&*i
+.go vat
+...set
+.gs attval id refid width split rotate
+.se *a 'span=&*s
+.if &L'&ROTATE gt 0 .se *a 'rotate="&ROTATE." &*a
+.if &L'&SPLIT gt 0 .se *a 'split="&SPLIT." &*a
+.if &L'&WIDTH gt 0 .se *a 'width="&WIDTH." &*a
+.if &L'&REFID gt 0 .se *a 'refid="&REFID." &*a
+.if &L'&ID gt 0 .se *a 'id="&ID." &*a
+.sk &f@tsk
+.xs table &*a
+.se f@intb = 1
+.se f@tpart = ''
+.se f@tcop = 0
+.se f@tlb = 0
+.se f@tcap = 0
+.se f@trows = 0
+.se f@trd = ''
+.se f@tlrd = ''
+.se f@thrd = ''
+.se f@tid = &U'&ID
+.if &L'&ID eq 0 .go rf
+.f@dfid t &ID
+.se fu@&f@tid = &$PN
+...rf
+.if &L'&REFID gt 0 .go ref
+.f@msg 12 refid
+.go map
+...ref
+.f@rchk &REFID
+.se f@tlrd '&f@ru
+.se f@thrd '&f@ru
+...map
+.aa thd f@thd f@ethd
+.aa tft f@tft f@etft
+.aa row f@row f@erow
+.aa tnote f@tnote (noatt) f@etnot
+.aa tcap f@tcap (noatt)
+.aa tdesc f@tdesc (noatt)
+.dm off
+.se f@tsk = 1
+.dm f@etbl on
+.if &f@intb ne 0 .go ok
+.f@msg 4 table
+.me
+...ok
+.f@tpend
+.xe table
+.se f@intb = 0
+.sk &f@tsk
+.f@tbcx
+.dm off
+.* .f@tcend: end the open cell; .f@tpend: and the open part
+.dm f@tcend on
+.if &f@tcop eq 0 .me
+.if &f@tlb ne 0 .fo on
+.se f@tlb = 0
+.xe c
+.se f@tcop = 0
+.dm off
+.dm f@tpend on
+.f@tcend
+.if &L'&f@tpart eq 0 .me
+.xe &f@tpart
+.se f@tpart = ''
+.dm off
+.* .f@trow [refid]: the row definition of a row, header or footer
+.dm f@trow on
+.se f@trd '&f@tlrd
+.if &L'&*1 eq 0 .go set
+.f@rchk &*1
+.se f@trd '&f@ru
+...set
+.se f@tlrd '&f@trd
+.se f@tcell = 0
+.aa c f@cell (vat) f@ecell
+.dm off
+.* :row [refid=] [split=]
+.dm f@row on
+.gs attval refid split
+.f@tpend
+.se f@trows = &f@trows + 1
+.se *a = ''
+.if &L'&REFID gt 0 .se *a 'refid="&REFID."
+.if &L'&SPLIT gt 0 .se *a '&*a split="&SPLIT."
+.xs row &*a
+.se f@tpart = row
+.f@trow &REFID
+.dm off
+.dm f@erow on
+.f@tpend
+.aa c f@cntx (vat)
+.dm off
+.* :thd/:tft [refid=]: before the first row (DCFS017W); their row
+.* definitions follow one another, apart from those of the body rows;
+.* no :row inside
+.dm f@thft on
+.gs attval refid
+.if &f@trows gt 0 .f@msg 17
+.f@tpend
+.se *a = ''
+.if &L'&REFID gt 0 .se *a 'refid="&REFID."
+.xs &*1 &*a
+.se f@tpart = &*1
+.se *s '&f@tlrd
+.se f@tlrd '&f@thrd
+.f@trow &REFID
+.se f@thrd '&f@tlrd
+.se f@tlrd '&*s
+.aa row f@cntx
+.dm off
+.dm f@thd /.f@thft thd
+.dm f@tft /.f@thft tft
+.dm f@ethd on
+.f@tpend
+.aa c f@cntx (vat)
+.aa row f@row f@erow
+.dm off
+.dm f@etft /.f@ethd
+.* :c [n]: the cell number (&f@tcell; DCFS016W for one that the row
+.* definition does not have) and its CONCAT value
+.dm f@cell on
+.se *n '&*1
+.f@tcend
+.if &L'&*n gt 0 .xs c n=&*n
+.el .xs c
+.se f@tcop = 1
+.f@cnum &*n
+.f@ccat
+.dm off
+.dm f@ecell /.f@tcend
+.dm f@cnum on
+.if x&f@trd eq x .me
+.if &L'&*1 eq 0 .go next
+.if &T'&*1 ne N .go bad
+.if x&rk@&f@trd.(&*1) eq x .go bad
+.se f@tcell = &*1
+.me
+...bad
+.f@msg 16 &*1 &f@trd
+...next
+.if &f@tcell eq 0 .go low
+.se *i '&rn@&f@trd.(&f@tcell)
+.if x&*i eq x .go low
+.se f@tcell = &*i
+.me
+...low
+.se f@tcell = &rl@&f@trd
+.dm off
+.* CONCAT=NO: format off until the cell ends (xml:space as starter.gml,
+.* so the tree is the same)
+.dm f@ccat on
+.if x&f@trd eq x .me
+.if &L'&rc@&f@trd eq 0 .me
+.se *k = &rk@&f@trd.(&f@tcell)
+.gs args &rc@&f@trd
+.if &*k gt &*0 .se *k = &*0
+.se *v '&*&*k
+.se *f = substr &*v 1 1
+.if &U'&*f ne N .me
+.xa xml:space=preserve
+.fo off
+.se f@tlb = 1
+.dm off
+.* :tnote: a row of one cell, "Note:" in hp2 before the text (UG p.59)
+.dm f@tnote on
+.f@tpend
+.aa c f@cntx (vat)
+.xs tnote
+.se f@tpart = tnote
+.bf hi2
+&f@l@note
+.pf
+.dm off
+.dm f@etnot on
+.if &f@tpart eq tnote .f@tpend
+.dm off
+.* :tcap: "Table n." in hp2, then the caption (one line, no tags: UG
+.* p.58); the number and the page for :tref and the list of tables.
+.* The skip is inside the element: resolve.xsl moves tcap and tdesc
+.* below the rows.
+.dm f@tcap on
+.gs scan *t
+.f@tpend
+.aa c f@cntx (vat)
+.se f@tbn = &f@tbn + 1
+.if &L'&f@tid gt 0 .se ft@&f@tid = &f@tbn
+.xs tcap
+.sk 1
+.bf hi2
+&f@l@tbl &f@tbn..
+.pf
+&*t.;.xe tcap
+.se f@tcap = 1
+.dm off
+.* :tdesc: after a caption a colon, then the description (UG p.58),
+.* ended by :etable
+.dm f@tdesc on
+.se *c = &f@tcap
+.f@tpend
+.aa c f@cntx (vat)
+.se f@tcap = 0
+.xs tdesc
+.se f@tpart = tdesc
+.if &*c eq 1 .ct :
+.el .sk 1
+.dm off
+.* :tref refid= [page=]: "Table n" (and " on page n"), as :figref
+.dm f@tref on
+.gs attval refid page
+.if &L'&REFID gt 0 .go id
+.f@msg 12 refid
+.me
+...id
+.se *k = &U'&REFID
+.if &E'&ft@&*k eq 1 .go ok
+.f@unk &f@l@tunk
+.gs insert &f@ut
+.me
+...ok
+.se *t = &ft@&*k
+.se *g = &fu@&*k
+.f@pgr &*g &PAGE
+.gs insert &f@l@tbl.&rbl.&*t.&f@pgt
+.dm off
+.* :tlist: as :figlist (resolve.xsl writes the list into the element)
+.dm f@tlist on
+.f@rset
+.pa
+.se f@shead '&f@l@tlist
+.f@runf
+.xs tlist
+.xe tlist
 .dm off
 .*
 .* ---- highlighting, citations, quotations ---------------------------------------
@@ -1113,9 +1588,56 @@
 .dm off
 .*
 .* ---- cross-references (IG p.151-156) ---------------------------------------------
+.* .f@dfid k ID: an identifier of kind k (h heading, g figure, t table,
+.* n footnote, l list item, i index entry) is defined.  DCFS013W when
+.* it was defined before in THIS pass: the reference symbols (fh@ID
+.* ...) come back from the previous pass through the symbol file (gml
+.* -symbols-in, gmlpass), so their existence is no test.  The stamp k@ID
+.* (k@ + a Starter Set ID of up to 7 characters: within the 10 of a
+.* symbol name, TPG p.229) says it was; its name goes into the list
+.* f@dfl, and .f@dfclr (at :egdoc) removes them all, and f@lastpass,
+.* so that the state of one pass does not go to the next (gmlpass
+.* compares the symbol files of two passes to stop).
+.dm f@dfid on
+.se *k = &*1.@&U'&*2
+.if &E'&&*k eq 1 .f@msg 13 &*2
+.if &E'&&*k eq 1 .me
+.se &*k = 1
+.se f@dfl() = &*k
+.dm off
+.dm f@dfclr on
+.se f@lastpass off
+.if &E'&f@dfl eq 0 .me
+.se *i = 0
+...nx
+.se *i = &*i + 1
+.if &*i gt &f@dfl .go end
+.se *k = &f@dfl(&*i)
+.se &*k off
+.go nx
+...end
+.se f@dfl off
+.dm off
+.* .f@unk text: DCFS020W for the unknown REFID (set by .gs attval in
+.* the caller), and f@ut is the text for a reference to it: the
+.* Starter Set's "ID unknown" text on the last pass, the ID itself (a
+.* stand-in of about the size of the target's text) on a pass before
+.* it, where a forward reference is not resolved yet (the symbols of a
+.* target come back with the symbol file of the pass, TPG p.233).
+.dm f@unk on
+.se f@ut '&*
+.if &f@lastpass eq 0 .se f@ut '&REFID
+.f@msg 20 &REFID
+.dm off
 .* .f@pgr page yes|no: " on page n" when asked for, or when the target
-.* is on another page (&$PN; in a one-pass run the page of a backward
-.* target is final)
+.* is on another page.  The pages are &$PN: with passes (gmlpass) each
+.* reference to it is a question that TeX answers with the page the
+.* place of the question is put out on (gml.tex \gmlquery, at
+.* shipout), so the &$PN that a target's APF records (fp@ID fq@ID) is
+.* the page of the target as an anchor would give it; the answer comes
+.* one pass later, and a forward reference sees it a pass after that
+.* (gmlpass runs until the pages are stable).  In one pass &$PN is 1:
+.* only page=yes prints a page.
 .dm f@pgr on
 .se f@pgt = ''
 .if x&U'&*2 eq xNO .me
@@ -1132,8 +1654,8 @@
 ...id
 .se *k = &U'&REFID
 .if &E'&fh@&*k eq 1 .go ok
-.f@msg 20 &REFID &f@l@hunk
-.gs insert &f@oq1.&f@l@hunk.&f@cq1
+.f@unk &f@l@hunk
+.gs insert &f@oq1.&f@ut.&f@cq1
 .me
 ...ok
 .se *t '&fh@&*k
@@ -1149,8 +1671,8 @@
 ...id
 .se *k = &U'&REFID
 .if &E'&fg@&*k eq 1 .go ok
-.f@msg 20 &REFID &f@l@funk
-.gs insert &f@l@funk
+.f@unk &f@l@funk
+.gs insert &f@ut
 .me
 ...ok
 .se *t = &fg@&*k
@@ -1174,8 +1696,8 @@
 .gs attval refid page
 .se *k = &U'&REFID
 .if &E'&fl@&*k eq 1 .go ok
-.f@msg 20 &REFID &f@l@lunk
-.gs insert &f@l@lunk
+.f@unk &f@l@lunk
+.gs insert &f@ut
 .me
 ...ok
 .se *t '&fl@&*k
@@ -1227,7 +1749,7 @@
 .dm f@piid on
 .if &L'&ID eq 0 .me
 .se *k = &U'&ID
-.if &E'&fi@&*k eq 1 .f@msg 13 &ID
+.f@dfid i &ID
 .se fi@&*k '&f@ip
 .se fs@&*k '&f@is
 .dm off
@@ -1359,13 +1881,8 @@
 .aa ih2 f@ih2
 .aa ih3 f@ih3
 .aa iref f@iref
-.* not formatted yet: tables (SH20-9186-06 ch.7)
-.aa table f@cntx
-.aa row f@cntx
-.aa c f@cntx (vat)
-.aa rdef f@cntx
-.aa thd f@cntx
-.aa tft f@cntx
-.aa tnote f@cntx (noatt)
-.aa tcap f@cntx (noatt)
-.aa tdesc f@cntx (noatt)
+.aa rdef f@rdef
+.aa table f@table (vat) f@etbl
+.f@tbcx
+.aa tref f@tref
+.aa tlist f@tlist (noatt)

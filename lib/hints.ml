@@ -655,8 +655,8 @@ let put_toc ctx ops =
    one hint gml:tcentry per entry made so far ([Toc.printable]: text=,
    level= (pt for a .pt line), indent= (TCIN, normalised), font= (TFONT),
    dot=yes|no, and page= when its page is known ([Toc.entry.page], or
-   [Ctx.page_of] its anchor: the hook of the planned pass model, which
-   answers nothing yet), anchor= otherwise: gml.tex's page reference),
+   [Ctx.page_of] its anchor: the pass model's aux file, gml -aux),
+   anchor= otherwise: gml.tex's page reference),
    with a gml:sk 1 before an entry whose level asks for it (TS); then
    gml:tc action=end (reserve=n: the page after the table is numbered n
    pages after its first). *)

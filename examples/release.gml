@@ -241,7 +241,7 @@ following characteristics:
 :li.My mother in New Rochelle
 :li.My great aunt in Detroit
 :esl.
-:li.Clea out the garage.
+:li.Clean out the garage.
 :eol
 :index
 :egdoc.

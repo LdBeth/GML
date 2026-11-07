@@ -6,8 +6,8 @@
     - every formatting hint element removed: the gml:NAME hints of the
       table in lib/hints.ml (br sp sk in ir of ll fo nf ju pa cp cc cb bx
       hr vr kp dh tc sx tp tb bf pf df hy hw rc bc fl ls sb ws es wz is ic
-      ud dr pn pl pw pm tm bm cl cd sc mc) and the gml:br breaks written
-      by scope.xsl;
+      ud dr pn pl pw pm tm bm cl cd sc mc), gml:query (a question of the
+      pass model) and the gml:br breaks written by scope.xsl;
     - the scopes unwrapped, their content kept: gml:lines (line-counted
       words) and gml:scope (scope.xsl);
     - the running heading/footing definitions gml:rh and gml:rf removed
@@ -30,7 +30,7 @@
   <xsl:variable name="hints" select="('br', 'sp', 'sk', 'in', 'ir', 'of', 'll', 'fo', 'nf', 'ju',
       'pa', 'cp', 'cc', 'cb', 'bx', 'hr', 'vr', 'kp', 'dh', 'tc', 'sx', 'tp', 'tb', 'bf', 'pf',
       'df', 'hy', 'hw', 'rc', 'bc', 'fl', 'ls', 'sb', 'ws', 'es', 'wz', 'is', 'ic', 'ud', 'dr',
-      'pn', 'pl', 'pw', 'pm', 'tm', 'bm', 'cl', 'cd', 'sc', 'mc')"/>
+      'pn', 'pl', 'pw', 'pm', 'tm', 'bm', 'cl', 'cd', 'sc', 'mc', 'query')"/>
 
   <xsl:template match="gml:*[local-name() = $hints] | gml:rh | gml:rf"/>
 

@@ -9,6 +9,8 @@
 
   Output (method text, pure ASCII):
     [\def\gmlfonts{$tex-fonts}] [\def\gmltagset{$tex-tagset}]
+    [\def\gmlmode{hints}] [\def\gmlpassno{K}\def\gmlpasses{N}: the root's
+    pass= passes=, gml -pass/-passes, for gml.tex's \gmlpass]
     \input gml ($tex-input), then $tex-preamble
     \gmlbegindocument ... \gmlenddocument \bye
   Dispatch scheme - one rule for source elements, one for generated ones:
@@ -31,6 +33,7 @@
     gml:lines              \gmlbeginlines{WORD}{k=v,...[,more=yes]}...\gmlendlines
                            more=yes: the next gml:lines is its cont="yes"
                            continuation (the line does not end here).
+    gml:query              \gmlquery{id}{pn|lc}  (a question of the pass model)
     gml:num                \gmlnum{label}
     gml:pageref            \gmlpageref{anchor}{always|auto}{label}
     generated lists        \gmltocbegin{title} \gmltocentry{level=..,..}{num}{text}{\gmlpageref..}
@@ -88,6 +91,8 @@
     xmlns:t="urn:x-gml:tex"
     exclude-result-prefixes="#all">
 
+  <xsl:include href="common.xsl"/>
+
   <xsl:output method="text" encoding="UTF-8"/>
   <xsl:mode use-accumulators="#all"/>
 
@@ -107,11 +112,9 @@
   <xsl:param name="tex-mode" as="xs:string" select="'auto'"/>
 
   <xsl:variable name="root" select="(/gml:doc, /*)[1]"/>
-  <xsl:variable name="first-source" select="($root//*[not(self::gml:*)])[1]"/>
   <xsl:variable name="mode" as="xs:string" select="
       if ($tex-mode = ('elements', 'hints')) then $tex-mode
-      else if (exists($root//(gml:df | gml:dh | gml:dr)
-                       [empty($first-source) or . &lt;&lt; $first-source]))
+      else if (gml:hint-mode($root))
       then 'hints' else 'elements'"/>
 
   <xsl:variable name="nl" select="'&#10;'"/>
@@ -201,6 +204,11 @@
     <xsl:if test="$mode = 'hints'">
       <xsl:value-of select="concat('\def\gmlmode{hints}', $nl)"/>
     </xsl:if>
+    <!-- the pass model (gml -pass/-passes): gml.tex's \gmlpass reads them -->
+    <xsl:if test="$root/@pass and $root/@passes">
+      <xsl:value-of select="concat('\def\gmlpassno{', t:name($root/@pass), '}\def\gmlpasses{',
+                                   t:name($root/@passes), '}', $nl)"/>
+    </xsl:if>
     <xsl:text>\input </xsl:text>
     <xsl:value-of select="$tex-input"/>
     <xsl:value-of select="$nl"/>
@@ -250,6 +258,12 @@
     <xsl:value-of select="concat('\gmlhint{', local-name(), '}{', t:attrs(@*, ()), '}')"/>
     <xsl:if test="@break = 'yes'">%&#10;</xsl:if>
     <xsl:apply-templates/>
+  </xsl:template>
+
+  <!-- a question of the pass model (gml -aux, Ctx.query): gml.tex
+       writes the answer to the aux file -->
+  <xsl:template match="gml:query" priority="1">
+    <xsl:value-of select="concat('\gmlquery{', t:name(string(@id)), '}{', t:name(string(@what)), '}')"/>
   </xsl:template>
 
   <!-- a .sx in a running heading or footing: the page number symbol

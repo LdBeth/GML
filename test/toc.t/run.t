@@ -29,14 +29,14 @@ level 1), DOT or NODOT.  "2" reserves two page numbers (p.157).
 
 The page of an entry is left to TeX: the entry carries anchor= (the
 gml:tcmark of its heading), and gml.tex's page references give the
-page, from its .ref file, on a second TeX run.  (A pass model with an
-aux file, where TeX reports the pages to the next SCRIPT pass, would
-give page= instead: Ctx.page_of, not yet implemented.)
+page, from its .gmlaux file, on a second TeX run.  With the pass model
+(gml -aux: TeX reports the pages to the next pass, test/aux.t) an
+entry whose anchor the aux file knows gets page= instead.
 
   $ printf '.h1 One\n.h2 Two\n.tc\n' > small.gml
-  $ gml -tex - small.gml | grep tcentry
-  \gmlhint{tcentry}{level=1,text=One,dot=yes,anchor=gml.tc.1,break=yes}%
-  \gmlhint{tcentry}{level=2,text=Two,dot=yes,anchor=gml.tc.2,break=yes}%
+  $ gml small.gml | grep -o '<gml:tcentry [^>]*>'
+  <gml:tcentry level="1" text="One" dot="yes" anchor="gml.tc.1" break="yes"/>
+  <gml:tcentry level="2" text="Two" dot="yes" anchor="gml.tc.2" break="yes"/>
 
 A .tc before the headings is empty in one pass (the heading after it
 is the second gml:h); the title is &SYSCONTENT, else CONTENTS; "/"

@@ -6,11 +6,14 @@
 #   mk doc.sem.xml    semantic XML         xslt/strip-hints.xsl (from doc.r.xml)
 #   mk doc.html       HTML                 xslt/html.xsl       (from doc.s.xml)
 #   mk doc.tex        plain TeX            xslt/tex.xsl        (from doc.r.xml)
-#   mk doc.dvi        tex with share/tex on TEXINPUTS
-#   mk test           test-ocaml, test-xslt and test-parity
+#   mk doc.texrun     one run of $TEX on doc.tex, share/tex on TEXINPUTS
+#   mk doc.pdf        the passes: gmlpass -n $PASSES -tex $TEXENGINE
+#                     (each pass: doc.xml, doc.r.xml, doc.tex by the
+#                     rules above, then TeX; doc.gmlaux, doc.sym)
+#   mk doc.dvi        the same with $TEX (a DVI engine, default tex)
+#   mk test           test-ocaml and test-xslt
 #   mk test-ocaml     the engine's cram tests (dune test)
 #   mk test-xslt      the XSLT fixture tests (xslt/test/run)
-#   mk test-parity    gml -tex = tex.xsl on the XML (test/tex-parity.sh)
 #
 # Run mk in the project root (ROOT is the current directory).  Variables
 # can be overridden on the command line: mk GML=gml SAXON=transform doc.html
@@ -33,6 +36,12 @@
 # OUTDIR (empty, or a directory ending in /) puts doc.xml, and so every
 # later stage, in that directory: OUTDIR/doc.xml is made from doc.gml.
 #
+# Passes (README "Passes"): PASSES (default 4) and TEXENGINE (default
+# pdftex; aptex) for doc.pdf.  gmlpass makes the stages with this file
+# (mk -a OUTDIR=... doc.tex), giving gml the pass options in
+# GMLPASSFLAGS (-pass k -passes n -aux ... -symbols-in/-out ...);
+# empty otherwise.
+#
 # Another mkfile can use these rules: set ROOT (and TAGSET, OUTDIR), then
 # include this file (examples/mkfile does).
 
@@ -46,6 +55,8 @@ PROFILE=starter
 DUNE=opam exec --switch gml -- dune
 GML=$DUNE exec --root $ROOT --display quiet -- gml -share $ROOT/share
 TEX=tex
+TEXENGINE=pdftex
+PASSES=4
 
 # the tag set: profile, imbed directory and stage stylesheets
 GMLPROFILE=`{if(~ $"TAGSET '') echo $PROFILE; if not echo $TAGSET/profile.gml}
@@ -67,7 +78,7 @@ $OUTDIR%.xml: %.gml
 	for(s in $sets) setargs=($setargs -set $s)
 	# gml returns 4 after warnings (DCF return codes): still a result
 	st=()
-	$GML -profile $GMLPROFILE $GMLFLAGS $setargs $stem.gml > $target.tmp || st=$status
+	$GML -profile $GMLPROFILE $GMLFLAGS $setargs `{echo $GMLPASSFLAGS} $stem.gml > $target.tmp || st=$status
 	if(! ~ $st '' 4) { rm -f $target.tmp; exit $st }
 	mv $target.tmp $target
 
@@ -89,18 +100,29 @@ $OUTDIR%.xml: %.gml
 	if(! ~ $"TEXTAGSET '') tagparam=tex-tagset^'='^$TEXTAGSET
 	$SAXON -s:$stem.r.xml -xsl:$TEXXSL -o:$target `{echo $SETS} $tagparam $XSLTFLAGS
 
-%.dvi: %.tex
+%.texrun:V: %.tex
 	dir=`{/usr/local/plan9/bin/basename -d $stem}
 	cd $dir && TEXINPUTS=$ROOT/share/tex: $TEX -interaction nonstopmode `{/usr/local/plan9/bin/basename $stem}.tex
 
-test:V: test-ocaml test-xslt test-parity
+# the passes, with $TEXENGINE for doc.pdf and $TEX for doc.dvi; the
+# profile or tag set and SETS/XSLTFLAGS as for the stages (gmlpass
+# makes them with this file)
+GMLPASSARGS=`{if(~ $"TAGSET '') echo -profile $PROFILE; if not echo -tagset $TAGSET}
+$OUTDIR%.pdf $OUTDIR%.dvi: %.gml
+	setargs=()
+	for(s in `{echo $SETS}) setargs=($setargs -set $s)
+	for(p in `{echo $XSLTFLAGS}) setargs=($setargs -p $p)
+	# (both targets at once when both are asked for)
+	for(t in $target){
+		engine=$TEXENGINE
+		if(~ $t *.dvi) engine=$TEX
+		SAXON=$SAXON $ROOT/gmlpass -n $PASSES -tex $engine $GMLPASSARGS $setargs -o `{/usr/local/plan9/bin/basename -d $t} $stem.gml || exit 1
+	}
+
+test:V: test-ocaml test-xslt
 
 test-ocaml:V:
 	$DUNE test --root $ROOT
 
 test-xslt:V:
 	SAXON=$SAXON $XSLT/test/run
-
-# (after test-ocaml: it uses the dune build of gml)
-test-parity:V: test-ocaml
-	SAXON=$SAXON $ROOT/test/tex-parity.sh

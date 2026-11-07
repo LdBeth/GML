@@ -36,11 +36,20 @@
 #        tex/starter is gml/starter.gml resolved; tex/features =
 #        resolve/features.out.xml; tex/dcfdefs is hand-written (a
 #        formatting profile's .df/.dr/.dh, hence hint mode)
+#        tex/dcfstarter-tables: gmlfmt -to resolved -profile dcfstarter
+#        gml/dcfstarter-tables.gml (with the G dates; hint mode)
+#        tex/batch: gml gml/tex-batch.gml (no profile, the SCRIPT control
+#        words: hint mode) | resolve.xsl; tex/query: gml -aux none.gmlaux
+#        -pass 1 -passes 2 gml/tex-query.gml | resolve.xsl (the page
+#        questions of the pass model, \gmlquery and \gmlpassno); tex/dv:
+#        gml gml/tex-dv.gml (test/dv.t/in.gml) | resolve.xsl
 #   html gmlfmt -to scoped gml/html-NAME.gml   -> html/NAME.in.xml
 #        (figs, fn, hints, index, lines, lists, scope, sections, text);
 #        html/starter and html/params are gml/starter.gml scoped,
 #        fn-chapter reuses fn; features, nesting, state, values are
 #        copies of scope/*.out.xml
+#        html/dcfstarter-tables: gmlfmt -to scoped -profile dcfstarter
+#        gml/dcfstarter-tables.gml (G dates; hint mode: no gml:num labels)
 
 if(~ $#SAXON 0) SAXON=/usr/local/bin/transform
 here=`{cd `{/usr/local/plan9/bin/basename -d $0} && pwd}

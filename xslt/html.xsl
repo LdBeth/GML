@@ -139,6 +139,8 @@
     xmlns:h="urn:x-gml:html"
     exclude-result-prefixes="#all">
 
+  <xsl:include href="common.xsl"/>
+
   <xsl:output method="html" version="5.0" encoding="UTF-8" indent="no"
       include-content-type="no"/>
 
@@ -179,14 +181,17 @@
   <xsl:variable name="h:gml-used" select="('doc', 'scope', 'lines', 'br', 'sp', 'sk', 'pa',
       'cp', 'cc', 'cb', 'hr', 'sx', 'h', 'fn', 'rh', 'rf', 'raw', 'num', 'pageref',
       'toc-entries', 'toc-entry', 'entry-text', 'figlist-entries', 'figlist-entry',
-      'tlist-entries', 'tlist-entry', 'cpart',
+      'tlist-entries', 'tlist-entry', 'cpart', 'dv',
       'index-entries', 'index-group', 'index-entry', 'index-term', 'see')"/>
+  <!-- hint mode: a formatting profile wrote the text, numbers and labels
+       (gml:hint-mode, common.xsl; as tex.xsl's auto mode) -->
+  <xsl:variable name="h:hint-mode" as="xs:boolean" select="gml:hint-mode(/)"/>
   <!-- gml: hints with no HTML meaning: dropped (the state hints too, in
        case the input was not scoped) -->
   <xsl:variable name="h:gml-dropped" select="('bx', 'vr', 'kp', 'tc', 'dh', 'df', 'hw', 'rc',
       'fl', 'is', 'ic', 'dr', 'cl', 'cd', 'sc', 'mc', 'pn', 'pl', 'pw', 'pm', 'tm', 'bm',
       'in', 'ir', 'hy', 'of', 'll', 'fo', 'nf', 'ju', 'tp', 'tb', 'ls', 'wz', 'bc',
-      'bf', 'pf', 'ws', 'es', 'sb', 'ud')"/>
+      'bf', 'pf', 'ws', 'es', 'sb', 'ud', 'query', 'tcmark')"/>
   <xsl:variable name="h:lists" select="('ol', 'ul', 'sl', 'l', 'dl', 'gl')"/>
   <xsl:variable name="h:index-tags" select="('i1', 'i2', 'i3', 'ih1', 'ih2', 'ih3', 'iref')"/>
   <!-- elements written inline (phrasing) -->
@@ -216,6 +221,7 @@
         else if ($n/self::gml:scope) then $n/@kind = 'inline'
         else if ($n/self::gml:lines) then $n/@word = ('us', 'up', 'uc', 'rc')
         else if ($n/self::gml:raw) then $n/@backend = 'html'
+        else if ($n/self::gml:dv) then true()
         else h:unknown($n)"/>
   </xsl:function>
 
@@ -740,6 +746,11 @@
     <span class="gml-num"><xsl:apply-templates/></span>
     <xsl:text> </xsl:text>
   </xsl:template>
+  <!-- hint mode: the profile wrote its own numbers and labels into the text
+       ("Figure 1.", "Table 1.", "Note:"), so resolve.xsl's gml:num is
+       dropped, as gml.tex does (in the toc, figlist and tlist entries too:
+       their text is the caption with the profile's label) -->
+  <xsl:template match="gml:num[$h:hint-mode]" priority="2"/>
 
   <!-- ==== paragraphs and phrases ========================================= -->
   <xsl:template match="p | pc">
@@ -847,6 +858,7 @@
     <xsl:variable name="label" as="item()*">
       <xsl:choose>
         <xsl:when test="self::lp"/>
+        <xsl:when test="gml:num and $h:hint-mode"/>
         <xsl:when test="gml:num"><xsl:apply-templates select="gml:num/node()"/></xsl:when>
         <xsl:when test="$list/self::ul">
           <xsl:variable name="d" select="if ($list/@nest castable as xs:integer) then xs:integer($list/@nest)
@@ -1603,6 +1615,16 @@
     <h:raw><xsl:value-of select="."/></h:raw>
   </xsl:template>
   <xsl:template match="gml:raw | gml:rh | gml:rf"/>
+  <!-- a text variable (.dv, e.g. a profile's footnote callout): its text,
+       raised (sup) or lowered (sub) when it has a baseline shift -->
+  <xsl:template match="gml:dv">
+    <xsl:variable name="b" select="normalize-space(@baseline)"/>
+    <xsl:choose>
+      <xsl:when test="matches($b, '^[+]?0*(\.0*)?[a-z]*$')"><xsl:value-of select="@text"/></xsl:when>
+      <xsl:when test="starts-with($b, '-')"><sub><xsl:value-of select="@text"/></sub></xsl:when>
+      <xsl:otherwise><sup><xsl:value-of select="@text"/></sup></xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
 
   <xsl:template match="gml:*[local-name() = $h:gml-dropped]" priority="-0.25"/>
 

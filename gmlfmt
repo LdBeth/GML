@@ -26,10 +26,11 @@
 #   -I        an imbed directory for gml
 #
 # The same tools as the mkfile: GML (default: the gml built by dune in the
-# project, through opam, with -share GMLROOT/share so that the profiles
-# are read from the source tree: dune exec does not refresh the copy in
-# _build), SAXON (default /usr/local/bin/transform); GMLROOT is the
-# project root (default: the directory of this script).
+# project, through opam, run with -share GMLROOT/share so that the
+# profiles are read from the source tree: the copy in _build is not
+# refreshed), SAXON (default /usr/local/bin/transform); GMLROOT is the
+# project root (default: the directory of this script).  The defaults
+# and the tag set are share/rc/gmlenv.rc, shared with gmlpass.
 
 fn usage {
 	echo 'usage: gmlfmt [-to xml|resolved|scoped|semantic|html|tex] [-profile p] [-tagset t] [-set name=value]... [-p name=value]... [-I dir]... in.gml' >[1=2]
@@ -40,7 +41,6 @@ to=xml
 profile=starter
 profileopt=()
 tagset=()
-bundle=()
 sets=()
 params=()
 gmlargs=()
@@ -71,28 +71,11 @@ if(! ~ $to xml resolved scoped semantic html tex) usage
 if(~ $#GMLROOT 0) GMLROOT=`{/usr/local/plan9/bin/basename -d $0}
 root=`{cd $GMLROOT && pwd}
 xslt=$root/xslt
-if(~ $#SAXON 0) SAXON=/usr/local/bin/transform
-if(~ $#GML 0) gml=(opam exec --switch gml -- dune exec --root $root --display quiet -- gml -share $root/share)
-if not gml=`{echo $GML}
-
-# the tag set (after the option loop: -profile wins in any order)
-if(! ~ $#tagset 0){
-	dir=()
-	if(~ $tagset */*) dir=$tagset
-	if(~ $#dir 0 && test -d $root/share/tagset/$tagset) dir=$root/share/tagset/$tagset
-	if(~ $#dir 0 && test -f $root/share/profile/$tagset.gml) profile=$tagset
-	if(~ $#dir 0 && ! test -f $root/share/profile/$tagset.gml){
-		echo gmlfmt: no tag set $tagset >[1=2]
-		exit 1
-	}
-	if(! ~ $#dir 0){
-		if(! test -d $dir) { echo gmlfmt: no tag set $tagset >[1=2]; exit 1 }
-		bundle=`{cd $dir && pwd}
-		if(~ $#bundle 0) { echo gmlfmt: no tag set $tagset >[1=2]; exit 1 }
-		if(! test -f $bundle/profile.gml) { echo gmlfmt: $bundle/profile.gml missing >[1=2]; exit 1 }
-		profile=$bundle/profile.gml
-		gmlargs=($gmlargs -I $bundle)
-	}
+prog=gmlfmt
+. $root/share/rc/gmlenv.rc
+if(! ~ $#bundle 0){
+	profile=$bundle/profile.gml
+	gmlargs=($gmlargs -I $bundle)
 }
 if(! ~ $#profileopt 0) profile=$profileopt
 

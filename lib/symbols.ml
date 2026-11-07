@@ -38,6 +38,11 @@ type t = {
       (** value of a system symbol (normalised name, with the [$]) or of one of
           its elements; installed by [Ctx.create] because the values depend on
           the context *)
+  mutable query : string -> string -> string;
+      (** [query name v]: a reference to the plain value [v] of system symbol
+          [name] by [get] (substitution, [.se x = &]), not by [defined] or
+          [is_system]: the page state symbols ([&$PN], [&$LC]) are questions to
+          the layout engine ([Ctx.query]); the identity for the others *)
 }
 
 (** DCF limit on symbol name length (p.229). *)
@@ -53,6 +58,7 @@ let create () =
     local = (fun () -> base);
     in_macro = (fun () -> false);
     system = (fun _ _ -> None);
+    query = (fun _ v -> v);
   }
 
 (** Names beginning with [$] are case-insensitive (p.241). *)
@@ -67,12 +73,14 @@ let is_name_char = function
   | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '$' | '#' | '@' -> true
   | _ -> false
 
-(** Is [name] (with an optional leading [*]) a valid symbol name? *)
-let valid_name name =
+(** Is [name] (with an optional leading [*]) a valid symbol name?  With
+    [~long:true] the length is not limited (the coupling files of the pass
+    model, [Ctx.coupling]). *)
+let valid_name ?(long = false) name =
   let body =
     if is_local name then String.sub name 1 (String.length name - 1) else name
   in
-  String.length body <= max_name_len
+  (long || String.length body <= max_name_len)
   && String.for_all is_name_char body
   && (body <> "" || is_local name)
 
@@ -103,7 +111,7 @@ let defined t name =
 let get ?(sub = 0) t name =
   let n = norm name in
   match if n <> "" && n.[0] = '$' then t.system n sub else None with
-  | Some _ as v -> v
+  | Some v -> Some (if sub = 0 then t.query n v else v)
   | None ->
       if sub = 0 then Option.bind (find t n) (fun s -> s.value)
       else if not (defined t n) then None
@@ -190,6 +198,50 @@ let unset ?(sub = 0) t name =
           if sub = 0 then Hashtbl.remove sc n else Hashtbl.remove s.elems sub)
     (read_only t name)
 
+(* ---- carried over between passes ------------------------------------------ *)
+
+(* The symbol file of a multi-pass run (gml -symbols-out / -symbols-in,
+   gmlpass) is SCRIPT source, imbedded by the next pass before the
+   profile (Aux.imbed):
+
+     .* gml symbols                   constant first line
+     .su off                          a value with & stays as written
+     .dc cw off                       a value with ; is not split
+     .se NAME = 'value'               one line per symbol ...
+     .se NAME(n) = 'value'            ... and per array element (n >= 1)
+     .se gml@toc(n) = '...'           the TOC entries (lib/toc.ml)
+     .dc cw
+     .su on
+
+   The value is always quoted, a quote in it doubled (Expr.close_quote).
+   SCRIPT has no escape for a line end: one in a value is written as a
+   blank (DCF-VERIFY: what DCF's own carry-over does with it).  Every
+   global symbol that is defined at the end of the pass, except the date
+   and time symbols ([date_names], set again by every pass: they would
+   make two passes differ), the answers of the aux file ([aux_prefixes],
+   read again from it by every pass) and gml@toc (lib/toc.ml writes the
+   entries itself).  Sorted by name and subscript, so that two passes
+   that end in the same state write the same file.  DCF-VERIFY: the set
+   of symbols DCF keeps from one pass to the next (TPG p.233: symbols
+   unresolved on the first pass are resolved on the second) is not
+   documented in our manuals. *)
+
+(** [.se NAME = 'value'] ([sub] = 0) or [.se NAME(sub) = 'value']. *)
+let se_line ?(sub = 0) name v =
+  let b = Buffer.create (String.length v + 16) in
+  Buffer.add_string b ".se ";
+  Buffer.add_string b name;
+  if sub <> 0 then Printf.bprintf b "(%d)" sub;
+  Buffer.add_string b " = '";
+  String.iter
+    (function
+      | '\'' -> Buffer.add_string b "''"
+      | '\n' | '\r' -> Buffer.add_char b ' '
+      | c -> Buffer.add_char b c)
+    v;
+  Buffer.add_char b '\'';
+  Buffer.contents b
+
 (* ---- date and time ------------------------------------------------------ *)
 
 let months =
@@ -244,3 +296,54 @@ let date_symbols () =
     ("SYSMINUTE", Printf.sprintf "%02d" tm.Unix.tm_min);
     ("SYSSECOND", Printf.sprintf "%02d" tm.Unix.tm_sec);
   ]
+
+let date_names = List.map fst (date_symbols ())
+
+(** The prefixes of the aux file's symbols (lib/aux.ml): [pa@] the page of an
+    anchor, [pq@] the answer to a question. *)
+let anchor_prefix = "pa@"
+
+let query_prefix = "pq@"
+
+(** The symbols of the aux file (lib/aux.ml): not carried. *)
+let aux_prefixes = [ anchor_prefix; query_prefix; "pr@" ]
+
+(** The array the TOC entries travel in (lib/toc.ml). *)
+let toc_name = "gml@toc"
+
+let carried name =
+  name <> ""
+  && (not (String.starts_with ~prefix:"$" name))
+  && name <> toc_name
+  && (not (List.mem name date_names))
+  && not (List.exists (fun prefix -> String.starts_with ~prefix name) aux_prefixes)
+
+(** The [.se] lines of the symbols (without line ends). *)
+let dump t =
+  let entries name s =
+    List.map (fun v -> ((name, 0), v)) (Option.to_list s.value)
+    @ Hashtbl.fold (fun k v acc -> ((name, k), v) :: acc) s.elems []
+  in
+  Hashtbl.fold
+    (fun name s acc -> if carried name then entries name s @ acc else acc)
+    t.global []
+  |> List.sort (fun (a, _) (b, _) -> compare a b)
+  |> List.map (fun ((name, sub), v) -> se_line ~sub name v)
+
+(** The whole symbol file around [lines] (the [.se] lines of [dump] and
+    [Toc.dump]), with line ends. *)
+let file lines =
+  String.concat "\n"
+    ([ ".* gml symbols"; ".su off"; ".dc cw off" ] @ lines @ [ ".dc cw"; ".su on" ])
+  ^ "\n"
+
+(** After loading the symbol file: "all array index counters are reset to
+    zero for the second pass but the individual elements are not reset"
+    (TPG p.256, TWOPASS): every global symbol with elements whose element 0
+    is a counter (a number or null) gets 0. *)
+let reset_counters t =
+  Hashtbl.iter
+    (fun _ s ->
+      if Hashtbl.length s.elems > 0 && counter_of s <> None then s.value <- Some "0")
+    t.global
+

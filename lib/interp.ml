@@ -332,30 +332,46 @@ let check_balance ctx =
   ctx.cs_open <- [];
   Ctx.sync_mute ctx
 
+(* One line of the input: its location, then [process] in its mode. *)
+let process_line ctx (s, loc, kind) =
+  ctx.Ctx.loc <- loc;
+  process ctx
+    (match kind with
+    | Input.Source -> Ctx.Raw
+    | Input.Residual p -> Ctx.Residual p
+    | Input.Split b -> Ctx.Split b)
+    s
+
+(* Process lines until the input stack is empty. *)
+let rec drain ctx =
+  match Input.next_line ctx.Ctx.input with
+  | None -> ()
+  | Some line ->
+      process_line ctx line;
+      drain ctx
+
 let run ctx =
   install_sets ctx;
   let rec loop () =
-    match Input.next_line ctx.Ctx.input with
-    | None -> (
-        (* the epifile: the rest of the profile after its .ef (p.51) *)
-        match ctx.epifile with
-        | Some (path, lines, idx) ->
-            ctx.epifile <- None;
-            Input.push_file_at ctx.input path lines idx;
-            loop ()
-        | None -> ())
-    | Some (s, loc, kind) ->
-        ctx.loc <- loc;
-        process ctx
-          (match kind with
-          | Input.Source -> Ctx.Raw
-          | Input.Residual p -> Ctx.Residual p
-          | Input.Split b -> Ctx.Split b)
-          s;
+    drain ctx;
+    (* the epifile: the rest of the profile after its .ef (p.51) *)
+    match ctx.epifile with
+    | Some (path, lines, idx) ->
+        ctx.epifile <- None;
+        Input.push_file_at ctx.input path lines idx;
         loop ()
+    | None -> ()
   in
   loop ();
   check_balance ctx
+
+(** Process the file [path] now, line by line like an imbedded file, on an
+    empty input stack (before [run]: the coupling files of the pass model,
+    [Aux]); returns when the file has ended. *)
+let imbed_now ctx path =
+  match Input.imbed ctx.Ctx.input ("(" ^ path ^ ")") with
+  | Error e -> Ctx.error ctx "%s" e
+  | Ok _ -> drain ctx
 
 (** A context with the native control words installed. *)
 let create ?include_path () =

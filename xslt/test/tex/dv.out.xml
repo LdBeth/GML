@@ -1,0 +1,16 @@
+\def\gmlmode{hints}
+\input gml
+\gmlbegindocument%
+\gmlhint{dr}{spec=thick weight 1mm,break=no,rule=thick,weight=1mm}\gmlstart{gml:rf}{}%
+\gmlrundyn{\gmlhint{sx}{left=R \& D,fill=,right=Page \gmlpageno{},pagesym=\gmlchar{57344},break=yes}%
+}\gmlend{gml:rf}%
+\gmlstart{gml:rh}{}%
+\gmlrundyn{\gmlbeginlines{ce}{n=1,break=yes}Heading \& more, page \gmlhint{pageno}{break=no}\gmlendlines{}}\gmlend{gml:rh}%
+Body text with \& here and a raised callout\gmlhint{dv}{name=sup,font=hi1,baseline=3pt,text=1,break=no} in text.
+\gmlhint{hr}{spec=thick,break=yes}%
+After the rule.
+\gmlhint{pa}{break=yes}%
+Second page.
+%
+\gmlenddocument
+\bye

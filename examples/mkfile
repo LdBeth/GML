@@ -1,21 +1,34 @@
-# mkfile - every output of release.gml, in out/ (Plan 9 mk, recipes in rc).
+# mkfile - every output of the examples, in out/ (Plan 9 mk, recipes in rc).
 #
 #   cd examples && mk          all of them (only what is out of date)
 #   mk -a                      all of them, again
 #   mk out/release.html        one of them
-#   mk clean                   remove the TeX by-products
+#   mk clean                   remove the TeX and pass by-products
 #
-# The rules are the project's (../mkfile), with the notes tag set
-# (notes/: the Starter Set plus :warn, with its own html.xsl and
-# tagset.tex) and out/ as OUTDIR.  The project's variables can be
-# overridden in the same way (mk SAXON=... GML=...); PDFTEX is the pdftex
-# for out/release.pdf.
+# release.gml: the rules are the project's (../mkfile), with the notes
+# tag set (notes/: the Starter Set plus :warn, with its own html.xsl and
+# tagset.tex) and out/ as OUTDIR.  dcfstarter.gml: the formatting
+# profile (share/profile/dcfstarter.gml) and -set SYSVARH=yes, not the
+# notes tag set.
+#
+# The PDF files are made in passes by ../gmlpass (README "Passes"):
+# PASSES (default 4) and TEXENGINE (default pdftex; aptex) of the
+# project's mkfile.  The passes work in out/passes/ (JOB.xml ... JOB.tex,
+# JOB.gmlaux, JOB.sym, JOB.passK.err, JOB.log) and the PDF is moved to
+# out/: the XML of a pass carries the pass options and page questions,
+# and must not replace the stage files that the HTML is made from.
+#
+# The project's variables can be overridden in the same way (mk SAXON=...
+# GML=... TEXENGINE=aptex).  mk does not see changes to the stylesheets,
+# gml.tex or tagset.tex: mk -a after changing them.
 
 MKSHELL=/usr/local/plan9/bin/rc
 ROOT=`{cd .. && pwd}
 TAGSET=$ROOT/examples/notes
 OUTDIR=out/
-PDFTEX=/Library/TeX/texbin/pdftex
+PASSDIR=out/passes
+MK=/usr/local/plan9/bin/mk
+DCFPROFILE=$ROOT/share/profile/dcfstarter.gml
 
 OUT=\
 	out/release.xml\
@@ -29,6 +42,8 @@ OUT=\
 	out/release-internal.r.xml\
 	out/release-internal.s.xml\
 	out/release-internal.html\
+	out/dcfstarter.html\
+	out/dcfstarter.pdf\
 	out/gml.css
 
 all:V: $OUT
@@ -48,18 +63,24 @@ out/release-internal.xml: release.gml $TAGSET/profile.gml
 out/gml.css: $ROOT/share/html/gml.css
 	cp $prereq $target
 
-# release.tex loads notes/tagset.tex by absolute path, so only share/tex
-# goes on TEXINPUTS; two runs so that the page references settle.  (The
-# .tex macro files are not prerequisites: mk would try to make them with
-# the %.tex rule; mk -a after changing them.)
-out/release.pdf:Q: out/release.tex
-	cd out
-	for(pass in 1 2){
-		TEXINPUTS=$ROOT/share/tex: $PDFTEX -interaction=nonstopmode release.tex > /dev/null || {
-			echo mk: pdftex failed, see out/release.log >[1=2]
-			exit 1
-		}
-	}
+# the passes (these explicit rules win over the project's out/%.pdf,
+# which would make the passes in out/ itself)
+out/release.pdf: release.gml $TAGSET/profile.gml
+	SAXON=$SAXON $ROOT/gmlpass -n $PASSES -tex $TEXENGINE -tagset $TAGSET -o $PASSDIR release.gml
+	mv $PASSDIR/release.pdf $target
+
+out/dcfstarter.pdf: dcfstarter.gml $DCFPROFILE
+	SAXON=$SAXON $ROOT/gmlpass -n $PASSES -tex $TEXENGINE -profile $DCFPROFILE -set SYSVARH'='yes -o $PASSDIR dcfstarter.gml
+	mv $PASSDIR/dcfstarter.pdf $target
+
+# the HTML of dcfstarter.gml: the project's stage rules (out/dcfstarter.xml,
+# .r.xml, .s.xml) without the tag set, the profile by its path (gml
+# would take ./dcfstarter.gml first).  One pass: the forward references
+# give DCFS020W and "unknown", but resolve.xsl makes the TOC (the XML of
+# a later pass has the .tc entries instead, which html.xsl does not show)
+out/dcfstarter.html: dcfstarter.gml $DCFPROFILE
+	SETS='SYSVARH=yes' $MK -a -f $ROOT/mkfile ROOT'='$ROOT TAGSET'=' OUTDIR'='out/ PROFILE'='$DCFPROFILE $target
 
 clean:V:
-	rm -f out/*.log out/*.aux out/*.ref out/*.tmp
+	for(d in out $PASSDIR)
+		rm -f $d/*.gmlaux $d/*.sym $d/*.pass*.err $d/*.log $d/*.tmp

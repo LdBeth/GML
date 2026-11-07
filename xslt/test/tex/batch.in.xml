@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gml:df name="bold" spec="font BOLD" break="no"/><gml:df name="caps" spec="font BOLD up" break="no"/><gml:df name="face" spec="type('Helvetica Bold' 12 bold)" break="no"/><gml:dr spec="thin weight 0.2mm" break="no"/><gml:dh level="1" spec="font caps spaf 2 nbr" break="no"/>Plain text, then a skip.
+<gml:sp n="2" unit="line" break="yes"/><gml:bf font="caps" break="no"/>upper case words here
+<gml:pf initial="yes" break="no"/>back to normal.
+<gml:h level="1" break="yes"><gml:tcmark anchor="gml.tc.1" break="no"/>A Heading</gml:h>
+Text after the heading.
+<gml:lines word="ce" n="2" break="yes">before </gml:lines><hp1><gml:lines word="ce" cont="yes">a phrase</gml:lines></hp1><gml:lines word="ce" cont="yes"> after
+and a second line</gml:lines>
+<gml:lines word="us" n="on" break="no">under scored
+</gml:lines>Specials: $ &amp; # % { } \ ^ _ ~ &lt; &gt; | " -- --- café
+Tab	separated	line
+<gml:fo fill="no" align="left" overdraw="extend" break="yes"/>  preformatted   text
+
+  after a blank line
+<gml:fo fill="yes" align="justify" overdraw="extend" break="yes"/><gml:rf><gml:sx left="Left &amp; Right" fill="" right="Page " pagesym="" break="yes"/></gml:rf><gml:rh>Page <gml:pageno break="no"/> of the heading; &amp; is a text ampersand
+</gml:rh></gml:doc>

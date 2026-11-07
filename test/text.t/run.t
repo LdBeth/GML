@@ -23,9 +23,9 @@ Bad usage:
 
   $ gml -set nope in.gml
   gml: error: -set nope: expected sym=val
-  usage: gml [-I dir]... [-lib dir]... [-share dir] [-profile file|name] [-set sym=val]... [-maxgo n] [-undef-tags text|element|error] [-o out.xml] [-tex file] [-tex-fonts name] input.gml
+  usage: gml [-I dir]... [-lib dir]... [-share dir] [-profile file|name] [-set sym=val]... [-maxgo n] [-undef-tags text|element|error] [-o out.xml] [-pass k] [-passes n] [-aux file] [-symbols-in file] [-symbols-out file] input.gml
   [8]
   $ gml
   gml: error: no input file
-  usage: gml [-I dir]... [-lib dir]... [-share dir] [-profile file|name] [-set sym=val]... [-maxgo n] [-undef-tags text|element|error] [-o out.xml] [-tex file] [-tex-fonts name] input.gml
+  usage: gml [-I dir]... [-lib dir]... [-share dir] [-profile file|name] [-set sym=val]... [-maxgo n] [-undef-tags text|element|error] [-o out.xml] [-pass k] [-passes n] [-aux file] [-symbols-in file] [-symbols-out file] input.gml
   [8]

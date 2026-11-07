@@ -4,10 +4,10 @@ A processor for IBM DCF SCRIPT/VS documents with GML markup (the DCF
 Release 3 dialect, SH35-0069 and the Starter Set of SH35-0050).  The
 programmable layer is kept faithful: symbols, macros, `.if`/`.go`,
 conditional sections, imbedding and the GML tag-to-APF machinery.  Pages
-are not laid out for a 3800 printer.  The main output is TeX for
-`share/tex/gml.tex`, written by the engine itself (`gml -tex`), for any
-plain TeX engine.  A secondary output, beside it as LaTeX2HTML is beside LaTeX, is a
-semantic XML tree that XSLT 3.0 stylesheets turn into HTML.
+are not laid out for a 3800 printer.  The engine writes a semantic XML
+tree, and XSLT 3.0 stylesheets turn it into TeX for `share/tex/gml.tex`,
+for any plain TeX engine (the main output), or into HTML (beside it as
+LaTeX2HTML is beside LaTeX).
 Formatting control words (`.sp`, `.in`, `.ce`, `.bf` ...) become *hints*:
 each hint records the new state and whether it breaks.
 
@@ -18,35 +18,34 @@ each hint records the new state and whether it breaks.
     |
     |  gml   OCaml engine (lib/, bin/): input stack, substitution,
     |        macros, GML tags -> APFs, .xs/.xd element building, hints
+    v
+ doc.xml    canonical XML (urn:x-gml:canonical, hints gml:*)
+    |
+    |  xslt/resolve.xsl   numbering, cross-references, TOC,
+    v                     figure list, table grid, index
+ doc.r.xml
     |
     +----------------------------------+
-    |  main path: TeX                  |  secondary path: XML -> HTML
+    |  main path: TeX                  |  secondary path: HTML
     |                                  |
-    |  gml -tex doc.tex                |  gml -o doc.xml
-    |  (lib/be_tex.ml, hint mode)      v
-    |                               doc.xml    canonical XML
-    v                                  |       (urn:x-gml:canonical, hints gml:*)
- doc.tex + share/tex/gml.tex           |
-    |                                  |  xslt/resolve.xsl   numbering, cross-references,
-    |  plain TeX: tex, pdftex,         v                     TOC, figure list, index
-    |  aptex ... (twice, for        doc.r.xml
-    |  page references)                |
-    |                                  |  xslt/scope.xsl     state hints -> nested scopes
+    |  xslt/tex.xsl                    |  xslt/scope.xsl   state hints -> nested scopes
     v                                  v
- doc.pdf / doc.dvi                  doc.s.xml
-                                       |
-                                       |  xslt/html.xsl + share/html/gml.css
-                                       v
-                                    doc.html
+ doc.tex + share/tex/gml.tex        doc.s.xml
+    |                                  |
+    |  plain TeX: tex, pdftex,         |  xslt/html.xsl + share/html/gml.css
+    |  aptex ... in passes:            v
+    |  gmlpass (mk doc.pdf)         doc.html
+    v
+ doc.pdf / doc.dvi
 ```
 
-The TeX path is the main one: the engine writes the TeX for `gml.tex`
-itself (`lib/be_tex.ml`, hint mode; see "Direct TeX (`gml -tex`)").
-The XML path is for XML and HTML output.  The engine
-knows nothing about XSLT; its stages are joined only by files, so each
-intermediate can be inspected.  Two more stylesheets read `doc.r.xml`:
-`xslt/strip-hints.xsl` (the semantic tree only, `doc.sem.xml`) and
-`xslt/tex.xsl` (the older XSLT route to `doc.tex`).
+The TeX path is the main one.  The XSLT stages do the restructuring
+(the table grid, lists, numbering, the index) and TeX does the layout;
+tex.xsl writes hint mode when a formatting profile such as dcfstarter
+drives the layout with control words.  The engine knows nothing about
+XSLT; its stages are joined only by files, so each intermediate can be
+inspected.  `xslt/strip-hints.xsl` also reads `doc.r.xml` and writes
+the semantic tree only (`doc.sem.xml`).
 
 ## Prerequisites
 
@@ -65,8 +64,7 @@ intermediate can be inspected.  Two more stylesheets read `doc.r.xml`:
 opam exec --switch=gml -- dune build
 opam exec --switch=gml -- dune test      # engine cram tests (test/*.t)
 ./xslt/test/run                          # XSLT fixtures (xslt/test/STAGE/*.in.xml)
-test/tex-parity.sh                       # gml -tex = tex.xsl on the XML (needs SaxonC)
-mk test                                  # all three: mk test-ocaml, test-xslt, test-parity
+mk test                                  # both: mk test-ocaml, test-xslt
 ```
 
 `xslt/test/run [-update] [name...]` takes `STAGE/NAME`, `NAME` or a
@@ -80,11 +78,13 @@ lists how each fixture input was generated.
 ```
 gml [-I dir]... [-share dir] [-profile file|name] [-set sym=val]...
     [-lib dir]... [-maxgo n] [-undef-tags text|element|error] [-o out.xml]
-    [-tex file] [-tex-fonts name] input.gml
+    [-pass k] [-passes n] [-aux file] [-symbols-in file] [-symbols-out file]
+    input.gml
 ```
 
 - `-profile starter` loads the shipped Starter Set profile from the share
-  directory: `-share dir`, else `$GML_SHARE`, else `share/gml` next to the
+  directory (a file `starter` or `starter.gml` in the current directory
+  comes first): `-share dir`, else `$GML_SHARE`, else `share/gml` next to the
   executable, else the share directory of the build.  Its tag set is the
   Release 3 Starter Set plus the tables of Release 3.2 (SH20-9186-06
   ch.7): `:rdef` row definitions (CWIDTHS, ARRANGE for spanning cells,
@@ -98,8 +98,11 @@ gml [-I dir]... [-share dir] [-profile file|name] [-set sym=val]...
   `dir/NAME.scr` (NAME in upper case), used by `.dm name lib`,
   `.se name lib`, and with `.ly on|mac|sym` for unresolved macros, APFs
   and symbols.
-- `-tex file` writes TeX for `gml.tex` directly, in hint mode, without
-  the XSLT stages.  See "Direct TeX (`gml -tex`)".
+- `-o file` writes the XML there; without it, to standard output.
+- `-pass k -passes n -aux file -symbols-in file -symbols-out file`: one
+  pass of a multi-pass run (`&$PASS`, `&$TWO`; page questions answered
+  from TeX's aux file; the symbols carried between passes).  See
+  "Passes (`gmlpass`)", which runs them.
 - The return code follows DCF: 0, or 4 after warnings, 8 after errors.
 
 From the source tree:
@@ -134,7 +137,9 @@ Run mk in the project root.  A target may be any path:
 | `doc.s.xml` / `doc.sem.xml` | `doc.r.xml` | scope.xsl / strip-hints.xsl |
 | `doc.html` | `doc.s.xml` | html.xsl |
 | `doc.tex` | `doc.r.xml` | tex.xsl |
-| `doc.dvi` | `doc.tex` | `$TEX` (default tex) with `share/tex` on TEXINPUTS |
+| `doc.texrun` | `doc.tex` | one run of `$TEX` (default tex) with `share/tex` on TEXINPUTS |
+| `doc.pdf` | `doc.gml` | `gmlpass -n $PASSES -tex $TEXENGINE` (default 4, pdftex): see [Passes](#passes-gmlpass) |
+| `doc.dvi` | `doc.gml` | the same with `$TEX` |
 | `test`, `test-ocaml`, `test-xslt` | | the test suites |
 
 ```
@@ -143,8 +148,9 @@ mk "XSLTFLAGS='h1-prefix=Chapter'" doc.html      # stylesheet parameters only
 ```
 
 mk does not know when `SETS` change: remove the intermediates
-(`doc.xml`, `doc.r.xml` ...) first.  For TeX, run tex twice: page
-references are read from `doc.ref` on the second run.
+(`doc.xml`, `doc.r.xml` ...) first.  For one TeX run (`doc.texrun`),
+run it twice: page references are read from `doc.gmlaux` on the second
+run; `doc.pdf` and `doc.dvi` make the passes.
 
 The stylesheet parameters (`SYSVARS`/`SYSVARD`/`SYSVART` page layouts,
 `paper`, fonts, literals, `css`, `footnotes`, `pageref`, `tex-preamble`
@@ -261,13 +267,21 @@ touching the shipped files, by the tag set `examples/notes/`: its
 `profile.gml` defines the tag, its stylesheets import the stock stages
 and add rules for it, and `tagset.tex` styles it for TeX.
 
+`examples/dcfstarter.gml` shows the formatting profile (see
+[below](#formatting-profile-dcfstarter)): every Starter Set tag
+including the tables, with the TOC, the lists of figures and tables,
+cross-references in both directions and an index.
+
 `examples/mkfile` makes everything in `examples/out/` (`cd examples &&
-mk`, or `mk -a` to redo it all): the engine XML (`release.xml`),
-resolved, scoped and semantic XML, HTML for both audiences, plain TeX
-and the typeset `release.pdf`.  It sets `ROOT`, `TAGSET=notes` and
-`OUTDIR=out/`, then includes the project's `mkfile` for the rules; only
-the internal edition (`-set audience=internal`), `gml.css` and the
-pdftex runs have rules of their own.
+mk`, or `mk -a` to redo it all): for release.gml the engine XML
+(`release.xml`), resolved, scoped and semantic XML, HTML for both
+audiences, plain TeX and the typeset `release.pdf`; for dcfstarter.gml
+`dcfstarter.pdf` and `dcfstarter.html`.  It sets `ROOT`, `TAGSET=notes`
+and `OUTDIR=out/`, then includes the project's `mkfile` for the rules;
+the internal edition (`-set audience=internal`), `gml.css`, the PDF
+files (gmlpass, in `out/passes/`) and dcfstarter.html (the project's
+rules with `-profile dcfstarter`) have rules of their own.  `mk clean`
+removes the TeX and pass by-products.
 
 ## DCF fidelity
 
@@ -298,75 +312,173 @@ named `f@...` and its messages are `DCFSnnnW`.  TeX is only the layout
 engine: the `.df`/`.dh` at the start put `gml.tex` in hint mode, and
 `.xs`/`.xe` keep just the elements that the later stages need (the
 document sections, headings for the TOC, `fig`/`figcap` for the
-figure list).
+figure list, the table elements for resolve.xsl's grid and the list of
+tables).
 
 ```
+cd examples && ../gmlpass -set SYSVARH=yes -o out dcfstarter.gml   # out/dcfstarter.pdf
+
+# the simple alternative: one pass (forward references give DCFS020W)
 gmlfmt -to tex -profile dcfstarter -set SYSVARH=yes \
     examples/dcfstarter.gml > dcfstarter.tex
-TEXINPUTS=.:share/tex: tex dcfstarter.tex       # twice, for page refs
+TEXINPUTS=.:share/tex: tex dcfstarter.tex
 ```
+
+`examples/dcfstarter.gml` uses all of it; `cd examples && mk` makes
+`out/dcfstarter.pdf` (four passes) and `out/dcfstarter.html`.
 
 `-set SYSVARH=yes` numbers the headings (`1.0`, `1.1`, ...; appendix
 headings are lettered); `SYSVART=left|right|center` places the title
 page.  The profile covers `:gdoc` (with `sec=`, which becomes the running
 heading), the front matter (title page, abstract, preface, `:toc`,
-`:figlist`), body, appendix and back matter with their page numbering
+`:figlist`, `:tlist`), body, appendix and back matter with their page numbering
 and running footings, `:h0`-`:h6`, `:p :pc :note`, the five lists with
 `compact`, `tsize`, `termhi`, `headhi` and `break`, `:lq`, `:xmp`,
-`:fig` (`frame`, `place`), `:figcap :figdesc`, `:fn`, `:hp0`-`:hp3`,
+`:fig` (`frame`, `place`), `:figcap :figdesc`, the tables of Release 3.2
+(`:rdef` with `cwidths`, `arrange`, `hp`, `align`, `valign`, `concat`;
+`:table :thd :tft :row :c :tnote :tcap :tdesc`, with the row
+definition and cell number checks, the caption numbers and the space
+around a table; the grid is resolve.xsl's, the rows, repeated header
+and footer and footnotes in cells are gml.tex's), `:fn`, `:hp0`-`:hp3`,
 `:cit`, `:q` (nesting), the cross-references `:hdref :figref :fnref
-:liref` (with `page=`), and the index tags `:i1`-`:i3 :ih1`-`:ih3 :iref`
+:liref :tref` (with `page=`), and the index tags `:i1`-`:i3 :ih1`-`:ih3 :iref`
 (`pg`, `see`, `seeid`, `print`) through `.pi`.  Footnote callouts are
 raised and small (a `.dv` text variable with FONT and BASELINE).  `:toc`
 issues `.tc` only when the run has two passes (`&$TWO` = 1): with one
 pass the table would be empty, so in the pipeline the TOC comes from
 the resolve stage instead (`.xs toc`).  Tags out of context are
-reported and dropped.  Not yet: the table tags (they are reported as
-out of context), and references to targets that come later in the
-document (one pass: they give `DCFS020W` and a placeholder).
+reported and dropped.  A reference to a target that comes later in
+the document needs passes ([gmlpass](#passes-gmlpass)): in one pass it
+gives `DCFS020W` and the Starter Set's "ID unknown" text; with passes
+it is resolved on pass 2, its page a pass later, and `DCFS020W` comes
+only on the last pass, for an ID that does not exist.
 `test/dcfstarter.t` checks its hints.
 
-## Direct TeX (`gml -tex`)
+## Passes (`gmlpass`)
 
-`gml -tex file` (`-` for standard output) writes the TeX for
-`share/tex/gml.tex` from the engine's finished tree, without the XSLT
-stages; any plain TeX engine typesets it (`tex`, `pdftex`, `aptex`
-...), twice for the page references.  The XML is written only with
-`-o`.
+DCF formats a document more than once when it is asked to (the SCRIPT
+options FPASSES(n) and TWOPASS, SH20-9186-06 p.126 and p.129) and puts
+out only the last pass, so that forward references, a front table of
+contents and page-dependent tests see the previous pass's results.
+Here one pass is a gml run and a TeX run; `gmlpass` (an rc script
+beside `gmlfmt`) makes them.  Without passes the page state is not
+known while the document is processed: `&$PN` (and `.se x = &`,
+SH35-0069 p.254) is 1 and `&$LC` is 60; a `.tc` entry carries
+`anchor=` (its heading's `gml:tcmark`), and gml.tex's page references
+give its page on the second TeX run.  With passes they come from TeX:
 
 ```
-gml -profile dcfstarter -tex doc.tex doc.gml
-TEXINPUTS=.:share/tex: pdftex doc.tex            # twice
+gmlpass [-n N] [-tex ENGINE] [-profile p | -tagset t] [-set name=value]...
+        [-p name=value]... [-o DIR] doc.gml
+
+cd examples && ../gmlpass -o out dcfstarter.gml       # out/dcfstarter.pdf
+./gmlpass -tex aptex -o out examples/dcfstarter.gml
+mk PROFILE=dcfstarter PASSES=4 TEXENGINE=aptex doc.pdf
 ```
 
-- `lib/be_tex.ml` is the OCaml port of the hint-mode part of
-  `xslt/tex.xsl`: a recursive walk of the tree writing the same macro
-  calls (escaping, `\gmlstart`/`\gmlend`, `\gmlhint` with the parsed
-  `.df`/`.dh`/`.dr` keys, `gml:lines` with `more=yes`, format-off text,
-  tab lines, the upper-case font state, `\gmlislabel`, `\gmlrundyn`).
-  Its output is byte-identical to `tex.xsl tex-mode=hints` applied to
-  the unresolved XML of the same run (`test/tex-parity.sh`, run by
-  `mk test`, checks every test and example document under three
-  profiles).  There is no resolve stage, so no anchors, numbers, TOC,
-  figure list or index from resolve.xsl: the profile makes them (for
-  IBM's DSMPROF3 those are the only differences from `resolve.xsl |
-  tex.xsl`).  The output is always hint mode; `-tex-fonts name` gives
-  `\def\gmlfonts{name}`.
-- The page state is not known while the document is processed: `&$PN`
-  (and `.se x = &`, SH35-0069 p.254) is 1 and `&$LC` is 60.  A `.tc`
-  entry carries `anchor=` (its heading's `gml:tcmark`), and gml.tex's
-  page references give its page on the second TeX run.
+The default is 4 passes (IBM's FPASSES limit), pdftex and `-profile
+dcfstarter`; `-tex tex` makes a DVI file.  For pass k of N:
 
-Planned: passes with an aux file.  DCF formats a document more than
-once when it is asked to (the SCRIPT options FPASSES(n) and TWOPASS,
-SH20-9186-06 p.126 and p.129), so that forward references, a front
-table of contents and page-dependent tests see the previous pass's
-results.  The plan is the same here: each SCRIPT pass writes the TeX in
-batch, TeX writes the measurements (page numbers, lines left, the pages
-of anchors) to an aux file, and the next pass reads them through the
-hooks `Ctx.page_query` (`&$PN`, `&$LC`) and `Ctx.page_of` (`.tc`
-entries), which give the constants above until then.  Nothing in it is
-specific to one TeX engine.
+1. `gml -pass k -passes N -aux DIR/JOB.gmlaux -symbols-in DIR/JOB.sym
+   -symbols-out DIR/JOB.sym.new`, then the stages to `DIR/JOB.tex`:
+   the project's mkfile rules (`mk -a OUTDIR=DIR/ DIR/JOB.tex`, so
+   `JOB.xml`, `JOB.r.xml` and `JOB.tex` are the files of the
+   [mk table](#mk-the-pipeline-as-files); `GMLPASSFLAGS` carries the
+   pass options to the gml rule);
+2. ENGINE on `JOB.tex` in DIR.  `\gmlpass` in gml.tex (from the
+   `\def\gmlpassno{k}\def\gmlpasses{N}` that tex.xsl puts
+   before `\input gml`, from the root element's `pass=`/`passes=`)
+   makes a draft before the last pass: `\pdfdraftmode=1` with pdftex,
+   `\dpxoutput=0` with ApTeX (its DVI path), nothing with tex.  The
+   choice is TeX's, from the TeX input, not a command-line switch;
+3. `JOB.sym.new` becomes `JOB.sym`.
+
+The first pass starts from nothing.  After a pass k >= 2 that left
+`JOB.gmlaux` and the symbol file as the pass before it did, the next
+pass would only repeat it: gmlpass goes straight to the last pass
+(numbered N, so the profile and TeX know it is the last).  It warns
+when the last pass still changed them (`-n` too small).  A forward
+reference costs passes: pass 1 does not know its target; pass 2 knows
+the target's symbols (its number) but only the page the target had on
+pass 1; pass 3 prints its page; pass 4 finds that nothing moved.  When
+the page text appears only on pass 3 ("on page n" is left out on the
+target's own page, and pass 1 puts every target on page 1) and moves
+later text, one more pass is needed; `page=yes` prints the page on
+every pass and avoids it.  So `examples/dcfstarter.gml` needs the
+default 4 (with `-n 3` it warns).  The date and time are the same for
+all passes (`SOURCE_DATE_EPOCH`).  The messages of the passes
+before the last are kept in `DIR/JOB.passK.err`; the last pass prints
+its own.
+
+The two files between the passes are plain text in SCRIPT syntax: a
+constant comment line, then `.se` lines, imbedded by the engine at the
+start of the next pass (before `-set` and the profile) and, for
+`JOB.gmlaux`, read by gml.tex under a catcode regime.  A symbol name
+in them may be longer than ten characters.
+
+- `JOB.gmlaux` (`-aux`): the pages of the anchors and the answers to
+  the page-state questions, written by TeX (anchors and `pn` at
+  shipout) and read by the next pass; the format is documented in
+  gml.tex's header:
+
+  ```
+  .* gml aux
+  .se pa@gml@tc@1 = 'iv'
+  .se pr@1 = '3'
+  .se pq@1@12@3 = 2
+  ```
+
+  `pa@` is the page of an anchor, `pr@N` gml.tex's own N-th `when=auto`
+  page reference, `pq@` the answer to a question (a bare number).  The
+  name after the prefix is the anchor or question id (without its
+  `q`) as tex.xsl escapes it (`+code+` for a character other
+  than A-Z a-z 0-9 `.` `-`), with `.` written `@` and any other
+  character that is not a letter or digit as `#HH` (hexadecimal), so
+  `gml.tc.1` is `pa@gml@tc@1` and `q1.12.3` is `pq@1@12@3`.  With `-aux`, every reference to `&$PN` or `&$LC` (also
+  `.se x = &`) is a question: the hint `gml:query id=ID what=pn|lc`
+  where it is made, `\gmlquery{ID}{pn|lc}` in the TeX (scope.xsl
+  passes it, html.xsl and strip-hints.xsl drop it), answered from the
+  previous pass's file (1 and 60 when it has no answer).  `pn` is the
+  page number (absolute) of the page the place of the question is put
+  out on, which is what a cross-reference wants of its target; `lc` is
+  the lines left on the page, after the page builder ran (in a
+  paragraph the lines of the paragraph in progress are not counted).
+  The ID is `qF.L.N`, the N-th question on line L of input file F
+  (files counted by their first question), so a decision taken
+  differently on one line shifts only the ids of that line.  A `.tc`
+  entry gets `page=` when the file knows its anchor.
+- `JOB.sym` (`-symbols-out`, `-symbols-in`): the engine's symbol dump,
+  carried to the next pass: the global symbols defined at the end of a
+  pass (not the system, local, date and time symbols, nor the aux
+  file's) and the TOC entries (DCF keeps its DSMUTTOC file between
+  passes: a `.tc` at the front prints the previous pass's entries, TPG
+  p.156), as the array `gml@toc`; the format is documented in
+  lib/symbols.ml:
+
+  ```
+  .* gml symbols
+  .su off
+  .dc cw off
+  .se fh@INTRO = 'Introduction'
+  .se f@mon(1) = 'January'
+  .se gml@toc(1) = '1<TAB>1<TAB>0<TAB><TAB>1<TAB>gml.tc.1<TAB>Introduction'
+  .dc cw
+  .su on
+  ```
+
+  Values are always quoted, a quote doubled; `.su off` and `.dc cw
+  off` keep `&` and `;` in a value as written; a line end in a value
+  is written as a blank (DCF-VERIFY).  It is loaded before the profile
+  runs, so `-set` and the profile's own `.se` lines win; a forward
+  reference finds its target's symbols.  DCF-VERIFY: which symbols
+  DCF keeps from one pass to the next.
+
+`&$PASS` is k and `&$TWO` is 1 when N > 1; `&$PASSES` (not a DCF
+symbol) is N.  The dcfstarter profile knows its last pass
+(`f@lastpass`, the TPG p.247 idiom generalised), gives `DCFS020W` and
+the "ID unknown" texts only there, checks duplicate IDs per pass, and
+issues `.tc` for `:toc` (`-set f@tcres=n` reserves n page numbers,
+`.tc n`, TPG p.157).
 
 ## Testing against IBM's Starter Set
 
@@ -431,15 +543,15 @@ images are readable, though its OCR text is not.
 - TeX ignores `.vr .sb .ic .ud .mc` with a message, approximates `.is`
   (except `.is to` after a label at the start of a line, which is exact), and
   `.cd` multi-column layout gives one column.  `.tc` prints the entries
-  collected so far (one pass: a front-matter TOC needs more passes, which
-  are not implemented yet).
+  collected so far in one pass, those of the previous pass with
+  [gmlpass](#passes-gmlpass).
 - HTML has no pages.  `gml:pageref` is dropped or becomes a link
   (`pageref=link`).  `.wz .bc .ws .es .sb .ud` survive only as
   `data-gml-*` attributes.
 - Device-only control words (`.dd .it .sv .dl .uw .oc .sy .te .lo`) give
   a one-time warning.  Layout system symbols (`&$PN` = 1, `&$LC` = 60,
-  `&DH'` ... = 0) return neutral values (the planned pass model would
-  give `&$PN` and `&$LC` from TeX).
+  `&DH'` ... = 0) return neutral values in one pass; with passes
+  (`gml -aux`, gmlpass) `&$PN` and `&$LC` come from TeX.
 - `gmlfmt` is an rc script.  plan9port rc cannot run a script named by
   a relative path such as `dir/gmlfmt`, so start it with a path that
   begins with `/` or `./`.  `xslt/test/run` has a

@@ -24,5 +24,5 @@ A control word that does not break (here .se, reading &$PN) does not
 stop the join either.
 
   $ printf '5\n.sb .15cm\n.se x = &$PN\n.ct 3\n' > sent.gml
-  $ gml -tex - sent.gml | grep '^5'
-  5\gmlhint{sb}{spec=0.15cm,break=no}3
+  $ gml sent.gml | grep -o '>5<.*'
+  >5<gml:sb spec="0.15cm" break="no"/>3

@@ -20,6 +20,8 @@
 %       figcap: bold hanging label, fn: dropped - the mark is a key).
 %   \gmlanchor{name}              a page-reference target
 %   \gmlpageref{anchor}{when}{label}   when = always | auto
+%   \gmlquery{id}{pn|lc}          a question of the pass model (gml:query):
+%       the answer goes to the aux file (see "Page references")
 %   \gmltocbegin{title} \gmltocentry{k=v}{num}{text}{page} \gmltocend
 %   \gmlfiglistbegin{title} \gmlfiglistentry{k=v}{label}{text}{page} \gmlfiglistend
 %   \gmltlistbegin{title} \gmltlistentry{k=v}{label}{text}{page} \gmltlistend
@@ -66,13 +68,43 @@
 % also the em, not the ex-height); dh/dv = device units of 1/240in (3820
 % pels).  A mixed sum ("4ch+1i", unit=mixed) is parsed term by term.
 %
-% Page references: \gmlanchor writes \gml@ap{name}{\folio} to
-% \jobname.ref at shipout; the file is read by \gmlbegindocument, so
-% references are right on the second run ("??" on the first).  A
-% when=auto reference also writes its own page (\gml@rp{n}{\folio}) and
-% prints " label page" only if the target is on another page (on the
-% first run it always prints).  \gmlenddocument re-reads the new file
-% and says when TeX must be run again.
+% Page references and the aux file \jobname.gmlaux.  It is SCRIPT
+% source (the next formatting pass imbeds it, lib/aux.ml), one line each:
+%   .* gml aux              the first line (constant: gmlpass compares
+%                           two passes' files byte for byte)
+%   .se pa@ENC = 'FOLIO'    \gmlanchor{name}: the page (as printed) the
+%                           anchor is put out on, written at shipout
+%   .se pr@N = 'FOLIO'      the page of the N-th when=auto reference
+%   .se pq@ENC = VALUE      \gmlquery{id}{pn|lc}: the answer (a number)
+% ENC is the name as tex.xsl escaped it (A-Z a-z 0-9 . - and
+% +code+) with "." written "@", "-" "#2D" and "+" "#2B" (\gml@enc), so
+% that it is a SCRIPT symbol name; a question id loses its leading "q"
+% (q1.12.3: pq@1@12@3).  The file is read by \gmlbegindocument
+% (\gml@readrefs, under a catcode regime, \gml@auxfile; pa@ENC defines
+% \gml@pg@ENC, pr@N \gml@rpg@N, pq@ lines are skipped), so references
+% are right on the second run ("??" on the first).  A when=auto
+% reference prints " label page" only if the target is on another page
+% (on the first run it always prints).  \gmlenddocument re-reads the
+% new file and says when TeX must be run again.
+%
+% Passes (gml -aux, the driver gmlpass): the next formatting pass of
+% gml asks questions about the page state: \gmlquery{id}{pn} writes the
+% pq@ line at shipout, the value the page number (\pageno, absolute:
+% plain TeX counts roman pages negative) of the page the question's
+% place is put out on: &$PN where a heading or figure is, exactly what
+% a cross-reference wants.  \gmlquery{id}{lc} writes it at once, the
+% value the lines left on the page (&$LC): (\pagegoal-\pagetotal)/
+% \baselineskip rounded down, \vsize/\baselineskip on an empty page; in
+% outer vertical mode the page builder runs first (\par, unless a
+% \parshape, \hangindent, \looseness or \hangafter is set for the
+% next paragraph); in a paragraph the lines of the paragraph in
+% progress are not counted (DCF-VERIFY: DCF counts the output lines
+% formatted so far).  \gmlpass (run by \gmlbegindocument) reads
+% \gmlpassno/\gmlpasses (\def'd before \input gml by tex.xsl,
+% from gml -pass/-passes): on a pass before the last the output is a
+% draft: \pdfdraftmode=1 with pdftex, \dpxoutput=0 with ApTeX (DVI only,
+% no PDF), nothing with Knuth's tex.  DCF puts out only the last pass
+% (SH20-9186-06 p.126).
 %
 % Non-ASCII: tex.xsl writes pure ASCII; every character outside
 % printable ASCII and every TeX special except $ & # % (which become \$
@@ -1025,7 +1057,7 @@
 % a table of contents entry) is an anchor; gml:tcentry is one line: the
 % text in font= (a .df name), indented by indent=, then a dot leader to
 % the page on the right (dot=yes) or two blanks and the page (dot=no).
-% The page is page=, or the page of anchor= (the .ref file of the
+% The page is page=, or the page of anchor= (the .gmlaux file of the
 % previous run; ?? on the first).
 \newcount\gml@tcfirst
 \gmldefhint{tc}{\gml@hget{action}\gml@tv\gml@hget{reserve}\gml@tu
@@ -1120,38 +1152,94 @@
   \ifx\gml@tmpb\gml@yes\else\leavevmode\llap{\gml@tv\enspace}\fi}
 
 % ---- page references ----------------------------------------------------------------
-\def\gml@pagenumber#1{\expandafter\ifx\csname gml@pg@#1\endcsname\relax
-  \global\gml@refschangedtrue??\else\csname gml@pg@#1\endcsname\fi}
+% ENC (the names of the aux file, lib/aux.ml): a name as tex.xsl
+% escaped it (A-Z a-z 0-9 . - and +code+) with "." as "@", "-" as "#2D"
+% and "+" as "#2B" (a catcode-12 #); expandable (\csname, \write); a
+% macro as the name (\gmlanchor{\gml@tv}) is expanded once first
+{\catcode`\#=12 \gdef\gml@hash{#}}
+\def\gml@enc#1{\expandafter\gml@enc@#1\gml@enc@end}
+\def\gml@enc@end{\gml@enc@end}
+\def\gml@enc@#1{\ifx\gml@enc@end#1\else\gml@enc@c#1\expandafter\gml@enc@\fi}
+\def\gml@enc@c#1{\if.#1@\else\if-#1\gml@hash2D\else\if+#1\gml@hash2B\else#1\fi\fi\fi}
+% a question id without its leading q, encoded
+\def\gml@qenc#1{\gml@qenc@#1\gml@nil}
+\def\gml@qenc@#1#2\gml@nil{\gml@enc{#2}}
+% the page of anchor #1: \gml@pagecs is given its \gml@pg@ENC macro
+\def\gml@pagenumber#1{\expandafter\gml@pagecs\csname gml@pg@\gml@enc{#1}\endcsname}
+\def\gml@pagecs#1{\ifx#1\relax\global\gml@refschangedtrue??\else#1\fi}
+% a \write to the aux file at shipout (#1 expanded now); in vertical mode
+% held to what follows by \nobreak
+\def\gml@shipwrite#1{\edef\gml@tmpa{\write\gml@refout{#1}}%
+  \ifvmode\gml@tmpa\nobreak\else\gml@tmpa\fi}
 \def\gmlanchor#1{\ifgml@reffile
-  \edef\gml@tmpa{\write\gml@refout{\string\gml@ap{#1}{\noexpand\gml@folio}}}%
-  \ifvmode\gml@tmpa\nobreak\else\gml@tmpa\fi\fi}
+  \gml@shipwrite{.se pa@\gml@enc{#1} = '\noexpand\gml@folio'}\fi}
+% the questions of the pass model (an unknown kind is ignored)
+\def\gmlquery#1#2{\ifgml@reffile\csname gml@q@#2\endcsname{#1}\fi}
+\def\gml@abspage{\ifnum\pageno<\z@\number-\pageno\else\number\pageno\fi}
+\def\gml@q@pn#1{\gml@shipwrite{.se pq@\gml@qenc{#1} = \noexpand\gml@abspage}}
+\def\gml@q@lc#1{\begingroup\gml@lbuild
+  \ifdim\pagegoal=\maxdimen\gml@dima\vsize
+  \else\gml@dima\pagegoal\advance\gml@dima-\pagetotal\fi
+  \gml@dimb\baselineskip\ifdim\gml@dimb>\z@\else\gml@dimb12\p@\fi
+  \gml@cnta\gml@dima\divide\gml@cnta\gml@dimb
+  \ifnum\gml@cnta<\z@\gml@cnta\z@\fi
+  \immediate\write\gml@refout{.se pq@\gml@qenc{#1} = \the\gml@cnta}\endgroup}
+\def\gml@lbuild{\ifvmode\ifinner\else\ifnum\parshape=\z@\ifdim\hangindent=\z@
+  \ifnum\looseness=\z@\ifnum\hangafter=\@ne\endgraf\fi\fi\fi\fi\fi\fi}
+% \gmlpass: draft output on a pass before the last
+\def\gmlpass{\ifx\gmlpassno\undefined\else\ifx\gmlpasses\undefined\else
+  \ifnum\gmlpassno<\gmlpasses\relax\gml@draftmode\fi\fi\fi}
+\def\gml@draftmode{\ifx\pdfdraftmode\undefined
+    \ifx\dpxoutput\undefined\else\dpxoutput=\z@\fi
+  \else\pdfdraftmode=\@ne\fi}
 \def\gml@reflabel#1{\def\gml@tmpe{#1}\ifx\gml@tmpe\empty\else\ #1\nobreak\ \fi}
 \def\gmlpageref#1#2#3{\def\gml@tmpd{#2}%
   \ifx\gml@tmpd\gml@autostr\gml@pageref@auto{#1}{#3}%
   \else\gml@reflabel{#3}\gml@pagenumber{#1}\fi}
 \def\gml@pageref@auto#1#2{\global\advance\gml@refcount\@ne
-  \ifgml@reffile\edef\gml@tmpa{\write\gml@refout
-    {\string\gml@rp{\the\gml@refcount}{\noexpand\gml@folio}}}\gml@tmpa\fi
+  \ifgml@reffile\gml@shipwrite{.se pr@\the\gml@refcount\space= '\noexpand\gml@folio'}\fi
   \expandafter\let\expandafter\gml@pa\csname gml@rpg@\the\gml@refcount\endcsname
-  \expandafter\let\expandafter\gml@pb\csname gml@pg@#1\endcsname
-  \ifx\gml@pa\relax\gml@reflabel{#2}\gml@pagenumber{#1}%
-  \else\ifx\gml@pa\gml@pb\else\gml@reflabel{#2}\gml@pagenumber{#1}\fi\fi}
+  \expandafter\let\expandafter\gml@pb\csname gml@pg@\gml@enc{#1}\endcsname
+  \ifx\gml@pa\relax\gml@reflabel{#2}\gml@pagecs\gml@pb
+  \else\ifx\gml@pa\gml@pb\else\gml@reflabel{#2}\gml@pagecs\gml@pb\fi\fi}
 \def\gml@folio{\gml@folioprefix\folio}
-\def\gml@readrefs{\begingroup\catcode`\@=11
-  \def\gml@ap##1##2{\expandafter\gdef\csname gml@pg@##1\endcsname{##2}}%
-  \def\gml@rp##1##2{\expandafter\gdef\csname gml@rpg@##1\endcsname{##2}}%
-  \openin\gml@in=\jobname.ref
-  \ifeof\gml@in\closein\gml@in\global\gml@refschangedtrue
-  \else\closein\gml@in\input\jobname.ref \fi\endgroup
-  \immediate\openout\gml@refout=\jobname.ref \global\gml@reffiletrue}
+% Reading the aux file: every special character catcode 12, a line at a
+% time (\read), each ".se NAME = VALUE" line parsed by delimited macros
+% (a line that does not start with ".se " is skipped); VALUE loses its
+% quotes (a doubled quote is not undone: a folio has none).  pa@ENC
+% defines \gml@pg@ENC, pr@N \gml@rpg@N; pq@ (the engine's) is skipped.
+% #1 (\gml@auxset or \gml@auxcmp) gets {pg|rpg}{key}{value}; #2 runs
+% when there is no file.
+\def\gml@auxcat{\catcode`\\=12 \catcode`\{=12 \catcode`\}=12 \catcode`\$=12
+  \catcode`\&=12 \catcode`\#=12 \catcode`\^=12 \catcode`\_=12 \catcode`\%=12
+  \catcode`\~=12 \catcode`\'=12 \catcode`\==12 \catcode`\@=12 \catcode`\ =10
+  \endlinechar\m@ne}
+\def\gml@auxfile#1#2{\openin\gml@in=\jobname.gmlaux
+  \ifeof\gml@in\closein\gml@in#2%
+  \else\begingroup\let\gml@auxput#1\gml@auxcat\gml@auxloop\endgroup
+    \closein\gml@in\fi}
+\def\gml@auxloop{\read\gml@in to\gml@tmpa
+  \ifeof\gml@in\else
+    \expandafter\gml@auxline\gml@tmpa\gml@stop.se x = \gml@stop\gml@nil
+    \expandafter\gml@auxloop\fi}
+\def\gml@auxline#1.se #2 = #3\gml@stop#4\gml@nil{\def\gml@tmpb{#1}\def\gml@tmpc{#4}%
+  \ifx\gml@tmpb\empty\ifx\gml@tmpc\empty\else
+    \gml@auxval#3''\gml@nil\gml@auxname#2\gml@stop\gml@stop\gml@stop\gml@stop\gml@nil\fi\fi}
+\def\gml@auxval#1'#2'#3\gml@nil{\def\gml@tmpd{#1}%
+  \ifx\gml@tmpd\empty\def\gml@tmpd{#2}\fi}
+\def\gml@auxname#1#2#3#4\gml@stop#5\gml@nil{\def\gml@tmpb{#1#2#3}%
+  \ifx\gml@tmpb\gml@auxpa\gml@auxput{pg}{#4}\gml@tmpd
+  \else\ifx\gml@tmpb\gml@auxpr\gml@auxput{rpg}{#4}\gml@tmpd\fi\fi}
+\edef\gml@auxpa{pa\string @}
+\edef\gml@auxpr{pr\string @}
+\def\gml@auxset#1#2#3{\expandafter\global\expandafter\let\csname gml@#1@#2\endcsname#3}
+\def\gml@auxcmp#1#2#3{\expandafter\ifx\csname gml@#1@#2\endcsname#3\else
+  \global\gml@refschangedtrue\fi}
+\def\gml@readrefs{\gml@auxfile\gml@auxset{\global\gml@refschangedtrue}%
+  \immediate\openout\gml@refout=\jobname.gmlaux \global\gml@reffiletrue
+  \immediate\write\gml@refout{.* gml aux}}
 \def\gml@checkrefs{\immediate\closeout\gml@refout\global\gml@reffilefalse
-  \begingroup\catcode`\@=11
-  \def\gml@ap##1##2{\def\gml@tmpd{##2}\expandafter\ifx\csname gml@pg@##1\endcsname
-    \gml@tmpd\else\global\gml@refschangedtrue\fi}%
-  \def\gml@rp##1##2{\def\gml@tmpd{##2}\expandafter\ifx\csname gml@rpg@##1\endcsname
-    \gml@tmpd\else\global\gml@refschangedtrue\fi}%
-  \openin\gml@in=\jobname.ref
-  \ifeof\gml@in\closein\gml@in\else\closein\gml@in\input\jobname.ref \fi\endgroup
+  \gml@auxfile\gml@auxcmp{}%
   \ifgml@refschanged\immediate\write16{GML: page references have changed;
     run TeX again to get them right.}\fi}
 
@@ -1172,7 +1260,7 @@
 \def\gml@userrh{\ifodd\pageno\gml@runput{rh}{odd}\vbox\else\gml@runput{rh}{even}\vbox\fi\hss}
 \def\gml@userrf{\ifodd\pageno\gml@runput{rf}{odd}\vtop\else\gml@runput{rf}{even}\vtop\fi\hss}
 % The page number symbol (.dc PS, default &) in a running heading or
-% footing: tex.xsl and be_tex write the content as \gmlrundyn{...} (a
+% footing: tex.xsl writes the content as \gmlrundyn{...} (a
 % .sx with pagesym=, or a gml:pageno), which is kept as tokens and
 % typeset when each page is shipped out.  The page number is its own
 % macro, \gmlpageno (gml:pageno, and the symbol in the fields of a .sx
@@ -1511,7 +1599,9 @@
 % one that ends inside it; what then no longer fits is \vsplit off and
 % goes back to the next page.  The last four tables keep their boxes
 % (n mod 4).  tnote is a full-width row; tcap/tdesc are styled like
-% figcap/figdesc below the table.  rotate and shade: a message, ignored.
+% figcap/figdesc below the table, kept with its last rows (\nobreak after
+% the rows; in hint mode the caption paragraph does not break either).
+% rotate and shade: a message, ignored.
 % Footnotes in cells: the \insert is held apart and put on the page right
 % after the row (or the group of rows) that refers to it; one in thd or
 % tft goes with its first placement only, and one in a row that \output
@@ -1552,8 +1642,8 @@
 \def\gml@tbl@warn#1{\gml@aget{#1}\gml@tv\def\gml@tmpd{0}%
   \ifx\gml@tv\empty\else\ifx\gml@tv\gml@tmpd\else
   \gml@warnonce{tbl#1}{table #1= is not supported in TeX (ignored)}\fi\fi}
-\gmldefstart{table}{\par\gml@vskip\gml@tableskip
-  \global\advance\gml@tblno\@ne\gml@tbl@slotof\gml@tblno
+\gmldefstart{table}{\par\gml@vskip\gml@tableskip\gml@tbl@open}
+\def\gml@tbl@open{\global\advance\gml@tblno\@ne\gml@tbl@slotof\gml@tblno
   \global\let\gml@tblslot\gml@tblos
   \global\setbox\gml@tbl@box{thd}\gml@tblslot\box\voidb@x
   \global\setbox\gml@tbl@box{tft}\gml@tblslot\box\voidb@x
@@ -1562,6 +1652,7 @@
   \global\setbox\gml@tftfns\box\voidb@x \global\gml@tblfnhsize\hsize
   \global\gml@tblrule=\gml@tablerule\relax
   \global\gml@tbloff\gml@elemleft\global\advance\gml@tbloff\gml@hintleft
+  \ifnum\gml@ofstate=\tw@\global\advance\gml@tbloff\gml@ofdim\fi % in a .of region
   \gml@aget{width}\gml@tv
   \ifx\gml@tv\empty\gml@dima\hsize\advance\gml@dima-\gml@tbloff
     \advance\gml@dima-\gml@elemright\advance\gml@dima-\gml@hintright
@@ -1738,7 +1829,7 @@
     \expandafter\gml@tbl@newbox\csname gml@cb@\the\gml@tblncell\endcsname\fi
   \global\setbox\csname gml@cb@\the\gml@tblncell\endcsname\vbox\bgroup
     \hsize\gml@tW\gml@elemhsize\gml@tW\gml@elemleft\z@\gml@elemright\z@\gml@incelltrue
-    \gml@hintleft\z@\gml@hintright\z@\gml@hintll\z@
+    \gml@hintleft\z@\gml@hintright\z@\gml@hintll\z@\gml@ofstate\z@
     \edef\gml@tmpd{\noexpand\gml@hi{\gml@thp}}\expandafter\gml@setfont\expandafter{\gml@tmpd}%
     \ifx\gml@tcc\gml@no\gml@setfill{no}\gml@tal\gml@preservetrue
     \else\gml@setfill{yes}\gml@tal\gml@preservefalse\fi
@@ -1768,17 +1859,24 @@
 \gmldefend{tnote}{\gml@tbl@cellend\gml@tbl@rowend}
 \gmldefnum{tnote}#1{\leavevmode{\gml@hi{2}#1}\nobreak\ }
 % -- caption and description: as figcap/figdesc, after the table
-\gmldefstart{tcap}{\gml@tbl@finish\gml@figcap@start}
+\gmldefstart{tcap}{\gml@tbl@finish\nobreak\gml@figcap@start}
 \expandafter\let\csname gml@tcap@end\expandafter\endcsname\csname gml@figcap@end\endcsname
 \expandafter\let\csname gml@num@tcap\expandafter\endcsname\csname gml@num@figcap\endcsname
-\gmldefstart{tdesc}{\gml@tbl@finish\gml@figdesc@start}
+\gmldefstart{tdesc}{\gml@tbl@finish\nobreak\gml@figdesc@start}
 \expandafter\let\csname gml@tdesc@end\expandafter\endcsname\csname gml@figdesc@end\endcsname
 \gmldefstart{tref}{} \gmldefstart{tlist}{}
-% hint mode: tables are still laid out here (no DCF profile formats them)
-\gml@hkeep{table} \gml@hkeep{thd} \gml@hkeep{tft} \gml@hkeep{row} \gml@hkeep{c}
-\gml@hkeep{gml:cpart} \gml@hkeep{tnote} \gml@hkeep{tcap} \gml@hkeep{tdesc}
-\expandafter\let\csname gml@hnum@tnote\expandafter\endcsname\csname gml@num@tnote\endcsname
-\expandafter\let\csname gml@hnum@tcap\expandafter\endcsname\csname gml@num@tcap\endcsname
+% hint mode: the rows are still laid out here (the grid is TeX's job), but
+% the profile does the rest, as a DCF profile does (dcfstarter.gml): the
+% space before and after the table (.sk), the "Table n." and "Note:"
+% labels (so gml:num prints nothing, as everywhere in hint mode) and the
+% caption and description styling (.sk .bf; the .ct colon of tdesc joins
+% the caption's paragraph, so tcap ends no paragraph).  tcap and tdesc
+% only end the rows; the paragraph they start ends with the table.
+\gml@hkeep{thd} \gml@hkeep{tft} \gml@hkeep{row} \gml@hkeep{c}
+\gml@hkeep{gml:cpart} \gml@hkeep{tnote}
+\gmldefhstart{table}{\par\gml@tbl@open}
+\gmldefhend{table}{\gml@tbl@finish{\interlinepenalty\@M\par}}
+\gmldefhstart{tcap}{\gml@tbl@finish\nobreak} \gmldefhstart{tdesc}{\gml@tbl@finish\nobreak}
 % -- \output: repeat thd at the top and tft at the bottom of a page inside a table
 \def\gml@tbl@output{\global\setbox\gml@tblrest\box\voidb@x
   \ifx\gml@tblforce\empty\edef\gml@tbltop{\topmark}\else\let\gml@tbltop\gml@tblforce\fi
@@ -1841,16 +1939,24 @@
 \def\gml@tbl@fnstart{\ifx\gml@tmpb\gml@no\else
     \let\@sf\empty\ifhmode\edef\@sf{\spacefactor\the\spacefactor}\/\fi
     \gml@tmpc\@sf\fi
-  \def\gml@fnclose{\egroup\egroup}%
+  \expandafter\gml@tbl@fnhold\expandafter{\gml@tmpc}}
+% #1 the mark: the footnote's \insert is built inside \gml@tblfns (closed
+% by \gml@fnclose's two \egroup)
+\def\gml@tbl@fnhold#1{\def\gml@fnclose{\egroup\egroup}%
   \global\setbox\gml@tblfns\vbox\bgroup\ifvoid\gml@tblfns\else\unvbox\gml@tblfns\fi
-    \gml@incellfalse\hsize\gml@tblfnhsize
-    \expandafter\gml@vfootnote\expandafter{\gml@tmpc}\bgroup\gml@fnsetup}
+    \gml@incellfalse\gml@tbl@fnreset\hsize\gml@tblfnhsize\gml@vfootnote{#1}\bgroup\gml@fnsetup}
 \gmldefnum{fn}#1{}
 \gmldefstart{gml:fn}{\gml@aget{kind}\gml@fnkind
   \ifx\gml@fnkind\gml@leaderstr\global\gml@userleadertrue
     \global\setbox\gml@fnleader\vbox\bgroup\gml@runsetup
-  \else\gml@vfootnote{}\bgroup\gml@fnsetup\fi}
-\gmldefend{gml:fn}{\ifx\gml@fnkind\gml@leaderstr\par\egroup\else\egroup\fi}
+  \else\ifgml@incell\gml@tbl@hfnstart\else\let\gml@fnclose\egroup
+    \gml@vfootnote{}\bgroup\gml@fnsetup\fi\fi}
+\gmldefend{gml:fn}{\ifx\gml@fnkind\gml@leaderstr\par\egroup\else\gml@fnclose\fi}
+% a .fn block (hint mode) in a table cell: held in \gml@tblfns as an fn element
+\def\gml@tbl@hfnstart{\gml@tbl@fnhold{}}
+% the cell's font, fill and alignment do not reach its footnotes
+\def\gml@tbl@fnreset{\def\gml@efont{\rm}\gml@efontstamp\z@\let\gml@efill\empty
+  \let\gml@ealign\empty\gml@preservefalse\parfillskip\z@ plus1fil}
 \let\gml@plainfootnoterule\footnoterule
 \def\footnoterule{\ifgml@userleader\copy\gml@fnleader\kern2pt
   \else\gml@plainfootnoterule\fi}
@@ -1920,7 +2026,7 @@
 \def\gmlsee#1#2#3{\unskip.\ {\it#2}\ #3}
 
 % ---- the document --------------------------------------------------------------------------------------
-\def\gmlbegindocument{\gml@readrefs\gml@tabdefault
+\def\gmlbegindocument{\gmlpass\gml@readrefs\gml@tabdefault
   \everypar{\gml@everypar}\rm\gml@apply}
 \def\gmlenddocument{\par\vfill\supereject\gml@checkrefs}
 

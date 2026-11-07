@@ -23,16 +23,38 @@ let is_blank c = c = ' ' || c = '\t'
     quotes). *)
 let is_quote c = c = '\''
 
-(* Index of the closing quote matching the one at [i] (or [n]). *)
+(* Index of the closing quote matching the one at [i] (or [n]).  A
+   doubled quote inside the string stands for one quote and does not
+   close it (DSMPROF3's [.se @oquote '"''"''...], SH35-0069 p.230; the
+   symbol file of the pass model writes a quote in a value doubled,
+   Symbols.se_line); [''] alone is still the null string. *)
 let close_quote s i =
-  match String.index_from_opt s (i + 1) s.[i] with
-  | Some j -> j
-  | None -> String.length s
+  let n = String.length s and q = s.[i] in
+  let rec go j =
+    match String.index_from_opt s j q with
+    | None -> n
+    | Some j when j + 1 < n && s.[j + 1] = q -> go (j + 2)
+    | Some j -> j
+  in
+  go (i + 1)
 
-(* The contents of the delimited string at [i] and the index of its closing quote (or [n]). *)
+(* The contents of the delimited string at [i] (doubled quotes made
+   single) and the index of its closing quote (or [n]).  By [close_quote]
+   every quote in the body is one of a doubled pair. *)
 let delimited s i =
-  let j = close_quote s i in
-  (String.sub s (i + 1) (j - i - 1), j)
+  let j = close_quote s i and q = s.[i] in
+  match String.index_from_opt s (i + 1) q with
+  | Some k when k < j ->
+      let b = Buffer.create (j - i) in
+      let rec go k =
+        if k < j then begin
+          Buffer.add_char b s.[k];
+          go (if s.[k] = q then k + 2 else k + 1)
+        end
+      in
+      go (i + 1);
+      (Buffer.contents b, j)
+  | _ -> (String.sub s (i + 1) (j - i - 1), j)
 
 (** Remove the delimiters of every delimited string ('...') in [s]; other text
     is kept as written. *)

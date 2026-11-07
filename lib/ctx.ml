@@ -175,18 +175,33 @@ type t = {
   mutable ly_sym : bool;  (** [.ly on|sym]: search for symbols *)
   lib_members : (string, string array option) Hashtbl.t;
       (** library members read so far, by member name; [None]: not found *)
-  mutable page_query : string -> string option;
-      (** the page state for [&$PN] and [&$LC] (the system symbol name);
-          [None]: the neutral constant (1, 60).  The hook for the planned
-          pass model (SCRIPT's FPASSES/TWOPASS, SH20-9186-06 p.126, p.129):
-          each pass writes TeX in batch, TeX writes the measurements to an
-          aux file, and the next pass answers from it.  Nothing installs it
-          yet. *)
+  mutable pass : int;  (** [&$PASS]: this formatting pass (gml -pass) *)
+  mutable passes : int;
+      (** the number of formatting passes (gml -passes; SCRIPT's FPASSES(n),
+          TWOPASS = 2, SH20-9186-06 p.126, p.129): [&$TWO] is 1 when it is
+          more than 1, [&$PASSES] is it *)
+  query_files : (string, int) Hashtbl.t;
+      (** the files questions were asked in, numbered in order of the first
+          question ([query]) *)
+  query_lines : (string, int) Hashtbl.t;
+      (** questions asked so far per input line ("file.line") *)
+  mutable page_query : (string -> string option) option;
+      (** [Some f]: the pass model is on (gml -aux, set by [Aux.load]): each
+          reference to [&$PN] or [&$LC] is a question to the layout engine
+          ([query]), and [f id] is the answer to question [id] (q2.14.1 ...)
+          from the previous pass's aux file (the symbol [pq@ENC] TeX set);
+          [f id = None]: not known (the first pass, or a question the previous
+          pass did not ask): the neutral constant (1, 60).  [None]: no
+          questions *)
   mutable page_of : string -> string option;
-      (** the page (as printed) of an anchor, for [.tc] (the same planned
-          aux file: the page TeX put the anchor on in the previous pass);
-          [None]: not known, the entry carries [anchor=] and gml.tex's page
-          references give the page *)
+      (** the page (as printed) of an anchor, for [.tc]: the page TeX put the
+          anchor on in the previous pass ([Aux], the symbol [pa@ENC]); [None]:
+          not known, the entry carries [anchor=] and gml.tex's page references
+          give the page *)
+  mutable coupling : bool;
+      (** a coupling file of the pass model (the aux file, the symbol file) is
+          being imbedded ([Aux.imbed]): its [.se] names may be longer than ten
+          characters *)
 }
 
 and word = { run : t -> string -> unit  (** receives the operands *) }
@@ -252,11 +267,10 @@ let system_value ctx name sub =
       | "$TAB" -> Some "\t" (* the tab character (SH35-0069 p.85, p.246) *)
       | "$BS" -> Some "\b" (* backspace, EBCDIC 16 *)
       | "$ENV" -> Some "BODY" (* modern edge: no keeps, floats, footnotes *)
-      | "$PN" -> (
-          (* [page_query]: the planned pass model *)
-          match ctx.page_query "$PN" with
-          | Some v -> Some v
-          | None -> Some "1" (* modern edge: no pagination *))
+      (* the page state: a neutral constant here (modern edge: no
+         pagination); with the pass model [query] asks TeX and answers
+         from the previous pass *)
+      | "$PN" -> Some "1"
       | "$KP" | "$VR" -> Some "OFF"
       | "$LST" -> Some "0"
       (* the last GML tag found, as written, and its delimiter (p.251).
@@ -271,8 +285,13 @@ let system_value ctx name sub =
          the INDEX option (so .pi is honoured), no bind *)
       | "$DCF" -> Some "3.0"
       | "$SYS" -> Some "CMS"
-      | "$PASS" -> Some "1"
-      | "$TWO" | "$UNF" | "$DDUT" | "$BE" | "$BO" -> Some "0"
+      | "$PASS" -> Some (string_of_int ctx.pass)
+      | "$TWO" -> Some (if ctx.passes > 1 then "1" else "0")
+      (* not a DCF symbol: the n of FPASSES(n), so that a profile can tell
+         its last pass when there are more than two (TPG p.247 tests
+         &$PASS eq 2 for TWOPASS) *)
+      | "$PASSES" -> Some (string_of_int ctx.passes)
+      | "$UNF" | "$DDUT" | "$BE" | "$BO" -> Some "0"
       | "$INDX" -> Some "1"
       | "$LIB" -> Some (if ctx.libs = [] then "0" else "1")
       | "$PRT" -> Some "ON"
@@ -284,11 +303,59 @@ let system_value ctx name sub =
       | "$LL" | "$CL" -> Some ll
       | "$PW" -> Some "85"
       | "$PL" -> Some "66"
-      | "$LC" -> (
-          match ctx.page_query "$LC" with Some v -> Some v | None -> Some "60")
+      | "$LC" -> Some "60"
       | "$TM" | "$BM" | "$FM" | "$RH" | "$RF" -> Some "0"
       | _ -> None)
   | _ -> None
+
+(* A reference to &$PN or &$LC with the pass model on (gml -aux): a
+   question to the layout engine.  It is the hint gml:query id=ID
+   what=pn|lc at the output cursor (the place in the text where the
+   line is processed); TeX answers in the aux file (gml.tex \gmlquery:
+   pn the page that place is put out on, lc the lines left on the page
+   there), and the next pass answers from it ([page_query]).
+
+   The id is qF.L.N: the N-th question asked while line L of input file
+   F is processed (the topmost file on the input stack: for an APF, the
+   document line with the tag), F counting the files in the order of
+   their first question).  Two passes that take the
+   same decisions ask the same questions with the same ids; a pass that
+   takes another decision on a line (a forward reference resolved on
+   pass 2 asks for the page where it is) shifts only the ids of that
+   line, so the other answers stay right (a plain counter would make
+   every later answer wrong for one more pass).  Every reference asks:
+   a .se x = &$PN in a macro asks once per call, which is right (each
+   call is at another place); a reference whose value is only tested
+   is a question nobody needs, harmless.  No question in ignored output
+   (.cs ignore: no hint), nor for a value given by -set. *)
+let query_id ctx =
+  let path, line =
+    match Input.current_file ctx.input with
+    | Some ff -> (ff.Input.path, ff.Input.idx)
+    | None -> ("", 0)
+  in
+  let f =
+    match Hashtbl.find_opt ctx.query_files path with
+    | Some f -> f
+    | None ->
+        let f = Hashtbl.length ctx.query_files + 1 in
+        Hashtbl.add ctx.query_files path f;
+        f
+  in
+  let key = Printf.sprintf "%d.%d" f line in
+  let n = 1 + Option.value (Hashtbl.find_opt ctx.query_lines key) ~default:0 in
+  Hashtbl.replace ctx.query_lines key n;
+  Printf.sprintf "q%s.%d" key n
+
+let query ctx name v =
+  match (name, ctx.page_query) with
+  | ("$PN" | "$LC"), Some answer
+    when (not ctx.doc.Doc.mute) && not (List.mem_assoc name ctx.sys_sets) ->
+      let id = query_id ctx in
+      Doc.hint ctx.doc "query"
+        [ ("id", id); ("what", if name = "$PN" then "pn" else "lc"); ("break", "no") ];
+      Option.value (answer id) ~default:v
+  | _ -> v
 
 let system_symbol ctx name sub =
   match List.assoc_opt name ctx.sys_sets with
@@ -357,12 +424,18 @@ let create ?(include_path = []) () =
       (* SH35-0069 p.240: the initial setting is OFF *)
       ly_sym = false;
       lib_members = Hashtbl.create 16;
-      page_query = (fun _ -> None);
+      pass = 1;
+      passes = 1;
+      query_files = Hashtbl.create 4;
+      query_lines = Hashtbl.create 64;
+      page_query = None;
       page_of = (fun _ -> None);
+      coupling = false;
     }
   in
   ctx.doc.Doc.page_symbol <- (fun () -> Some ctx.chars.Chars.ps);
   ctx.syms.Symbols.system <- system_symbol ctx;
+  ctx.syms.Symbols.query <- query ctx;
   ctx.doc.Doc.report <-
     (fun m -> Loc.report ctx.diag Loc.Warning ctx.loc "%s" m);
   ctx.doc.Doc.here <- (fun () -> Loc.to_string ctx.loc);

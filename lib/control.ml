@@ -272,8 +272,12 @@ let dc ctx ops =
 
 (* ---- symbols ------------------------------------------------------------ *)
 
+(* Modern edge: the names of the pass model's coupling files (pa@ENC,
+   pq@ENC: an encoded anchor or question id, lib/aux.ml) may be longer
+   than ten characters while such a file is imbedded. *)
 let check_name ctx cw name k =
   if Symbols.valid_name name then k ()
+  else if ctx.Ctx.coupling && Symbols.valid_name ~long:true name then k ()
   else if
     String.length name
     > Symbols.max_name_len + if Symbols.is_local name then 1 else 0

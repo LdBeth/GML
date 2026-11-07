@@ -1,6 +1,7 @@
 (* gml [-I dir]... [-lib dir]... [-share dir] [-profile file|name] [-set sym=val]...
        [-maxgo n] [-undef-tags text|element|error] [-o out.xml]
-       [-tex file] [-tex-fonts name] input.gml
+       [-pass k] [-passes n] [-aux file] [-symbols-in file] [-symbols-out file]
+       input.gml
 
    -profile NAME, when NAME is not a file, is the shipped profile
    share/profile/NAME.gml ("-profile starter": the GML Starter Set).  The
@@ -15,13 +16,27 @@
    .dm name lib, .se name lib, and with .ly on|mac|sym for unresolved
    macros, GML tag APFs and symbols.
 
-   -tex FILE writes the document as TeX for share/tex/gml.tex in hint
-   mode (Be_tex: the profile's control words do the layout), "-" for
-   standard output; it is what xslt/tex.xsl (tex-mode=hints) makes of
-   the XML.  &$PN and &$LC are constants (Ctx.page_query).  With -tex
-   the XML is written only when -o is given. *)
+   The XML is written to -o FILE, else to standard output; TeX is made
+   from it by the XSLT stages (mkfile: resolve.xsl, tex.xsl).
 
-let usage = "usage: gml [-I dir]... [-lib dir]... [-share dir] [-profile file|name] [-set sym=val]... [-maxgo n] [-undef-tags text|element|error] [-o out.xml] [-tex file] [-tex-fonts name] input.gml"
+   The pass model (SCRIPT's FPASSES(n)/TWOPASS, SH20-9186-06 p.126,
+   p.129; the driver is the rc script gmlpass, README "Passes"): one run
+   of gml is one formatting pass, the TeX run after it measures.
+   -pass K -passes N: &$PASS is K, &$TWO is 1 when N > 1 (and &$PASSES
+   is N); the root element gets pass=K passes=N, which tex.xsl
+   turns into \def\gmlpassno{K}\def\gmlpasses{N} before \input gml (gml.tex
+   \gmlpass: draft output on a pass before the last).  -aux FILE (Aux:
+   JOB.gmlaux, written by TeX in the previous pass; a missing file is
+   empty) turns the page symbols into questions: each reference to &$PN
+   or &$LC is a hint gml:query and is answered from FILE (else 1, 60),
+   and a .tc entry gets the page of its anchor.  -symbols-in FILE loads
+   the symbols (and the TOC entries) of the previous pass before the
+   profile runs, so that the profile's own .se lines win, with the array
+   index counters reset to 0 (TPG p.256);
+   -symbols-out FILE writes them at the end of the pass (Symbols.dump,
+   Toc.dump). *)
+
+let usage = "usage: gml [-I dir]... [-lib dir]... [-share dir] [-profile file|name] [-set sym=val]... [-maxgo n] [-undef-tags text|element|error] [-o out.xml] [-pass k] [-passes n] [-aux file] [-symbols-in file] [-symbols-out file] input.gml"
 
 let share_candidates explicit =
   let exe = Sys.executable_name in
@@ -63,8 +78,11 @@ let () =
   let output = ref None in
   let max_go = ref None in
   let undef = ref Gml.Ctx.Undef_text in
-  let tex = ref None in
-  let tex_fonts = ref "" in
+  let pass = ref None in
+  let passes = ref None in
+  let aux = ref None in
+  let sym_in = ref None in
+  let sym_out = ref None in
   let inputs = ref [] in
   let bad = ref [] in
   let add_set s =
@@ -97,17 +115,26 @@ let () =
                | _ -> Gml.Ctx.Undef_text)),
        "  a GML tag without APF: text (with a message, the DCF way), an element, or an error");
       ("-o", Arg.String (fun f -> output := Some f),
-       "file  write XML to file (default stdout, none with -tex)");
-      ("-tex", Arg.String (fun f -> tex := Some f),
-       "file  write TeX for gml.tex (hint mode) to file (- for stdout)");
-      ("-tex-fonts", Arg.String (fun f -> tex_fonts := f),
-       "name  the gml.tex font scheme (gmlfont-NAME.tex)") ]
+       "file  write XML to file (default stdout)");
+      ("-pass", Arg.Int (fun n -> pass := Some n), "k  this formatting pass (&$PASS)");
+      ("-passes", Arg.Int (fun n -> passes := Some n),
+       "n  the number of formatting passes (&$TWO is 1 when n > 1)");
+      ("-aux", Arg.String (fun f -> aux := Some f),
+       "file  the aux file of the previous pass: &$PN and &$LC are asked of TeX");
+      ("-symbols-in", Arg.String (fun f -> sym_in := Some f),
+       "file  load the symbols of the previous pass before the profile");
+      ("-symbols-out", Arg.String (fun f -> sym_out := Some f),
+       "file  write the symbols at the end of the pass") ]
   in
   (try Arg.parse_argv Sys.argv spec (fun f -> inputs := f :: !inputs) usage with
    | Arg.Help m -> print_string m; exit 0
    | Arg.Bad m -> prerr_string m; exit 8);
   let fail msg = Printf.eprintf "gml: error: %s\n%s\n" msg usage; exit 8 in
   List.iter fail (List.rev !bad);
+  let pass_k = Option.value !pass ~default:1 in
+  let passes_n = Option.value !passes ~default:(max 1 pass_k) in
+  if pass_k < 1 || passes_n < 1 || pass_k > passes_n then
+    fail (Printf.sprintf "-pass %d -passes %d: expected 1 <= k <= n" pass_k passes_n);
   let input =
     match !inputs with
     | [ f ] -> f
@@ -131,6 +158,13 @@ let () =
          Gml.Ctx.warn ctx "-lib %s: not a directory" d)
     ctx.libs;
   Option.iter (fun n -> ctx.max_go <- n) !max_go;
+  ctx.pass <- pass_k;
+  ctx.passes <- passes_n;
+  (* the previous pass's symbols and TOC entries, then the aux file: both
+     imbedded before Interp.run, so that -set and the profile's .se lines
+     win (lib/aux.ml) *)
+  Option.iter (Gml.Aux.load_symbols ctx) !sym_in;
+  Option.iter (Gml.Aux.load ctx) !aux;
   ctx.undef_tags <- !undef;
   let open_or_fail name =
     match Gml.Input.imbed ctx.input name with
@@ -147,12 +181,6 @@ let () =
        | Some f -> ctx.profile_id <- open_or_fail f
        | None -> Gml.Ctx.error ctx "profile %s not found (no file, no shipped profile)" p)
     !profile;
-  let config =
-    { Gml.Be_tex.default_config with
-      fonts = !tex_fonts;
-      title_align =
-        (match List.assoc_opt "SYSVART" ctx.sets with Some v -> v | None -> "") }
-  in
   let write f s =
     if f = "-" then print_string s
     else
@@ -161,8 +189,18 @@ let () =
   in
   if ctx.diag.errors = 0 then Gml.Interp.run ctx;
   let root = Gml.Interp.finish ctx in
+  let root =
+    match root with
+    | Gml.Tree.Element (n, a, ch) when !pass <> None || !passes <> None ->
+        Gml.Tree.Element
+          (n, a @ [ ("pass", string_of_int pass_k); ("passes", string_of_int passes_n) ], ch)
+    | _ -> root
+  in
+  Option.iter
+    (fun f ->
+      write f (Gml.Symbols.file (Gml.Symbols.dump ctx.syms @ Gml.Toc.dump ctx.toc)))
+    !sym_out;
   (match !output with
-   | None -> if !tex = None then print_string (Gml.Be_xml.document root)
+   | None -> print_string (Gml.Be_xml.document root)
    | Some f -> write f (Gml.Be_xml.document root));
-  Option.iter (fun f -> write f (Gml.Be_tex.document ~config root)) !tex;
   exit (Gml.Loc.return_code ctx.diag)
