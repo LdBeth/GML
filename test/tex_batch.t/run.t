@@ -8,7 +8,9 @@ lines, format-off text kept line by line with its blanks, and running
 titles holding the page number symbol as \gmlrundyn (typeset at every
 page).  In running title text the page number symbol is the hint
 gml:pageno, split off before .tr translation, so &amp. (X'08 translated
-to "&") stays a text ampersand (SH35-0069 p.234, p.259).  With -tex no
+to "&") stays a text ampersand (SH35-0069 p.234, p.259); in the fields
+of a .sx there it is \gmlpageno, the other characters (translated) are
+text, so \& is always an ampersand.  With -tex no
 XML is written unless -o is given.
 
   $ gml -tex - in.gml
@@ -20,7 +22,7 @@ XML is written unless -o is given.
   \gmlhint{bf}{font=caps,break=no}\gmlupword{upper} \gmlupword{case} \gmlupword{words} \gmlupword{here}
   \gmlhint{pf}{initial=yes,break=no}back to normal.
   \gmlstart{gml:h}{level=1,break=yes,text=A Heading}%
-  \gmlupword{A} \gmlupword{Heading}\gmlend{gml:h}%
+  \gmlhint{tcmark}{anchor=gml.tc.1,break=no}\gmlupword{A} \gmlupword{Heading}\gmlend{gml:h}%
   
   Text after the heading.
   \gmlbeginlines{ce}{n=2,break=yes,more=yes}before \gmlendlines{}\gmlstart{hp1}{}\gmlbeginlines{ce}{cont=yes,more=yes}a phrase\gmlendlines{}\gmlend{hp1}\gmlbeginlines{ce}{cont=yes} after
@@ -34,7 +36,7 @@ XML is written unless -o is given.
   \ \ after\ a\ blank\ line
   \gmlhint{fo}{fill=yes,align=justify,overdraw=extend,break=yes}%
   \gmlstart{gml:rf}{}%
-  \gmlrundyn{\gmlhint{sx}{left=Left,fill=,right=Page \&,pagesym=\&,break=yes}%
+  \gmlrundyn{\gmlhint{sx}{left=Left \& Right,fill=,right=Page \gmlpageno{},pagesym=\gmlchar{57344},break=yes}%
   }\gmlend{gml:rf}%
   \gmlstart{gml:rh}{}%
   \gmlrundyn{Page \gmlhint{pageno}{break=no} of the heading; \& is a text ampersand

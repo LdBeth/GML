@@ -131,6 +131,22 @@ let attr_pair (k, v) =
   in
   k ^ "=" ^ if local = "anchor" || k = "refid" then name v else attr v
 
+(* the first index >= [from] of [sub] in [s] *)
+let find_sub s sub from =
+  let n = String.length s and m = String.length sub in
+  let rec go i = if i + m > n then None else if String.sub s i m = sub then Some i else go (i + 1) in
+  go from
+
+(* tokenize(s, sep, 'q') of XPath, but [""] for "" *)
+let split_on sep s =
+  let n = String.length s and m = String.length sep in
+  let rec go i start acc =
+    if i + m > n then List.rev (String.sub s start (n - start) :: acc)
+    else if String.sub s i m = sep then go (i + m) (i + m) (String.sub s start (i - start) :: acc)
+    else go (i + 1) start acc
+  in
+  go 0 0 []
+
 let attrs ?(extra = []) l = String.concat "," (List.map attr_pair l @ extra)
 
 let normalize_space s =
@@ -193,6 +209,10 @@ let rec plain_nodes b l = List.iter (plain_node b) l
 and plain_node b = function
   | Tree.Text s -> Buffer.add_string b s
   | Tree.Raw (_, c) -> Buffer.add_string b c
+  | Tree.Hint ("dv", a) ->
+      (* a text variable is known text (SH35-0069 p.261: usable in a
+         heading and its TOC entry) *)
+      Buffer.add_string b (Option.value (List.assoc_opt "text" a) ~default:"")
   | Tree.Hint _ -> ()
   | Tree.Element (n, _, ch) ->
       if not (List.mem n index_tags || n = "gml:num") then plain_nodes b ch
@@ -871,6 +891,19 @@ let start st ?plain ?(running = false) xname a =
           ^ "}{" ^ Option.value (List.assoc_opt "when" a) ~default:"always" ^ "}{"
           ^ attr (Option.value (List.assoc_opt "label" a) ~default:"") ^ "}");
         st.frames <- new_frame ~kind:`Skip xname :: st.frames
+    | Some "sx" when List.mem_assoc "pagesym" a ->
+        (* the page number symbol in the fields is the page number,
+           \gmlpageno (SH35-0069 p.128); any other character, a text "&"
+           too, is text *)
+        let ps = List.assoc "pagesym" a in
+        let field (k, v) =
+          if (k = "left" || k = "fill" || k = "right") && ps <> "" then
+            k ^ "=" ^ String.concat "\\gmlpageno{}" (List.map attr (split_on ps v))
+          else attr_pair (k, v)
+        in
+        out st ("\\gmlhint{sx}{" ^ String.concat "," (List.map field a) ^ "}");
+        if List.assoc_opt "break" a = Some "yes" then out st "%\n";
+        st.frames <- new_frame ~kind:`Hint ?space xname :: st.frames
     | Some l ->
         out st ("\\gmlhint{" ^ l ^ "}{" ^ attrs a ^ "}");
         if List.assoc_opt "break" a = Some "yes" then out st "%\n";
@@ -1068,8 +1101,19 @@ let stream ?(warn = ignore) doc =
   let ser = create () in
   ser.warn <- warn;
   let root = List.nth doc.Doc.stack (List.length doc.Doc.stack - 1) in
-  { doc; ser; levels = [ { elt = root; done_ = 0; tdone = 0; hoisted = false } ];
-    warned = false }
+  let s =
+    { doc; ser; levels = [ { elt = root; done_ = 0; tdone = 0; hoisted = false } ];
+      warned = false }
+  in
+  (* [.ct] may change a child that has not been written: a growing text
+     (child [done_], partly written) never has its trailing line end
+     written ([emit_partial]); an element not entered has nothing written *)
+  doc.Doc.sent <-
+    (fun e i ->
+      match List.find_opt (fun l -> l.elt == e) s.levels with
+      | Some l -> i < l.done_
+      | None -> false);
+  s
 
 (* the children of [l] not yet written, oldest first *)
 let new_children l =

@@ -54,25 +54,24 @@
 .*    left and the page number on the right (.sx with the page number
 .*    symbol &, the default of .dc PS); the running heading is the
 .*    security classification (:gdoc sec=) centred.
-.*  - TOC: in DCF the .hN words write TC entries and .tc prints them
-.*    (TPG p.151-156).  The TeX path has no .tc (gml.tex ignores it) but
-.*    builds :toc from the h0-h4 elements, so the heading APFs wrap their
-.*    .hN in an hN element and :toc makes an empty toc element.  The
+.*  - TOC: in DCF the .hN words write TC entries (.dh n tc: h0-h4 in
+.*    the body, appendix and back matter, none in the front matter) and
+.*    .tc prints them (TPG p.151-157), with the pages a layout engine
+.*    reports.  A .tc at the front sees only the entries of a previous
+.*    pass, so :toc issues it with TWOPASS (&$TWO); in one pass it makes
+.*    an empty toc element, which resolve.xsl fills from the h0-h4
+.*    elements (the heading APFs wrap their .hN in an hN element).  The
 .*    numbers are in the heading text (the profile numbers), so in hint
 .*    mode the TOC and figure list print no numbers of their own.
-.*    DCF-VERIFY: .tc is not issued (it would print a second TOC once a
-.*    layout engine implements it).
 .*  - Index: :i1 :i2 :i3 :ih1 :ih2 :ih3 :iref give .pi entries (TPG
 .*    p.213-218); :index places them with .ix.
 .*  - Tables (:table :row :c, Rel 3.2) are not formatted yet: the tags
 .*    are out of context (DCFS002W).  :psc and :l are not done either.
 .*
 .* Known limits: an APF's .gs scan takes the residual text up to the
-.* next tag, so a tag inside a heading, title or index term ends the
-.* text there (the rest follows as ordinary text), as with IBM's own
-.* macros on this engine (DCF-VERIFY).  Footnote callouts are in the
-.* "parens" style of the Starter Set ("(1)", IG p.24): a raised callout
-.* needs .dv BASELINE, which the engine does not parse.
+.* next tag (IG p.9), so a tag inside a heading, title or index term
+.* ends the text there and the rest follows as ordinary text, as in DCF
+.* (the Starter Set forbids tags in a heading, SH20-9186-06 p.13).
 .* ------------------------------------------------------------------------
 .*
 .* ---- delimiters and processing (IG p.21 items 9-13) ---------------------
@@ -174,6 +173,8 @@
 .* the title page (DCF-VERIFY: the title size) and examples (a mono face)
 .df title type(bold 24)
 .df xmp type('courier')
+.* the raised footnote numbers
+.df f@sup type(7)
 .*
 .* ---- rules (IG p.22 item 16): figures in the default weight, a lighter
 .* footnote leader
@@ -183,7 +184,7 @@
 .* ---- head levels: TPG Figure 14 with the Starter Set's spacing (IG
 .* p.22 item 24: 1.3i before h0/h1, 5 and 3 lines after them, 3 skips
 .* before and 2 after h2-h4; h5/h6 run in) ----------------------------------
-.dh 0 pa spbf 1.3i spaf 5 font hd0 up nohy left
+.dh 0 pa spbf 1.3i spaf 5 font hd0 up nohy left nto
 .dh 1 pa spbf 1.3i spaf 3 font hd1 up nohy left
 .dh 2 skbf 3 spaf 2 font hd2 up nohy left
 .dh 3 skbf 3 spaf 2 font hd3 nohy left
@@ -376,15 +377,26 @@
 .if &L'&f@sect gt 0 .xe &f@sect
 .se f@sect = ''
 .dm off
+.* .f@tc tc|ntc: table of contents entries for h0-h4 (TPG p.151-157;
+.* none for the front matter, as IBM's DSMFRONT)
+.dm f@tc on
+.dh 0 &*1
+.dh 1 &*1
+.dh 2 &*1
+.dh 3 &*1
+.dh 4 &*1
+.dm off
 .* front matter: roman page numbers from i
 .dm f@front on
 .f@sect frontm
+.f@tc ntc
 .pa 1
 .pn roman
 .dm off
 .* the body: arabic page numbers from 1; the heading counters restart
 .dm f@body on
 .f@sect body
+.f@tc tc
 .pa 1
 .pn arabic
 .se f@h1c = 0
@@ -393,11 +405,13 @@
 .dm off
 .dm f@appd on
 .f@sect appendix
+.f@tc tc
 .pa
 .se f@h1c = 0
 .dm off
 .dm f@backm on
 .f@sect backm
+.f@tc tc
 .pa
 .se f@shead = ''
 .f@runf
@@ -412,13 +426,17 @@
 .dm off
 .dm f@abstr /.f@shd &f@l@abs
 .dm f@pref /.f@shd &f@l@pref
-.* :toc and :figlist: resolve.xsl writes the lists into the elements
-.* (in DCF: .tc, and a figure list collected by the profile)
+.* :toc: with TWOPASS (&$TWO) the DCF way, .tc (TPG p.156-157: the
+.* entries of the previous pass); in one pass a .tc here would be empty,
+.* so resolve.xsl writes the list into the toc element instead.
+.* :figlist: resolve.xsl writes the list into the figlist element.
 .dm f@toc on
 .f@rset
 .pa
 .se f@shead '&f@l@toc
 .f@runf
+.if &$TWO eq 1 .tc &f@l@toc
+.if &$TWO eq 1 .me
 .xs toc
 .xe toc
 .dm off
@@ -1026,8 +1044,16 @@
 .dm off
 .*
 .* ---- footnotes (IG p.129-131; Figure 5: skip 1) --------------------------------
-.* The number is called out in parentheses where :fn stands; a
-.* footnote with an id is called out by :fnref instead (fn@ID).
+.* The number is called out where :fn stands, raised in a smaller font
+.* (the Starter Set's "shifts" style for page printers, IG p.130-131:
+.* DSM#SUPR changes to a small font and shifts the baseline up); a
+.* footnote with an id is called out by :fnref instead (fn@ID).  The
+.* footnote starts with its number in the same style.
+.* .f@fncall n: &f@fnc is the raised number n (a .dv text variable,
+.* TPG p.258-261: a font and a baseline shift)
+.dm f@fncall on
+.dv f@fnc font f@sup baseline p3 /&*1
+.dm off
 .dm f@fn on
 .if &f@infn eq 0 .go ok
 .f@msg 14 footnote footnote
@@ -1036,15 +1062,18 @@
 .gs attval id
 .se f@fnn = &f@fnn + 1
 .se f@infn = 1
-.if &L'&ID eq 0 .ct (&f@fnn.)
-.if &L'&ID eq 0 .go on
+.f@fncall &f@fnn
+.if &L'&ID gt 0 .go id
+.ct &f@fnc.
+.go on
+...id
 .se *k = &U'&ID
 .if &E'&fn@&*k eq 1 .f@msg 13 &ID
 .se fn@&*k = &f@fnn
 ...on
 .fn on
 .sp 1
-(&f@fnn.)
+&f@fnc.
 .dm off
 .dm f@efn on
 .if &f@infn ne 0 .go ok
@@ -1137,7 +1166,8 @@
 .me
 ...ok
 .se *t = &fn@&*k
-.gs insert (&*t.)
+.f@fncall &*t
+.gs insert &f@fnc.
 .dm off
 .dm f@liref on
 .gs attval refid page

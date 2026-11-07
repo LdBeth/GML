@@ -787,7 +787,8 @@
   \fi\fi\fi\fi}
 % .hr [rulename] h [FOR w | TO h] ... [LEFT] [RIGHT]: rule segments on
 % one line, each in the weight of the last rule name (boxrule).  No
-% operands: across the line.  DCF-VERIFY: a start position without FOR,
+% position (no operands, or only a rule name, SX26-3723 .HR: every
+% operand is optional): across the line.  DCF-VERIFY: a start position without FOR,
 % TO or RIGHT runs to the right edge of the column.
 \def\gml@hr@flush{\gml@dimc\gml@dima\advance\gml@dimc-\gml@hrstart
   \ifdim\gml@dimc>\z@
@@ -797,8 +798,9 @@
     \gml@hrpos\gml@dima\fi
   \gml@hrmode\z@}
 \def\gml@hr@right{\gml@dima\hsize\advance\gml@dima-\leftskip}
+\newif\ifgml@hrpos
 \def\gml@hr@tok#1{\gml@isnumtok{#1}%
-  \ifgml@found\gml@dimtok{#1}\gml@dimb
+  \ifgml@found\gml@hrpostrue\gml@dimtok{#1}\gml@dimb
     \ifcase\gml@hrmode \gml@hrstart\gml@dimb\gml@hrmode\@ne
     \or \gml@hr@right\gml@hr@flush\gml@hrstart\gml@dimb\gml@hrmode\@ne
     \or \gml@dima\gml@hrstart\advance\gml@dima\gml@dimb\gml@hr@flush
@@ -806,10 +808,10 @@
   \else\def\gml@tmpd{#1}%
     \ifx\gml@tmpd\gml@forstr\gml@hrmode\tw@
     \else\ifx\gml@tmpd\gml@tostr\gml@hrmode\thr@@
-    \else\ifx\gml@tmpd\gml@leftstr
+    \else\ifx\gml@tmpd\gml@leftstr\gml@hrpostrue
       \ifnum\gml@hrmode=\@ne\gml@hr@right\gml@hr@flush\fi
       \gml@hrstart-\leftskip\gml@hrmode\@ne
-    \else\ifx\gml@tmpd\gml@rightstr
+    \else\ifx\gml@tmpd\gml@rightstr\gml@hrpostrue
       \ifnum\gml@hrmode=\z@\gml@hrstart-\leftskip\fi
       \gml@hr@right\gml@hr@flush
     \else\ifnum\gml@hrmode=\@ne\gml@hr@right\gml@hr@flush\fi
@@ -819,8 +821,9 @@
   \gml@rulewd=\csname gml@rule@boxrule\endcsname\relax
   \gml@hrpos\z@\gml@hrmode\z@\setbox\gml@box\hbox{}%
   \ifx\gml@tv\empty\gml@hrstart-\leftskip\gml@hr@right\gml@hr@flush
-  \else\gml@forwords\gml@tv\gml@hr@tok
-    \ifnum\gml@hrmode=\@ne\gml@hr@right\gml@hr@flush\fi\fi
+  \else\gml@hrposfalse\gml@forwords\gml@tv\gml@hr@tok
+    \ifnum\gml@hrmode=\@ne\gml@hr@right\gml@hr@flush\fi
+    \ifgml@hrpos\else\gml@hrstart-\leftskip\gml@hr@right\gml@hr@flush\fi\fi
   \nointerlineskip\vskip\gml@rulesep\moveright\leftskip\box\gml@box
   \vskip\gml@rulesep}
 % .kp: keeps cannot be boxed across hints; on/float/delay forbid page
@@ -1015,9 +1018,56 @@
   \ifnum0\gml@sn>1 \gml@warnonce{cd}{multi-column layout (.cd) is not supported; one column}\fi}
 \gmldefhint{sc}{}
 \gmldefhint{mc}{\gml@notimpl{mc}}
-\gmldefhint{tc}{\gml@warnonce{tc}{.tc ignored: the table of contents comes from :toc}}
+% .tc (SH35-0069 p.156-157): action=begin ejects the page (the engine
+% puts the title heading and the gml:tcentry hints after it); with
+% reserve=n, action=end ejects again and numbers the next page n pages
+% after the first page of the table.  gml:tcmark (a heading or .pt with
+% a table of contents entry) is an anchor; gml:tcentry is one line: the
+% text in font= (a .df name), indented by indent=, then a dot leader to
+% the page on the right (dot=yes) or two blanks and the page (dot=no).
+% The page is page=, or the page of anchor= (the .ref file of the
+% previous run; ?? on the first).
+\newcount\gml@tcfirst
+\gmldefhint{tc}{\gml@hget{action}\gml@tv\gml@hget{reserve}\gml@tu
+  \def\gml@tmpd{begin}%
+  \ifx\gml@tv\gml@tmpd\gml@newpage\global\gml@tcfirst\pageno
+  \else\ifx\gml@tu\empty\else\gml@newpage
+    \ifnum\gml@tcfirst<\z@\global\pageno\gml@tcfirst\global\advance\pageno-\gml@tu\relax
+    \else\global\pageno\gml@tcfirst\global\advance\pageno\gml@tu\relax\fi\fi\fi}
+\gmldefhint{tcmark}{\gml@hget{anchor}\gml@tv\ifx\gml@tv\empty\else\gmlanchor{\gml@tv}\fi}
+\gmldefhint{tcentry}{\par\begingroup
+  \gml@hget{text}\gml@tctext\gml@hget{font}\gml@tv\gml@hget{indent}\gml@tu
+  \gml@hget{dot}\gml@tcdot\gml@hget{page}\gml@tcpage\gml@hget{anchor}\gml@tcanchor
+  \ifx\gml@tcpage\empty\ifx\gml@tcanchor\empty\else
+    \edef\gml@tcpage{\noexpand\gml@pagenumber{\gml@tcanchor}}\fi\fi
+  \let\gml@fontcmd\relax\ifx\gml@tv\empty\else\gml@fontlookup\gml@tv\fi
+  \ifx\gml@fontcmd\relax\else\gml@fontcmd\fi
+  \ifx\gml@tu\empty\gml@dima\z@\else\gml@dimtok\gml@tu\gml@dima\fi
+  \advance\leftskip\gml@dima \hangindent2em \hangafter\@ne
+  \ifx\gml@tcdot\gml@no
+    \rightskip\z@ plus 1fil\parfillskip\z@ plus 1fil
+    \noindent\gml@tctext\enspace\enspace\gml@tcpage
+  \else
+    \rightskip3em plus 1fil\parfillskip-\rightskip
+    \noindent\gml@tctext\nobreak\leaders\hbox to .6em{\hss.\hss}\hfill
+    \nobreak\hbox to 3em{\hss\gml@tcpage}\fi
+  \par\endgroup}
 \gmldefhint{vr}{\gml@notimpl{vr}}
 \gmldefhint{sb}{\gml@notimpl{sb}}
+% gml:ct (layout mode only): a .ct whose text went to TeX before it
+% (SH35-0069 p.48): the word space after it goes
+\gmldefhint{ct}{\ifhmode\unskip\fi}
+% .dv text variables (SH35-0069 p.258-261, SX26-3723): gml:dv where the
+% variable is used, text= in font= (a .df/.bf name), raised by baseline=
+% (a vertical space; negative lowers it, as .sb).  A shifted variable is
+% one box; otherwise the text is ordinary text in a group.
+\gmldefhint{dv}{\gml@hget{text}\gml@dvtext\gml@hget{font}\gml@tv
+  \gml@hget{baseline}\gml@tu\let\gml@fontcmd\relax
+  \ifx\gml@tv\empty\else\gml@fontlookup\gml@tv\fi
+  \ifx\gml@fontcmd\relax\let\gml@fontcmd\empty\fi
+  \ifx\gml@tu\empty{\gml@fontcmd\gml@dvtext}%
+  \else\gml@dimtok\gml@tu\gml@dima
+    \leavevmode\raise\gml@dima\hbox{\gml@fontcmd\gml@dvtext}\fi}
 \gmldefhint{bc}{} \gmldefhint{fl}{} \gmldefhint{wz}{}
 % .sa/.re: the engine follows a .re with the hints that set the saved
 % state again (restore=yes), so nothing to do here.  .fv: page-level
@@ -1125,9 +1175,11 @@
 \def\gml@userrh{\ifodd\pageno\gml@runput{rh}{odd}\vbox\else\gml@runput{rh}{even}\vbox\fi\hss}
 \def\gml@userrf{\ifodd\pageno\gml@runput{rf}{odd}\vtop\else\gml@runput{rf}{even}\vtop\fi\hss}
 % The page number symbol (.dc PS, default &) in a running heading or
-% footing: tex.xsl writes the content as \gmlrundyn{...} (a .sx with
-% pagesym=, or an & in its text), which is kept as tokens and typeset
-% when each page is shipped out, with \& as the page number.  The hints
+% footing: tex.xsl and be_tex write the content as \gmlrundyn{...} (a
+% .sx with pagesym=, or a gml:pageno), which is kept as tokens and
+% typeset when each page is shipped out.  The page number is its own
+% macro, \gmlpageno (gml:pageno, and the symbol in the fields of a .sx
+% with pagesym=), so a text ampersand (\&) stays an ampersand.  The hints
 % in it are made local there (\global is \relax) and start from a
 % neutral state (no indention, offset or keep), so the body's formatting
 % state is untouched.  Without the symbol the box made where the heading
@@ -1136,12 +1188,13 @@
 % a running heading or footing (before .tr translation, so a text "&"
 % made by &amp. stays text, SH35-0069 p.234 and p.259); in \gmlrundyn
 % it is the page being shipped out
-\gmldefhint{pageno}{\gml@folio}
+\def\gmlpageno{\gml@folio}
+\gmldefhint{pageno}{\gmlpageno}
 \newif\ifgml@rundyn
 \long\def\gmlrundyn#1{\gdef\gml@rundyntoks{#1}\global\gml@rundyntrue}
 \def\gml@runput#1#2#3{\expandafter\ifx\csname gml@#1dyn#2\endcsname\relax
     \copy\csname gml@#1#2\endcsname
-  \else{\let\global\relax\let\&\gml@folio
+  \else{\let\global\relax
     \gml@hintleft\z@\gml@hintright\z@\gml@hintll\z@\gml@ofstate\z@\gml@keepfalse
     \setbox\gml@box#3{\gml@runsetup\csname gml@#1dyn#2\endcsname\par}\box\gml@box}\fi}
 \output={\gml@tbl@output\hsize\gml@defaulthsize\plainoutput\global\gml@plainpagefalse

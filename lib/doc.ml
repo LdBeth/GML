@@ -121,6 +121,12 @@ type t = {
           a running heading or footing ([gml:rh], [gml:rf]) it stands for the
           page number (SH35-0069 p.125, p.128, p.259) and becomes the hint
           [gml:pageno] ([text]) *)
+  dvars : (int, Tree.attrs) Hashtbl.t;
+      (** the text variables of [.dv] ([define_variable]), by number *)
+  mutable sent : open_elt -> int -> bool;
+      (** has child [i] (counted from the oldest) of this open element already
+          gone to the layout engine?  [Be_tex.stream] installs it; [.ct] cannot
+          change such a child ([join_previous]).  Initially never. *)
 }
 
 let root_name = "gml:doc"
@@ -147,6 +153,8 @@ let create () =
     mute = false;
     tr = Hashtbl.create 8;
     page_symbol = (fun () -> None);
+    dvars = Hashtbl.create 8;
+    sent = (fun _ _ -> false);
   }
 
 let top t = List.hd t.stack
@@ -421,12 +429,124 @@ let line_end t ~counted ~text =
     List.iter (fun sc -> List.iter (push_scope t) sc.next) (List.rev expired)
   end
 
+(* ---- .dv text variables ------------------------------------------------ *)
+
+(* A text variable with a font, a baseline shift or TEXT ([.dv name
+   [FONT f] [BASELINE b] /string], [.dv name TEXT /string], SH35-0069
+   p.258-261, SX26-3723) is "known text": it needs no code point and no
+   translate table, may be used anywhere (a heading, a running heading
+   or footing, split text), and is put out in its font, shifted.  Its
+   symbol's value is the string between two characters of the private
+   use plane 15: U+F0000 + its number (from 1) before, U+F0000 after.
+   The string is substituted like any symbol value (IBM's DSMPROF3
+   defines its list item labels as ".dv @id@l@o1 /&@item#.." under
+   .su off); no other rule reads the two characters (tags, separators,
+   the page number symbol, .tr); when text enters the tree the variable
+   becomes the hint [gml:dv] with [text=] the string and the font and
+   baseline of the definition.  A plain [.dv name /string] is a symbol
+   ([Hints.define_variable]). *)
+let dv_base = 0xF0000
+
+let utf8_of u =
+  let b = Buffer.create 4 in
+  Buffer.add_utf_8_uchar b (Uchar.of_int u);
+  Buffer.contents b
+
+let dv_end = utf8_of dv_base
+
+(** Define a text variable with the attributes of its hint (without
+    [text]); returns the value its symbol gets for [string]. *)
+let define_variable t attrs string =
+  let i = Hashtbl.length t.dvars + 1 in
+  Hashtbl.replace t.dvars i attrs;
+  utf8_of (dv_base + i) ^ string ^ dv_end
+
+(* the plane-15 code point at [i] of [s] (>= U+F0000), with its length *)
+let dv_char s i =
+  if Char.code s.[i] <> 0xF3 then None
+  else
+    let d = String.get_utf_8_uchar s i in
+    let u = Uchar.to_int (Uchar.utf_decode_uchar d) in
+    if Uchar.utf_decode_is_valid d && u >= dv_base then
+      Some (u - dv_base, Uchar.utf_decode_length d)
+    else None
+
+(* [s] as pieces: [Either.Left text] and [Either.Right attrs] (a text
+   variable, with [text=]); an unmatched end mark is dropped, an
+   unended variable runs to the end of [s] *)
+let split_dvars t s =
+  if Hashtbl.length t.dvars = 0 || not (String.contains s '\xf3') then
+    [ Either.Left s ]
+  else begin
+    let n = String.length s in
+    let left acc i j = if j > i then Either.Left (String.sub s i (j - i)) :: acc else acc in
+    (* the end mark after [i] *)
+    let rec find_end i =
+      if i >= n then (n, n)
+      else match dv_char s i with
+        | Some (0, l) -> (i, i + l)
+        | Some (_, l) -> find_end (i + l)
+        | None -> find_end (i + 1)
+    in
+    let rec go i start acc =
+      if i >= n then List.rev (left acc start n)
+      else
+        match dv_char s i with
+        | Some (0, l) -> go (i + l) (i + l) (left acc start i)
+        | Some (k, l) when Hashtbl.mem t.dvars k ->
+            let e, next = find_end (i + l) in
+            let text = String.sub s (i + l) (e - i - l) in
+            let a = Hashtbl.find t.dvars k in
+            let attrs =
+              List.filter (fun (k, _) -> k <> "break") a
+              @ [ ("text", text); ("break", "no") ]
+            in
+            go next next (Either.Right attrs :: left acc start i)
+        | Some (_, l) -> go (i + l) start acc
+        | None -> go (i + 1) start acc
+    in
+    go 0 0 []
+  end
+
+(* [s] with its text variables replaced by their text (an attribute value) *)
+let dvar_text t s =
+  match split_dvars t s with
+  | [ Either.Left s ] -> s
+  | l ->
+      String.concat ""
+        (List.map
+           (function
+             | Either.Left s -> s
+             | Either.Right a -> Option.value (List.assoc_opt "text" a) ~default:"")
+           l)
+
+(** [s] as it is put out, for text in a hint's attribute (the fields of
+    [.sx]): translated ([.tr]), its text variables replaced by their text
+    (which is not translated). *)
+let output_text t s =
+  String.concat ""
+    (List.map
+       (function
+         | Either.Left s -> translate t s
+         | Either.Right a -> Option.value (List.assoc_opt "text" a) ~default:"")
+       (split_dvars t s))
+
 (* Text enters the tree translated ([.tr]).  In a running heading or
    footing the page number symbol is split off first, as the hint
    [gml:pageno]: it is the page number symbol before any translation
    (SH35-0069 p.259: "&amp." is X'08 translated to "&" on output, a text
    ampersand). *)
-let add_text t s =
+let rec add_text t s =
+  match split_dvars t s with
+  | [ Either.Left s ] -> add_plain_text t s
+  | l ->
+      List.iter
+        (function
+          | Either.Left s -> if s <> "" then add_plain_text t s
+          | Either.Right a -> add t (Tree.Hint ("dv", a)))
+        l
+
+and add_plain_text t s =
   match if in_running t then t.page_symbol () else None with
   | Some c when String.contains s c ->
       List.iteri
@@ -451,32 +571,100 @@ let end_line t = if not t.mute then line_end t ~counted:false ~text:false
     continuation). *)
 let text_inline t s = if s <> "" && not t.mute then add_text t s
 
+(* ---- .ct: the previous output word ------------------------------------- *)
+
+(* DCF has no tree: [.ct] continues the last word put out, whatever hints
+   and element ends came after it (SH35-0069 p.48; p.107: "5" [.sb .15cm]
+   [.ct 3]), unless a control word that breaks came between (p.47: "If a
+   formatter control that causes a break follows the continued word,
+   continuation is cancelled").  [last_text] finds that word in a list of
+   nodes, newest first: [Found (text, rebuild)] where [rebuild t'] is the
+   list with the text replaced by [t'] (None: the text is removed), and the
+   index (newest first) of the node of the list that holds it. *)
+type last =
+  | Found of string * (string option -> Tree.node list) * int
+  | Blocked  (** a breaking hint or raw output comes first *)
+  | Absent
+
+let rec last_text ?(k = 0) nodes =
+  match nodes with
+  | [] -> Absent
+  | Tree.Text "" :: rest -> skip k (Tree.Text "") rest
+  | Tree.Text a :: rest ->
+      Found
+        ( a,
+          (fun t ->
+            match t with None -> rest | Some t -> Tree.Text t :: rest),
+          k )
+  | Tree.Hint (_, attrs) :: rest when List.assoc_opt "break" attrs <> Some "yes"
+    ->
+      skip k (List.hd nodes) rest
+  | Tree.Hint _ :: _ | Tree.Raw _ :: _ -> Blocked
+  | (Tree.Element (n, a, ch) as e) :: rest -> (
+      match last_text (List.rev ch) with
+      | Found (s, rebuild, _) ->
+          Found
+            ( s,
+              (fun t -> Tree.Element (n, a, List.rev (rebuild t)) :: rest),
+              k )
+      | Blocked -> Blocked
+      | Absent -> skip k e rest)
+
+and skip k node rest =
+  match last_text ~k:(k + 1) rest with
+  | Found (s, rebuild, i) -> Found (s, (fun t -> node :: rebuild t), i)
+  | r -> r
+
+(* The last output word: in the open elements from the innermost out
+   (an open element's content follows its parent's children).  [f] gets
+   the element holding it, the text, how to replace it, and whether that
+   child already went to the layout engine ([sent], asked of the
+   stream), in which case it cannot change. *)
+let with_last_text t f =
+  let rec go = function
+    | [] -> ()
+    | e :: outer -> (
+        match last_text e.children with
+        | Absent -> go outer
+        | Blocked -> ()
+        | Found (s, rebuild, k) -> f e s rebuild ~sent:(t.sent e (e.count - 1 - k)))
+  in
+  go t.stack
+
 (** [.ct text] (SH35-0069 p.48): the word space after the previous text line
-    goes, so [text] continues it. *)
+    goes, so [text] continues it, across non-breaking hints and element ends.
+    If that text has already gone to the layout engine (a query came after
+    it), its word space is taken back there instead: the hint [gml:ct]
+    ([\unskip] in TeX), so this is the one place where layout mode's output
+    differs from the batch output. *)
 let join_previous t =
-  let e = top t in
   if not t.mute then
-    match e.children with
-    | Tree.Text a :: rest when a <> "" && a.[String.length a - 1] = '\n' ->
-        let a = String.sub a 0 (String.length a - 1) in
-        if a = "" then begin
-          e.children <- rest;
-          e.count <- e.count - 1
-        end
-        else e.children <- Tree.Text a :: rest
-    | _ -> ()
+    with_last_text t (fun e a rebuild ~sent ->
+        let n = String.length a in
+        if a.[n - 1] = '\n' then
+          if sent then add t (Tree.Hint ("ct", [ ("break", "no") ]))
+          else begin
+            let a = String.sub a 0 (n - 1) in
+            let a' = if a = "" then None else Some a in
+            let before = List.length e.children in
+            e.children <- rebuild a';
+            e.count <- e.count + List.length e.children - before
+          end)
 
 (** [.ct] alone: a continuation in effect (the previous text line ended without
     a word space) is cancelled. *)
 let cancel_continuation t =
-  let e = top t in
   if not t.mute then
-    match e.children with
-    | Tree.Text a :: _ when a <> "" && a.[String.length a - 1] <> '\n' ->
-        add t (Tree.Text "\n")
-    | _ -> ()
+    with_last_text t (fun _ a _ ~sent:_ ->
+        if a.[String.length a - 1] <> '\n' then add t (Tree.Text "\n"))
 
-let hint t name attrs = if not t.mute then add t (Tree.Hint (name, attrs))
+let hint t name attrs =
+  if not t.mute then
+    add t
+      (Tree.Hint
+         ( name,
+           if Hashtbl.length t.dvars = 0 then attrs
+           else List.map (fun (k, v) -> (k, dvar_text t v)) attrs ))
 
 let raw t backend content =
   if not t.mute then add t (Tree.Raw (backend, content))

@@ -39,6 +39,9 @@ type transport = {
       (** [query text what]: typeset [text], then the page state [what] *)
   finish : string -> (int, string) result;
       (** [finish text]: typeset [text], end the document; the exit status *)
+  page : string -> string option;
+      (** [page id]: the page (as printed) that TeX shipped the anchor [id]
+          out on, if it has reported it *)
 }
 
 (* ---- the pipe to a TeX process -------------------------------------------- *)
@@ -129,6 +132,7 @@ let pipe ?(timeout = 600.) ~cmd ~jobname ~share_tex ~driver ~warn () =
     state := `Dead;
     Error msg
   in
+  let pages = Hashtbl.create 64 in
   let pending = ref None in
   let flush_pending () =
     Option.iter (fun m -> warn m) !pending;
@@ -147,6 +151,13 @@ let pipe ?(timeout = 600.) ~cmd ~jobname ~share_tex ~driver ~warn () =
           if m = "READY" then Ok ans
           else if String.length m >= 4 && String.sub m 0 4 = "ANS " then
             until_ready r (Some (String.trim (String.sub m 4 (String.length m - 4))))
+          else if String.length m >= 5 && String.sub m 0 5 = "PAGE " then begin
+            (* written at shipout by gml-layout.tex's \gmlanchor *)
+            (match split_blanks (String.sub m 5 (String.length m - 5)) with
+            | [ id; pg ] -> Hashtbl.replace pages id pg
+            | _ -> ());
+            until_ready r ans
+          end
           else until_ready r ans
         end
         else if n > 0 && l.[0] = '!' then begin
@@ -266,21 +277,42 @@ let pipe ?(timeout = 600.) ~cmd ~jobname ~share_tex ~driver ~warn () =
             state := `Dead;
             Ok (match status with Unix.WEXITED n -> n | _ -> 255))
   in
-  { query; finish }
+  { query; finish; page = Hashtbl.find_opt pages }
 
 (* ---- a fake engine, for tests ------------------------------------------------ *)
 
 (** No TeX: the text is kept in [buf]; a page has 50 lines of the TeX source,
-    so pn = 1 + lines / 50 and lc = 50 - lines mod 50. *)
+    so pn = 1 + lines / 50 and lc = 50 - lines mod 50; an anchor
+    ([\gmlanchor{id}], or [anchor=id] on a gml:tcmark hint) is on the page of
+    its line, reported once that page is complete or a query follows it. *)
 let fake buf =
   let lines () =
     let n = ref 0 in
     String.iter (fun c -> if c = '\n' then incr n) (Buffer.contents buf);
     !n
   in
+  let pages = Hashtbl.create 16 in
+  let anchors text =
+    let base = lines () in
+    List.iteri
+      (fun i line ->
+        let pg = string_of_int (1 + ((base + i) / 50)) in
+        let rec find from =
+          match Be_tex.find_sub line "\\gmlhint{tcmark}{anchor=" from with
+          | Some j ->
+              let k = j + 24 in
+              let e = try String.index_from line k ',' with Not_found -> String.length line in
+              Hashtbl.replace pages (String.sub line k (e - k)) pg;
+              find e
+          | None -> ()
+        in
+        find 0)
+      (String.split_on_char '\n' text)
+  in
   {
     query =
       (fun text what ->
+        anchors text;
         Buffer.add_string buf text;
         let l = lines () in
         match what with
@@ -288,6 +320,7 @@ let fake buf =
         | "lc" -> Ok (string_of_int (50 - (l mod 50)))
         | w -> Error ("unknown query " ^ w));
     finish = (fun text -> Buffer.add_string buf text; Ok 0);
+    page = Hashtbl.find_opt pages;
   }
 
 (* ---- the driver ---------------------------------------------------------------- *)
@@ -338,6 +371,7 @@ let install ?source ctx transport =
               Ctx.error ctx "layout: %s; &$PN and &$LC are constants from now on" e;
               None)
       | _ -> None);
+  ctx.Ctx.page_of <- (fun id -> if t.alive then transport.page id else None);
   t
 
 (** After [Interp.finish]: the rest of the document goes to the engine; TeX's
@@ -346,6 +380,7 @@ let finish t =
   let text = Be_tex.flush ~final:true t.stream ^ "%\n" in
   Option.iter (fun b -> Buffer.add_string b text) t.source;
   t.ctx.Ctx.page_query <- (fun _ -> None);
+  t.ctx.Ctx.page_of <- (fun _ -> None);
   if not t.alive then None
   else
     match t.transport.finish text with

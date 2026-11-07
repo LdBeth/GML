@@ -58,6 +58,15 @@
 \def\gml@lbuild{\ifvmode\ifinner\else\ifnum\parshape=\z@\ifdim\hangindent=\z@
   \ifnum\looseness=\z@\ifnum\hangafter=\@ne\endgraf\fi\fi\fi\fi\fi\fi}
 
+% An anchor (gml:tcmark: a table of contents entry) also tells gml its
+% page when the page is shipped out: "GML:PAGE id folio" on the
+% terminal (a \write that is not \immediate is done at \shipout), so
+% that a .tc knows the pages of the entries before it without asking in
+% the middle of a paragraph.
+\let\gml@lanchor\gmlanchor
+\def\gmlanchor#1{\edef\gml@tmpa{\write16{GML:PAGE #1 \noexpand\gml@folio}}%
+  \gml@tmpa\gml@lanchor{#1}}
+
 % (\bye is \outer in plain TeX)
 \def\gmlfinish{\gmlenddocument\csname bye\endcsname}
 

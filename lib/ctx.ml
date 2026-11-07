@@ -164,6 +164,7 @@ type t = {
       (** environments saved by [.sa] (and by [.fn on]), innermost first *)
   hctr : Headctr.t;  (** the head-level counter ([.gs hctr], [.dh n num]) *)
   dh_num : (int, unit) Hashtbl.t;  (** head levels defined NUM ([.dh]) *)
+  toc : Toc.t;  (** table of contents entries and definitions ([.dh], [.hn], [.pt], [.tc]) *)
   mutable literal : int;
       (** [.li]: input lines still to be taken literally; -1: [.li on] *)
   mutable last_tag : string;  (** [&$TAG] *)
@@ -177,6 +178,10 @@ type t = {
   mutable page_query : string -> string option;
       (** the live page state for [&$PN] and [&$LC] (the system symbol name)
           from a layout engine ([Layout]); [None]: the neutral constant *)
+  mutable page_of : string -> string option;
+      (** the page (as printed) that the layout engine put an anchor on,
+          once that page has been shipped out ([Layout]; [.tc]); [None]:
+          not known *)
 }
 
 and word = { run : t -> string -> unit  (** receives the operands *) }
@@ -338,6 +343,7 @@ let create ?(include_path = []) () =
       saved = [];
       hctr = Headctr.create ();
       dh_num = Hashtbl.create 7;
+      toc = Toc.create ();
       literal = 0;
       last_tag = "";
       last_tagd = "";
@@ -347,6 +353,7 @@ let create ?(include_path = []) () =
       ly_sym = false;
       lib_members = Hashtbl.create 16;
       page_query = (fun _ -> None);
+      page_of = (fun _ -> None);
     }
   in
   ctx.doc.Doc.page_symbol <- (fun () -> Some ctx.chars.Chars.ps);

@@ -186,7 +186,7 @@
   <!-- the plain text of a heading, for the running footing -->
   <xsl:function name="t:plain" as="xs:string">
     <xsl:param name="e" as="element()"/>
-    <xsl:sequence select="normalize-space(string-join($e//text()[not(ancestor::gml:num)
+    <xsl:sequence select="normalize-space(string-join(($e//text() | $e//gml:dv/@text)[not(ancestor::gml:num)
         and not(ancestor::*[local-name() = $index-tags])]))"/>
   </xsl:function>
 
@@ -250,6 +250,19 @@
     <xsl:value-of select="concat('\gmlhint{', local-name(), '}{', t:attrs(@*, ()), '}')"/>
     <xsl:if test="@break = 'yes'">%&#10;</xsl:if>
     <xsl:apply-templates/>
+  </xsl:template>
+
+  <!-- a .sx in a running heading or footing: the page number symbol
+       (@pagesym) in its fields is the page number, \gmlpageno; any other
+       character, a text "&" too, is text -->
+  <xsl:template match="gml:sx[@pagesym != '']" priority="1">
+    <xsl:variable name="ps" select="string(@pagesym)"/>
+    <xsl:value-of select="concat('\gmlhint{sx}{', string-join(for $a in @* return
+        if (name($a) = ('left', 'fill', 'right'))
+        then name($a) || '=' || string-join(for $p in tokenize(string($a), $ps, 'q')
+                                            return t:attr($p), '\gmlpageno{}')
+        else t:attrs($a, ()), ','), '}')"/>
+    <xsl:if test="@break = 'yes'">%&#10;</xsl:if>
   </xsl:template>
 
   <xsl:template match="gml:df | gml:dh | gml:dr" priority="1">

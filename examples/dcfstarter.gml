@@ -38,7 +38,7 @@ Set does it on a page printer.
 :hp1.emphasized:ehp1., :hp2.bold:ehp2. or :hp3.both:ehp3., and a
 :q.quotation can contain :q.another one:eq. inside it:eq..
 The Starter Set numbers footnotes through the document.:fn.This is the
-first footnote.  Its number is called out in parentheses.:efn.
+first footnote.  Its number is raised in the text.:efn.
 :i1 id=para.paragraphs
 :i2.spacing
 :p.A second paragraph follows after three quarters of a line of

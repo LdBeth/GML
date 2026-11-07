@@ -34,7 +34,7 @@
      resolved) where it is defined, not when each page starts (p.127).
    - [.tr] (p.207) is not a hint: it sets the translate table that
      [Doc] applies to text entering the tree.  [.dv] (p.258) sets a
-     symbol.  [.li] (literal mode) is input processing ([Interp]).
+     symbol to a text variable, the hint [gml:dv] where it is used.  [.li] (literal mode) is input processing ([Interp]).
    - Words with no typesetting meaning (system, terminal, spelling
      words) are warned about once: "ignored device control word .xx".
 
@@ -65,9 +65,10 @@
    | .kp         | yes*  | on|off|float|delay|inline|v[+v]  | kp mode [n unit]                          |
    | .fn         | no    | on|off|leader                    | element gml:fn [kind]                     |
    | .rh .rf     | no    | [odd|even] on|off, cancel|sup|res|execute | element gml:rh/rf [page] / hint action |
-   | .h0-.h6     | yes   | text                             | element gml:h level                       |
-   | .dh         | no    | n options                        | dh level spec                             |
-   | .tc         | yes   | [n] [title|/]                    | tc [reserve] [title]                      |
+   | .dh         | no    | n options                        | dh level spec (NUM and TC options kept)   |
+   | .tc         | yes   | [n] [title|/]                    | tc action=begin|end [reserve]; gml:h title; tcentry per entry |
+   | .pt         | -     | text | .xx line                  | tcmark anchor (a .pt text line)           |
+   | .h0-.h6     | yes   | text                             | gml:h element; tcmark anchor (TC levels)  |
    | .sx         | yes   | [f] [c] /left/fill/right/        | sx left fill right [fold] [center]        |
    | .tp .tb     | no    | [add|del|set] stops              | tp/tb [action] stops                      |
    | .bf         | no    | font... [=]                      | bf font [restart]                         |
@@ -81,7 +82,7 @@
    | .cl .cd .sc .mc | yes | as written                     | NAME spec                                 |
    | .bc .fl     | no    | as written                       | NAME spec                                 |
    | .tr         | -     | pairs of c|hh                    | (translate table)                         |
-   | .dv         | -     | name [text|font f] /string       | (symbol)                                  |
+   | .dv         | -     | name [font f] [baseline b] /string | (symbol) dv name font baseline text (where used) |
 
    yes* : depends on the operands (NOBREAK; .pa NOBREAK; inline keeps).
    DCF-VERIFY for every row not cited above: the break column of .ju,
@@ -562,7 +563,12 @@ let hyphenate ctx ops =
 (* ---- headings, toc, split text ---------------------------------------------- *)
 
 (* .h0-.h6; a level defined NUM ([.dh n num], SH20-9161-3 p.247) is
-   numbered with the head-level counter ([Headctr]): num="1.0", "1.2". *)
+   numbered with the head-level counter ([Headctr]): num="1.0", "1.2".
+   A level with a table of contents entry (TC, SH35-0069 Figure 14:
+   levels 0-3) records it ([Toc]: the text as put out, with its number)
+   and marks the heading with the hint gml:tcmark anchor=ID, whose page
+   is the entry's; a TO level (level 0 initially) puts out only the mark,
+   no heading (SH20-9161-3 .DH TO). *)
 let heading n ctx ops =
   let d = doc ctx in
   let num =
@@ -572,42 +578,136 @@ let heading n ctx ops =
     end
     else []
   in
-  Doc.start_element ~eol:true d "gml:h"
-    ((("level", string_of_int n) :: num) @ [ ("break", "yes") ]);
-  if String.trim ops = "" then ignore (Doc.end_element d "gml:h")
-  else push_text ctx ops
+  let def = Toc.def ctx.toc n in
+  let text = String.trim ops in
+  let entry =
+    if def.Toc.tc && not d.Doc.mute then
+      let prefix = match num with [ (_, v) ] -> v ^ " " | _ -> "" in
+      Some (Toc.add ctx.toc (Toc.Head n) (prefix ^ Doc.output_text d text))
+    else None
+  in
+  let mark () =
+    Option.iter (fun e -> emit ctx "tcmark" ~brk:false [ ("anchor", e.Toc.id) ]) entry
+  in
+  if def.Toc.only then mark ()
+  else begin
+    Doc.start_element ~eol:true d "gml:h"
+      ((("level", string_of_int n) :: num) @ [ ("break", "yes") ]);
+    mark ();
+    if text = "" then ignore (Doc.end_element d "gml:h")
+    else push_text ctx ops
+  end
 
 (* .dh n options: kept as a hint; NUM / NONUM (the last one given) are
-   also recorded for the numbering of .hn. *)
+   also recorded for the numbering of .hn, and the table of contents
+   options (TC NTC TO NTO TS NTS DOT NODOT TCIN h TFONT f, SH20-9161-3
+   p.247) for its entries ([Toc]); .dh n alone restores the level's
+   initial definition. *)
 let define_head ctx ops =
   match first_word ops with
   | "", _ -> Ctx.error ctx ".dh: head level expected"
   | n, rest ->
-      Option.iter
-        (fun l ->
-          List.iter
-            (fun w ->
-              match lc w with
-              | "num" -> Hashtbl.replace ctx.dh_num l ()
-              | "nonum" -> Hashtbl.remove ctx.dh_num l
-              | _ -> ())
-            (tokens rest))
-        (int_of_string_opt n);
+      (match int_of_string_opt n with
+      | Some l when l >= 0 && l <= 6 ->
+          let ws = tokens rest in
+          if ws = [] then begin
+            Hashtbl.remove ctx.dh_num l;
+            Toc.reset ctx.toc l
+          end;
+          let rec go = function
+            | [] -> ()
+            | w :: rest -> (
+                match lc w with
+                | "num" -> Hashtbl.replace ctx.dh_num l (); go rest
+                | "nonum" -> Hashtbl.remove ctx.dh_num l; go rest
+                | _ -> (
+                    let value = match rest with v :: _ -> Some v | [] -> None in
+                    let value =
+                      if lc w = "tcin" then Option.map (norm Units.Horizontal) value
+                      else value
+                    in
+                    match Toc.option ctx.toc l w ~value with
+                    | `Took -> go (List.tl rest)
+                    | `Missing -> Ctx.error ctx ".dh %d: %s: a value expected" l w
+                    | `Done | `Other -> go rest))
+          in
+          go ws
+      | Some l -> Ctx.error ctx ".dh: head level 0 to 6 expected, not %d" l
+      | None -> ());
       emit ctx "dh" ~brk:false [ ("level", n); ("spec", rest) ]
 
+(* .pt text | .pt .xx ... (SH35-0069 p.155-156): a line of the table of
+   contents with the current page (DSMUTTOC gets ".'sx F /text/./page/"),
+   or a control word line put into it as it is; leading blanks of a text
+   line go.  The page is that of the hint gml:tcmark put out here. *)
+let put_toc ctx ops =
+  if ops <> "" && ops.[0] = '.' then ignore (Toc.add ctx.toc (Toc.Control ops) "")
+  else
+    let text = String.trim ops in
+    if text <> "" && not (doc ctx).Doc.mute then begin
+      let e = Toc.add ctx.toc Toc.Line (Doc.output_text (doc ctx) text) in
+      emit ctx "tcmark" ~brk:false [ ("anchor", e.Toc.id) ]
+    end
+
+(* .tc [n] [title | /] (SH35-0069 p.156-157): a page eject (the hint
+   gml:tc action=begin), the title as a level one heading (the title
+   given, else &SYSCONTENT if it is not null, else CONTENTS; "/": none),
+   one hint gml:tcentry per entry made so far ([Toc.printable]: text=,
+   level= (pt for a .pt line), indent= (TCIN, normalised), font= (TFONT),
+   dot=yes|no, and page= when the layout engine has reported the page of
+   its anchor, anchor= otherwise), with a gml:sk 1 before an entry whose
+   level asks for it (TS); then gml:tc action=end (reserve=n: the page
+   after the table is numbered n pages after its first).  Before the
+   entries the layout engine is given the document so far ([&$PN] query),
+   so that it ships out the pages before the eject and reports their
+   anchors ([Ctx.page_of]). *)
 let toc ctx ops =
+  let d = doc ctx in
   let n, rest = first_word ops in
   let reserve, title =
     match int_of_string_opt n with
     | Some _ -> ([ ("reserve", n) ], rest)
     | None -> ([], String.trim ops)
   in
-  emit ctx "tc" ~brk:true
-    (reserve
-    @
-    if title = "" then []
-    else if title = "/" then [ ("title", "") ]
-    else [ ("title", title) ])
+  let title =
+    if title = "/" then None
+    else if title <> "" then Some title
+    else
+      match Symbols.get ctx.syms "SYSCONTENT" with
+      | Some v when v <> "" -> Some v
+      | _ -> Some "CONTENTS"
+  in
+  emit ctx "tc" ~brk:true (("action", "begin") :: reserve);
+  if not d.Doc.mute then begin
+    ignore (ctx.page_query "$PN");
+    Option.iter
+      (fun t ->
+        Doc.start_element ~eol:true d "gml:h" [ ("level", "1"); ("break", "yes") ];
+        Doc.text d t)
+      title;
+    List.iter
+      (fun (e : Toc.entry) ->
+        match e.kind with
+        | Toc.Control line -> ctx.Ctx.process ctx (Ctx.Split true) line
+        | Toc.Head _ | Toc.Line ->
+            if e.skip then emit ctx "sk" ~brk:true [ ("n", "1"); ("unit", "line") ];
+            let page =
+              match e.page with
+              | Some p -> Some p
+              | None -> ctx.Ctx.page_of e.id
+            in
+            emit ctx "tcentry" ~brk:true
+              ([ ("level", (match e.kind with Toc.Head l -> string_of_int l | _ -> "pt"));
+                 ("text", e.text) ]
+              @ (if e.indent = "0" then [] else [ ("indent", norm Units.Horizontal e.indent) ])
+              @ (match e.font with Some f -> [ ("font", f) ] | None -> [])
+              @ [ ("dot", if e.dot then "yes" else "no") ]
+              @ match page with
+                | Some p -> [ ("page", p) ]
+                | None -> [ ("anchor", e.id) ]))
+      (Toc.printable ctx.toc)
+  end;
+  emit ctx "tc" ~brk:true (("action", "end") :: reserve)
 
 (* .sx [f] [c] /left/fill/right/ (p.76) *)
 let split_text ctx ops =
@@ -628,15 +728,30 @@ let split_text ctx ops =
            the page number (SH35-0069 p.128: ".sx c //Introduction/Page &/");
            pagesym= tells the backends which character it is *)
         let ps = ctx.chars.Chars.ps in
-        let pagesym =
-          if
-            Doc.in_running (doc ctx)
-            && List.exists (fun f -> String.contains f ps) [ l; f; r ]
-          then [ ("pagesym", String.make 1 ps) ]
-          else []
-        in
-        emit ctx "sx" ~brk:true
-          ([ ("left", l); ("fill", f); ("right", r) ] @ fl @ pagesym)
+        let out = Doc.output_text (doc ctx) in
+        if
+          Doc.in_running (doc ctx)
+          && List.exists (fun f -> String.contains f ps) [ l; f; r ]
+        then begin
+          (* the fields are put out (translated, text variables) piece by
+             piece between the page number symbols, which are written as
+             the pagesym= character: the symbol itself, or U+E000 when a
+             piece holds it as text ("&amp." translated to "&", p.259) *)
+          let pieces = List.map (fun f -> List.map out (String.split_on_char ps f)) [ l; f; r ] in
+          let m =
+            if List.exists (List.exists (fun p -> String.contains p ps)) pieces
+            then "\u{E000}"
+            else String.make 1 ps
+          in
+          match List.map (String.concat m) pieces with
+          | [ l; f; r ] ->
+              emit ctx "sx" ~brk:true
+                ([ ("left", l); ("fill", f); ("right", r) ] @ fl @ [ ("pagesym", m) ])
+          | _ -> assert false
+        end
+        else
+          emit ctx "sx" ~brk:true
+            ([ ("left", out l); ("fill", out f); ("right", out r) ] @ fl)
     | _ -> Ctx.error ctx ".sx: three delimited fields expected"
 
 (* ---- footnotes, running headings ----------------------------------------------- *)
@@ -841,30 +956,62 @@ let translate ctx ops =
   in
   match Control.words ops with [] -> Hashtbl.reset tbl | ws -> go ws
 
-(* .dv name [text | font f] /string (p.258): the symbol gets the
-   string.  DCF-VERIFY: the font is ignored; the value is not protected
-   from being read again as markup. *)
+(* .dv name [FONT f] [BASELINE b] [/string[/]] | .dv name [TEXT] [/string[/]]
+   (SH35-0069 p.258-261; SX26-3723 .DV): a text variable, "known text" with
+   an optional font and baseline shift (positive is up, as for .sb, p.107).
+   With FONT, BASELINE or TEXT the symbol's value is the string between
+   two marks ([Doc.define_variable]) and it becomes the hint gml:dv where
+   it enters the text: text= the string (substituted like any value),
+   font=, baseline= (vertical space units, normalised), name=, break="no";
+   a plain [.dv name /string] is a symbol with that value (IBM's DSMPROF3
+   defines its list labels so, under .su off, and one as a control word
+   line, ".dv @id@l@o9 /.dsm#supr &@item#.").  The string is the rest of
+   the line after its delimiter (the first character after the keywords),
+   without a closing delimiter.  DCF-VERIFY: with no string the variable
+   is the null string; BASELINE without FONT is allowed. *)
+let is_name_start c =
+  match c with 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '@' | '#' | '$' -> true | _ -> false
+
 let define_variable ctx ops =
   let name, rest = first_word ops in
   if name = "" then Ctx.error ctx ".dv: symbol name expected"
   else
-    let rest =
+    let rec keys acc rest =
       let w, r = first_word rest in
       match lc w with
-      | "text" -> r
-      | "font" ->
-          Ctx.warn_once ctx "dv-font"
-            ".dv: the font of a defined variable is ignored";
-          snd (first_word r)
-      | _ -> rest
+      | "text" -> keys (("", "text") :: acc) r
+      | ("font" | "baseline") as k ->
+          let v, r = first_word r in
+          if v = "" then Error (Printf.sprintf "%s: value expected" k)
+          else
+            let v = if k = "baseline" then norm Units.Vertical v else v in
+            keys ((k, v) :: List.remove_assoc k acc) r
+      | _ -> Ok (List.rev acc, rest)
     in
-    if rest = "" then Ctx.error ctx ".dv %s: /string expected" name
-    else
-      let v = String.sub rest 1 (String.length rest - 1) in
-      Control.check_name ctx ".dv" name (fun () ->
-          match Symbols.set ctx.syms name v with
-          | Ok () -> ()
-          | Error e -> Ctx.error ctx ".dv: %s" e)
+    match keys [] rest with
+    | Error e -> Ctx.error ctx ".dv %s: %s" name e
+    | Ok (_, rest) when rest <> "" && is_name_start rest.[0] ->
+        Ctx.error ctx ".dv %s: FONT, BASELINE, TEXT or /string expected, not %s"
+          name (fst (first_word rest))
+    | Ok (k, rest) ->
+        let v =
+          if rest = "" then ""
+          else
+            let d = rest.[0] in
+            let v = String.sub rest 1 (String.length rest - 1) in
+            let n = String.length v in
+            if n > 0 && v.[n - 1] = d then String.sub v 0 (n - 1) else v
+        in
+        let text_form = List.mem_assoc "" k in
+        let k = List.remove_assoc "" k in
+        Control.check_name ctx ".dv" name (fun () ->
+            let value =
+              if k = [] && not text_form then v
+              else Doc.define_variable (doc ctx) (("name", name) :: k) v
+            in
+            match Symbols.set ctx.syms name value with
+            | Ok () -> ()
+            | Error e -> Ctx.error ctx ".dv: %s" e)
 
 (* ---- index ---------------------------------------------------------------------- *)
 
@@ -1036,6 +1183,7 @@ let table =
     row "h6" Yes "text" (heading 6);
     row "dh" No "n options" define_head;
     row "tc" Yes "[n] [title|/]" toc;
+    row "pt" No "text | .xx line" put_toc;
     row "sx" Yes "[f] [c] /left/fill/right/" split_text;
     row "tp" No "[add|del|set] stops" (tabs "tp");
     row "tb" No "[add|del|set] stops" (tabs "tb");
@@ -1070,7 +1218,7 @@ let table =
     row "sc" Yes "" (generic "sc" ~brk:true);
     row "mc" Yes "" (generic "mc" ~brk:true);
     row "tr" Not_a_hint "pairs of c|hh" translate;
-    row "dv" Not_a_hint "name [text|font f] /string" define_variable;
+    row "dv" Not_a_hint "name [font f] [baseline b] [text] /string" define_variable;
     row "sa" No "[envname]" save_env;
     row "re" No "[envname]" restore_env;
     row "fv" No "top|bottom|center|justify"
