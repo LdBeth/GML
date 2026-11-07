@@ -87,7 +87,7 @@ An alist of (NAME . VALUE); handy as a file- or dir-local variable."
 (defcustom gml-output-format "html"
   "Default -to target of `gml-format'."
   :type '(choice (const "xml") (const "resolved") (const "scoped")
-                 (const "semantic") (const "html") (const "tex") (const "fo")))
+                 (const "semantic") (const "html") (const "tex")))
 
 (defcustom gml-eol-tags
   '("h0" "h1" "h2" "h3" "h4" "h5" "h6" "title" "docnum" "date" "author"
@@ -939,7 +939,7 @@ as the Starter Set's DSM#RSET does, except :gdoc."
   (concat (file-name-sans-extension file)
           (pcase to
             ("xml" ".xml") ("resolved" ".r.xml") ("scoped" ".s.xml")
-            ("semantic" ".sem.xml") ("html" ".html") ("tex" ".tex") ("fo" ".fo"))))
+            ("semantic" ".sem.xml") ("html" ".html") ("tex" ".tex"))))
 
 (defun gml-format (to)
   "Run gmlfmt -to TO on the visited file, writing FILE.EXT next to it.
@@ -947,7 +947,7 @@ Diagnostics go to a compilation buffer."
   (interactive
    (list (if current-prefix-arg
              (completing-read "Format: " '("xml" "resolved" "scoped" "semantic"
-                                           "html" "tex" "fo")
+                                           "html" "tex")
                               nil t nil nil gml-output-format)
            gml-output-format)))
   (let ((file (or buffer-file-name (user-error "Buffer is not visiting a file"))))

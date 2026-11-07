@@ -5,7 +5,7 @@
 #   xslt/test/run [-update] [name...]
 #
 # Each test is a file STAGE/NAME.in.xml, STAGE being the stylesheet
-# (resolve, scope, strip-hints, html, tex, fo, fo-vendor-ah).  It is
+# (resolve, scope, strip-hints, html, tex).  It is
 # transformed with xslt/STAGE.xsl, with the parameters listed in
 # STAGE/NAME.params (name=value words), and the result is compared with
 # STAGE/NAME.out.xml; the xsl:message output (standard error) is compared
@@ -41,13 +41,6 @@
 #        html/starter and html/params are gml/starter.gml scoped,
 #        fn-chapter reuses fn; features, nesting, state, values are
 #        copies of scope/*.out.xml
-#   fo   gmlfmt -to scoped gml/fo-NAME.gml     -> fo/NAME.in.xml
-#        (hints, layout, lists; fo/tables and html/tables are
-#        gml/tables.gml scoped; layout-duplex, layout-offset and
-#        fo-vendor-ah/layout reuse layout); fo/starter and fo/state are
-#        gml/starter.gml and gml/state.gml scoped; fo/features =
-#        scope/features.out.xml
-# The fo tests also run test/fo/check.xsl (check= in their .params).
 
 if(~ $#SAXON 0) SAXON=/usr/local/bin/transform
 here=`{cd `{/usr/local/plan9/bin/basename -d $0} && pwd}

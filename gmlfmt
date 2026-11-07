@@ -1,7 +1,7 @@
 #!/usr/local/plan9/bin/rc
 # gmlfmt - run the GML pipeline on one file, result on standard output.
 #
-#   gmlfmt [-to xml|resolved|scoped|semantic|html|tex|fo] [-profile p]
+#   gmlfmt [-to xml|resolved|scoped|semantic|html|tex] [-profile p]
 #          [-tagset t] [-set name=value]... [-p name=value]... [-I dir]...
 #          in.gml
 #
@@ -11,7 +11,6 @@
 #               scoped    + xslt/scope.xsl            (from resolved)
 #               semantic  + xslt/strip-hints.xsl      (from resolved)
 #               html      + xslt/html.xsl             (from scoped)
-#               fo        + xslt/fo.xsl               (from scoped)
 #               tex       + xslt/tex.xsl              (from resolved)
 #   -profile  the gml profile (default starter)
 #   -tagset   a tag set: a bundle directory (t contains a /, or
@@ -19,8 +18,8 @@
 #             A bundle holds profile.gml (required: the profile, unless
 #             -profile is given; the directory is also the last -I),
 #             optionally resolve.xsl scope.xsl strip-hints.xsl html.xsl
-#             fo.xsl tex.xsl (used instead of the stock stage; they
-#             normally xsl:import it) and tagset.tex (tex stage parameter
+#             tex.xsl (used instead of the stock stage; they normally
+#             xsl:import it) and tagset.tex (tex stage parameter
 #             tex-tagset: gml.tex inputs it before gmllocal.tex).
 #   -set      a symbol for gml (-set) and a parameter for every stylesheet
 #   -p        a parameter for the stylesheets only (e.g. -p h1-prefix=Chapter)
@@ -33,7 +32,7 @@
 # project root (default: the directory of this script).
 
 fn usage {
-	echo 'usage: gmlfmt [-to xml|resolved|scoped|semantic|html|tex|fo] [-profile p] [-tagset t] [-set name=value]... [-p name=value]... [-I dir]... in.gml' >[1=2]
+	echo 'usage: gmlfmt [-to xml|resolved|scoped|semantic|html|tex] [-profile p] [-tagset t] [-set name=value]... [-p name=value]... [-I dir]... in.gml' >[1=2]
 	exit usage
 }
 
@@ -67,7 +66,7 @@ while(! ~ $#* 0 && ~ $1 -*){
 }
 if(! ~ $#* 1) usage
 in=$1
-if(! ~ $to xml resolved scoped semantic html tex fo) usage
+if(! ~ $to xml resolved scoped semantic html tex) usage
 
 if(~ $#GMLROOT 0) GMLROOT=`{/usr/local/plan9/bin/basename -d $0}
 root=`{cd $GMLROOT && pwd}
@@ -141,8 +140,8 @@ case tex
 case scoped
 	xsl resolve $tmp.xml -o:$tmp.r.xml
 	xsl scope $tmp.r.xml
-case html fo
+case html
 	xsl resolve $tmp.xml -o:$tmp.r.xml
 	xsl scope $tmp.r.xml -o:$tmp.s.xml
-	xsl $to $tmp.s.xml
+	xsl html $tmp.s.xml
 }

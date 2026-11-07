@@ -4,8 +4,8 @@
 
   Input: canonical or resolved XML (gml:doc).  Output: the same tree in
   which the STATE hints are replaced by <gml:scope> wrappers that carry the
-  state in force over their content, for backends (HTML, XSL-FO) whose
-  model is inheritance down a tree rather than a global state.
+  state in force over their content, for backends (HTML) whose model is
+  inheritance down a tree rather than a global state.
 
   State hints (from the table in lib/hints.ml; every one carries the new
   absolute value, so the state at a point is just the last value seen):

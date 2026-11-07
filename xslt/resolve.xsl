@@ -6,7 +6,7 @@
   urn:x-gml:canonical; Starter Set tags as plain elements; formatting hints
   as gml:* elements).  Output: the same tree, same conventions, with the
   whole-document features worked out, so that the backends (tex.xsl,
-  scope.xsl -> html.xsl / fo.xsl) never need a second pass.  Everything is
+  scope.xsl -> html.xsl) never need a second pass.  Everything is
   copied unchanged except what is listed here.  The semantics follow the
   GML Starter Set Implementation Guide (SH35-0050, cited as IG p.n).
 

@@ -4,40 +4,51 @@ A processor for IBM DCF SCRIPT/VS documents with GML markup (the DCF
 Release 3 dialect, SH35-0069 and the Starter Set of SH35-0050).  The
 programmable layer is kept faithful: symbols, macros, `.if`/`.go`,
 conditional sections, imbedding and the GML tag-to-APF machinery.  Pages
-are not laid out for a 3800 printer.  The output is a semantic XML tree,
-and XSLT 3.0 stylesheets turn that tree into HTML, plain TeX or XSL-FO.
-Formatting control words (`.sp`, `.in`, `.ce`, `.bf` ...) become *hints*
-in the tree: each hint records the new state and whether it breaks.
+are not laid out for a 3800 printer.  The main output is TeX for
+`share/tex/gml.tex`, written by the engine itself (`gml -tex`), which can
+also typeset the document while it is processed (`gml -layout aptex`).
+A secondary output, beside it as LaTeX2HTML is beside LaTeX, is a
+semantic XML tree that XSLT 3.0 stylesheets turn into HTML.
+Formatting control words (`.sp`, `.in`, `.ce`, `.bf` ...) become *hints*:
+each hint records the new state and whether it breaks.
 
 ## Architecture
 
 ```
- doc.gml + profile (share/profile/starter.gml)
+ doc.gml + profile (share/profile/starter.gml, dcfstarter.gml)
     |
     |  gml   OCaml engine (lib/, bin/): input stack, substitution,
-    v        macros, GML tags -> APFs, .xs/.xd element building, hints
- doc.xml     canonical XML (namespace urn:x-gml:canonical, hints gml:*)
+    |        macros, GML tags -> APFs, .xs/.xd element building, hints
     |
-    |  xslt/resolve.xsl   numbering, cross-references, TOC, figure list, index
-    v
- doc.r.xml ---------------+---------------------------+
-    |                     |                           |
-    | xslt/tex.xsl        | xslt/strip-hints.xsl      | xslt/scope.xsl  (state hints
-    v                     v                           v                -> nested scopes)
- doc.tex               doc.sem.xml                 doc.s.xml
- + share/tex/gml.tex   (semantic tree only)           |
-    |                                     +-----------+-------------+
-    v                                     | xslt/html.xsl           | xslt/fo.xsl
- tex / pdftex                             v  + share/html/gml.css   v  (or fo-vendor-ah.xsl)
-                                       doc.html                  doc.fo -> an XSL-FO formatter
+    +----------------------------------+
+    |  main path: TeX                  |  secondary path: XML -> HTML
+    |                                  |
+    |  gml -tex doc.tex                |  gml -o doc.xml
+    |  gml -layout aptex               v
+    |  (lib/be_tex.ml, hint mode)   doc.xml    canonical XML
+    v                                  |       (urn:x-gml:canonical, hints gml:*)
+ doc.tex + share/tex/gml.tex           |
+    |                                  |  xslt/resolve.xsl   numbering, cross-references,
+    |  tex / pdftex, or with -layout   v                     TOC, figure list, index
+    |  ApTeX running alongside      doc.r.xml
+    |  the engine, answering           |
+    |  its page-state questions        |  xslt/scope.xsl     state hints -> nested scopes
+    v  (&$PN, &$LC)                    v
+ doc.pdf / doc.dvi                  doc.s.xml
+                                       |
+                                       |  xslt/html.xsl + share/html/gml.css
+                                       v
+                                    doc.html
 ```
 
-The engine knows nothing about XSLT.  The stages are joined only by
-files, so each intermediate can be inspected.  A second path, layout mode,
-skips them: `gml -tex`/`-layout` writes the TeX for `gml.tex` itself
-(`lib/be_tex.ml`, hint mode), and with `-layout` TeX runs alongside the
-engine and answers its page-state questions (see "Layout mode
-(ApTeX)").
+The TeX path is the main one: the engine writes the TeX for `gml.tex`
+itself (`lib/be_tex.ml`, hint mode), and with `-layout` TeX runs
+alongside the engine and answers its page-state questions (see "Layout
+mode (ApTeX)").  The XML path is for XML and HTML output.  The engine
+knows nothing about XSLT; its stages are joined only by files, so each
+intermediate can be inspected.  Two more stylesheets read `doc.r.xml`:
+`xslt/strip-hints.xsl` (the semantic tree only, `doc.sem.xml`) and
+`xslt/tex.xsl` (the older XSLT route to `doc.tex`).
 
 ## Prerequisites
 
@@ -48,8 +59,8 @@ engine and answers its page-state questions (see "Layout mode
   (override with `SAXON=...`).
 - plan9port in `/usr/local/plan9` (`mk`, `rc`) for the `mkfile`, `gmlfmt`
   and the XSLT test runner.
-- TeX (`tex` or `pdftex`, plain format) for the TeX output.
-- An XSL-FO formatter for PDF (none is included; see the limitations).
+- TeX (`tex` or `pdftex`, plain format) for the TeX output; ApTeX
+  (`aptex`) for layout mode.
 
 ## Build and test
 
@@ -81,8 +92,8 @@ gml [-I dir]... [-share dir] [-profile file|name] [-set sym=val]...
   ch.7): `:rdef` row definitions (CWIDTHS, ARRANGE for spanning cells,
   per-cell HP/ALIGN/VALIGN/CONCAT/ROTATE/MINDEPTH), `:table :thd :tft
   :row :c :tnote :tcap :tdesc`, `:tref` and `:tlist`; resolve.xsl works
-  out the cell grid, numbering and captions, and the HTML, XSL-FO and
-  TeX stages draw ruled tables (fixtures from `xslt/test/gml/tables.gml`).
+  out the cell grid, numbering and captions, and the HTML and TeX
+  stages draw ruled tables (fixtures from `xslt/test/gml/tables.gml`).
 - `-set SYSVARH=yes` sets a symbol, as DCF's `SYSVAR` options do.
 - `-lib dir` (repeatable, searched in order) adds a symbol and macro
   library, as DCF's `LIB` option does: a member is the file `dir/NAME` or
@@ -100,7 +111,7 @@ From the source tree:
 ### `gmlfmt`: the whole pipeline to standard output
 
 ```
-./gmlfmt [-to xml|resolved|scoped|semantic|html|tex|fo] [-profile p]
+./gmlfmt [-to xml|resolved|scoped|semantic|html|tex] [-profile p]
          [-tagset t] [-set name=value]... [-p name=value]... [-I dir]... in.gml
 ```
 
@@ -124,17 +135,14 @@ Run mk in the project root.  A target may be any path:
 | `doc.xml` | `doc.gml` | gml -profile `$PROFILE` (default starter) |
 | `doc.r.xml` | `doc.xml` | resolve.xsl |
 | `doc.s.xml` / `doc.sem.xml` | `doc.r.xml` | scope.xsl / strip-hints.xsl |
-| `doc.html` / `doc.fo` | `doc.s.xml` | html.xsl / fo.xsl |
+| `doc.html` | `doc.s.xml` | html.xsl |
 | `doc.tex` | `doc.r.xml` | tex.xsl |
 | `doc.dvi` | `doc.tex` | `$TEX` (default tex) with `share/tex` on TEXINPUTS |
-| `doc.pdf` | `doc.fo` | `$FOP`, which must be given: `mk FOP=fop doc.pdf` |
 | `test`, `test-ocaml`, `test-xslt` | | the test suites |
-| `fo-check` | `$FOFILES` | `xslt/test/fo/check`: structural XSL-FO checks |
 
 ```
 SETS='SYSVARH=yes SYSVARP=draft' mk doc.html     # -set for gml and the stylesheets
 mk "XSLTFLAGS='h1-prefix=Chapter'" doc.html      # stylesheet parameters only
-mk 'FOFILES=doc.fo' fo-check                     # makes doc.fo if need be, then checks it
 ```
 
 mk does not know when `SETS` change: remove the intermediates
@@ -187,8 +195,8 @@ The stylesheet parameters (`SYSVARS`/`SYSVARD`/`SYSVART` page layouts,
   the gml profile, e.g. `.im starter` and then the bundle's own tags;
   the directory is also on the `.im` path, after the `-I` dirs) and
   optionally stage overrides `resolve.xsl`, `scope.xsl`,
-  `strip-hints.xsl`, `html.xsl`, `fo.xsl`, `tex.xsl`, used instead of
-  the stock stylesheets.  An override normally does `xsl:import` of the
+  `strip-hints.xsl`, `html.xsl`, `tex.xsl`, used instead of the stock
+  stylesheets.  An override normally does `xsl:import` of the
   stock one by relative path (e.g. `../../xslt/html.xsl` from a bundle
   in `share/tagset/NAME`) and adds or overrides template rules.  An
   optional `tagset.tex` is passed to tex.xsl as `tex-tagset`, which
@@ -198,9 +206,8 @@ The stylesheet parameters (`SYSVARS`/`SYSVARD`/`SYSVART` page layouts,
   `share/html/gml.css` or replace it (parameters `css`, `css-inline`,
   `css-file`).
 - **XSLT.** Write a stylesheet that does `xsl:import` of a stage and
-  overrides its template rules.  `xslt/fo-vendor-ah.xsl` is the example:
-  it fills the hook modes of fo.xsl with Antenna House extensions.  An
-  importer of html.xsl that handles its own tags redefines the variable
+  overrides its template rules (the bundle `examples/notes/` has
+  examples).  An importer of html.xsl that handles its own tags redefines the variable
   `h:extra-known` (namespace `urn:x-gml:html`) so they are not reported as
   unknown.
 
@@ -259,8 +266,8 @@ and add rules for it, and `tagset.tex` styles it for TeX.
 
 `examples/mkfile` makes everything in `examples/out/` (`cd examples &&
 mk`, or `mk -a` to redo it all): the engine XML (`release.xml`),
-resolved, scoped and semantic XML, HTML for both audiences, XSL-FO, plain
-TeX and the typeset `release.pdf`.  It sets `ROOT`, `TAGSET=notes` and
+resolved, scoped and semantic XML, HTML for both audiences, plain TeX
+and the typeset `release.pdf`.  It sets `ROOT`, `TAGSET=notes` and
 `OUTDIR=out/`, then includes the project's `mkfile` for the rules; only
 the internal edition (`-set audience=internal`), `gml.css` and the
 pdftex runs have rules of their own.
@@ -270,8 +277,8 @@ pdftex runs have rules of their own.
 `docs/dcf-notes.md` lists the SCRIPT/VS and Starter Set rules checked
 against the manuals.  Each entry has a status (DONE, OK, EXT) and the
 cram test that shows it.  The points that the guides leave open are
-marked `DCF-VERIFY`: 88 in the sources (`lib/`, `share/`, `xslt/`)
-and 32 in the notes.  They include how far an ignored conditional section is
+marked `DCF-VERIFY`: 86 in the sources (`lib/`, `share/`, `xslt/`)
+and 38 in the notes.  They include how far an ignored conditional section is
 "resolved", the input-versus-output line count of `.in … after n`, the
 `.mg` severities, the DSMGML message numbers and wording, the EBCDIC
 code page (037) for hex codes, the neutral values of device system
@@ -312,7 +319,11 @@ and running footings, `:h0`-`:h6`, `:p :pc :note`, the five lists with
 `:fig` (`frame`, `place`), `:figcap :figdesc`, `:fn`, `:hp0`-`:hp3`,
 `:cit`, `:q` (nesting), the cross-references `:hdref :figref :fnref
 :liref` (with `page=`), and the index tags `:i1`-`:i3 :ih1`-`:ih3 :iref`
-(`pg`, `see`, `seeid`, `print`) through `.pi`.  Tags out of context are
+(`pg`, `see`, `seeid`, `print`) through `.pi`.  Footnote callouts are
+raised and small (a `.dv` text variable with FONT and BASELINE).  `:toc`
+issues `.tc` only when the run has two passes (`&$TWO` = 1): with one
+pass the table would be empty, so in the pipeline the TOC comes from
+the resolve stage instead (`.xs toc`).  Tags out of context are
 reported and dropped.  Not yet: the table tags (they are reported as
 out of context), and references to targets that come later in the
 document (one pass: they give `DCFS020W` and a placeholder).
@@ -320,8 +331,8 @@ document (one pass: they give `DCFS020W` and a placeholder).
 
 ## Layout mode (ApTeX)
 
-In the pipeline above SCRIPT builds a tree and TeX formats it
-afterwards, so the page state is unknown while the document is
+In the XML pipeline (and `gml -tex` without `-layout`) TeX formats
+the document afterwards, so the page state is unknown while the document is
 processed: `&$PN` is 1 and `&$LC` is 60.  In layout mode SCRIPT does
 the formatting through a formatting profile's control words (hint mode)
 and TeX is only the layout engine, running alongside: the engine asks
@@ -391,6 +402,17 @@ gml -share share -layout aptex examples/layout.gml
   counted (forcing `\par` would change the output), so a `.if &$LC`
   test belongs after a break (`.sp`, `.br`).  DCF-VERIFY: DCF counts its
   own output lines, the partial one included.
+- Pages of anchors: `\gmlanchor` (a heading's `gml:tcmark`, a table
+  of contents entry) also does a `\write16{GML:PAGE id folio}` that is
+  not immediate, so TeX reports the page when it ships the page out;
+  gml collects these lines while it waits for an answer.  `.tc` ejects
+  the page and makes a `&$PN` query first, so every earlier entry has
+  its page and the table is typeset with the numbers (`page=`);
+  without `-layout` the entries carry `anchor=` and gml.tex's page
+  references fill them in on a second TeX run.
+- `.ct` after a query: when the text it joins has already gone to TeX,
+  the join is the hint `gml:ct` (`\unskip`) instead of an edit of the
+  text, so the TeX differs from the batch output there.
 - Not yet: page state other than `&$PN`/`&$LC` (`&$LL` follows `.ll`,
   not TeX), `.cp`/`.cc` still decided by gml.tex, not by SCRIPT; a
   heading open at a query gets `text=` with its text so far; `.xa` on
@@ -436,11 +458,12 @@ Device and command-option system symbols (`&$PDEV`, `&$CHAR`, `&$SYS`,
 All of these have cram tests or XSLT fixtures of their own.  The run
 now ends with one warning (`.sv`) and one error, IBM's own `.sk &@sK@x`
 (symbol names are case-sensitive), and TeX runs without errors.  What
-still differs from IBM's output: `.cd` columns are ignored, `.tc` is
-ignored (the TOC entries come from the resolve stage, and IBM's
-heading text does not reach them), and some quotation marks are not
-right yet.  The page number `&` in running headings and footings, and
-the `.pi`/`.ix` index with its page numbers, are typeset.
+still differs from IBM's output: `.cd` columns are ignored, the
+table of contents is empty (DSMPROF3's `.tc` comes before the
+headings, and there is one pass; see `&$PASS`), and some quotation
+marks are not right yet.  The page number `&` in running headings and
+footings (`\gmlpageno`, so a text `&` there stays an ampersand) and
+the `.pi`/`.ix` index with its page numbers are typeset.
 
 The SH35-0070 Language Reference, which defines most of these, has no
 English copy online.  The other references, kept in the project root
@@ -455,25 +478,11 @@ images are readable, though its OCR text is not.
 
 ## Known limitations
 
-- **XSL-FO is not render-tested.** No FO formatter is installed, so
-  `doc.fo` is checked only structurally (`mk fo-check`, and the fo
-  fixtures run `xslt/test/fo/check.xsl`).  `mk doc.pdf` needs `FOP=...`.
-- Plain XSL-FO 1.1 cannot express some things, so fo.xsl approximates
-  them:
-  - `when=auto` page references and `.cp n`;
-  - floating keeps and figures at the page foot;
-  - a running heading that changes in the middle of a paragraph;
-  - tabs (`.tp`/`.tb`) and column balancing (`.bc`);
-  - `.sc`/`.mc` in mid-page and `.pa n` renumbering;
-  - footnotes in figures (written in place, in brackets);
-  - `.kp`/`.bx` brackets, which are applied to whole blocks.
-
-  fo.xsl also ignores the temporary `.in`/`.ir` (FOR/AFTER), `.vr`,
-  `.ic`, `.ud`, `.dr`, the page-layout words and `.cd`.
 - TeX ignores `.vr .sb .ic .ud .mc` with a message, approximates `.is`
   (except `.is to` after a label at the start of a line, which is exact), and
-  `.cd` multi-column layout gives one column.  `.tc` is ignored: the TOC
-  comes from `:toc`.
+  `.cd` multi-column layout gives one column.  `.tc` prints the entries
+  collected so far (one pass: a front-matter TOC needs more passes, which
+  are not implemented yet).
 - HTML has no pages.  `gml:pageref` is dropped or becomes a link
   (`pageref=link`).  `.wz .bc .ws .es .sb .ud` survive only as
   `data-gml-*` attributes.
@@ -481,7 +490,7 @@ images are readable, though its OCR text is not.
   a one-time warning.  Layout system symbols (`&$PN` = 1, `&$LC` = 60,
   `&DH'` ... = 0) return neutral values, except `&$PN` and `&$LC` in
   layout mode (`-layout`).
-- `gmlfmt` and `xslt/test/fo/check` are rc scripts.  plan9port rc cannot
-  run a script named by a relative path such as `dir/gmlfmt`, so start
-  them with a path that begins with `/` or `./`.  `xslt/test/run` has a
+- `gmlfmt` is an rc script.  plan9port rc cannot run a script named by
+  a relative path such as `dir/gmlfmt`, so start it with a path that
+  begins with `/` or `./`.  `xslt/test/run` has a
   small sh launcher for this reason.

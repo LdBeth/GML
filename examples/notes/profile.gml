@@ -1,7 +1,7 @@
 .* profile.gml -- the "notes" tag set: the Starter Set plus a :warn tag.
 .* Used through  ./gmlfmt -tagset examples/notes ...  which runs
 .* gml -profile notes/profile.gml -I notes; the other files of this
-.* bundle (html.xsl, fo.xsl, tagset.tex) style :warn in each output.
+.* bundle (html.xsl, tagset.tex) style :warn in each output.
 .im starter
 .*
 .* ---- a user-defined tag: :warn level=n.text :ewarn. ---------------------
@@ -35,8 +35,7 @@
 .*   :fmlref refid=x.  "(n)", the number of :fml id=x (resolve.xsl).
 .* The automatic elements <m>, <fml>, <fmlref> do the work; the APFs are
 .* empty.  The bundle's resolve.xsl numbers the equations, tex.xsl passes
-.* the math to TeX unescaped, html.xsl hands it to KaTeX, fo.xsl shows
-.* the TeX source.
+.* the math to TeX unescaped, html.xsl hands it to KaTeX.
 .dm mathapf on
 .dm off
 .aa m mathapf mathapf

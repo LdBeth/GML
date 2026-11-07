@@ -6,7 +6,7 @@
 #   mk clean                   remove the TeX by-products
 #
 # The rules are the project's (../mkfile), with the notes tag set
-# (notes/: the Starter Set plus :warn, with its own html.xsl, fo.xsl and
+# (notes/: the Starter Set plus :warn, with its own html.xsl and
 # tagset.tex) and out/ as OUTDIR.  The project's variables can be
 # overridden in the same way (mk SAXON=... GML=...); PDFTEX is the pdftex
 # for out/release.pdf.
@@ -24,7 +24,6 @@ OUT=\
 	out/release.s.xml\
 	out/release.tex\
 	out/release.html\
-	out/release.fo\
 	out/release.pdf\
 	out/release-internal.xml\
 	out/release-internal.r.xml\
