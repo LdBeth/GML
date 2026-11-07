@@ -33,12 +33,6 @@ optional).
   \gmlenddocument
   \bye
 
-With ApTeX (if installed) the document typesets without TeX errors
-(they would be warnings here); one output file (PDF or DVI).
-
-  $ if command -v aptex > /dev/null; then gml -layout aptex in.gml && ls in.pdf in.dvi 2> /dev/null | grep -c . ; else echo 1; fi
-  1
-
 The string of a text variable is substituted like any symbol value, so
 IBM's DSMPROF3 can define its list item labels under .su off (".dv
 @id@l@o1 /&@item#.."); a plain .dv (no FONT, BASELINE or TEXT) is a

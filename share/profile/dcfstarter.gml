@@ -9,9 +9,9 @@
 .* the APFs here do the formatting the DCF way: SCRIPT/VS control words
 .* (SH35-0069-3 Text Programmer's Guide, cited TPG p.n), symbols and
 .* counters, as a real Release 3 profile does.  The result is a stream
-.* of formatting hints that a layout engine (TeX in hint mode: tex.xsl
-.* picks it because .df/.dh/.dr come before the first element; or the
-.* direct layout mode) turns into pages.
+.* of formatting hints that a layout engine (TeX in hint mode: gml -tex,
+.* or tex.xsl, which picks it because .df/.dh/.dr come before the first
+.* element) turns into pages.
 .*
 .* This is NOT IBM's DSMPROF3.  It is written from the documented
 .* behaviour (the IG's descriptions of the formatted result, Figure 5
@@ -56,13 +56,14 @@
 .*    security classification (:gdoc sec=) centred.
 .*  - TOC: in DCF the .hN words write TC entries (.dh n tc: h0-h4 in
 .*    the body, appendix and back matter, none in the front matter) and
-.*    .tc prints them (TPG p.151-157), with the pages a layout engine
-.*    reports.  A .tc at the front sees only the entries of a previous
-.*    pass, so :toc issues it with TWOPASS (&$TWO); in one pass it makes
-.*    an empty toc element, which resolve.xsl fills from the h0-h4
-.*    elements (the heading APFs wrap their .hN in an hN element).  The
-.*    numbers are in the heading text (the profile numbers), so in hint
-.*    mode the TOC and figure list print no numbers of their own.
+.*    .tc prints them (TPG p.151-157), each entry referring to its
+.*    heading's anchor for the page.  A .tc at the front sees only the
+.*    entries of a previous pass, so :toc issues it with TWOPASS
+.*    (&$TWO); in one pass it makes an empty toc element, which
+.*    resolve.xsl fills from the h0-h4 elements (the heading APFs wrap
+.*    their .hN in an hN element).  The numbers are in the heading text
+.*    (the profile numbers), so in hint mode the TOC and figure list
+.*    print no numbers of their own.
 .*  - Index: :i1 :i2 :i3 :ih1 :ih2 :ih3 :iref give .pi entries (TPG
 .*    p.213-218); :index places them with .ix.
 .*  - Tables (:table :row :c, Rel 3.2) are not formatted yet: the tags

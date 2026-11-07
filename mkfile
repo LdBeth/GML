@@ -7,9 +7,10 @@
 #   mk doc.html       HTML                 xslt/html.xsl       (from doc.s.xml)
 #   mk doc.tex        plain TeX            xslt/tex.xsl        (from doc.r.xml)
 #   mk doc.dvi        tex with share/tex on TEXINPUTS
-#   mk test           both test suites: test-ocaml and test-xslt
+#   mk test           test-ocaml, test-xslt and test-parity
 #   mk test-ocaml     the engine's cram tests (dune test)
 #   mk test-xslt      the XSLT fixture tests (xslt/test/run)
+#   mk test-parity    gml -tex = tex.xsl on the XML (test/tex-parity.sh)
 #
 # Run mk in the project root (ROOT is the current directory).  Variables
 # can be overridden on the command line: mk GML=gml SAXON=transform doc.html
@@ -92,10 +93,14 @@ $OUTDIR%.xml: %.gml
 	dir=`{/usr/local/plan9/bin/basename -d $stem}
 	cd $dir && TEXINPUTS=$ROOT/share/tex: $TEX -interaction nonstopmode `{/usr/local/plan9/bin/basename $stem}.tex
 
-test:V: test-ocaml test-xslt
+test:V: test-ocaml test-xslt test-parity
 
 test-ocaml:V:
 	$DUNE test --root $ROOT
 
 test-xslt:V:
 	SAXON=$SAXON $XSLT/test/run
+
+# (after test-ocaml: it uses the dune build of gml)
+test-parity:V: test-ocaml
+	SAXON=$SAXON $ROOT/test/tex-parity.sh

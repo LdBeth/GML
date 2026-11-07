@@ -20,13 +20,9 @@ element ends (DCF has no tree; SH35-0069 p.107: "5", ".sb .15cm", ".ct
   <gml:br break="yes"/>stays apart.
   </gml:doc>
 
-In layout mode the text may already have gone to TeX (a query came
-between it and the .ct): the word space is then taken back in TeX, the
-hint gml:ct (\unskip), the one difference from the batch output.
+A control word that does not break (here .se, reading &$PN) does not
+stop the join either.
 
   $ printf '5\n.sb .15cm\n.se x = &$PN\n.ct 3\n' > sent.gml
-  $ gml -layout-fake -tex - sent.gml | grep -v '^%gml:query' | grep -A1 '^5$'
-  5
-  \gmlhint{sb}{spec=0.15cm,break=no}\gmlhint{ct}{break=no}3
   $ gml -tex - sent.gml | grep '^5'
   5\gmlhint{sb}{spec=0.15cm,break=no}3

@@ -27,17 +27,13 @@ level 1), DOT or NODOT.  "2" reserves two page numbers (p.157).
   <gml:tcentry level="1" text="Second Chapter" dot="yes" anchor="gml.tc.7" break="yes"/>
   <gml:tc action="end" reserve="2" break="yes"/>
 
-Without a layout engine the page of an entry is left to TeX (anchor=,
-gml.tex's page references).  In layout mode TeX reports the page of
-each anchor when it ships the page out ("GML:PAGE id folio",
-gml-layout.tex), and .tc ejects the page and lets TeX catch up before
-it makes the entries, so they get page= (here the fake engine: 50 lines
-of source a page).
+The page of an entry is left to TeX: the entry carries anchor= (the
+gml:tcmark of its heading), and gml.tex's page references give the
+page, from its .ref file, on a second TeX run.  (A pass model with an
+aux file, where TeX reports the pages to the next SCRIPT pass, would
+give page= instead: Ctx.page_of, not yet implemented.)
 
   $ printf '.h1 One\n.h2 Two\n.tc\n' > small.gml
-  $ gml -layout-fake -tex - small.gml | grep tcentry
-  \gmlhint{tcentry}{level=1,text=One,dot=yes,page=1,break=yes}%
-  \gmlhint{tcentry}{level=2,text=Two,dot=yes,page=1,break=yes}%
   $ gml -tex - small.gml | grep tcentry
   \gmlhint{tcentry}{level=1,text=One,dot=yes,anchor=gml.tc.1,break=yes}%
   \gmlhint{tcentry}{level=2,text=Two,dot=yes,anchor=gml.tc.2,break=yes}%

@@ -5,9 +5,8 @@ Release 3 dialect, SH35-0069 and the Starter Set of SH35-0050).  The
 programmable layer is kept faithful: symbols, macros, `.if`/`.go`,
 conditional sections, imbedding and the GML tag-to-APF machinery.  Pages
 are not laid out for a 3800 printer.  The main output is TeX for
-`share/tex/gml.tex`, written by the engine itself (`gml -tex`), which can
-also typeset the document while it is processed (`gml -layout aptex`).
-A secondary output, beside it as LaTeX2HTML is beside LaTeX, is a
+`share/tex/gml.tex`, written by the engine itself (`gml -tex`), for any
+plain TeX engine.  A secondary output, beside it as LaTeX2HTML is beside LaTeX, is a
 semantic XML tree that XSLT 3.0 stylesheets turn into HTML.
 Formatting control words (`.sp`, `.in`, `.ce`, `.bf` ...) become *hints*:
 each hint records the new state and whether it breaks.
@@ -24,16 +23,16 @@ each hint records the new state and whether it breaks.
     |  main path: TeX                  |  secondary path: XML -> HTML
     |                                  |
     |  gml -tex doc.tex                |  gml -o doc.xml
-    |  gml -layout aptex               v
-    |  (lib/be_tex.ml, hint mode)   doc.xml    canonical XML
+    |  (lib/be_tex.ml, hint mode)      v
+    |                               doc.xml    canonical XML
     v                                  |       (urn:x-gml:canonical, hints gml:*)
  doc.tex + share/tex/gml.tex           |
     |                                  |  xslt/resolve.xsl   numbering, cross-references,
-    |  tex / pdftex, or with -layout   v                     TOC, figure list, index
-    |  ApTeX running alongside      doc.r.xml
-    |  the engine, answering           |
-    |  its page-state questions        |  xslt/scope.xsl     state hints -> nested scopes
-    v  (&$PN, &$LC)                    v
+    |  plain TeX: tex, pdftex,         v                     TOC, figure list, index
+    |  aptex ... (twice, for        doc.r.xml
+    |  page references)                |
+    |                                  |  xslt/scope.xsl     state hints -> nested scopes
+    v                                  v
  doc.pdf / doc.dvi                  doc.s.xml
                                        |
                                        |  xslt/html.xsl + share/html/gml.css
@@ -42,9 +41,8 @@ each hint records the new state and whether it breaks.
 ```
 
 The TeX path is the main one: the engine writes the TeX for `gml.tex`
-itself (`lib/be_tex.ml`, hint mode), and with `-layout` TeX runs
-alongside the engine and answers its page-state questions (see "Layout
-mode (ApTeX)").  The XML path is for XML and HTML output.  The engine
+itself (`lib/be_tex.ml`, hint mode; see "Direct TeX (`gml -tex`)").
+The XML path is for XML and HTML output.  The engine
 knows nothing about XSLT; its stages are joined only by files, so each
 intermediate can be inspected.  Two more stylesheets read `doc.r.xml`:
 `xslt/strip-hints.xsl` (the semantic tree only, `doc.sem.xml`) and
@@ -59,8 +57,7 @@ intermediate can be inspected.  Two more stylesheets read `doc.r.xml`:
   (override with `SAXON=...`).
 - plan9port in `/usr/local/plan9` (`mk`, `rc`) for the `mkfile`, `gmlfmt`
   and the XSLT test runner.
-- TeX (`tex` or `pdftex`, plain format) for the TeX output; ApTeX
-  (`aptex`) for layout mode.
+- A plain TeX engine (`tex`, `pdftex`, `aptex` ...) for the TeX output.
 
 ## Build and test
 
@@ -68,7 +65,8 @@ intermediate can be inspected.  Two more stylesheets read `doc.r.xml`:
 opam exec --switch=gml -- dune build
 opam exec --switch=gml -- dune test      # engine cram tests (test/*.t)
 ./xslt/test/run                          # XSLT fixtures (xslt/test/STAGE/*.in.xml)
-mk test                                  # both: mk test-ocaml, mk test-xslt
+test/tex-parity.sh                       # gml -tex = tex.xsl on the XML (needs SaxonC)
+mk test                                  # all three: mk test-ocaml, test-xslt, test-parity
 ```
 
 `xslt/test/run [-update] [name...]` takes `STAGE/NAME`, `NAME` or a
@@ -82,7 +80,7 @@ lists how each fixture input was generated.
 ```
 gml [-I dir]... [-share dir] [-profile file|name] [-set sym=val]...
     [-lib dir]... [-maxgo n] [-undef-tags text|element|error] [-o out.xml]
-    [-tex file] [-layout cmd] [-jobname name] [-tex-fonts name] input.gml
+    [-tex file] [-tex-fonts name] input.gml
 ```
 
 - `-profile starter` loads the shipped Starter Set profile from the share
@@ -101,8 +99,7 @@ gml [-I dir]... [-share dir] [-profile file|name] [-set sym=val]...
   `.se name lib`, and with `.ly on|mac|sym` for unresolved macros, APFs
   and symbols.
 - `-tex file` writes TeX for `gml.tex` directly, in hint mode, without
-  the XSLT stages; `-layout cmd` typesets with TeX while the document is
-  processed, so `&$PN` and `&$LC` are live.  See "Layout mode (ApTeX)".
+  the XSLT stages.  See "Direct TeX (`gml -tex`)".
 - The return code follows DCF: 0, or 4 after warnings, 8 after errors.
 
 From the source tree:
@@ -277,7 +274,7 @@ pdftex runs have rules of their own.
 `docs/dcf-notes.md` lists the SCRIPT/VS and Starter Set rules checked
 against the manuals.  Each entry has a status (DONE, OK, EXT) and the
 cram test that shows it.  The points that the guides leave open are
-marked `DCF-VERIFY`: 86 in the sources (`lib/`, `share/`, `xslt/`)
+marked `DCF-VERIFY`: 84 in the sources (`lib/`, `share/`, `xslt/`)
 and 38 in the notes.  They include how far an ignored conditional section is
 "resolved", the input-versus-output line count of `.in … after n`, the
 `.mg` severities, the DSMGML message numbers and wording, the EBCDIC
@@ -306,7 +303,7 @@ figure list).
 ```
 gmlfmt -to tex -profile dcfstarter -set SYSVARH=yes \
     examples/dcfstarter.gml > dcfstarter.tex
-TEXINPUTS=.:share/tex: aptex dcfstarter.tex     # twice, for page refs
+TEXINPUTS=.:share/tex: tex dcfstarter.tex       # twice, for page refs
 ```
 
 `-set SYSVARH=yes` numbers the headings (`1.0`, `1.1`, ...; appendix
@@ -329,94 +326,47 @@ out of context), and references to targets that come later in the
 document (one pass: they give `DCFS020W` and a placeholder).
 `test/dcfstarter.t` checks its hints.
 
-## Layout mode (ApTeX)
+## Direct TeX (`gml -tex`)
 
-In the XML pipeline (and `gml -tex` without `-layout`) TeX formats
-the document afterwards, so the page state is unknown while the document is
-processed: `&$PN` is 1 and `&$LC` is 60.  In layout mode SCRIPT does
-the formatting through a formatting profile's control words (hint mode)
-and TeX is only the layout engine, running alongside: the engine asks
-it for the page number (`&$PN`, also `.se x = &`, SH35-0069 p.254) and
-the lines left on the page (`&$LC`).  IBM's DSMHEAD5/DSMPARA5 use this
-(`.se @h5line = '&$PN./&$LC.'`, then `.if &$PN./&$LC eq &@h5line .ct :`
-to put a colon after a run-in heading that no text followed), and so
-can a document: `.if &$LC lt 8 .pa`.
+`gml -tex file` (`-` for standard output) writes the TeX for
+`share/tex/gml.tex` from the engine's finished tree, without the XSLT
+stages; any plain TeX engine typesets it (`tex`, `pdftex`, `aptex`
+...), twice for the page references.  The XML is written only with
+`-o`.
 
 ```
-gml -layout aptex doc.gml                        # doc.pdf (or .dvi) in the current directory
-gml -layout 'aptex --output-format=pdf' -jobname out -tex out.tex doc.gml
-gml -tex doc.tex doc.gml                         # the same TeX, constants for the page state
-gml -share share -layout aptex examples/layout.gml
+gml -profile dcfstarter -tex doc.tex doc.gml
+TEXINPUTS=.:share/tex: pdftex doc.tex            # twice
 ```
 
-- `-tex file` (`-` for standard output) writes the TeX without
-  running it.  `lib/be_tex.ml` is the OCaml port of the hint-mode part
-  of `xslt/tex.xsl`: the same macro calls for `gml.tex` (escaping,
-  `\gmlstart`/`\gmlend`, `\gmlhint` with the parsed `.df`/`.dh`/`.dr`
-  keys, `gml:lines` with `more=yes`, format-off text, tab lines, the
-  upper-case font state, `\gmlislabel`, `\gmlrundyn`).  There is no
-  resolve stage, so no anchors, numbers, TOC, figure list or index from
-  resolve.xsl: the profile makes them (for IBM's DSMPROF3 those are the
-  only differences from `resolve.xsl | tex.xsl`).  The output is always
-  hint mode; `-tex-fonts name` gives `\def\gmlfonts{name}`.
-- `-layout cmd` runs `cmd` (words: the program and its options, e.g.
-  `aptex --output-format=pdf`) with `--interaction=scrollmode
-  --jobname=JOB` on a driver file, `share/tex` first on `TEXINPUTS`.
-  JOB is `-jobname` or the input's base name; TeX's output goes to the
-  current directory.  The XML is written only with `-o`.  With `-tex
-  file` the TeX source is also kept as it was sent, with a comment line
-  `%gml:query pn=N` after each answer (TeX ignores it); otherwise it is
-  the `-tex` output.  `GML_LAYOUT_DEBUG=file` logs the exchange.
-- Streaming: when a query comes, the TeX of what has been built so far
-  goes to TeX, in whole lines.  The serializer is an event processor
-  whose undecided parts (whether a whitespace text is dropped, a
-  figcap's `desc=yes`, a `gml:lines`' `more=yes`) are holes filled
-  later; the walker follows the live element stack, keeping for each
-  open element the children already written.  Open elements are entered
-  when a query needs them: a provisional element as the empty marker it
-  will become, a heading with the text it has so far; a running heading
-  or footing is held back until it ends.  Batch output (one final flush)
-  is the same text; a query only changes it where TeX had to be told
-  something before it was known (a line scope split after the query:
-  `\gmllinesmore` before its `\gmlendlines`; `test/layout_stream.t`).
-- Protocol (`lib/layout.ml`, `share/tex/gml-layout.tex`), all of it
-  initiated by gml: TeX loops writing `GML:READY` and reading a line
-  (`\read-1`, without a prompt; TeX flushes the terminal before it
-  reads, so there is no deadlock).  gml writes the new TeX to a chunk
-  file and sends `\gmlchunk{k}\relax\gmlquery{pn}` (or `lc`); TeX
-  inputs the chunk and answers `GML:ANS value`.  At the end
-  `\gmlchunk{k}\relax\gmlfinish`, and gml waits for TeX to exit.  TeX's
-  error lines (`!`) are warnings, with their `l.N` line; anything else
-  on its terminal is ignored (it is in the `.log`).  If TeX dies, cannot
-  find or write a file (it would prompt), or does not answer in 10
-  minutes, gml reports an error and the page state is the constant for
-  the rest of the run.
-- The transport is a record of two functions (`query text what`,
-  `finish text`), so the pipe can be replaced by TeX as a C library
-  linked in: push `text` onto TeX's input, run until it is used up, read
-  the registers.
-- `&$PN` is `\pageno` (its absolute value).  `&$LC` is
-  (`\pagegoal`-`\pagetotal`)/`\baselineskip`, rounded down, and
-  `\vsize`/`\baselineskip` on an empty page; in vertical mode the page
-  builder runs first.  In the middle of a paragraph the paragraph is not
-  counted (forcing `\par` would change the output), so a `.if &$LC`
-  test belongs after a break (`.sp`, `.br`).  DCF-VERIFY: DCF counts its
-  own output lines, the partial one included.
-- Pages of anchors: `\gmlanchor` (a heading's `gml:tcmark`, a table
-  of contents entry) also does a `\write16{GML:PAGE id folio}` that is
-  not immediate, so TeX reports the page when it ships the page out;
-  gml collects these lines while it waits for an answer.  `.tc` ejects
-  the page and makes a `&$PN` query first, so every earlier entry has
-  its page and the table is typeset with the numbers (`page=`);
-  without `-layout` the entries carry `anchor=` and gml.tex's page
-  references fill them in on a second TeX run.
-- `.ct` after a query: when the text it joins has already gone to TeX,
-  the join is the hint `gml:ct` (`\unskip`) instead of an edit of the
-  text, so the TeX differs from the batch output there.
-- Not yet: page state other than `&$PN`/`&$LC` (`&$LL` follows `.ll`,
-  not TeX), `.cp`/`.cc` still decided by gml.tex, not by SCRIPT; a
-  heading open at a query gets `text=` with its text so far; `.xa` on
-  an element already sent is lost.
+- `lib/be_tex.ml` is the OCaml port of the hint-mode part of
+  `xslt/tex.xsl`: a recursive walk of the tree writing the same macro
+  calls (escaping, `\gmlstart`/`\gmlend`, `\gmlhint` with the parsed
+  `.df`/`.dh`/`.dr` keys, `gml:lines` with `more=yes`, format-off text,
+  tab lines, the upper-case font state, `\gmlislabel`, `\gmlrundyn`).
+  Its output is byte-identical to `tex.xsl tex-mode=hints` applied to
+  the unresolved XML of the same run (`test/tex-parity.sh`, run by
+  `mk test`, checks every test and example document under three
+  profiles).  There is no resolve stage, so no anchors, numbers, TOC,
+  figure list or index from resolve.xsl: the profile makes them (for
+  IBM's DSMPROF3 those are the only differences from `resolve.xsl |
+  tex.xsl`).  The output is always hint mode; `-tex-fonts name` gives
+  `\def\gmlfonts{name}`.
+- The page state is not known while the document is processed: `&$PN`
+  (and `.se x = &`, SH35-0069 p.254) is 1 and `&$LC` is 60.  A `.tc`
+  entry carries `anchor=` (its heading's `gml:tcmark`), and gml.tex's
+  page references give its page on the second TeX run.
+
+Planned: passes with an aux file.  DCF formats a document more than
+once when it is asked to (the SCRIPT options FPASSES(n) and TWOPASS,
+SH20-9186-06 p.126 and p.129), so that forward references, a front
+table of contents and page-dependent tests see the previous pass's
+results.  The plan is the same here: each SCRIPT pass writes the TeX in
+batch, TeX writes the measurements (page numbers, lines left, the pages
+of anchors) to an aux file, and the next pass reads them through the
+hooks `Ctx.page_query` (`&$PN`, `&$LC`) and `Ctx.page_of` (`.tc`
+entries), which give the constants above until then.  Nothing in it is
+specific to one TeX engine.
 
 ## Testing against IBM's Starter Set
 
@@ -488,8 +438,8 @@ images are readable, though its OCR text is not.
   `data-gml-*` attributes.
 - Device-only control words (`.dd .it .sv .dl .uw .oc .sy .te .lo`) give
   a one-time warning.  Layout system symbols (`&$PN` = 1, `&$LC` = 60,
-  `&DH'` ... = 0) return neutral values, except `&$PN` and `&$LC` in
-  layout mode (`-layout`).
+  `&DH'` ... = 0) return neutral values (the planned pass model would
+  give `&$PN` and `&$LC` from TeX).
 - `gmlfmt` is an rc script.  plan9port rc cannot run a script named by
   a relative path such as `dir/gmlfmt`, so start it with a path that
   begins with `/` or `./`.  `xslt/test/run` has a

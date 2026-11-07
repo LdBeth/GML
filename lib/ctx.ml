@@ -176,12 +176,17 @@ type t = {
   lib_members : (string, string array option) Hashtbl.t;
       (** library members read so far, by member name; [None]: not found *)
   mutable page_query : string -> string option;
-      (** the live page state for [&$PN] and [&$LC] (the system symbol name)
-          from a layout engine ([Layout]); [None]: the neutral constant *)
+      (** the page state for [&$PN] and [&$LC] (the system symbol name);
+          [None]: the neutral constant (1, 60).  The hook for the planned
+          pass model (SCRIPT's FPASSES/TWOPASS, SH20-9186-06 p.126, p.129):
+          each pass writes TeX in batch, TeX writes the measurements to an
+          aux file, and the next pass answers from it.  Nothing installs it
+          yet. *)
   mutable page_of : string -> string option;
-      (** the page (as printed) that the layout engine put an anchor on,
-          once that page has been shipped out ([Layout]; [.tc]); [None]:
-          not known *)
+      (** the page (as printed) of an anchor, for [.tc] (the same planned
+          aux file: the page TeX put the anchor on in the previous pass);
+          [None]: not known, the entry carries [anchor=] and gml.tex's page
+          references give the page *)
 }
 
 and word = { run : t -> string -> unit  (** receives the operands *) }
@@ -248,7 +253,7 @@ let system_value ctx name sub =
       | "$BS" -> Some "\b" (* backspace, EBCDIC 16 *)
       | "$ENV" -> Some "BODY" (* modern edge: no keeps, floats, footnotes *)
       | "$PN" -> (
-          (* the layout engine's page, in layout mode ([page_query]) *)
+          (* [page_query]: the planned pass model *)
           match ctx.page_query "$PN" with
           | Some v -> Some v
           | None -> Some "1" (* modern edge: no pagination *))

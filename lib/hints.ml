@@ -654,13 +654,12 @@ let put_toc ctx ops =
    given, else &SYSCONTENT if it is not null, else CONTENTS; "/": none),
    one hint gml:tcentry per entry made so far ([Toc.printable]: text=,
    level= (pt for a .pt line), indent= (TCIN, normalised), font= (TFONT),
-   dot=yes|no, and page= when the layout engine has reported the page of
-   its anchor, anchor= otherwise), with a gml:sk 1 before an entry whose
-   level asks for it (TS); then gml:tc action=end (reserve=n: the page
-   after the table is numbered n pages after its first).  Before the
-   entries the layout engine is given the document so far ([&$PN] query),
-   so that it ships out the pages before the eject and reports their
-   anchors ([Ctx.page_of]). *)
+   dot=yes|no, and page= when its page is known ([Toc.entry.page], or
+   [Ctx.page_of] its anchor: the hook of the planned pass model, which
+   answers nothing yet), anchor= otherwise: gml.tex's page reference),
+   with a gml:sk 1 before an entry whose level asks for it (TS); then
+   gml:tc action=end (reserve=n: the page after the table is numbered n
+   pages after its first). *)
 let toc ctx ops =
   let d = doc ctx in
   let n, rest = first_word ops in
@@ -679,7 +678,6 @@ let toc ctx ops =
   in
   emit ctx "tc" ~brk:true (("action", "begin") :: reserve);
   if not d.Doc.mute then begin
-    ignore (ctx.page_query "$PN");
     Option.iter
       (fun t ->
         Doc.start_element ~eol:true d "gml:h" [ ("level", "1"); ("break", "yes") ];

@@ -44,3 +44,10 @@ XML is written unless -o is given.
   %
   \gmlenddocument
   \bye
+
+&$PN and &$LC are the neutral constants, 1 and 60 (Ctx.page_query, the
+hook for a planned pass model with an aux file written by TeX).
+
+  $ printf '.se x = &$PN\n.se y = &$LC\n.se z = &\n&x &y &z\n' > c.gml
+  $ gml -tex - c.gml | grep '^1'
+  1 60 1

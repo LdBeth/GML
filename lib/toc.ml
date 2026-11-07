@@ -12,11 +12,11 @@
    (p.156): with one pass a .tc at the start of the document is empty.
 
    The page of an entry is the page its heading is put out on.  The
-   heading carries an anchor ([id]); in layout mode TeX reports the page
-   of each anchor when the page is shipped out ([Ctx.page_of]), and [.tc]
-   ejects the page first, so every earlier anchor is known when the table
-   is made.  Otherwise the page is left to TeX ([anchor=] on the entry:
-   gml.tex's page references, from its .ref file, on a second run).
+   heading carries an anchor ([id], the hint gml:tcmark); the entry
+   carries [anchor=] and the page is left to TeX (gml.tex's page
+   references, from its .ref file, on a second run).  [Ctx.page_of] is
+   the hook for the planned pass model (an aux file written by TeX in
+   the previous pass): an anchor it knows gives the entry [page=].
 
    [previous]: the entries of the previous formatting pass, for a
    multi-pass run (none yet: the engine makes one pass). *)

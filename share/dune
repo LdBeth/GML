@@ -6,13 +6,12 @@
   (profile/starter.gml as profile/starter.gml)
   (profile/dcfstarter.gml as profile/dcfstarter.gml)))
 
-; The TeX macros, installed in share/gml/tex/ (gml -layout puts this
-; directory on TEXINPUTS).
+; The TeX macros, installed in share/gml/tex/ (put this directory on
+; TEXINPUTS to typeset the output of gml -tex or tex.xsl).
 (install
  (section share)
  (package gml)
  (files
   (tex/gml.tex as tex/gml.tex)
-  (tex/gml-layout.tex as tex/gml-layout.tex)
   (tex/gmlfont-cm.tex as tex/gmlfont-cm.tex)
   (tex/gmlfont-ncs.tex as tex/gmlfont-ncs.tex)))

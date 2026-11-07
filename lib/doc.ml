@@ -89,13 +89,6 @@ type open_elt = {
       (** an element nothing is known to close ([start_element]): unless its own
           end tag closes it, it becomes an empty marker followed by its content
           ([close_top]) *)
-  mutable count : int;  (** [List.length children], kept up to date *)
-  mutable contributed : int;
-      (** set by [close_top]: the number of nodes this element added to its
-          parent's children: 0 for a dropped empty scope piece, 1 normally, n+1
-          for a provisional element left empty (its n children follow the
-          marker). -1 while open. For [Be_tex]'s streaming, which follows the
-          live stack. *)
 }
 
 type t = {
@@ -123,25 +116,12 @@ type t = {
           [gml:pageno] ([text]) *)
   dvars : (int, Tree.attrs) Hashtbl.t;
       (** the text variables of [.dv] ([define_variable]), by number *)
-  mutable sent : open_elt -> int -> bool;
-      (** has child [i] (counted from the oldest) of this open element already
-          gone to the layout engine?  [Be_tex.stream] installs it; [.ct] cannot
-          change such a child ([join_previous]).  Initially never. *)
 }
 
 let root_name = "gml:doc"
 
 let elt ?(kind = Plain) ?(eol_close = false) ?(provisional = false) name attrs =
-  {
-    name;
-    attrs;
-    children = [];
-    kind;
-    eol_close;
-    provisional;
-    count = 0;
-    contributed = -1;
-  }
+  { name; attrs; children = []; kind; eol_close; provisional }
 
 let create () =
   {
@@ -154,7 +134,6 @@ let create () =
     tr = Hashtbl.create 8;
     page_symbol = (fun () -> None);
     dvars = Hashtbl.create 8;
-    sent = (fun _ _ -> false);
   }
 
 let top t = List.hd t.stack
@@ -164,9 +143,7 @@ let add t node =
   let e = top t in
   match (node, e.children) with
   | Tree.Text b, Tree.Text a :: rest -> e.children <- Tree.Text (a ^ b) :: rest
-  | _ ->
-      e.children <- node :: e.children;
-      e.count <- e.count + 1
+  | _ -> e.children <- node :: e.children
 
 (* Close the top element into its parent; an empty scope piece is
    dropped.  A provisional element closed by anything but its own end tag
@@ -175,19 +152,14 @@ let close_top ?(own = false) t =
   match t.stack with
   | e :: (parent :: _ as rest) ->
       t.stack <- rest;
-      if e.provisional && not own then begin
+      if e.provisional && not own then
         parent.children <-
-          e.children @ (Tree.Element (e.name, e.attrs, []) :: parent.children);
-        e.contributed <- e.count + 1
-      end
+          e.children @ (Tree.Element (e.name, e.attrs, []) :: parent.children)
       else if not (is_scope e && e.children = []) then begin
         (match e.kind with Scope sc -> sc.started <- true | Plain -> ());
         parent.children <-
-          Tree.Element (e.name, e.attrs, List.rev e.children) :: parent.children;
-        e.contributed <- 1
+          Tree.Element (e.name, e.attrs, List.rev e.children) :: parent.children
       end
-      else e.contributed <- 0;
-      parent.count <- parent.count + e.contributed
   | _ -> invalid_arg "Doc.close_top: root"
 
 (* ---- scopes --------------------------------------------------------------- *)
@@ -579,47 +551,37 @@ let text_inline t s = if s <> "" && not t.mute then add_text t s
    formatter control that causes a break follows the continued word,
    continuation is cancelled").  [last_text] finds that word in a list of
    nodes, newest first: [Found (text, rebuild)] where [rebuild t'] is the
-   list with the text replaced by [t'] (None: the text is removed), and the
-   index (newest first) of the node of the list that holds it. *)
+   list with the text replaced by [t'] (None: the text is removed). *)
 type last =
-  | Found of string * (string option -> Tree.node list) * int
+  | Found of string * (string option -> Tree.node list)
   | Blocked  (** a breaking hint or raw output comes first *)
   | Absent
 
-let rec last_text ?(k = 0) nodes =
+let rec last_text nodes =
   match nodes with
   | [] -> Absent
-  | Tree.Text "" :: rest -> skip k (Tree.Text "") rest
+  | Tree.Text "" :: rest -> skip (Tree.Text "") rest
   | Tree.Text a :: rest ->
-      Found
-        ( a,
-          (fun t ->
-            match t with None -> rest | Some t -> Tree.Text t :: rest),
-          k )
+      Found (a, fun t -> match t with None -> rest | Some t -> Tree.Text t :: rest)
   | Tree.Hint (_, attrs) :: rest when List.assoc_opt "break" attrs <> Some "yes"
     ->
-      skip k (List.hd nodes) rest
+      skip (List.hd nodes) rest
   | Tree.Hint _ :: _ | Tree.Raw _ :: _ -> Blocked
   | (Tree.Element (n, a, ch) as e) :: rest -> (
       match last_text (List.rev ch) with
-      | Found (s, rebuild, _) ->
-          Found
-            ( s,
-              (fun t -> Tree.Element (n, a, List.rev (rebuild t)) :: rest),
-              k )
+      | Found (s, rebuild) ->
+          Found (s, fun t -> Tree.Element (n, a, List.rev (rebuild t)) :: rest)
       | Blocked -> Blocked
-      | Absent -> skip k e rest)
+      | Absent -> skip e rest)
 
-and skip k node rest =
-  match last_text ~k:(k + 1) rest with
-  | Found (s, rebuild, i) -> Found (s, (fun t -> node :: rebuild t), i)
+and skip node rest =
+  match last_text rest with
+  | Found (s, rebuild) -> Found (s, fun t -> node :: rebuild t)
   | r -> r
 
 (* The last output word: in the open elements from the innermost out
    (an open element's content follows its parent's children).  [f] gets
-   the element holding it, the text, how to replace it, and whether that
-   child already went to the layout engine ([sent], asked of the
-   stream), in which case it cannot change. *)
+   the element holding it, the text and how to replace it. *)
 let with_last_text t f =
   let rec go = function
     | [] -> ()
@@ -627,35 +589,24 @@ let with_last_text t f =
         match last_text e.children with
         | Absent -> go outer
         | Blocked -> ()
-        | Found (s, rebuild, k) -> f e s rebuild ~sent:(t.sent e (e.count - 1 - k)))
+        | Found (s, rebuild) -> f e s rebuild)
   in
   go t.stack
 
 (** [.ct text] (SH35-0069 p.48): the word space after the previous text line
-    goes, so [text] continues it, across non-breaking hints and element ends.
-    If that text has already gone to the layout engine (a query came after
-    it), its word space is taken back there instead: the hint [gml:ct]
-    ([\unskip] in TeX), so this is the one place where layout mode's output
-    differs from the batch output. *)
+    goes, so [text] continues it, across non-breaking hints and element ends. *)
 let join_previous t =
   if not t.mute then
-    with_last_text t (fun e a rebuild ~sent ->
+    with_last_text t (fun e a rebuild ->
         let n = String.length a in
         if a.[n - 1] = '\n' then
-          if sent then add t (Tree.Hint ("ct", [ ("break", "no") ]))
-          else begin
-            let a = String.sub a 0 (n - 1) in
-            let a' = if a = "" then None else Some a in
-            let before = List.length e.children in
-            e.children <- rebuild a';
-            e.count <- e.count + List.length e.children - before
-          end)
+          e.children <- rebuild (if n = 1 then None else Some (String.sub a 0 (n - 1))))
 
 (** [.ct] alone: a continuation in effect (the previous text line ended without
     a word space) is cancelled. *)
 let cancel_continuation t =
   if not t.mute then
-    with_last_text t (fun _ a _ ~sent:_ ->
+    with_last_text t (fun _ a _ ->
         if a.[String.length a - 1] <> '\n' then add t (Tree.Text "\n"))
 
 let hint t name attrs =
