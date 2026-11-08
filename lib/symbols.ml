@@ -73,7 +73,7 @@ let is_name_char = function
   | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '$' | '#' | '@' -> true
   | _ -> false
 
-(** Is [name] (with an optional leading [*]) a valid symbol name?  With
+(** Is [name] (with an optional leading [*]) a valid symbol name? With
     [~long:true] the length is not limited (the coupling files of the pass
     model, [Ctx.coupling]). *)
 let valid_name ?(long = false) name =
@@ -316,7 +316,10 @@ let carried name =
   && (not (String.starts_with ~prefix:"$" name))
   && name <> toc_name
   && (not (List.mem name date_names))
-  && not (List.exists (fun prefix -> String.starts_with ~prefix name) aux_prefixes)
+  && not
+       (List.exists
+          (fun prefix -> String.starts_with ~prefix name)
+          aux_prefixes)
 
 (** The [.se] lines of the symbols (without line ends). *)
 let dump t =
@@ -334,16 +337,17 @@ let dump t =
     [Toc.dump]), with line ends. *)
 let file lines =
   String.concat "\n"
-    ([ ".* gml symbols"; ".su off"; ".dc cw off" ] @ lines @ [ ".dc cw"; ".su on" ])
+    ([ ".* gml symbols"; ".su off"; ".dc cw off" ]
+    @ lines @ [ ".dc cw"; ".su on" ])
   ^ "\n"
 
-(** After loading the symbol file: "all array index counters are reset to
-    zero for the second pass but the individual elements are not reset"
-    (TPG p.256, TWOPASS): every global symbol with elements whose element 0
-    is a counter (a number or null) gets 0. *)
+(** After loading the symbol file: "all array index counters are reset to zero
+    for the second pass but the individual elements are not reset" (TPG p.256,
+    TWOPASS): every global symbol with elements whose element 0 is a counter (a
+    number or null) gets 0. *)
 let reset_counters t =
   Hashtbl.iter
     (fun _ s ->
-      if Hashtbl.length s.elems > 0 && counter_of s <> None then s.value <- Some "0")
+      if Hashtbl.length s.elems > 0 && counter_of s <> None then
+        s.value <- Some "0")
     t.global
-

@@ -110,9 +110,9 @@ type t = {
           translates when the line is put out, so a [.tr] change in the middle
           of an output line would also affect the text before it there. *)
   mutable page_symbol : unit -> char option;
-      (** the page number symbol ([.dc ps]; [Ctx] installs it): in the text of
-          a running heading or footing ([gml:rh], [gml:rf]) it stands for the
-          page number (SH35-0069 p.125, p.128, p.259) and becomes the hint
+      (** the page number symbol ([.dc ps]; [Ctx] installs it): in the text of a
+          running heading or footing ([gml:rh], [gml:rf]) it stands for the page
+          number (SH35-0069 p.125, p.128, p.259) and becomes the hint
           [gml:pageno] ([text]) *)
   dvars : (int, Tree.attrs) Hashtbl.t;
       (** the text variables of [.dv] ([define_variable]), by number *)
@@ -263,6 +263,7 @@ let is_open t name = List.mem name (open_elements t)
 
 (** Is a running heading or footing definition open? *)
 let in_running t = is_open t "gml:rh" || is_open t "gml:rf"
+
 let current t = match open_elements t with [] -> None | n :: _ -> Some n
 
 let start_element ?(eol = false) ?(provisional = false) t name attrs =
@@ -426,8 +427,8 @@ let utf8_of u =
 
 let dv_end = utf8_of dv_base
 
-(** Define a text variable with the attributes of its hint (without
-    [text]); returns the value its symbol gets for [string]. *)
+(** Define a text variable with the attributes of its hint (without [text]);
+    returns the value its symbol gets for [string]. *)
 let define_variable t attrs string =
   let i = Hashtbl.length t.dvars + 1 in
   Hashtbl.replace t.dvars i attrs;
@@ -451,11 +452,14 @@ let split_dvars t s =
     [ Either.Left s ]
   else begin
     let n = String.length s in
-    let left acc i j = if j > i then Either.Left (String.sub s i (j - i)) :: acc else acc in
+    let left acc i j =
+      if j > i then Either.Left (String.sub s i (j - i)) :: acc else acc
+    in
     (* the end mark after [i] *)
     let rec find_end i =
       if i >= n then (n, n)
-      else match dv_char s i with
+      else
+        match dv_char s i with
         | Some (0, l) -> (i, i + l)
         | Some (_, l) -> find_end (i + l)
         | None -> find_end (i + 1)
@@ -489,12 +493,13 @@ let dvar_text t s =
         (List.map
            (function
              | Either.Left s -> s
-             | Either.Right a -> Option.value (List.assoc_opt "text" a) ~default:"")
+             | Either.Right a ->
+                 Option.value (List.assoc_opt "text" a) ~default:"")
            l)
 
-(** [s] as it is put out, for text in a hint's attribute (the fields of
-    [.sx]): translated ([.tr]), its text variables replaced by their text
-    (which is not translated). *)
+(** [s] as it is put out, for text in a hint's attribute (the fields of [.sx]):
+    translated ([.tr]), its text variables replaced by their text (which is not
+    translated). *)
 let output_text t s =
   String.concat ""
     (List.map
@@ -562,7 +567,8 @@ let rec last_text nodes =
   | [] -> Absent
   | Tree.Text "" :: rest -> skip (Tree.Text "") rest
   | Tree.Text a :: rest ->
-      Found (a, fun t -> match t with None -> rest | Some t -> Tree.Text t :: rest)
+      Found
+        (a, fun t -> match t with None -> rest | Some t -> Tree.Text t :: rest)
   | Tree.Hint (_, attrs) :: rest when List.assoc_opt "break" attrs <> Some "yes"
     ->
       skip (List.hd nodes) rest
@@ -600,7 +606,8 @@ let join_previous t =
     with_last_text t (fun e a rebuild ->
         let n = String.length a in
         if a.[n - 1] = '\n' then
-          e.children <- rebuild (if n = 1 then None else Some (String.sub a 0 (n - 1))))
+          e.children <-
+            rebuild (if n = 1 then None else Some (String.sub a 0 (n - 1))))
 
 (** [.ct] alone: a continuation in effect (the previous text line ended without
     a word space) is cancelled. *)

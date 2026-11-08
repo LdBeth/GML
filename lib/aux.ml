@@ -39,14 +39,15 @@ let tex_name s =
       let d = String.get_utf_8_uchar s i in
       let l = Uchar.utf_decode_length d in
       (match s.[i] with
-       | ('A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '.' | '-') as c when l = 1 ->
-           Buffer.add_char b c
-       | _ ->
-           let u =
-             if Uchar.utf_decode_is_valid d then Uchar.to_int (Uchar.utf_decode_uchar d)
-             else 0xFFFD
-           in
-           Printf.bprintf b "+%d+" u);
+      | ('A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '.' | '-') as c when l = 1 ->
+          Buffer.add_char b c
+      | _ ->
+          let u =
+            if Uchar.utf_decode_is_valid d then
+              Uchar.to_int (Uchar.utf_decode_uchar d)
+            else 0xFFFD
+          in
+          Printf.bprintf b "+%d+" u);
       go (i + l)
     end
   in
@@ -65,34 +66,38 @@ let enc s =
 
 (** The symbol of question [id] (q1.12.3 -> pq@1@12@3). *)
 let query_name id =
-  let id = if id <> "" && id.[0] = 'q' then String.sub id 1 (String.length id - 1) else id in
+  let id =
+    if id <> "" && id.[0] = 'q' then String.sub id 1 (String.length id - 1)
+    else id
+  in
   Symbols.query_prefix ^ enc id
 
 (** The symbol of anchor [a] (gml.tc.1 -> pa@gml@tc@1). *)
 let anchor_name a = Symbols.anchor_prefix ^ enc a
 
-(** Imbed the coupling file [f] now (before the document run); a file that
-    does not exist is empty (the first pass).  Whether it existed. *)
+(** Imbed the coupling file [f] now (before the document run); a file that does
+    not exist is empty (the first pass). Whether it existed. *)
 let imbed (ctx : Ctx.t) f =
   Sys.file_exists f
   && begin
-       ctx.Ctx.coupling <- true;
-       Interp.imbed_now ctx f;
-       ctx.Ctx.coupling <- false;
-       true
-     end
+    ctx.Ctx.coupling <- true;
+    Interp.imbed_now ctx f;
+    ctx.Ctx.coupling <- false;
+    true
+  end
 
-(** gml -symbols-in [f]: imbed the previous pass's symbols; its TOC entries
-    are those of the previous pass and its array counters start again at 0. *)
+(** gml -symbols-in [f]: imbed the previous pass's symbols; its TOC entries are
+    those of the previous pass and its array counters start again at 0. *)
 let load_symbols (ctx : Ctx.t) f =
   if imbed ctx f then begin
     ctx.Ctx.toc.Toc.previous <- Some (Toc.carried ctx.Ctx.syms);
     Symbols.reset_counters ctx.Ctx.syms
   end
 
-(** gml -aux [f]: imbed it and ask the questions of the pass model; the
-    answers are its symbols. *)
+(** gml -aux [f]: imbed it and ask the questions of the pass model; the answers
+    are its symbols. *)
 let load (ctx : Ctx.t) f =
   ignore (imbed ctx f);
-  ctx.Ctx.page_query <- Some (fun id -> Symbols.get ctx.Ctx.syms (query_name id));
+  ctx.Ctx.page_query <-
+    Some (fun id -> Symbols.get ctx.Ctx.syms (query_name id));
   ctx.Ctx.page_of <- (fun a -> Symbols.get ctx.Ctx.syms (anchor_name a))

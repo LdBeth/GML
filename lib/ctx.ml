@@ -164,7 +164,9 @@ type t = {
       (** environments saved by [.sa] (and by [.fn on]), innermost first *)
   hctr : Headctr.t;  (** the head-level counter ([.gs hctr], [.dh n num]) *)
   dh_num : (int, unit) Hashtbl.t;  (** head levels defined NUM ([.dh]) *)
-  toc : Toc.t;  (** table of contents entries and definitions ([.dh], [.hn], [.pt], [.tc]) *)
+  toc : Toc.t;
+      (** table of contents entries and definitions ([.dh], [.hn], [.pt], [.tc])
+      *)
   mutable literal : int;
       (** [.li]: input lines still to be taken literally; -1: [.li on] *)
   mutable last_tag : string;  (** [&$TAG] *)
@@ -178,8 +180,8 @@ type t = {
   mutable pass : int;  (** [&$PASS]: this formatting pass (gml -pass) *)
   mutable passes : int;
       (** the number of formatting passes (gml -passes; SCRIPT's FPASSES(n),
-          TWOPASS = 2, SH20-9186-06 p.126, p.129): [&$TWO] is 1 when it is
-          more than 1, [&$PASSES] is it *)
+          TWOPASS = 2, SH20-9186-06 p.126, p.129): [&$TWO] is 1 when it is more
+          than 1, [&$PASSES] is it *)
   query_files : (string, int) Hashtbl.t;
       (** the files questions were asked in, numbered in order of the first
           question ([query]) *)
@@ -191,8 +193,8 @@ type t = {
           ([query]), and [f id] is the answer to question [id] (q2.14.1 ...)
           from the previous pass's aux file (the symbol [pq@ENC] TeX set);
           [f id = None]: not known (the first pass, or a question the previous
-          pass did not ask): the neutral constant (1, 60).  [None]: no
-          questions *)
+          pass did not ask): the neutral constant (1, 60). [None]: no questions
+      *)
   mutable page_of : string -> string option;
       (** the page (as printed) of an anchor, for [.tc]: the page TeX put the
           anchor on in the previous pass ([Aux], the symbol [pa@ENC]); [None]:
@@ -353,7 +355,11 @@ let query ctx name v =
     when (not ctx.doc.Doc.mute) && not (List.mem_assoc name ctx.sys_sets) ->
       let id = query_id ctx in
       Doc.hint ctx.doc "query"
-        [ ("id", id); ("what", if name = "$PN" then "pn" else "lc"); ("break", "no") ];
+        [
+          ("id", id);
+          ("what", if name = "$PN" then "pn" else "lc");
+          ("break", "no");
+        ];
       Option.value (answer id) ~default:v
   | _ -> v
 

@@ -587,15 +587,16 @@ let heading n ctx ops =
     else None
   in
   let mark () =
-    Option.iter (fun e -> emit ctx "tcmark" ~brk:false [ ("anchor", e.Toc.id) ]) entry
+    Option.iter
+      (fun e -> emit ctx "tcmark" ~brk:false [ ("anchor", e.Toc.id) ])
+      entry
   in
   if def.Toc.only then mark ()
   else begin
     Doc.start_element ~eol:true d "gml:h"
       ((("level", string_of_int n) :: num) @ [ ("break", "yes") ]);
     mark ();
-    if text = "" then ignore (Doc.end_element d "gml:h")
-    else push_text ctx ops
+    if text = "" then ignore (Doc.end_element d "gml:h") else push_text ctx ops
   end
 
 (* .dh n options: kept as a hint; NUM / NONUM (the last one given) are
@@ -618,17 +619,25 @@ let define_head ctx ops =
             | [] -> ()
             | w :: rest -> (
                 match lc w with
-                | "num" -> Hashtbl.replace ctx.dh_num l (); go rest
-                | "nonum" -> Hashtbl.remove ctx.dh_num l; go rest
+                | "num" ->
+                    Hashtbl.replace ctx.dh_num l ();
+                    go rest
+                | "nonum" ->
+                    Hashtbl.remove ctx.dh_num l;
+                    go rest
                 | _ -> (
-                    let value = match rest with v :: _ -> Some v | [] -> None in
                     let value =
-                      if lc w = "tcin" then Option.map (norm Units.Horizontal) value
+                      match rest with v :: _ -> Some v | [] -> None
+                    in
+                    let value =
+                      if lc w = "tcin" then
+                        Option.map (norm Units.Horizontal) value
                       else value
                     in
                     match Toc.option ctx.toc l w ~value with
                     | `Took -> go (List.tl rest)
-                    | `Missing -> Ctx.error ctx ".dh %d: %s: a value expected" l w
+                    | `Missing ->
+                        Ctx.error ctx ".dh %d: %s: a value expected" l w
                     | `Done | `Other -> go rest))
           in
           go ws
@@ -641,7 +650,8 @@ let define_head ctx ops =
    or a control word line put into it as it is; leading blanks of a text
    line go.  The page is that of the hint gml:tcmark put out here. *)
 let put_toc ctx ops =
-  if ops <> "" && ops.[0] = '.' then ignore (Toc.add ctx.toc (Toc.Control ops) "")
+  if ops <> "" && ops.[0] = '.' then
+    ignore (Toc.add ctx.toc (Toc.Control ops) "")
   else
     let text = String.trim ops in
     if text <> "" && not (doc ctx).Doc.mute then begin
@@ -680,7 +690,8 @@ let toc ctx ops =
   if not d.Doc.mute then begin
     Option.iter
       (fun t ->
-        Doc.start_element ~eol:true d "gml:h" [ ("level", "1"); ("break", "yes") ];
+        Doc.start_element ~eol:true d "gml:h"
+          [ ("level", "1"); ("break", "yes") ];
         Doc.text d t)
       title;
     List.iter
@@ -688,21 +699,28 @@ let toc ctx ops =
         match e.kind with
         | Toc.Control line -> ctx.Ctx.process ctx (Ctx.Split true) line
         | Toc.Head _ | Toc.Line ->
-            if e.skip then emit ctx "sk" ~brk:true [ ("n", "1"); ("unit", "line") ];
+            if e.skip then
+              emit ctx "sk" ~brk:true [ ("n", "1"); ("unit", "line") ];
             let page =
               match e.page with
               | Some p -> Some p
               | None -> ctx.Ctx.page_of e.id
             in
             emit ctx "tcentry" ~brk:true
-              ([ ("level", (match e.kind with Toc.Head l -> string_of_int l | _ -> "pt"));
-                 ("text", e.text) ]
-              @ (if e.indent = "0" then [] else [ ("indent", norm Units.Horizontal e.indent) ])
+              ([
+                 ( "level",
+                   match e.kind with Toc.Head l -> string_of_int l | _ -> "pt"
+                 );
+                 ("text", e.text);
+               ]
+              @ (if e.indent = "0" then []
+                 else [ ("indent", norm Units.Horizontal e.indent) ])
               @ (match e.font with Some f -> [ ("font", f) ] | None -> [])
               @ [ ("dot", if e.dot then "yes" else "no") ]
-              @ match page with
-                | Some p -> [ ("page", p) ]
-                | None -> [ ("anchor", e.id) ]))
+              @
+              match page with
+              | Some p -> [ ("page", p) ]
+              | None -> [ ("anchor", e.id) ]))
       (Toc.printable ctx.toc)
   end;
   emit ctx "tc" ~brk:true (("action", "end") :: reserve)
@@ -735,7 +753,11 @@ let split_text ctx ops =
              piece between the page number symbols, which are written as
              the pagesym= character: the symbol itself, or U+E000 when a
              piece holds it as text ("&amp." translated to "&", p.259) *)
-          let pieces = List.map (fun f -> List.map out (String.split_on_char ps f)) [ l; f; r ] in
+          let pieces =
+            List.map
+              (fun f -> List.map out (String.split_on_char ps f))
+              [ l; f; r ]
+          in
           let m =
             if List.exists (List.exists (fun p -> String.contains p ps)) pieces
             then "\u{E000}"
@@ -744,7 +766,9 @@ let split_text ctx ops =
           match List.map (String.concat m) pieces with
           | [ l; f; r ] ->
               emit ctx "sx" ~brk:true
-                ([ ("left", l); ("fill", f); ("right", r) ] @ fl @ [ ("pagesym", m) ])
+                ([ ("left", l); ("fill", f); ("right", r) ]
+                @ fl
+                @ [ ("pagesym", m) ])
           | _ -> assert false
         end
         else
@@ -968,7 +992,9 @@ let translate ctx ops =
    without a closing delimiter.  DCF-VERIFY: with no string the variable
    is the null string; BASELINE without FONT is allowed. *)
 let is_name_start c =
-  match c with 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '@' | '#' | '$' -> true | _ -> false
+  match c with
+  | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '@' | '#' | '$' -> true
+  | _ -> false
 
 let define_variable ctx ops =
   let name, rest = first_word ops in
@@ -990,7 +1016,8 @@ let define_variable ctx ops =
     | Error e -> Ctx.error ctx ".dv %s: %s" name e
     | Ok (_, rest) when rest <> "" && is_name_start rest.[0] ->
         Ctx.error ctx ".dv %s: FONT, BASELINE, TEXT or /string expected, not %s"
-          name (fst (first_word rest))
+          name
+          (fst (first_word rest))
     | Ok (k, rest) ->
         let v =
           if rest = "" then ""
@@ -1216,7 +1243,8 @@ let table =
     row "sc" Yes "" (generic "sc" ~brk:true);
     row "mc" Yes "" (generic "mc" ~brk:true);
     row "tr" Not_a_hint "pairs of c|hh" translate;
-    row "dv" Not_a_hint "name [font f] [baseline b] [text] /string" define_variable;
+    row "dv" Not_a_hint "name [font f] [baseline b] [text] /string"
+      define_variable;
     row "sa" No "[envname]" save_env;
     row "re" No "[envname]" restore_env;
     row "fv" No "top|bottom|center|justify"

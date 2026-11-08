@@ -73,28 +73,50 @@ let create () =
 let def t n = t.defs.(n)
 let reset t n = t.defs.(n) <- default n
 
-(** A [.dh n] option word that concerns the table of contents; [value] gives
-    the operand of TCIN and TFONT. Returns false for any other word, and
-    whether the operand was taken. *)
+(** A [.dh n] option word that concerns the table of contents; [value] gives the
+    operand of TCIN and TFONT. Returns false for any other word, and whether the
+    operand was taken. *)
 let option t n w ~value =
   let d = t.defs.(n) in
   match String.lowercase_ascii w with
-  | "tc" -> d.tc <- true; `Done
-  | "ntc" -> d.tc <- false; `Done
-  | "to" -> d.only <- true; `Done
-  | "nto" -> d.only <- false; `Done
-  | "ts" -> d.skip <- true; `Done
-  | "nts" -> d.skip <- false; `Done
-  | "dot" -> d.dot <- true; `Done
-  | "nodot" -> d.dot <- false; `Done
+  | "tc" ->
+      d.tc <- true;
+      `Done
+  | "ntc" ->
+      d.tc <- false;
+      `Done
+  | "to" ->
+      d.only <- true;
+      `Done
+  | "nto" ->
+      d.only <- false;
+      `Done
+  | "ts" ->
+      d.skip <- true;
+      `Done
+  | "nts" ->
+      d.skip <- false;
+      `Done
+  | "dot" ->
+      d.dot <- true;
+      `Done
+  | "nodot" ->
+      d.dot <- false;
+      `Done
   | "tcin" -> (
       match value with
-      | Some v -> d.indent <- v; `Took
+      | Some v ->
+          d.indent <- v;
+          `Took
       | None -> `Missing)
   | "tfont" -> (
       match value with
-      | Some v when String.lowercase_ascii v = "off" -> d.font <- None; `Took
-      | Some v when v <> "" && v.[0] <> '&' -> d.font <- Some v; `Took
+      | Some v when String.lowercase_ascii v = "off" ->
+          d.font <- None;
+          `Took
+      | Some v when v <> "" && v.[0] <> '&' ->
+          d.font <- Some v;
+          `Took
       | Some _ -> `Took
       | None -> `Done (* last on the line: no error (the FONT rule) *))
   | _ -> `Other
@@ -111,9 +133,27 @@ let add t ?page kind text =
     match kind with
     | Head n ->
         let d = t.defs.(n) in
-        { id; kind; text; skip = d.skip; indent = d.indent; font = d.font; dot = d.dot; page }
+        {
+          id;
+          kind;
+          text;
+          skip = d.skip;
+          indent = d.indent;
+          font = d.font;
+          dot = d.dot;
+          page;
+        }
     | Line | Control _ ->
-        { id; kind; text; skip = false; indent = "0"; font = None; dot = true; page }
+        {
+          id;
+          kind;
+          text;
+          skip = false;
+          indent = "0";
+          font = None;
+          dot = true;
+          page;
+        }
   in
   t.entries <- e :: t.entries;
   e
@@ -146,7 +186,15 @@ let to_line n (e : entry) =
   let flag b = if b then "1" else "0" in
   Symbols.se_line ~sub:n Symbols.toc_name
     (String.concat "\t"
-       [ kind; flag e.skip; e.indent; Option.value e.font ~default:""; flag e.dot; e.id; text ])
+       [
+         kind;
+         flag e.skip;
+         e.indent;
+         Option.value e.font ~default:"";
+         flag e.dot;
+         e.id;
+         text;
+       ])
 
 (** The [.se gml@toc(n)] lines of this pass's entries, in order. *)
 let dump t = List.mapi (fun i e -> to_line (i + 1) e) (List.rev t.entries)
@@ -160,18 +208,27 @@ let of_value v =
         match kind with
         | "pt" -> Some Line
         | "cw" -> Some (Control text)
-        | l -> Option.bind (int_of_string_opt l) (fun l -> if l >= 0 && l <= 6 then Some (Head l) else None)
+        | l ->
+            Option.bind (int_of_string_opt l) (fun l ->
+                if l >= 0 && l <= 6 then Some (Head l) else None)
       in
       Option.map
         (fun kind ->
-          { id; kind; text = (match kind with Control _ -> "" | _ -> text);
-            skip = skip = "1"; indent; font = (if font = "" then None else Some font);
-            dot = dot = "1"; page = None })
+          {
+            id;
+            kind;
+            text = (match kind with Control _ -> "" | _ -> text);
+            skip = skip = "1";
+            indent;
+            font = (if font = "" then None else Some font);
+            dot = dot = "1";
+            page = None;
+          })
         kind
   | _ -> None
 
-(** The entries of the previous pass, taken out of the symbol table (the
-    array gml@toc of the symbol file, now undefined). *)
+(** The entries of the previous pass, taken out of the symbol table (the array
+    gml@toc of the symbol file, now undefined). *)
 let carried syms =
   let es = List.filter_map of_value (Symbols.elements syms Symbols.toc_name) in
   ignore (Symbols.unset syms Symbols.toc_name);

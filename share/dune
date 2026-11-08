@@ -1,4 +1,5 @@
 ; The shipped profiles, installed in share/gml/profile/.
+
 (install
  (section share)
  (package gml)
@@ -8,6 +9,7 @@
 
 ; The TeX macros, installed in share/gml/tex/ (put this directory on
 ; TEXINPUTS to typeset the output of tex.xsl).
+
 (install
  (section share)
  (package gml)

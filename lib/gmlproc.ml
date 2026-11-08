@@ -539,7 +539,8 @@ let exatt ctx args =
           List.filteri
             (fun i (k, _) ->
               not
-                (List.exists (fun (k', _) -> k' = k)
+                (List.exists
+                   (fun (k', _) -> k' = k)
                    (List.filteri (fun j _ -> j < i) l)))
             l
         in

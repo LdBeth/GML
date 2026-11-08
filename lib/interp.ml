@@ -365,9 +365,9 @@ let run ctx =
   loop ();
   check_balance ctx
 
-(** Process the file [path] now, line by line like an imbedded file, on an
-    empty input stack (before [run]: the coupling files of the pass model,
-    [Aux]); returns when the file has ended. *)
+(** Process the file [path] now, line by line like an imbedded file, on an empty
+    input stack (before [run]: the coupling files of the pass model, [Aux]);
+    returns when the file has ended. *)
 let imbed_now ctx path =
   match Input.imbed ctx.Ctx.input ("(" ^ path ^ ")") with
   | Error e -> Ctx.error ctx "%s" e
