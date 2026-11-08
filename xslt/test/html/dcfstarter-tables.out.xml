@@ -19,13 +19,12 @@
 <section class="gml-body">
 <div class="gml-pa" style="break-before: page"></div>
 <div class="gml-pa" style="break-before: page"></div>
-<h1 id="gml-h1-1" class="gml-h1"><span class="gml-h gml-h-1" role="heading" aria-level="1" style="display: block">Tables</span>
-</h1>
+<h1 id="gml-h1-1" class="gml-h gml-h-1 gml-h1">Tables</h1>
 <div class="gml-sp" style="height: 0.75lh"></div>The timetable is Table ID unknown.
 <div class="gml-sp" style="height: 1lh"></div>
 <table id="planets" class="gml-table gml-span-column gml-split-yes">
 <caption class="gml-tcaption"><span class="gml-tcap"><span class="gml-sp" style="display: block; height: 1lh"></span><span class="gml-scope gml-font gml-font-hi2" data-font="hi2">Table 1.
-</span>Some planets</span><span class="gml-tdesc" style="display: block">:
+</span>Some planets</span><span class="gml-tdesc">:
 Three of the eight.
 </span></caption>
 <colgroup>
@@ -86,14 +85,10 @@ Three of the eight.
 </div></td>
 <td class="gml-c" data-cell="4" style="text-align: left; vertical-align: top">Lab work
 </td></tr></tbody></table>
-<div class="gml-sp" style="height: 1lh"></div>
-<div class="gml-sp" style="height: 0.75lh"></div>The planets are in Table&nbsp;1 on page 1.
+<div class="gml-sp" style="height: 1lh"></div>The planets are in Table&nbsp;1 on page 1.
 </section>
 <section class="gml-footnotes" role="doc-endnotes">
 <ol class="gml-footnote-list">
-<li class="gml-footnote gml-fn-unnumbered">
-<div class="gml-sp" style="height: 1lh"></div>
-<hr class="gml-hr"></li>
 <li class="gml-footnote gml-fn-unnumbered">
 <div class="gml-sp" style="height: 1lh"></div><sup>1</sup>
 Both were found in 1877.</li></ol></section>

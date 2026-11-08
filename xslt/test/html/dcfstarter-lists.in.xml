@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gml:df name="hi0" spec="type(normal)" break="no"/><gml:df name="hi1" spec="type(italic)" break="no"/><gml:df name="hi2" spec="type(bold)" break="no"/><gml:df name="hi3" spec="type(bold italic)" break="no"/><gml:df name="hd0" spec="type(bold 20 italic)" break="no"/><gml:df name="hd1" spec="type(bold 20)" break="no"/><gml:df name="hd2" spec="type(bold 18 italic)" break="no"/><gml:df name="hd3" spec="type(bold 14)" break="no"/><gml:df name="hd4" spec="type(bold 12 italic)" break="no"/><gml:df name="hd5" spec="type(bold)" break="no"/><gml:df name="hd6" spec="type(bold italic)" break="no"/><gml:df name="title" spec="type(bold 24)" break="no"/><gml:df name="xmp" spec="type('courier')" break="no"/><gml:df name="f@sup" spec="type(7)" break="no"/><gml:dr spec="f@frule" break="no"/><gml:dr spec="f@fnrule weight 0.2mm" break="no"/><gml:dh level="0" spec="pa spbf 1.3i spaf 5 font hd0 up nohy left nto" break="no"/><gml:dh level="1" spec="pa spbf 1.3i spaf 3 font hd1 up nohy left" break="no"/><gml:dh level="2" spec="skbf 3 spaf 2 font hd2 up nohy left" break="no"/><gml:dh level="3" spec="skbf 3 spaf 2 font hd3 nohy left" break="no"/><gml:dh level="4" spec="skbf 3 spaf 2 font hd4 nohy left" break="no"/><gml:dh level="5" spec="skbf 1 nbr font hd5 nohy" break="no"/><gml:dh level="6" spec="skbf 1 nbr font hd6 nohy" break="no"/><gml:fn kind="leader"><gml:sp n="1" unit="line" break="yes"/><gml:hr spec="f@fnrule 0ch for 16ch" break="yes"/></gml:fn><gml:rf><gml:scope kind="inline" font="hi0"><gml:sx left="" fill="" right="&amp;" pagesym="&amp;" break="yes"/></gml:scope></gml:rf><body><gml:dh level="0" spec="tc" break="no"/><gml:dh level="1" spec="tc" break="no"/><gml:dh level="2" spec="tc" break="no"/><gml:dh level="3" spec="tc" break="no"/><gml:dh level="4" spec="tc" break="no"/><gml:pa page="1" break="yes"/><gml:pn spec="arabic" break="no"/><gml:rf><gml:scope kind="inline" font="hi0"><gml:sx left="" fill="" right="&amp;" pagesym="&amp;" break="yes"/></gml:scope></gml:rf><gml:pa break="yes"/><gml:rf><gml:scope kind="inline" font="hi0"><gml:sx left="Lists" fill="" right="&amp;" pagesym="&amp;" break="yes"/></gml:scope></gml:rf><h1 id="lists" anchor="lists"><gml:h level="1" break="yes"><gml:tcmark anchor="gml.tc.1" break="no"/>Lists</gml:h>
+</h1><gml:sk n="0.75" unit="line" break="yes"/>The formatting profile indents lists with .in and .of and tabs to
+the text with .is (html/dcfstarter-lists: one block per item with
+the hanging indention, the identifier an inline block as wide as the
+indention, a wider term followed by one blank).
+<gml:sk n="0.75" unit="line" break="yes"/><gml:scope kind="block" in="4ch"><gml:sk n="0.75" unit="line" break="yes"/></gml:scope><gml:scope kind="block" of="4ch">1.
+<gml:is spec="to 4ch min 1ch blank" break="no"/>The first item of the list, long enough to need a second output
+line so that the hanging indention of the item text can be seen.
+<gml:sk n="0.75" unit="line" break="yes"/>2.
+<gml:is spec="to 4ch min 1ch blank" break="no"/>The second item, with a nested list:
+<gml:sk n="0.75" unit="line" break="yes"/></gml:scope><gml:scope kind="block" in="8ch"><gml:sk n="0.75" unit="line" break="yes"/></gml:scope><gml:scope kind="block" in="4ch" of="4ch">a.
+<gml:is spec="to 4ch min 1ch blank" break="no"/>a nested item
+<gml:sk n="0.75" unit="line" break="yes"/>b.
+<gml:is spec="to 4ch min 1ch blank" break="no"/>another nested item
+</gml:scope><gml:scope kind="block" in="4ch"><gml:br break="yes" cause="in ir"/><gml:sk n="0.75" unit="line" break="yes"/><gml:sk n="0.75" unit="line" break="yes"/></gml:scope>A list part, at the label position.
+<gml:br break="yes" cause="in ir"/><gml:sk n="0.75" unit="line" break="yes"/><gml:sk n="0.75" unit="line" break="yes"/><gml:scope kind="block" in="8ch"><gml:sk n="1" unit="line" break="yes"/></gml:scope><gml:scope kind="block" of="8ch"><gml:scope kind="inline" font="hi3">Term
+</gml:scope><gml:is spec="to 8ch min 1ch blank" break="no"/><gml:scope kind="inline" font="hi3">Description
+</gml:scope><gml:sk n="1" unit="line" break="yes"/><gml:scope kind="inline" font="hi2">GML
+</gml:scope><gml:is spec="to 8ch min 1ch blank" break="no"/>Generalized Markup Language: tags that say what a part of the
+document is, not how it looks.
+<gml:sk n="1" unit="line" break="yes"/><gml:scope kind="inline" font="hi2">Too-long-term
+</gml:scope><gml:is spec="to 8ch min 1ch blank" break="no"/>A term wider than the term column is followed by one blank.
+</gml:scope><gml:br break="yes" cause="in ir"/><gml:sk n="0.75" unit="line" break="yes"/><h5 anchor="gml-h5-1"><gml:h level="5" break="yes">Run-in heading.</gml:h>
+</h5>The text of a level five heading continues on the same line.
+</body></gml:doc>

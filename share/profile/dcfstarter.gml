@@ -246,6 +246,7 @@
 .se f@infig = 0
 .se f@figpf = 0
 .se f@incap = 0
+.se f@hrun = 0
 .se f@infn = 0
 .se f@intp = 0
 .se f@h1c = 0
@@ -609,7 +610,9 @@
 .sp 2i
 .bf title
 .ls by 1.2
+.* (the title lines in a title element: the HTML <title>)
 .se *i = 0
+.if &f@ttn gt 0 .xs title
 ...tl
 .se *i = &*i + 1
 .if &*i gt &f@ttn .go te
@@ -617,6 +620,7 @@
 &f@ttl(&*i)
 .go tl
 ...te
+.if &f@ttn gt 0 .xe title
 .ls normal
 .pf
 .sp 2i
@@ -727,6 +731,10 @@
 ...hd
 .h&*l &*x
 .xe h&*l
+.* a run-in heading (levels 5 and 6, NBR): the first paragraph
+.* continues its line (UG p.14)
+.se f@hrun = 0
+.if &*l ge 5 .se f@hrun = 1
 .aa p f@para1 (noatt)
 .dm off
 .dm f@hd0 /.f@hd 0
@@ -740,10 +748,11 @@
 .* ---- paragraphs and notes (IG Figure 5: skip .75) -------------------------
 .dm f@para /.sk .75
 .* the first paragraph after a heading: the heading's space after is
-.* enough (a .sk after a heading is conditional anyway, TPG p.152)
+.* enough (a .sk after a heading is conditional anyway, TPG p.152);
+.* after a run-in heading it begins on the heading's line (f@hrun)
 .dm f@para1 on
 .aa p f@para (noatt)
-.sk .75
+.if &f@hrun eq 0 .sk .75
 .dm off
 .dm f@pcont /.sk .75
 .dm f@note on
@@ -1089,9 +1098,11 @@
 .pf
 &*t.;.xe figcap
 .dm off
-.* :figdesc: after a caption a colon, then the description
+.* :figdesc: after a caption a colon, then the description, in a
+.* figdesc element (closed by :efig: f@incap is 2 while it is open)
 .dm f@fdesc on
 .if &f@incap eq 0 .go nc
+.xs figdesc
 .ct :
 .se f@incap = 2
 .me
@@ -1099,12 +1110,15 @@
 .f@figpf
 .fo on
 .sk 1
+.xs figdesc
+.se f@incap = 2
 .dm off
 .dm f@efig on
 .if &f@infig ne 0 .go ok
 .f@msg 4 fig
 .me
 ...ok
+.if &f@incap eq 2 .xe figdesc
 .f@figpf
 .fo on
 .se f@tm = &f@fo

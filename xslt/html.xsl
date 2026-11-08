@@ -94,7 +94,16 @@
                  are kept as data-gml-NAME.
     gml:raw backend="html" is copied unescaped; other backends dropped.
     gml:rh gml:rf (page furniture) dropped; gml:fn -> an unnumbered
-    entry of the footnote list.  The device-level events (bx vr kp tc dh
+    entry of the footnote list (kind=leader, the .fn leader definition:
+    dropped, the list has its own rule).  gml:sp/sk: .sk skips that
+    follow each other with nothing visible between (across scope
+    boundaries) do not add up: the largest one is kept (gml.tex).  In
+    hint mode a heading element (h0-h6) holding a gml:h is only the
+    anchor: the gml:h is the heading, run-in (span.gml-runin, the text
+    follows on the same line) when its level was defined NBR (gml:dh,
+    accumulator h:dh); a title element is the text of the title in the
+    profile's own layout (div.gml-hint-title), and a figdesc/tdesc runs
+    on after the caption (the profile wrote the colon).  The device-level events (bx vr kp tc dh
     df hw rc fl is ic dr cl cd sc mc pn pl pw pm tm bm, temporary in/ir,
     hy options) have no HTML meaning and are dropped, as are sa re (the
     saved environment) and ix (the place of the index: resolve.xsl put the
@@ -105,7 +114,13 @@
     in        margin-left   ir  margin-right   (state values are absolute:
               each scope writes the difference from the enclosing scope,
               calc(new - old), so nesting adds up to the DCF value)
-    of        padding-left (difference) + text-indent: -of (hanging)
+    of        padding-left (difference) + text-indent: -of (hanging).
+              DCF starts the hanging indention again after every break:
+              a scope with blocks or gml:br inside is written as one
+              div.gml-hang per run of text between them, each with the
+              indention; and a .is to h tab after a label makes the
+              label an inline block h wide (span.gml-hang-label, plus a
+              no-break blank: a wider label is followed by one blank)
     ll        max-width (default: var(-\-gml-measure))
     fill=no   white-space: pre-wrap      fill=yes  white-space: normal
     align     text-align: left right center, justify ->
@@ -138,6 +153,7 @@
 <xsl:stylesheet version="3.0"
     xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
     xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:map="http://www.w3.org/2005/xpath-functions/map"
     xmlns:gml="urn:x-gml:canonical"
     xmlns:h="urn:x-gml:html"
     exclude-result-prefixes="#all">
@@ -496,14 +512,27 @@
              else span (display: block for a box in phrasing content) -->
         <xsl:variable name="block" select="h:box(.)"/>
         <xsl:variable name="has-blocks" select="exists(*[not(h:inline(.) or h:invisible(.) or self::gml:br)])"/>
-        <xsl:element name="{if ($ctx = 'flow' and ($block or $has-blocks)) then 'div' else 'span'}">
+        <!-- a hanging indention (of) over breaks: each run of text between
+             them gets the indention (h:hang-runs; a scope with one run too,
+             for its label), the scope keeps the rest -->
+        <xsl:variable name="hang-css" select="$css[matches(., '^(padding-left|text-indent):')]"/>
+        <xsl:variable name="hang" select="exists($hang-css) and $ctx = 'flow'"/>
+        <xsl:variable name="css" select="if ($hang) then $css[not(. = $hang-css)] else $css"/>
+        <xsl:element name="{if ($ctx = 'flow' and ($block or $has-blocks or $hang)) then 'div' else 'span'}">
           <xsl:attribute name="class" select="string-join(('gml-scope', $class), ' ')"/>
           <xsl:if test="exists($css) or ($block and $ctx = 'phrasing')">
             <xsl:attribute name="style" select="string-join((
                 if ($block and $ctx = 'phrasing') then 'display: block' else (), $css), '; ')"/>
           </xsl:if>
           <xsl:call-template name="h:scope-data"><xsl:with-param name="s" select="."/></xsl:call-template>
-          <xsl:apply-templates/>
+          <xsl:choose>
+            <xsl:when test="$hang">
+              <xsl:call-template name="h:hang-runs">
+                <xsl:with-param name="css" select="$hang-css"/>
+              </xsl:call-template>
+            </xsl:when>
+            <xsl:otherwise><xsl:apply-templates/></xsl:otherwise>
+          </xsl:choose>
         </xsl:element>
       </xsl:otherwise>
     </xsl:choose>
@@ -511,6 +540,62 @@
 
   <!-- a block box: div in flow content, span display:block in phrasing
        content, li in a list -->
+  <!-- the runs of inline content of a hanging scope, between its breaks
+       (gml:br, which the run boundary replaces; blocks, written as they
+       are): one div.gml-hang each, with the indention -->
+  <xsl:template name="h:hang-runs">
+    <xsl:param name="css" as="xs:string*"/>
+    <xsl:for-each-group select="node()" group-adjacent="h:inline(.) or h:invisible(.)">
+      <xsl:choose>
+        <xsl:when test="current-grouping-key() and exists(current-group()[not(h:invisible(.))])">
+          <div class="gml-hang" style="{string-join($css, '; ')}">
+            <xsl:call-template name="h:labelled-run">
+              <xsl:with-param name="nodes" select="current-group()"/>
+            </xsl:call-template>
+          </div>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:apply-templates select="current-group()[not(self::gml:br)]"/>
+        </xsl:otherwise>
+      </xsl:choose>
+    </xsl:for-each-group>
+  </xsl:template>
+
+  <!-- a run with a label: the text before a .is "to h" tab (a list item's
+       identifier, a definition term) is an inline block h wide, so that
+       the text after it starts at h (the hanging indention), or after one
+       blank when the label is wider (the no-break blank at its end) -->
+  <xsl:template name="h:labelled-run">
+    <xsl:param name="nodes" as="node()*"/>
+    <xsl:variable name="is" select="($nodes[self::gml:is][matches(normalize-space(@spec), '^to ')])[1]"/>
+    <xsl:variable name="before" select="$nodes[exists($is) and . &lt;&lt; $is]"/>
+    <xsl:choose>
+      <xsl:when test="exists($before[h:inline(.)])">
+        <xsl:variable name="label" as="node()*">
+          <xsl:apply-templates select="$before"/>
+        </xsl:variable>
+        <span class="gml-hang-label" style="display: inline-block; text-indent: 0; min-width: {h:len(tokenize(normalize-space($is/@spec), ' ')[2], 'ch')}">
+          <xsl:apply-templates select="$label" mode="h:trim-end">
+            <xsl:with-param name="last" select="($label/descendant-or-self::text()[normalize-space() != ''])[last()]" tunnel="yes"/>
+          </xsl:apply-templates>
+          <xsl:value-of select="$nbsp"/>
+        </span>
+        <xsl:apply-templates select="$nodes[. &gt;&gt; $is]"/>
+      </xsl:when>
+      <xsl:otherwise><xsl:apply-templates select="$nodes"/></xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+  <!-- a result tree without the blank space after its last text -->
+  <xsl:mode name="h:trim-end" on-no-match="shallow-copy"/>
+  <xsl:template match="text()" mode="h:trim-end">
+    <xsl:param name="last" as="text()?" tunnel="yes"/>
+    <xsl:choose>
+      <xsl:when test="exists($last) and . is $last"><xsl:value-of select="replace(., '\s+$', '')"/></xsl:when>
+      <xsl:when test="normalize-space() = '' and (empty($last) or . &gt;&gt; $last)"/>
+      <xsl:otherwise><xsl:value-of select="."/></xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+
   <xsl:template name="h:block">
     <xsl:param name="ctx" as="xs:string"/>
     <xsl:param name="class" as="xs:string"/>
@@ -550,6 +635,7 @@
       'header', 'nav', 'figure', 'ul', 'ol', 'dl', 'li', 'dd', 'blockquote', 'div', 'address',
       'table', 'colgroup', 'thead', 'tfoot', 'tbody', 'tr')"/>
 
+  <xsl:mode use-accumulators="#all"/>
   <xsl:mode name="h:out" on-no-match="shallow-copy"/>
   <xsl:template mode="h:out" match="*[local-name() = $h:blocks]">
     <xsl:if test="parent::*[local-name() = $h:containers]
@@ -589,7 +675,7 @@
             <xsl:with-param name="ctx" select="'flow'" tunnel="yes"/>
           </xsl:apply-templates>
           <xsl:sequence select="h:footnotes(if ($chapter-notes) then key('fn-chapter', 'root')
-                                            else (//fn | //gml:fn))"/>
+                                            else (//fn | //gml:fn[not(@kind = 'leader')]))"/>
           <xsl:text>&#10;</xsl:text>
         </main>
         <xsl:text>&#10;</xsl:text>
@@ -652,6 +738,21 @@
     </header>
   </xsl:template>
 
+  <!-- hint mode: the profile laid the title page out (font, alignment,
+       space); the element only says which text is the title -->
+  <xsl:template match="title[$h:hint-mode]" priority="1">
+    <xsl:param name="ctx" as="xs:string" tunnel="yes" select="'flow'"/>
+    <xsl:element name="{if ($ctx = 'phrasing') then 'span' else 'div'}">
+      <xsl:attribute name="class" select="'gml-hint-title'"/>
+      <xsl:attribute name="role" select="'heading'"/>
+      <xsl:attribute name="aria-level" select="1"/>
+      <xsl:if test="$ctx = 'phrasing'"><xsl:attribute name="style" select="'display: block'"/></xsl:if>
+      <xsl:apply-templates>
+        <xsl:with-param name="ctx" select="'phrasing'" tunnel="yes"/>
+      </xsl:apply-templates>
+    </xsl:element>
+  </xsl:template>
+
   <xsl:template match="title">
     <h1 class="gml-title">
       <xsl:apply-templates>
@@ -705,29 +806,68 @@
       <xsl:sequence select="h:footnotes(key('fn-chapter',
           if ($prev) then generate-id($prev) else if ($s) then generate-id($s) else 'root'))"/>
     </xsl:if>
-    <xsl:call-template name="h:heading">
-      <xsl:with-param name="ctx" select="$ctx"/>
-      <xsl:with-param name="level" select="xs:integer(substring(local-name(), 2))"/>
-      <xsl:with-param name="class" select="'gml-' || local-name()"/>
-    </xsl:call-template>
+    <xsl:choose>
+      <!-- hint mode: the profile issued .hn inside the element (gml:h),
+           which is the heading and takes the element's id -->
+      <xsl:when test="$h:hint-mode and gml:h"><xsl:apply-templates/></xsl:when>
+      <xsl:otherwise>
+        <xsl:call-template name="h:heading">
+          <xsl:with-param name="ctx" select="$ctx"/>
+          <xsl:with-param name="level" select="xs:integer(substring(local-name(), 2))"/>
+          <xsl:with-param name="class" select="'gml-' || local-name()"/>
+        </xsl:call-template>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
+
+  <!-- .dh per level: was the level defined NBR (a run-in heading: the text
+       follows on the same line)?  .dh n alone restores the default (BR). -->
+  <xsl:accumulator name="h:dh" as="map(xs:string, xs:boolean)" initial-value="map{}">
+    <xsl:accumulator-rule match="gml:dh" select="
+        let $l := normalize-space(@level),
+            $w := tokenize(lower-case(normalize-space(translate(string(@spec), '()', '  '))), ' ')[. != ''],
+            $b := $w[. = ('br', 'nbr')][last()]
+        return if (empty($w)) then map:remove($value, $l)
+               else if (exists($b)) then map:put($value, $l, $b = 'nbr')
+               else $value"/>
+  </xsl:accumulator>
 
   <xsl:template match="gml:h">
     <xsl:param name="ctx" as="xs:string" tunnel="yes" select="'flow'"/>
-    <xsl:call-template name="h:heading">
-      <xsl:with-param name="ctx" select="$ctx"/>
-      <xsl:with-param name="level" select="if (@level castable as xs:integer) then xs:integer(@level) else 1"/>
-      <xsl:with-param name="class" select="'gml-h gml-h-' || @level"/>
-    </xsl:call-template>
+    <xsl:variable name="level" select="if (@level castable as xs:integer) then xs:integer(@level) else 1"/>
+    <!-- in hint mode the first gml:h of a heading element carries its id -->
+    <xsl:variable name="own" select="../self::*[namespace-uri() = '' and local-name() = ('h0', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6')][$h:hint-mode][current() is gml:h[1]]"/>
+    <xsl:variable name="id" select="(@anchor, @id, $own/@anchor, $own/@id)[1] ! string()"/>
+    <xsl:variable name="class" select="'gml-h gml-h-' || @level || (if (exists($own)) then ' gml-' || local-name($own) else '')"/>
+    <xsl:choose>
+      <xsl:when test="(accumulator-before('h:dh')(string(@level)), false())[1]">
+        <span class="{$class} gml-runin" role="heading" aria-level="{max((1, min(($level, 6))))}">
+          <xsl:if test="exists($id)"><xsl:attribute name="id" select="$id"/></xsl:if>
+          <xsl:apply-templates>
+            <xsl:with-param name="ctx" select="'phrasing'" tunnel="yes"/>
+          </xsl:apply-templates>
+        </span>
+        <xsl:text> </xsl:text>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:call-template name="h:heading">
+          <xsl:with-param name="ctx" select="$ctx"/>
+          <xsl:with-param name="level" select="$level"/>
+          <xsl:with-param name="class" select="$class"/>
+          <xsl:with-param name="id" select="$id"/>
+        </xsl:call-template>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
   <xsl:template name="h:heading">
     <xsl:param name="ctx" as="xs:string"/>
     <xsl:param name="level" as="xs:integer"/>
     <xsl:param name="class" as="xs:string"/>
+    <xsl:param name="id" as="xs:string?" select="(@anchor, @id)[1] ! string()"/>
     <xsl:variable name="hn" select="'h' || max((1, min(($level, 6))))"/>
     <xsl:element name="{if ($ctx = 'phrasing') then 'span' else $hn}">
-      <xsl:call-template name="h:id"/>
+      <xsl:if test="exists($id)"><xsl:attribute name="id" select="$id"/></xsl:if>
       <xsl:attribute name="class" select="$class"/>
       <xsl:if test="$ctx = 'phrasing'">
         <xsl:attribute name="role" select="'heading'"/>
@@ -957,8 +1097,12 @@
   <xsl:template match="figcap" mode="caption">
     <span class="gml-figcap"><xsl:apply-templates/></span>
   </xsl:template>
+  <!-- (in hint mode the profile wrote the colon: the description runs on) -->
   <xsl:template match="figdesc" mode="caption">
-    <span class="gml-figdesc" style="display: block"><xsl:apply-templates/></span>
+    <span class="gml-figdesc">
+      <xsl:if test="not($h:hint-mode)"><xsl:attribute name="style" select="'display: block'"/></xsl:if>
+      <xsl:apply-templates/>
+    </span>
   </xsl:template>
 
   <!-- ==== tables ========================================================== -->
@@ -1238,7 +1382,10 @@
     <span class="gml-tcap"><xsl:apply-templates/></span>
   </xsl:template>
   <xsl:template match="tdesc" mode="caption">
-    <span class="gml-tdesc" style="display: block"><xsl:apply-templates/></span>
+    <span class="gml-tdesc">
+      <xsl:if test="not($h:hint-mode)"><xsl:attribute name="style" select="'display: block'"/></xsl:if>
+      <xsl:apply-templates/>
+    </span>
   </xsl:template>
 
   <!-- ==== footnotes ======================================================= -->
@@ -1264,7 +1411,7 @@
     <xsl:sequence select="if ($hd) then generate-id($hd) else if ($s) then generate-id($s) else 'root'"/>
   </xsl:function>
 
-  <xsl:key name="fn-chapter" match="fn | gml:fn" use="h:chapter(.)"/>
+  <xsl:key name="fn-chapter" match="fn | gml:fn[not(@kind = 'leader')]" use="h:chapter(.)"/>
 
   <xsl:function name="h:footnotes" as="element()?">
     <xsl:param name="fns" as="element()*"/>
@@ -1505,10 +1652,57 @@
     </xsl:if>
   </xsl:template>
 
+  <!-- the visible node after / before n: over the invisible nodes and
+       gml:br, and through the boundaries of scopes (a skip at the end of
+       a scope and one after it are consecutive) -->
+  <xsl:function name="h:after" as="node()?">
+    <xsl:param name="n" as="node()"/>
+    <xsl:variable name="s" select="$n/following-sibling::node()[not(h:invisible(.) or self::gml:br)][1]"/>
+    <xsl:sequence select="if (exists($s)) then h:first($s)
+                          else if ($n/parent::gml:scope) then h:after($n/parent::gml:scope) else ()"/>
+  </xsl:function>
+  <xsl:function name="h:first" as="node()?">
+    <xsl:param name="n" as="node()"/>
+    <xsl:variable name="c" select="$n/self::gml:scope/node()[not(h:invisible(.) or self::gml:br)][1]"/>
+    <xsl:sequence select="if (not($n/self::gml:scope)) then $n
+                          else if (exists($c)) then h:first($c) else h:after($n)"/>
+  </xsl:function>
+  <xsl:function name="h:before" as="node()?">
+    <xsl:param name="n" as="node()"/>
+    <xsl:variable name="s" select="$n/preceding-sibling::node()[not(h:invisible(.) or self::gml:br)][1]"/>
+    <xsl:sequence select="if (exists($s)) then h:last($s)
+                          else if ($n/parent::gml:scope) then h:before($n/parent::gml:scope) else ()"/>
+  </xsl:function>
+  <xsl:function name="h:last" as="node()?">
+    <xsl:param name="n" as="node()"/>
+    <xsl:variable name="c" select="$n/self::gml:scope/node()[not(h:invisible(.) or self::gml:br)][last()]"/>
+    <xsl:sequence select="if (not($n/self::gml:scope)) then $n
+                          else if (exists($c)) then h:last($c) else h:before($n)"/>
+  </xsl:function>
+
+  <!-- .sk skips do not add up (gml.tex \gml@vskip): of consecutive skips
+       the largest one is kept, the last of equal ones.  Sizes compare as
+       lines; skips in other units only when they are the same. -->
+  <xsl:function name="h:sk-lines" as="xs:double">
+    <xsl:param name="n" as="node()?"/>
+    <xsl:sequence select="if ($n/self::gml:sk and (empty($n/@unit) or $n/@unit = 'line')
+                              and $n/@n castable as xs:double) then xs:double($n/@n) else -1"/>
+  </xsl:function>
+  <xsl:function name="h:skip-dropped" as="xs:boolean">
+    <xsl:param name="s" as="element()"/>
+    <xsl:variable name="me" select="h:sk-lines($s)"/>
+    <xsl:variable name="next" select="h:after($s)"/>
+    <xsl:variable name="prev" select="h:before($s)"/>
+    <xsl:sequence select="(exists($next/self::gml:sk)
+                           and (h:len($next/@n || $next/@unit, 'line') = h:len($s/@n || $s/@unit, 'line')
+                                or ($me ge 0 and h:sk-lines($next) ge $me)))
+                          or (exists($prev/self::gml:sk) and $me ge 0 and h:sk-lines($prev) gt $me)"/>
+  </xsl:function>
+
   <xsl:template match="gml:sp | gml:sk">
     <xsl:param name="ctx" as="xs:string" tunnel="yes" select="'flow'"/>
     <xsl:variable name="len" select="h:len(@n || @unit, 'line')"/>
-    <xsl:if test="$len != '0'">
+    <xsl:if test="$len != '0' and not(self::gml:sk and h:skip-dropped(.))">
       <xsl:call-template name="h:block">
         <xsl:with-param name="ctx" select="$ctx"/>
         <xsl:with-param name="class" select="'gml-sp'"/>

@@ -50,7 +50,9 @@
 #        copies of scope/*.out.xml; html/index-pi is resolve/index-pi.out.xml
 #        | scope.xsl (the .pi entries and .ix placement)
 #        html/dcfstarter-tables: gmlfmt -to scoped -profile dcfstarter
-#        gml/dcfstarter-tables.gml (G dates; hint mode: no gml:num labels)
+#        gml/dcfstarter-tables.gml (G dates; hint mode: no gml:num labels);
+#        html/dcfstarter-lists the same from gml/dcfstarter-lists.gml (the
+#        hanging indention of lists and a run-in heading in hint mode)
 
 if(~ $#SAXON 0) SAXON=/usr/local/bin/transform
 here=`{cd `{/usr/local/plan9/bin/basename -d $0} && pwd}

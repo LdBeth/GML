@@ -94,15 +94,15 @@ h1, h2, h3, h4, h5, h6, .gml-h {
   hyphens: manual;
   break-after: avoid-page;
 }
-.gml-h0 { font-size: 2.2rem; margin: 3rem 0 1.5rem; padding: 0.75rem 0;
+.gml-h0, .gml-h-0 { font-size: 2.2rem; margin: 3rem 0 1.5rem; padding: 0.75rem 0;
           border-top: 3px solid var(--gml-fg); border-bottom: 1px solid var(--gml-rule); }
-.gml-h1, .gml-section-title, .gml-toc-title, .gml-figlist-title, .gml-index-title
+.gml-h1, .gml-h-1, .gml-section-title, .gml-toc-title, .gml-figlist-title, .gml-index-title
         { font-size: 1.75rem; margin: 2.5rem 0 1rem; }
-.gml-h2 { font-size: 1.35rem; margin: 2rem 0 0.75rem; }
-.gml-h3 { font-size: 1.15rem; margin: 1.5rem 0 0.5rem; }
-.gml-h4 { font-size: 1rem; margin: 1.25rem 0 0.5rem; }
-.gml-h5 { font-size: 1rem; font-weight: 600; font-style: italic; margin: 1rem 0 0.25rem; }
-.gml-h6 { font-size: 0.95rem; font-weight: 600; font-style: italic; margin: 1rem 0 0.25rem; }
+.gml-h2, .gml-h-2 { font-size: 1.35rem; margin: 2rem 0 0.75rem; }
+.gml-h3, .gml-h-3 { font-size: 1.15rem; margin: 1.5rem 0 0.5rem; }
+.gml-h4, .gml-h-4 { font-size: 1rem; margin: 1.25rem 0 0.5rem; }
+.gml-h5, .gml-h-5 { font-size: 1rem; font-weight: 600; font-style: italic; margin: 1rem 0 0.25rem; }
+.gml-h6, .gml-h-6 { font-size: 0.95rem; font-weight: 600; font-style: italic; margin: 1rem 0 0.25rem; }
 .gml-num { font-variant-numeric: tabular-nums; }
 h1 > .gml-num, h2 > .gml-num, h3 > .gml-num, h4 > .gml-num { color: var(--gml-muted); margin-right: 0.35em; }
 
@@ -206,17 +206,17 @@ pre, .gml-xmp { font-family: var(--gml-mono-font); font-size: 0.875em; line-heig
 .gml-footnote:target { background: var(--gml-code-bg); }
 
 /* ---- table of contents, figure list, index -------------------------------- */
-.gml-toc, .gml-figlist { margin: 2rem 0; text-align: left; }
-.gml-toc-list, .gml-figlist-list { list-style: none; margin: 0; padding: 0; }
+.gml-toc, .gml-figlist, .gml-tlist { margin: 2rem 0; text-align: left; }
+.gml-toc-list, .gml-figlist-list, .gml-tlist-list { list-style: none; margin: 0; padding: 0; }
 .gml-toc-list .gml-toc-list { padding-left: 1.5em; }
 .gml-toc-entry { margin: 0.2em 0; }
 .gml-toc-l0 > a { font-weight: 700; font-size: 1.05em; }
 .gml-toc-l1 > a { font-weight: 600; }
-.gml-toc-entry > a, .gml-figlist-entry > a { text-decoration: none; color: inherit; }
-.gml-toc-entry > a:hover, .gml-figlist-entry > a:hover { color: var(--gml-accent); text-decoration: underline; }
+.gml-toc-entry > a, .gml-figlist-entry > a, .gml-tlist-entry > a { text-decoration: none; color: inherit; }
+.gml-toc-entry > a:hover, .gml-figlist-entry > a:hover, .gml-tlist-entry > a:hover { color: var(--gml-accent); text-decoration: underline; }
 .gml-toc-entry .gml-num { color: var(--gml-muted); margin-right: 0.15em; }
-.gml-figlist-entry { margin: 0.2em 0; }
-.gml-figlist-entry .gml-num { font-weight: 600; }
+.gml-figlist-entry, .gml-tlist-entry { margin: 0.2em 0; }
+.gml-figlist-entry .gml-num, .gml-tlist-entry .gml-num { font-weight: 600; }
 
 .gml-index { text-align: left; }
 .gml-index-group { break-inside: avoid; }
@@ -232,9 +232,12 @@ pre, .gml-xmp { font-family: var(--gml-mono-font); font-size: 0.875em; line-heig
 }
 
 /* ---- control word headings and hints --------------------------------------- */
-.gml-h { font-size: 1.1rem; margin: 1.25em 0 0.5em; }
-.gml-h-0, .gml-h-1 { font-size: 1.6rem; }
-.gml-h-2 { font-size: 1.3rem; }
+/* a .hn heading (gml:h) is styled as the Starter Set heading of its level
+   (.gml-h-N with .gml-hN above); a run-in heading (level defined NBR) is
+   inline, the text follows on its line: the block pseudo-element before it
+   breaks the line and gives the skip before */
+.gml-runin { display: inline; margin: 0 0.5em 0 0; }
+.gml-runin::before { content: ""; display: block; margin-top: 1rem; }
 .gml-sp { display: block; }
 .gml-pa, .gml-cp, .gml-cc, .gml-cb { display: block; height: 0; }
 .gml-hr { border: 0; border-top: 1px solid var(--gml-rule); margin: 0.75em 0; display: block; }
