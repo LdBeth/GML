@@ -5,7 +5,8 @@
  (package gml)
  (files
   (profile/starter.gml as profile/starter.gml)
-  (profile/dcfstarter.gml as profile/dcfstarter.gml)))
+  (profile/dcfstarter.gml as profile/dcfstarter.gml)
+  (profile/starterset.gml as profile/starterset.gml)))
 
 ; The TeX macros, installed in share/gml/tex/ (put this directory on
 ; TEXINPUTS to typeset the output of tex.xsl).

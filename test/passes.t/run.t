@@ -6,7 +6,7 @@ hand.  Each pass is gml -pass k -passes n -aux JOB.gmlaux
 
 Pass 1 of 2: the forward references are not known yet; the profile
 prints a stand-in (the ID) and no message (DCFS020W waits for the last
-pass, f@lastpass); the .tc of :toc (&$TWO = 1) is empty; every &$PN is
+pass, ss@last); the .tc of :toc (&$TWO = 1) is empty; every &$PN is
 a question (gml:query, \gmlquery in the TeX), answered with the neutral
 1 (no aux file yet).  The root element has pass= and passes=, which
 tex.xsl writes as \def\gmlpassno{1}\def\gmlpasses{2} before \input gml.
@@ -26,10 +26,10 @@ tex.xsl writes as \def\gmlpassno{1}\def\gmlpasses{2} before \input gml.
 
 The symbol file has the cross-reference symbols (fh@ID text, fp@ID
 page, fg@ID number, fq@ID its page) and the TOC entries; the per-pass
-state (the ID stamps of f@dfid, f@lastpass) is removed at :egdoc, so
+state (the ID stamps of f@dfid, ss@last) is removed at :egdoc, so
 two passes in the same state write the same file.
 
-  $ grep '^.se f[hpgq]@\|gml@toc\|^.se [hg]@\|lastpass' p1.sym
+  $ grep '^.se f[hpgq]@\|gml@toc\|^.se [hg]@\|ss@last' p1.sym
   .se fg@PIC = '1'
   .se fh@INTRO = 'Introduction'
   .se fh@LATER = 'Later'

@@ -50,6 +50,6 @@ ended before a heading (DCFS003W).
   ctx.gml:7: +++DCFS015W Row definition nosuch is not defined.
   ctx.gml:10: +++DCFS012W Tag :tref requires the refid attribute.
   ctx.gml:11: +++DCFS014W A table cannot be nested in a table.
-  ctx.gml:12: +++DCFS019W Row definition x is redefined in an open table.
+  ctx.gml:12: +++DCFS019W Row definition x redefined while a table is open.
   ctx.gml:13: +++DCFS003W Tag :table was not ended before tag :h1.
   ctx.gml:14: +++DCFS004W Tag :etable found but no table is open.

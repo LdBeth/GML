@@ -10,15 +10,15 @@ after the first row, table tags outside a table and a table open at a
 heading are reported.
 
   $ gml -profile starter in.gml
-  in.gml:3 (in macro dsm#msg line 3, in macro dsm#cntx line 1): +++DSMGML002W Tag :c is out of context.
-  in.gml:6 (in macro dsm#msg line 24, in macro dsm@rdf line 15, in macro dsmrdef line 4): +++DSMGML012W Tag :rdef requires the id attribute.
-  in.gml:8 (in macro dsm#msg line 36, in macro dsmtable line 10): +++DSMGML016W Value wide is not valid for tag :table.
-  in.gml:19 (in macro dsm#msg line 30, in macro dsm#cnum line 8, in macro dsmcell line 4): +++DSMGML014W Cell 9 is not in row definition GRID.
-  in.gml:22 (in macro dsm#msg line 3, in macro dsm#cntx line 1): +++DSMGML002W Tag :c is out of context.
-  in.gml:23 (in macro dsm#msg line 27, in macro dsm#rchk line 3, in macro dsm#trow line 4, in macro dsmrow line 3): +++DSMGML013W Row definition nosuch is not defined.
-  in.gml:25 (in macro dsm#msg line 33, in macro dsm#thft line 1, in macro dsmtft line 1): +++DSMGML015W Tag :tft must come before the first row of the table.
-  in.gml:34 (in macro dsm#msg line 6, in macro dsm#rset line 5, in macro dsmhead1 line 1): +++DSMGML003W Tag :table not ended before tag :h1.
-  in.gml:35 (in macro dsm#msg line 24, in macro dsmtref line 2): +++DSMGML012W Tag :tref requires the refid attribute.
+  in.gml:3 (in macro ss@msg line 3, in macro ss@cntx line 1): +++DSMGML002W Tag :c is out of context and is ignored.
+  in.gml:6 (in macro ss@msg line 21, in macro ss@rdf line 15, in macro ss@rdef line 4, in macro dsmrdef line 1): +++DSMGML012W Tag :rdef requires the id attribute.
+  in.gml:8 (in macro ss@msg line 39, in macro ss@tspan line 9, in macro dsmtable line 2): +++DSMGML018W Value wide is not valid for tag :table.
+  in.gml:19 (in macro ss@msg line 33, in macro ss@cnum line 8, in macro dsmcell line 4): +++DSMGML016W Cell 9 is not in row definition GRID.
+  in.gml:22 (in macro ss@msg line 3, in macro ss@cntx line 1): +++DSMGML002W Tag :c is out of context and is ignored.
+  in.gml:23 (in macro ss@msg line 30, in macro ss@rchk line 3, in macro ss@trow line 3, in macro dsmrow line 4): +++DSMGML015W Row definition nosuch is not defined.
+  in.gml:25 (in macro ss@msg line 36, in macro ss@thft line 1, in macro dsm#thft line 3, in macro dsmtft line 1): +++DSMGML017W Tag :tft must come before the first row of the table.
+  in.gml:34 (in macro ss@msg line 6, in macro dsm#rset line 5, in macro dsmhead1 line 1): +++DSMGML003W Tag :table was not ended before tag :h1.
+  in.gml:35 (in macro ss@msg line 21, in macro dsmtref line 2): +++DSMGML012W Tag :tref requires the refid attribute.
   <?xml version="1.0" encoding="UTF-8"?>
   <gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><body>a cell before any table
   <rdef id="Grid" concat="yes y no yes" arrange="1 1 2 / 3 4 2" cwidths="2i 1i *"/><rdef cwidths="*"/><p>Text before the table

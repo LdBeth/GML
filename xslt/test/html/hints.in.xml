@@ -9,7 +9,7 @@
 <gml:lines word="ri" n="1" break="yes">right line</gml:lines>
 <gml:pa break="yes"/>New page.
 <gml:cp n="5" unit="line" break="yes"/>Conditional page.
-<gml:h level="2" break="yes">A control word heading</gml:h>
+<gml:h level="2" break="yes"><gml:tcmark anchor="gml.tc.1" break="no"/>A control word heading</gml:h>
 Text under it.
 <gml:rh>Running head
 </gml:rh><gml:rf>Running foot

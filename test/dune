@@ -3,6 +3,7 @@
   %{bin:gml}
   %{project_root}/share/profile/starter.gml
   %{project_root}/share/profile/dcfstarter.gml
+  %{project_root}/share/profile/starterset.gml
   (glob_files %{project_root}/share/tex/*.tex)))
 
 ; a real TeX run between the passes, the TeX made by the XSLT stages

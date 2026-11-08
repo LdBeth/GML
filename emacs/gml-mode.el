@@ -1126,7 +1126,14 @@ with the file named in the message."
     (dolist (n (gml--collect "^\\.'?\\(?:im\\|ap\\)[ \t]+\\([^ \t\n;]+\\)" 1))
       (when-let* ((f (gml--resolve-file n dir))) (push f files)))
     (when-let* ((p (and gml-profile (gml--resolve-file gml-profile dir))))
-      (push p files))
+      (push p files)
+      ;; and the files the profile imbeds (the shipped profiles:
+      ;; starterset.gml, where &date and the shared APFs are)
+      (with-temp-buffer
+        (insert-file-contents p)
+        (dolist (n (gml--collect "^\\.'?im[ \t]+\\([^ \t\n;]+\\)" 1))
+          (when-let* ((f (gml--resolve-file n (file-name-directory p))))
+            (push f files)))))
     (cl-remove-duplicates (nreverse files) :test #'string=)))
 
 (defun gml--definition-regexps (id)

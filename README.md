@@ -14,7 +14,8 @@ each hint records the new state and whether it breaks.
 ## Architecture
 
 ```
- doc.gml + profile (share/profile/starter.gml, dcfstarter.gml)
+ doc.gml + profile (share/profile/starter.gml, dcfstarter.gml: both
+    |              imbed starterset.gml)
     |
     |  gml   OCaml engine (lib/, bin/): input stack, substitution,
     |        macros, GML tags -> APFs, .xs/.xd element building, hints
@@ -92,6 +93,16 @@ gml [-I dir]... [-share dir] [-profile file|name] [-set sym=val]...
   :row :c :tnote :tcap :tdesc`, `:tref` and `:tlist`; resolve.xsl works
   out the cell grid, numbering and captions, and the HTML and TeX
   stages draw ruled tables (fixtures from `xslt/test/gml/tables.gml`).
+  The part that does not depend on the output is shared with the
+  formatting profile `dcfstarter` (below): `share/profile/starterset.gml`,
+  which both profiles imbed (`.im starterset`).  It holds the delimiters,
+  the text symbols (`&gml.`, `&amp.`, `&semi.`, `&rbl.`, the quotation
+  marks `&oqq.` `&cqq.` `&oq.` `&cq.`), `&date` and `&time`, `:psc`
+  (selected by `SYSVARP`), the message catalogue, the out-of-context
+  handling and the decisions of the table tags (row definitions, cell
+  numbers, CONCAT=NO); its macros and state are named `ss@...`.  `.im`
+  looks in the working directory and the `-I` directories first, so a
+  file `starterset.gml` there would shadow the shipped one.
 - `-set SYSVARH=yes` sets a symbol, as DCF's `SYSVAR` options do.
 - `-lib dir` (repeatable, searched in order) adds a symbol and macro
   library, as DCF's `LIB` option does: a member is the file `dir/NAME` or
@@ -172,7 +183,8 @@ The stylesheet parameters (`SYSVARS`/`SYSVARD`/`SYSVART` page layouts,
   The `.gs` services are `tag`, `rules`, `prefix`, `exatt`, `attval`,
   `scan`, `copy` and `insert`.  Every tag opens an element of its own name
   unless its rules say `noelem`; the APF's output goes inside it.  The
-  Starter Set APFs in `starter.gml` are ordinary macros: override them
+  Starter Set APFs in `starter.gml` (DSMPROF3's names; the shared ones
+  are `ss@...` in `starterset.gml`) are ordinary macros: override them
   in your own profile.
 - **Elements.** Our output control words are `.xs name a=v` (start),
   `.xe [name]` (end), `.xa a=v` (set attributes) and `.xr backend /text/`
@@ -260,7 +272,8 @@ The stylesheet parameters (`SYSVARS`/`SYSVARD`/`SYSVART` page layouts,
 - **xref** (`M-.`) on a macro call, `&symbol`, `.go` label,
   `refid=` value, tag or `.im` file name.  Definitions are looked up in
   the buffer, then in the imbedded files and the profile, so `&date`
-  leads to `starter.gml`.
+  leads to `starterset.gml` (the files the profile imbeds are searched
+  too).
 - **Flymake** runs the engine on the buffer (`-I` the file's directory)
   and reports its errors and warnings; `C-c C-c` runs `gmlfmt` into
   `doc.html` (`C-u C-c C-c` asks for the `-to` stage) with the messages
@@ -316,11 +329,11 @@ removes the TeX and pass by-products.
 `docs/dcf-notes.md` lists the SCRIPT/VS and Starter Set rules checked
 against the manuals.  Each entry has a status (DONE, OK, EXT) and the
 cram test that shows it.  The points that the guides leave open are
-marked `DCF-VERIFY`: 84 in the sources (`lib/`, `share/`, `xslt/`)
-and 38 in the notes.  They include how far an ignored conditional section is
+marked `DCF-VERIFY`, in the sources (`lib/`, `share/`, `xslt/`) and
+in the notes.  They include how far an ignored conditional section is
 "resolved", the input-versus-output line count of `.in … after n`, the
-`.mg` severities, the DSMGML message numbers and wording, the EBCDIC
-code page (037) for hex codes, the neutral values of device system
+`.mg` severities, the message numbers and wording (one catalogue for
+both Starter Set profiles), the EBCDIC code page (037) for hex codes, the neutral values of device system
 symbols, and APF lookup under
 `.ms off`.  Deliberate extensions are marked EXT: the automatic element
 per tag, `&'substr(`-style functions, footnotes inside figures, and
@@ -342,6 +355,19 @@ engine: the `.df`/`.dh` at the start put `gml.tex` in hint mode, and
 document sections, headings for the TOC, `fig`/`figcap` for the
 figure list, the table elements for resolve.xsl's grid and the list of
 tables).
+
+Both profiles imbed `share/profile/starterset.gml` (see `-profile
+starter` above) and so share one message catalogue (`ss@msg`): the same
+condition gives the same number, `DSMGMLnnnW` under starter and
+`DCFSnnnW` here (002 out of context, 003 not ended before a tag, 004
+an end tag with no such structure open, 005 an end tag that does not
+match the open list, 010/011 a term without a description and the
+reverse, 012 a required attribute missing, 013 an ID defined twice, 014
+a structure that cannot be nested, 015-019 the table checks, 020 an
+undefined reference, on the last pass only).  The tags out of context
+(`ss@cntx`) are dropped with DSMPROF3's attribute rules, so `:li id=x.`
+loses its attribute as well.  DCF-VERIFY: the numbers and wording are
+ours.
 
 ```
 cd examples && ../gmlpass -set SYSVARH=yes -o out dcfdemo.gml   # out/dcfdemo.pdf
@@ -368,7 +394,7 @@ and running footings, `:h0`-`:h6`, `:p :pc :note`, the five lists with
 definition and cell number checks, the caption numbers and the space
 around a table; the grid is resolve.xsl's, the rows, repeated header
 and footer and footnotes in cells are gml.tex's), `:fn`, `:hp0`-`:hp3`,
-`:cit`, `:q` (nesting), the cross-references `:hdref :figref :fnref
+`:cit`, `:q` (nesting), `:psc` (by `SYSVARP`), the cross-references `:hdref :figref :fnref
 :liref :tref` (with `page=`), and the index tags `:i1`-`:i3 :ih1`-`:ih3 :iref`
 (`pg`, `see`, `seeid`, `print`) through `.pi`.  Footnote callouts are
 raised and small (a `.dv` text variable with FONT and BASELINE).  `:toc`
@@ -488,7 +514,7 @@ in them may be longer than ten characters.
   .su off
   .dc cw off
   .se fh@INTRO = 'Introduction'
-  .se f@mon(1) = 'January'
+  .se ss@mon(1) = 'January'
   .se gml@toc(1) = '1<TAB>1<TAB>0<TAB><TAB>1<TAB>gml.tc.1<TAB>Introduction'
   .dc cw
   .su on
@@ -503,7 +529,7 @@ in them may be longer than ten characters.
 
 `&$PASS` is k and `&$TWO` is 1 when N > 1; `&$PASSES` (not a DCF
 symbol) is N.  The dcfstarter profile knows its last pass
-(`f@lastpass`, the TPG p.247 idiom generalised), gives `DCFS020W` and
+(`ss@last` of starterset.gml, the TPG p.247 idiom generalised), gives `DCFS020W` and
 the "ID unknown" texts only there, checks duplicate IDs per pass, and
 issues `.tc` for `:toc` (`-set f@tcres=n` reserves n page numbers,
 `.tc n`, TPG p.157).

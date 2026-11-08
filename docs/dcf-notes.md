@@ -172,17 +172,23 @@ carrying the new state, the operand and `break="yes|no"`.  The table in
 | **Symbols carried to the next pass** (TPG p.233: a symbol defined later in the document is known on the second pass): `-symbols-out` dumps every global symbol defined at the end of the pass (not system, local, date and time symbols), `-symbols-in` loads them before the profile runs, so `-set` and the profile's `.se` lines win.  The file is SCRIPT `.se` lines the next pass imbeds (README "Passes"; lib/symbols.ml).  The TOC entries (DSMUTTOC) go along as the array `gml@toc`: a `.tc` prints the previous pass's entries (p.156).  A line end in a value is written as a blank (DCF-VERIFY).  DCF-VERIFY: the set of symbols DCF keeps, and whether the profile's settings are redone (we redo them). | DONE (`symbols_pass.t`, `passes.t`), DCF-VERIFY |
 | The page questions: with `-aux` each reference to `&$PN`/`&$LC` is a hint `gml:query id what` (`\gmlquery`); TeX writes `.se pq@ENC = v` to `JOB.gmlaux` (ENC: the id without its `q`, `.` as `@`; gml.tex header), which the next pass imbeds: `pn` at shipout (the page the place is put out on, so a target's recorded `&$PN` is the page an anchor would give), `lc` at once.  Ids `qF.L.N` (file, line, n-th on the line) keep the answers of the other lines when a pass takes another decision on one line. | DONE (`aux.t`, `tex_pass.t`) |
 | `&$LC` in the middle of a paragraph: TeX has not broken the paragraph yet, so its lines are not counted (in vertical mode the page builder runs first).  DCF-VERIFY: DCF counts the lines formatted so far, the partial line included. | DCF-VERIFY (`tex_pass.t`) |
-| dcfstarter: `f@lastpass`; `DCFS020W` and the "ID unknown" texts only on the last pass (a stand-in, the ID, before it); duplicate IDs checked per pass (`f@dfid`: a stamp per ID, removed at `:egdoc` with the other per-pass state so that two passes in the same state write the same symbol file). | DONE (`passes.t`) |
+| dcfstarter: `ss@last` (starterset.gml; also removed at starter's `:egdoc`, `starterset.t`); `DCFS020W` and the "ID unknown" texts only on the last pass (a stand-in, the ID, before it); duplicate IDs checked per pass (`f@dfid`: a stamp per ID, removed at `:egdoc` with the other per-pass state so that two passes in the same state write the same symbol file). | DONE (`passes.t`) |
 
 ## Starter Set profile (`share/profile/starter.gml`)
 Modelled on DSMPROF3 (SH35-0050 Figure 7): `.aa` mappings of every Starter
 Set tag, `.xd` implicit-close models, DSM#CNTX/DSM#RSET messages through
 `.mg`, `:xmp` verbatim (`xml:space="preserve"` + `.fo off`).  `&date` is
-built like DSM#SETS ("June 13th, 1986").  `-profile starter` searches
+built like DSM#SETS ("June 13th, 1986").  What does not depend on the
+output is shared with dcfstarter in `share/profile/starterset.gml` (`.im
+starterset`, `ss@...` names): the delimiters, text symbols, `&date`,
+`:psc` (DSMPSC, `starter_psc.t`, `dcfstarter_psc.t`), the message
+catalogue, the out-of-context maps (DSM#CNTX with DSMPROF3's attribute
+rules: `:li :title :thd :tft :row` scan theirs, so they go with the tag,
+`dcfstarter_cntx.t`) and the table decisions.  `-profile starter` searches
 `-share dir`, `$GML_SHARE`, then `share/gml` near the executable (or the
 source tree's `share` from `_build`); that profile directory is also
 last on the `.im` path so a user profile can `.im starter` (p.297).
-DCF-VERIFY: message numbers and wording of DSMGML00n are approximations.
+DCF-VERIFY: message numbers and wording are approximations; one catalogue (`ss@msg`) serves both profiles, `DSMGMLnnnW` here and `DCFSnnnW` under dcfstarter, the same number for the same condition (`starterset.t`).
 `:q` nests (`&@nest@q`, DSMQUOTE/DSMEQUOT, SH35-0050 p.125); APF macros
 that read state at call time use the inline `.dm` form, since a
 single-line `.dm` is substituted when it is defined (p.274).  **EXT:** a

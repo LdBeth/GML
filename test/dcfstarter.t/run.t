@@ -32,7 +32,7 @@ Tags out of context are reported and dropped, their text is kept, and a
 list end tag must match the open list.
 
   $ gml -profile dcfstarter ctx.gml > /dev/null
-  ctx.gml:3 (in macro f@msg line 3, in macro f@cntx line 1): +++DCFS002W Tag :li is out of context and is ignored.
-  ctx.gml:4 (in macro f@msg line 3, in macro f@cntx line 1): +++DCFS002W Tag :figcap is out of context and is ignored.
-  ctx.gml:7 (in macro f@msg line 12, in macro f@elst line 5, in macro f@eul line 1): +++DCFS005W Tag :eul does not match the open list :ol.
+  ctx.gml:3 (in macro ss@msg line 3, in macro ss@cntx line 1): +++DCFS002W Tag :li is out of context and is ignored.
+  ctx.gml:4 (in macro ss@msg line 3, in macro ss@cntx line 1): +++DCFS002W Tag :figcap is out of context and is ignored.
+  ctx.gml:7 (in macro ss@msg line 12, in macro f@elst line 5, in macro f@eul line 1): +++DCFS005W Tag :eul does not match the open list :ol.
   [4]

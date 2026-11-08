@@ -9,11 +9,11 @@ DSM#RSET reports a quotation and a footnote still open at a heading.
 
   $ gml -profile starter in.gml
   in.gml:7: warning: end tag :eq: element q is not open
-  in.gml:7 (in macro dsm#msg line 15, in macro dsmequot line 2): +++DSMGML006W Tag :q found but no quotation is open.
+  in.gml:7 (in macro ss@msg line 9, in macro dsmequot line 2): +++DSMGML004W Tag :eq found but no quotation is open.
   in.gml:8: warning: end tag :efn: element fn is not open
-  in.gml:8 (in macro dsm#msg line 15, in macro dsmeftnt line 1): +++DSMGML006W Tag :fn found but no footnote is open.
-  in.gml:11 (in macro dsm#msg line 6, in macro dsm#rset line 2, in macro dsmhead1 line 1): +++DSMGML003W Tag :q not ended before tag :h1.
-  in.gml:11 (in macro dsm#msg line 6, in macro dsm#rset line 4, in macro dsmhead1 line 1): +++DSMGML003W Tag :fn not ended before tag :h1.
+  in.gml:8 (in macro ss@msg line 9, in macro dsmeftnt line 1): +++DSMGML004W Tag :efn found but no footnote is open.
+  in.gml:11 (in macro ss@msg line 6, in macro dsm#rset line 2, in macro dsmhead1 line 1): +++DSMGML003W Tag :q was not ended before tag :h1.
+  in.gml:11 (in macro ss@msg line 6, in macro dsm#rset line 4, in macro dsmhead1 line 1): +++DSMGML003W Tag :fn was not ended before tag :h1.
   <?xml version="1.0" encoding="UTF-8"?>
   <gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><body><p>He said <q>she said <q>no</q> there</q> and left.
   </p><fig>A figure<fn>a footnote in a figure</fn> with more text.

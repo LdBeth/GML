@@ -86,7 +86,7 @@ enough to wrap at that length.
 \gmlend{gml:fn}\gmlhint{dh}{level=2,spec=font bold,break=no,font=bold}\gmlhint{vr}{break=no}\gmlhint{pa}{break=yes}%
 \gmlhint{pn}{spec=roman,break=no}After a page eject, roman page numbers.
 \gmlstart{gml:h}{level=2,break=yes,text=A control word heading}%
-A control word heading\gmlend{gml:h}%
+\gmlhint{tcmark}{anchor=gml.tc.1,break=no}A control word heading\gmlend{gml:h}%
 
 Text after .h2.
 \gmlhint{pa}{side=odd,break=yes}%
