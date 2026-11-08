@@ -1,0 +1,39 @@
+<!DOCTYPE HTML><html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="GML html.xsl">
+<title>Control words</title>
+<link rel="stylesheet" href="gml.css">
+</head>
+<body class="gml">
+<main class="gml-doc">
+<article class="gml-gdoc">
+<section class="gml-body">
+<h1 id="ctl" class="gml-h1">Control words</h1>
+<div class="gml-scope" style="margin-left: 4ch">
+<div class="gml-hang" style="padding-left: 4ch; text-indent: -4ch">The first run of the hanging text, given on two input lines, so
+that the indention is seen on its second output line.
+</div>
+<div class="gml-hang" style="padding-left: 4ch; text-indent: -4ch">The second run, after a break, starts again at the hanging indention.
+</div></div>
+<div class="gml-sp" style="height: 1lh"></div>
+<div class="gml-scope" style="margin-left: 8ch">
+<div class="gml-hang" style="padding-left: 8ch; text-indent: -8ch"><span class="gml-hang-label" style="display: inline-block; text-indent: 0; min-width: 8ch">GML&nbsp;</span>Generalized Markup Language: the label before the tab is as wide as
+the indention.
+</div>
+<div class="gml-hang" style="padding-left: 8ch; text-indent: -8ch"><span class="gml-hang-label" style="display: inline-block; text-indent: 0; min-width: 8ch">Too-long-term&nbsp;</span>A label wider than the indention is followed by one blank.
+</div></div>
+<div class="gml-sp" style="height: 2lh"></div>
+<p>Of the three skips above (one line at the end of the indented
+block, two lines and one line after it) only the two-line one is kept.
+<span class="gml-sp" style="display: block; height: 1lh"></span>Two equal skips make one.
+</p>
+<h2 id="gml-h2-1" class="gml-h2">Headings</h2><span class="gml-h gml-h-5 gml-runin" role="heading" aria-level="5">Run-in heading.</span> 
+The text after a level five heading defined NBR continues on its line.
+<h5 class="gml-h gml-h-5">A heading again</h5>
+After .dh 5 alone the level breaks again.
+</section></article>
+</main>
+</body>
+</html>

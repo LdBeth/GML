@@ -97,18 +97,15 @@
     entry of the footnote list (kind=leader, the .fn leader definition:
     dropped, the list has its own rule).  gml:sp/sk: .sk skips that
     follow each other with nothing visible between (across scope
-    boundaries) do not add up: the largest one is kept (gml.tex).  In
-    hint mode a heading element (h0-h6) holding a gml:h is only the
-    anchor: the gml:h is the heading, run-in (span.gml-runin, the text
-    follows on the same line) when its level was defined NBR (gml:dh,
-    accumulator h:dh); a title element is the text of the title in the
-    profile's own layout (div.gml-hint-title), and a figdesc/tdesc runs
-    on after the caption (the profile wrote the colon).  The device-level events (bx vr kp tc dh
-    df hw rc fl is ic dr cl cd sc mc pn pl pw pm tm bm, temporary in/ir,
-    hy options) have no HTML meaning and are dropped, as are sa re (the
-    saved environment) and ix (the place of the index: resolve.xsl put the
-    gml:index-entries after it).  gml:pi (a SCRIPT index entry) is a link
-    target, like the index tags.
+    boundaries) do not add up: the largest one is kept (gml.tex).  A
+    gml:h (.hn) of a level defined NBR (gml:dh, accumulator h:dh) is a
+    run-in heading (span.gml-runin, the text follows on the same line).
+    The device-level events (bx vr kp tc dh df hw rc fl is ic dr cl cd sc
+    mc pn pl pw pm tm bm, temporary in/ir, hy options) have no HTML
+    meaning and are dropped, as are sa re (the saved environment) and ix
+    (the place of the index: resolve.xsl put the gml:index-entries after
+    it).  gml:pi (a SCRIPT index entry) is a link target, like the index
+    tags.
 
   Scope properties -> CSS
     in        margin-left   ir  margin-right   (state values are absolute:
@@ -202,9 +199,6 @@
       'toc-entries', 'toc-entry', 'entry-text', 'figlist-entries', 'figlist-entry',
       'tlist-entries', 'tlist-entry', 'cpart', 'dv', 'pi',
       'index-entries', 'index-group', 'index-entry', 'index-term', 'see')"/>
-  <!-- hint mode: a formatting profile wrote the text, numbers and labels
-       (gml:hint-mode, common.xsl; as tex.xsl's auto mode) -->
-  <xsl:variable name="h:hint-mode" as="xs:boolean" select="gml:hint-mode(/)"/>
   <!-- gml: hints with no HTML meaning: dropped (the state hints too, in
        case the input was not scoped) -->
   <xsl:variable name="h:gml-dropped" select="('bx', 'vr', 'kp', 'tc', 'dh', 'df', 'hw', 'rc',
@@ -738,21 +732,6 @@
     </header>
   </xsl:template>
 
-  <!-- hint mode: the profile laid the title page out (font, alignment,
-       space); the element only says which text is the title -->
-  <xsl:template match="title[$h:hint-mode]" priority="1">
-    <xsl:param name="ctx" as="xs:string" tunnel="yes" select="'flow'"/>
-    <xsl:element name="{if ($ctx = 'phrasing') then 'span' else 'div'}">
-      <xsl:attribute name="class" select="'gml-hint-title'"/>
-      <xsl:attribute name="role" select="'heading'"/>
-      <xsl:attribute name="aria-level" select="1"/>
-      <xsl:if test="$ctx = 'phrasing'"><xsl:attribute name="style" select="'display: block'"/></xsl:if>
-      <xsl:apply-templates>
-        <xsl:with-param name="ctx" select="'phrasing'" tunnel="yes"/>
-      </xsl:apply-templates>
-    </xsl:element>
-  </xsl:template>
-
   <xsl:template match="title">
     <h1 class="gml-title">
       <xsl:apply-templates>
@@ -806,18 +785,11 @@
       <xsl:sequence select="h:footnotes(key('fn-chapter',
           if ($prev) then generate-id($prev) else if ($s) then generate-id($s) else 'root'))"/>
     </xsl:if>
-    <xsl:choose>
-      <!-- hint mode: the profile issued .hn inside the element (gml:h),
-           which is the heading and takes the element's id -->
-      <xsl:when test="$h:hint-mode and gml:h"><xsl:apply-templates/></xsl:when>
-      <xsl:otherwise>
-        <xsl:call-template name="h:heading">
-          <xsl:with-param name="ctx" select="$ctx"/>
-          <xsl:with-param name="level" select="xs:integer(substring(local-name(), 2))"/>
-          <xsl:with-param name="class" select="'gml-' || local-name()"/>
-        </xsl:call-template>
-      </xsl:otherwise>
-    </xsl:choose>
+    <xsl:call-template name="h:heading">
+      <xsl:with-param name="ctx" select="$ctx"/>
+      <xsl:with-param name="level" select="xs:integer(substring(local-name(), 2))"/>
+      <xsl:with-param name="class" select="'gml-' || local-name()"/>
+    </xsl:call-template>
   </xsl:template>
 
   <!-- .dh per level: was the level defined NBR (a run-in heading: the text
@@ -835,10 +807,8 @@
   <xsl:template match="gml:h">
     <xsl:param name="ctx" as="xs:string" tunnel="yes" select="'flow'"/>
     <xsl:variable name="level" select="if (@level castable as xs:integer) then xs:integer(@level) else 1"/>
-    <!-- in hint mode the first gml:h of a heading element carries its id -->
-    <xsl:variable name="own" select="../self::*[namespace-uri() = '' and local-name() = ('h0', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6')][$h:hint-mode][current() is gml:h[1]]"/>
-    <xsl:variable name="id" select="(@anchor, @id, $own/@anchor, $own/@id)[1] ! string()"/>
-    <xsl:variable name="class" select="'gml-h gml-h-' || @level || (if (exists($own)) then ' gml-' || local-name($own) else '')"/>
+    <xsl:variable name="id" select="(@anchor, @id)[1] ! string()"/>
+    <xsl:variable name="class" select="'gml-h gml-h-' || @level"/>
     <xsl:choose>
       <xsl:when test="(accumulator-before('h:dh')(string(@level)), false())[1]">
         <span class="{$class} gml-runin" role="heading" aria-level="{max((1, min(($level, 6))))}">
@@ -890,11 +860,6 @@
     <span class="gml-num"><xsl:apply-templates/></span>
     <xsl:text> </xsl:text>
   </xsl:template>
-  <!-- hint mode: the profile wrote its own numbers and labels into the text
-       ("Figure 1.", "Table 1.", "Note:"), so resolve.xsl's gml:num is
-       dropped, as gml.tex does (in the toc, figlist and tlist entries too:
-       their text is the caption with the profile's label) -->
-  <xsl:template match="gml:num[$h:hint-mode]" priority="2"/>
 
   <!-- ==== paragraphs and phrases ========================================= -->
   <xsl:template match="p | pc">
@@ -1002,7 +967,6 @@
     <xsl:variable name="label" as="item()*">
       <xsl:choose>
         <xsl:when test="self::lp"/>
-        <xsl:when test="gml:num and $h:hint-mode"/>
         <xsl:when test="gml:num"><xsl:apply-templates select="gml:num/node()"/></xsl:when>
         <xsl:when test="$list/self::ul">
           <xsl:variable name="d" select="if ($list/@nest castable as xs:integer) then xs:integer($list/@nest)
@@ -1097,12 +1061,8 @@
   <xsl:template match="figcap" mode="caption">
     <span class="gml-figcap"><xsl:apply-templates/></span>
   </xsl:template>
-  <!-- (in hint mode the profile wrote the colon: the description runs on) -->
   <xsl:template match="figdesc" mode="caption">
-    <span class="gml-figdesc">
-      <xsl:if test="not($h:hint-mode)"><xsl:attribute name="style" select="'display: block'"/></xsl:if>
-      <xsl:apply-templates/>
-    </span>
+    <span class="gml-figdesc" style="display: block"><xsl:apply-templates/></span>
   </xsl:template>
 
   <!-- ==== tables ========================================================== -->
@@ -1382,10 +1342,7 @@
     <span class="gml-tcap"><xsl:apply-templates/></span>
   </xsl:template>
   <xsl:template match="tdesc" mode="caption">
-    <span class="gml-tdesc">
-      <xsl:if test="not($h:hint-mode)"><xsl:attribute name="style" select="'display: block'"/></xsl:if>
-      <xsl:apply-templates/>
-    </span>
+    <span class="gml-tdesc" style="display: block"><xsl:apply-templates/></span>
   </xsl:template>
 
   <!-- ==== footnotes ======================================================= -->

@@ -388,7 +388,10 @@
 .dm off
 .*
 .* ---- examples and figures -----------------------------------------------------------
+.* An example may be inside a figure: :exmp gives back the state that
+.* :xmp found (&@xstate), so that :efig still sees fig.
 .dm dsmxmp on
+.se @xstate = &@state
 .se @state = xmp
 .xa xml:space=preserve
 .fo off
@@ -398,7 +401,7 @@
 .dsm#msg 6 example
 .me
 ...ok
-.se @state = open
+.se @state = &@xstate
 .fo on
 .xe xmp
 .dm off

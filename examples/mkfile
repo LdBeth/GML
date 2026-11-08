@@ -29,6 +29,7 @@ OUTDIR=out/
 PASSDIR=out/passes
 MK=/usr/local/plan9/bin/mk
 DCFPROFILE=$ROOT/share/profile/dcfstarter.gml
+STARTERPROFILE=$ROOT/share/profile/starter.gml
 
 OUT=\
 	out/release.xml\
@@ -66,20 +67,20 @@ out/gml.css: $ROOT/share/html/gml.css
 # the passes (these explicit rules win over the project's out/%.pdf,
 # which would make the passes in out/ itself)
 out/release.pdf: release.gml $TAGSET/profile.gml
-	SAXON=$SAXON $ROOT/gmlpass -n $PASSES -tex $TEXENGINE -tagset $TAGSET -o $PASSDIR release.gml
+	$ROOT/gmlpass -n $PASSES -tex $TEXENGINE -tagset $TAGSET -o $PASSDIR release.gml
 	mv $PASSDIR/release.pdf $target
 
 out/dcfstarter.pdf: dcfstarter.gml $DCFPROFILE
-	SAXON=$SAXON $ROOT/gmlpass -n $PASSES -tex $TEXENGINE -profile $DCFPROFILE -set SYSVARH'='yes -o $PASSDIR dcfstarter.gml
+	$ROOT/gmlpass -n $PASSES -tex $TEXENGINE -profile $DCFPROFILE -set SYSVARH'='yes -o $PASSDIR dcfstarter.gml
 	mv $PASSDIR/dcfstarter.pdf $target
 
 # the HTML of dcfstarter.gml: the project's stage rules (out/dcfstarter.xml,
-# .r.xml, .s.xml) without the tag set, the profile by its path (gml
-# would take ./dcfstarter.gml first).  One pass: the forward references
-# give DCFS020W and "unknown", but resolve.xsl makes the TOC (the XML of
-# a later pass has the .tc entries instead, which html.xsl does not show)
-out/dcfstarter.html: dcfstarter.gml $DCFPROFILE
-	SETS='SYSVARH=yes' $MK -a -f $ROOT/mkfile ROOT'='$ROOT TAGSET'=' OUTDIR'='out/ PROFILE'='$DCFPROFILE $target
+# .r.xml, .s.xml) without the tag set, with the semantic profile starter
+# (the PDF's dcfstarter formats for pages).  One pass is enough:
+# resolve.xsl resolves the cross-references, forward ones too, and makes
+# the TOC from the whole document.
+out/dcfstarter.html: dcfstarter.gml $STARTERPROFILE
+	SETS='SYSVARH=yes' $MK -a -f $ROOT/mkfile ROOT'='$ROOT TAGSET'=' OUTDIR'='out/ PROFILE'='$STARTERPROFILE $target
 
 clean:V:
 	for(d in out $PASSDIR)

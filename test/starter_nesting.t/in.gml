@@ -9,4 +9,10 @@ A figure:fn.a footnote in a figure:efn. with more text.
 :h1.Heading :q.open
 :fn.not ended
 :h1.Next
+:fig.
+:xmp.
+an example in a figure
+:exmp.
+:figcap.Example caption
+:efig.
 :egdoc.

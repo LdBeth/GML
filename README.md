@@ -280,7 +280,8 @@ audiences, plain TeX and the typeset `release.pdf`; for dcfstarter.gml
 and `OUTDIR=out/`, then includes the project's `mkfile` for the rules;
 the internal edition (`-set audience=internal`), `gml.css`, the PDF
 files (gmlpass, in `out/passes/`) and dcfstarter.html (the project's
-rules with `-profile dcfstarter`) have rules of their own.  `mk clean`
+rules with `-profile starter`: resolve.xsl resolves the forward
+references in one pass) have rules of their own.  `mk clean`
 removes the TeX and pass by-products.
 
 ## DCF fidelity

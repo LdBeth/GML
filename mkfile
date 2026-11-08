@@ -44,7 +44,6 @@
 #
 # Another mkfile can use these rules: set ROOT (and TAGSET, OUTDIR), then
 # include this file (examples/mkfile does).
-
 MKSHELL=/usr/local/plan9/bin/rc
 ROOT=`{if(~ $#ROOT 0) pwd; if not echo $ROOT}
 XSLT=$ROOT/xslt
@@ -116,7 +115,7 @@ $OUTDIR%.pdf $OUTDIR%.dvi: %.gml
 	for(t in $target){
 		engine=$TEXENGINE
 		if(~ $t *.dvi) engine=$TEX
-		SAXON=$SAXON $ROOT/gmlpass -n $PASSES -tex $engine $GMLPASSARGS $setargs -o `{/usr/local/plan9/bin/basename -d $t} $stem.gml || exit 1
+		$ROOT/gmlpass -n $PASSES -tex $engine $GMLPASSARGS $setargs -o `{/usr/local/plan9/bin/basename -d $t} $stem.gml || exit 1
 	}
 
 test:V: test-ocaml test-xslt
@@ -125,4 +124,4 @@ test-ocaml:V:
 	$DUNE test --root $ROOT
 
 test-xslt:V:
-	SAXON=$SAXON $XSLT/test/run
+	$XSLT/test/run

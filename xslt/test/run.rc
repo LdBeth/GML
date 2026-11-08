@@ -44,15 +44,15 @@
 #        questions of the pass model, \gmlquery and \gmlpassno); tex/dv:
 #        gml gml/tex-dv.gml (test/dv.t/in.gml) | resolve.xsl
 #   html gmlfmt -to scoped gml/html-NAME.gml   -> html/NAME.in.xml
-#        (figs, fn, hints, index, lines, lists, scope, sections, text);
+#        (control, figs, fn, hints, index, lines, lists, scope, sections,
+#        text; control: raw SCRIPT control words in a semantic document,
+#        the hanging indention over breaks and a .is tab label, a run-in
+#        .dh NBR heading, consecutive .sk skips, the .fn leader);
 #        html/starter and html/params are gml/starter.gml scoped,
 #        fn-chapter reuses fn; features, nesting, state, values are
 #        copies of scope/*.out.xml; html/index-pi is resolve/index-pi.out.xml
-#        | scope.xsl (the .pi entries and .ix placement)
-#        html/dcfstarter-tables: gmlfmt -to scoped -profile dcfstarter
-#        gml/dcfstarter-tables.gml (G dates; hint mode: no gml:num labels);
-#        html/dcfstarter-lists the same from gml/dcfstarter-lists.gml (the
-#        hanging indention of lists and a run-in heading in hint mode)
+#        | scope.xsl (the .pi entries and .ix placement).  HTML is made
+#        only from the semantic profile (starter), not from dcfstarter.
 
 if(~ $#SAXON 0) SAXON=/usr/local/bin/transform
 here=`{cd `{/usr/local/plan9/bin/basename -d $0} && pwd}

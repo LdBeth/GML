@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gml:fn kind="leader"><gml:sp n="1" unit="line" break="yes"/></gml:fn><gdoc><body><h1 id="ctl" anchor="ctl">Control words</h1>
+<gml:scope kind="block" in="4ch" of="4ch"><gml:br break="yes" cause="in of"/>The first run of the hanging text, given on two input lines, so
+that the indention is seen on its second output line.
+<gml:br break="yes"/>The second run, after a break, starts again at the hanging indention.
+</gml:scope><gml:br break="yes" cause="in"/><gml:sk n="1" unit="line" break="yes"/><gml:scope kind="block" in="8ch" of="8ch">GML
+<gml:is spec="to 8ch min 1ch blank" break="no"/>Generalized Markup Language: the label before the tab is as wide as
+the indention.
+<gml:br break="yes"/>Too-long-term
+<gml:is spec="to 8ch min 1ch blank" break="no"/>A label wider than the indention is followed by one blank.
+<gml:sk n="1" unit="line" break="yes"/></gml:scope><gml:sk n="2" unit="line" break="yes"/><gml:sk n="1" unit="line" break="yes"/><p>Of the three skips above (one line at the end of the indented
+block, two lines and one line after it) only the two-line one is kept.
+<gml:sk n="1" unit="line" break="yes"/><gml:sk n="1" unit="line" break="yes"/>Two equal skips make one.
+</p><h2 anchor="gml-h2-1">Headings</h2>
+<gml:dh level="5" spec="nbr" break="no"/><gml:h level="5" break="yes">Run-in heading.</gml:h>
+The text after a level five heading defined NBR continues on its line.
+<gml:dh level="5" spec="" break="no"/><gml:h level="5" break="yes">A heading again</gml:h>
+After .dh 5 alone the level breaks again.
+</body></gdoc></gml:doc>
