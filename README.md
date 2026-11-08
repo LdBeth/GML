@@ -117,6 +117,9 @@ From the source tree:
 
 `-set` goes to gml and to every stylesheet.  `-p` goes to the
 stylesheets only, e.g. `./gmlfmt -to html -set SYSVARH=yes -p h1-prefix=Chapter doc.gml`.
+`-to html`, `scoped` and `semantic` also give gml `-set '$LDEV=HTML'`
+(the logical device, for a profile that chooses by it; to gml only),
+before the `-set` options.
 It uses the project's gml with `-share <root>/share`, so edits to
 `share/profile/starter.gml` take effect at once.  Set `GML`, `SAXON` or
 `GMLROOT` to use other tools.
@@ -204,7 +207,21 @@ The stylesheet parameters (`SYSVARS`/`SYSVARD`/`SYSVART` page layouts,
   in `share/tagset/NAME`) and adds or overrides template rules.  An
   optional `tagset.tex` is passed to tex.xsl as `tex-tagset`, which
   writes `\def\gmltagset{path}` before `\input gml`; gml.tex inputs it at
-  its end, before `gmllocal.tex` (so the most local file wins).
+  its end, before `gmllocal.tex` (so the most local file wins).  For
+  hint mode (a formatting profile) it gives its elements styles with
+  `\gmldefhstart`/`\gmldefhend`.
+  A bundle's profile may choose its master by the logical device, as
+  DCF profiles do: `.if &$LDEV eq HTML` imbed `starter` (the semantic
+  profile, for the HTML), else `dcfstarter` (the formatting profile,
+  for pages).  The HTML paths give gml `-set '$LDEV=HTML'`: `gmlfmt -to
+  html` (and `scoped`, `semantic`) does it itself, a mkfile adds it to
+  `GMLFLAGS` (not `SETS`: those also go to every stylesheet, and
+  `$LDEV` is not a parameter name); gmlpass and the other stages keep
+  gml's default device (`3800N6`).  Such a profile defines what it
+  relies on itself (not a master's internal symbols such as starter's
+  `&@blk`), and its tags that need elements under dcfstarter say so in
+  their `.aa` rules (`elem`, for the start and the end tag: the
+  profile's default rules are `noelem`).
 - **HTML.** Every element has a class `gml-NAME`.  Restyle
   `share/html/gml.css` or replace it (parameters `css`, `css-inline`,
   `css-file`).
@@ -260,14 +277,21 @@ passed to both.
 `examples/release.gml` is a Starter Set document (release notes) that
 also uses the programmable layer: symbols and arithmetic (`&version`,
 `&nextmin`), an array (`&platforms(*)`), a counting macro (`.change`),
-conditional text with `.if`/`.go` driven by `-set audience=internal`, and
-a user-defined tag `:warn level=n` whose APF uses `.gs attval` and `.gs
-insert`, with an `.xd` model.  The tag is styled per backend without
-touching the shipped files, by the tag set `examples/notes/`: its
-`profile.gml` defines the tag, its stylesheets import the stock stages
-and add rules for it, and `tagset.tex` styles it for TeX.
+conditional text with `.if`/`.go` driven by `-set audience=internal`, a
+user-defined tag `:warn level=n` whose APF uses `.gs attval` and `.gs
+insert`, with an `.xd` model, and math (`:m`, `:fml` numbered displays,
+`:fmlref`).  The tags are handled per backend without touching the
+shipped files, by the tag set `examples/notes/`: its `profile.gml`
+defines them, its stylesheets import the stock stages and add rules for
+them, and `tagset.tex` styles them for TeX.  One document, one profile
+per application: `profile.gml` imbeds `starter` for the logical device
+HTML (`-set '$LDEV=HTML'`, given by `gmlfmt -to html` and the examples'
+mkfile), so the HTML is the semantic profile's, and `dcfstarter`
+otherwise, so `release.pdf` (gmlpass) is the formatting profile's: there
+`:warn` is laid out by its APF with control words, like `:note`, and
+the math elements have hint-mode styles in `tagset.tex`.
 
-`examples/dcfstarter.gml` shows the formatting profile (see
+`examples/dcfdemo.gml` shows the formatting profile (see
 [below](#formatting-profile-dcfstarter)): every Starter Set tag
 including the tables, with the TOC, the lists of figures and tables,
 cross-references in both directions and an index.
@@ -275,13 +299,16 @@ cross-references in both directions and an index.
 `examples/mkfile` makes everything in `examples/out/` (`cd examples &&
 mk`, or `mk -a` to redo it all): for release.gml the engine XML
 (`release.xml`), resolved, scoped and semantic XML, HTML for both
-audiences, plain TeX and the typeset `release.pdf`; for dcfstarter.gml
-`dcfstarter.pdf` and `dcfstarter.html`.  It sets `ROOT`, `TAGSET=notes`
-and `OUTDIR=out/`, then includes the project's `mkfile` for the rules;
-the internal edition (`-set audience=internal`), `gml.css`, the PDF
-files (gmlpass, in `out/passes/`) and dcfstarter.html (the project's
-rules with `-profile starter`: resolve.xsl resolves the forward
-references in one pass) have rules of their own.  `mk clean`
+audiences, plain TeX (one pass, element mode) and the typeset
+`release.pdf`; for dcfdemo.gml `dcfdemo.pdf` and `dcfdemo.html`.  It
+sets `ROOT`, `TAGSET=notes` and `OUTDIR=out/`, then includes the
+project's `mkfile` for the rules and adds `-set '$LDEV=HTML'` to its
+`GMLFLAGS`, so the engine XML and every stage made from it
+(`release.tex` too) come from starter; the internal edition (`-set
+audience=internal`), `gml.css`, the PDF files (gmlpass, in
+`out/passes/`, the default device: dcfstarter) and dcfdemo.html (the
+project's rules with `-profile starter`: resolve.xsl resolves the
+forward references in one pass) have rules of their own.  `mk clean`
 removes the TeX and pass by-products.
 
 ## DCF fidelity
@@ -317,16 +344,16 @@ figure list, the table elements for resolve.xsl's grid and the list of
 tables).
 
 ```
-cd examples && ../gmlpass -set SYSVARH=yes -o out dcfstarter.gml   # out/dcfstarter.pdf
+cd examples && ../gmlpass -set SYSVARH=yes -o out dcfdemo.gml   # out/dcfdemo.pdf
 
 # the simple alternative: one pass (forward references give DCFS020W)
 gmlfmt -to tex -profile dcfstarter -set SYSVARH=yes \
-    examples/dcfstarter.gml > dcfstarter.tex
-TEXINPUTS=.:share/tex: tex dcfstarter.tex
+    examples/dcfdemo.gml > dcfdemo.tex
+TEXINPUTS=.:share/tex: tex dcfdemo.tex
 ```
 
-`examples/dcfstarter.gml` uses all of it; `cd examples && mk` makes
-`out/dcfstarter.pdf` (four passes) and `out/dcfstarter.html`.
+`examples/dcfdemo.gml` uses all of it; `cd examples && mk` makes
+`out/dcfdemo.pdf` (four passes) and `out/dcfdemo.html`.
 
 `-set SYSVARH=yes` numbers the headings (`1.0`, `1.1`, ...; appendix
 headings are lettered); `SYSVART=left|right|center` places the title
@@ -372,8 +399,8 @@ give its page on the second TeX run.  With passes they come from TeX:
 gmlpass [-n N] [-tex ENGINE] [-profile p | -tagset t] [-set name=value]...
         [-p name=value]... [-o DIR] doc.gml
 
-cd examples && ../gmlpass -o out dcfstarter.gml       # out/dcfstarter.pdf
-./gmlpass -tex aptex -o out examples/dcfstarter.gml
+cd examples && ../gmlpass -o out dcfdemo.gml       # out/dcfdemo.pdf
+./gmlpass -tex aptex -o out examples/dcfdemo.gml
 mk PROFILE=dcfstarter PASSES=4 TEXENGINE=aptex doc.pdf
 ```
 
@@ -405,7 +432,7 @@ pass 1; pass 3 prints its page; pass 4 finds that nothing moved.  When
 the page text appears only on pass 3 ("on page n" is left out on the
 target's own page, and pass 1 puts every target on page 1) and moves
 later text, one more pass is needed; `page=yes` prints the page on
-every pass and avoids it.  So `examples/dcfstarter.gml` needs the
+every pass and avoids it.  So `examples/dcfdemo.gml` needs the
 default 4 (with `-n 3` it warns).  The date and time are the same for
 all passes (`SOURCE_DATE_EPOCH`).  The messages of the passes
 before the last are kept in `DIR/JOB.passK.err`; the last pass prints

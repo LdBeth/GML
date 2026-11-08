@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gml:doc xmlns:gml="urn:x-gml:canonical"><gml:df name="hi1" spec="type(italic)" break="no"/><gml:df name="hi2" spec="type(bold)" break="no"/><gdoc><body><p><gml:bf font="hi2" break="no"/>All<gml:pf break="no"/> <gml:bf font="hi1" break="no"/>of this<gml:pf break="no"/> sentence.
+<gml:sk n="1" unit="line" break="yes"/> <gml:bf font="hi2" break="no"/>After a skip<gml:pf break="no"/></p></body></gdoc></gml:doc>

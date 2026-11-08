@@ -1,16 +1,16 @@
-.* dcfstarter.gml - a Starter Set document for the formatting profile
+.* dcfdemo.gml - a Starter Set document for the formatting profile
 .* share/profile/dcfstarter.gml (the tags are those of the Starter Set,
 .* so it runs under -profile starter too).
 .*
-.*   cd examples && ../gmlpass -set SYSVARH=yes -o out dcfstarter.gml
+.*   cd examples && ../gmlpass -set SYSVARH=yes -o out dcfdemo.gml
 .*
-.* (or mk out/dcfstarter.pdf in examples/): four passes, as with
+.* (or mk out/dcfdemo.pdf in examples/): four passes, as with
 .* FPASSES(4), so that the forward references, the TOC, the lists of
 .* figures and tables and the index have their pages.  In one pass:
 .*
 .*   ./gmlfmt -to tex -profile dcfstarter -set SYSVARH=yes \
-.*       examples/dcfstarter.gml > dcfstarter.tex
-.*   TEXINPUTS=.:share/tex: pdftex dcfstarter.tex
+.*       examples/dcfdemo.gml > dcfdemo.tex
+.*   TEXINPUTS=.:share/tex: pdftex dcfdemo.tex
 .*
 .* (forward references then give DCFS020W and "ID unknown").
 :gdoc sec='IBM Internal Use Only'.

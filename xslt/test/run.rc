@@ -35,7 +35,9 @@
 #        (chars, hints, lines; params and tagset reuse chars);
 #        tex/starter is gml/starter.gml resolved; tex/features =
 #        resolve/features.out.xml; tex/dcfdefs is hand-written (a
-#        formatting profile's .df/.dr/.dh, hence hint mode)
+#        formatting profile's .df/.dr/.dh, hence hint mode); so is
+#        tex/fontblank (the blank between two font changes, .pf .bf,
+#        stays: :ehp2. :hp1. under dcfstarter)
 #        tex/dcfstarter-tables: gmlfmt -to resolved -profile dcfstarter
 #        gml/dcfstarter-tables.gml (with the G dates; hint mode)
 #        tex/batch: gml gml/tex-batch.gml (no profile, the SCRIPT control

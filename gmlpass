@@ -7,7 +7,7 @@
 #           [-set name=value]... [-p name=value]... [-o DIR] doc.gml
 #
 #   -n        the number of passes (default 4, IBM's FPASSES limit:
-#             examples/dcfstarter.gml needs 4)
+#             examples/dcfdemo.gml needs 4)
 #   -tex      the TeX engine (default pdftex; aptex, tex): DIR/JOB.pdf, or
 #             DIR/JOB.dvi with tex
 #   -profile  the gml profile (default dcfstarter: a formatting profile;
@@ -97,7 +97,7 @@ prog=gmlpass
 . $root/share/rc/gmlenv.rc
 if(! ~ $#profileopt 0) { profile=$profileopt; bundle=() }
 # a shipped profile by its path: gml would take a file of that name in
-# the document's directory first (examples/dcfstarter.gml is one)
+# the document's directory first, such as a document named like the profile
 if(! ~ $profile */* && test -f $root/share/profile/$profile.gml) profile=$root/share/profile/$profile.gml
 if not if(! ~ $profile /*) profile=`{pwd}^/$profile
 

@@ -21,7 +21,16 @@
 #             tex.xsl (used instead of the stock stage; they normally
 #             xsl:import it) and tagset.tex (tex stage parameter
 #             tex-tagset: gml.tex inputs it before gmllocal.tex).
+#             A bundle's profile may choose its master profile by the
+#             logical device, as DCF profiles do (.if &$LDEV eq HTML
+#             .im starter, else .im dcfstarter: examples/notes): see
+#             -to below.
 #   -set      a symbol for gml (-set) and a parameter for every stylesheet
+#
+# The device: -to html, scoped and semantic (the semantic path, the HTML
+# and what it is made from) give gml -set '$LDEV=HTML' (to gml only:
+# $LDEV is not a valid stylesheet parameter name), before the -set
+# options; xml, resolved and tex keep gml's default device (3800N6).
 #   -p        a parameter for the stylesheets only (e.g. -p h1-prefix=Chapter)
 #   -I        an imbed directory for gml
 #
@@ -85,6 +94,10 @@ fn sigexit { rm -f $tmp.xml $tmp.r.xml $tmp.s.xml }
 
 setargs=()
 for(s in $sets) setargs=($setargs -set $s)
+# the semantic stages (html, scoped, semantic) are for the logical device
+# HTML: gml gets -set $LDEV=HTML (gml only: $LDEV is not a valid name
+# for a stylesheet parameter), before the -set words
+if(~ $to html scoped semantic) setargs=(-set '$LDEV=HTML' $setargs)
 
 # xsl stylesheet input [-o:output]
 fn xsl {

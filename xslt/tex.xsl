@@ -619,7 +619,11 @@
     <xsl:choose>
       <!-- blanks between the parts of a table cell, even in preserved text -->
       <xsl:when test="normalize-space(.) = '' and parent::c and ../gml:cpart"/>
+      <!-- a blank between two font changes (.pf .bf: the blank between two
+           highlighted phrases, :ehp2. :hp1.) is a word space and stays -->
       <xsl:when test="not($pre) and normalize-space(.) = ''
+          and not(preceding-sibling::node()[1][self::gml:bf or self::gml:pf]
+                  and following-sibling::node()[1][self::gml:bf or self::gml:pf])
           and (t:is-block(preceding-sibling::node()[1]) or t:is-block(following-sibling::node()[1])
                or (t:is-block(..) and (empty(preceding-sibling::node()) or empty(following-sibling::node()))))"/>
       <xsl:otherwise>

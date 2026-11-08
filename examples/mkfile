@@ -6,10 +6,18 @@
 #   mk clean                   remove the TeX and pass by-products
 #
 # release.gml: the rules are the project's (../mkfile), with the notes
-# tag set (notes/: the Starter Set plus :warn, with its own html.xsl and
-# tagset.tex) and out/ as OUTDIR.  dcfstarter.gml: the formatting
-# profile (share/profile/dcfstarter.gml) and -set SYSVARH=yes, not the
-# notes tag set.
+# tag set (notes/: the Starter Set plus :warn and math, with its own
+# resolve.xsl, tex.xsl, html.xsl and tagset.tex) and out/ as OUTDIR.
+# One document, one profile per application: notes/profile.gml picks
+# its master by the logical device.  The engine XML (out/release.xml,
+# out/release-internal.xml), and so the HTML and everything else made
+# from it here (.r.xml .s.xml .sem.xml, the one-pass element TeX
+# out/release.tex), is made with -set $LDEV=HTML (GMLFLAGS: gml only,
+# $LDEV is no stylesheet parameter name): the semantic profile
+# starter.  out/release.pdf (gmlpass) has gml's default device: the
+# formatting profile dcfstarter, TeX in hint mode.  dcfdemo.gml: the
+# formatting profile (share/profile/dcfstarter.gml) and -set
+# SYSVARH=yes, not the notes tag set.
 #
 # The PDF files are made in passes by ../gmlpass (README "Passes"):
 # PASSES (default 4) and TEXENGINE (default pdftex; aptex) of the
@@ -43,13 +51,18 @@ OUT=\
 	out/release-internal.r.xml\
 	out/release-internal.s.xml\
 	out/release-internal.html\
-	out/dcfstarter.html\
-	out/dcfstarter.pdf\
+	out/dcfdemo.html\
+	out/dcfdemo.pdf\
 	out/gml.css
 
 all:V: $OUT
 
 <$ROOT/mkfile
+
+# the engine XML of release.gml for the HTML: the logical device HTML,
+# so that notes/profile.gml imbeds starter (gml only, not SETS, which
+# also go to every stylesheet; ROOT/mkfile has set GMLFLAGS to -I TAGSET)
+GMLFLAGS=$GMLFLAGS -set '$LDEV=HTML'
 
 out/release.xml: $TAGSET/profile.gml
 
@@ -65,21 +78,23 @@ out/gml.css: $ROOT/share/html/gml.css
 	cp $prereq $target
 
 # the passes (these explicit rules win over the project's out/%.pdf,
-# which would make the passes in out/ itself)
+# which would make the passes in out/ itself); the passes run the
+# project's mkfile, with its own GMLFLAGS: the default device, so
+# release.pdf comes from notes/profile.gml with dcfstarter
 out/release.pdf: release.gml $TAGSET/profile.gml
 	$ROOT/gmlpass -n $PASSES -tex $TEXENGINE -tagset $TAGSET -o $PASSDIR release.gml
 	mv $PASSDIR/release.pdf $target
 
-out/dcfstarter.pdf: dcfstarter.gml $DCFPROFILE
-	$ROOT/gmlpass -n $PASSES -tex $TEXENGINE -profile $DCFPROFILE -set SYSVARH'='yes -o $PASSDIR dcfstarter.gml
-	mv $PASSDIR/dcfstarter.pdf $target
+out/dcfdemo.pdf: dcfdemo.gml $DCFPROFILE
+	$ROOT/gmlpass -n $PASSES -tex $TEXENGINE -profile $DCFPROFILE -set SYSVARH'='yes -o $PASSDIR dcfdemo.gml
+	mv $PASSDIR/dcfdemo.pdf $target
 
-# the HTML of dcfstarter.gml: the project's stage rules (out/dcfstarter.xml,
+# the HTML of dcfdemo.gml: the project's stage rules (out/dcfdemo.xml,
 # .r.xml, .s.xml) without the tag set, with the semantic profile starter
 # (the PDF's dcfstarter formats for pages).  One pass is enough:
 # resolve.xsl resolves the cross-references, forward ones too, and makes
 # the TOC from the whole document.
-out/dcfstarter.html: dcfstarter.gml $STARTERPROFILE
+out/dcfdemo.html: dcfdemo.gml $STARTERPROFILE
 	SETS='SYSVARH=yes' $MK -a -f $ROOT/mkfile ROOT'='$ROOT TAGSET'=' OUTDIR'='out/ PROFILE'='$STARTERPROFILE $target
 
 clean:V:
