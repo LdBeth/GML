@@ -309,11 +309,47 @@ the math elements have hint-mode styles in `tagset.tex`.
 including the tables, with the TOC, the lists of figures and tables,
 cross-references in both directions and an index.
 
+`examples/tategaki.gml` is a Japanese document set vertically
+(tategaki) by ApTeX, with the tag set `examples/tate/` (PDF only):
+`profile.gml` is dcfstarter with Japanese literals (図, 表, 目次, the
+quotation marks 「」『』, the date as 1986年6月13日), a title page that
+fits the vertical page, and the ruby tags, the bases and readings
+interleaved as in HTML: `:ruby.日:rt.に:ert.本:rt.ほん:ert.:eruby.`
+(elements: their rules say `elem`).  `tex.xsl` pairs each `:rt` with
+the text before it and works out the placement after pxrubrica: a
+reading centred on its base (spread 1:2:1 over a longer base of two or
+more characters), the bases at their natural width, so that a long
+reading (承/うけたまわ) overhangs the characters around it instead of
+spacing the base, and the readings of one ruby moved apart as little
+as they can be where they would overlap (東京/とうきょう).  The widths
+come from the passes: the profile numbers each `:rt`, TeX writes the
+measured widths of each base and reading to the aux file (`.se
+rb@w(k)`, `.se rb@r(k)`, in sp), and the next pass's profile puts them
+on the `:rt` (`.xa bw= rw=`) for tex.xsl; on the first pass they are
+estimated from the characters.  `tex.xsl` also writes Japanese text as
+it is, in UTF-8 (the CJK blocks, which upTeX reads as kanji), not as
+`\gmlchar{n}`.  `tagset.tex` (a pTeX engine only) makes
+the main vertical list tate (A5, 44 characters to the line), ships each
+page in a horizontal box so that the running heading and footing (the
+page number) stay horizontal, both at the top of the page, sets the
+footnotes horizontally at the foot of the page with their marks upright
+in the vertical line (tate-chu-yoko), centres
+Latin letters on the vertical line (`\tbaselineshift`), selects with
+every Latin font switch the mincho or gothic Japanese fonts that go
+with it (an input line end after a kanji is no word space, pTeX's
+rule; pTeX puts `\xkanjiskip` between Japanese and Latin), and sets
+each reading in
+half-size type against its base, to its right in a vertical line, in
+a box of no size (one ruby is not broken across lines).
+`../gmlpass -tex aptex -tagset ./tate -o out tategaki.gml` in examples/, or `mk
+out/tategaki.pdf`.
+
 `examples/mkfile` makes everything in `examples/out/` (`cd examples &&
 mk`, or `mk -a` to redo it all): for release.gml the engine XML
 (`release.xml`), resolved, scoped and semantic XML, HTML for both
 audiences, plain TeX (one pass, element mode) and the typeset
-`release.pdf`; for dcfdemo.gml `dcfdemo.pdf` and `dcfdemo.html`.  It
+`release.pdf`; for dcfdemo.gml `dcfdemo.pdf` and `dcfdemo.html`; for
+tategaki.gml `tategaki.pdf` (always with aptex).  It
 sets `ROOT`, `TAGSET=notes` and `OUTDIR=out/`, then includes the
 project's `mkfile` for the rules and adds `-set '$LDEV=HTML'` to its
 `GMLFLAGS`, so the engine XML and every stage made from it

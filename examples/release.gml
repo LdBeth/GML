@@ -17,7 +17,7 @@
 .*   all   cd examples && mk   (examples/mkfile: out/)
 .*
 .* ---- document symbols --------------------------------------------------
-.se product = 'Wonder San'
+.se product = 'Wind Server'
 .se major = 4
 .se minor = 2
 .se version = &major..&minor
@@ -209,7 +209,39 @@ arrange='1 3 4'.
 :ewarn.
 :backm.
 :h1.What-so-ever
+.fo left
+:p. This paragraph should be typed ragged right.  This was originally
+achieved with disable typesetting.  I wish there are many many many
+After a while, finding that nothing more
+happened, she decided on going into the garden at once; but, alas for
+poor Alice! when she got to the door, she found she had forgotten the
+little golden key, and when she went back to the table for it, she
+found she could not possibly reach it: she could see it quite plainly
+through the glass, and she tried her best to climb up one of the legs
+of the table, but it was too slippery; and when she had tired herself
+out with trying, the poor little thing sat down and cried.
+.fo on
+:p. After a while, finding that nothing more happened, she decided on
+going into the garden at once; but, alas for poor Alice! when she got
+to the door, she found she had forgotten the little golden key, and
+when she went back to the table for it, she found she could not
+possibly reach it: she could see it quite plainly through the glass,
+and she tried her best to climb up one of the legs of the table, but
+it was too slippery; and when she had tired herself out with trying,
+the poor little thing sat down and cried.
 :note.I wonder is there anything needs to be in the back-matter.
+:p.
+Some of our favorite fruits are
+also some of the most nutritious:
+:ul compact.
+:li.Apples
+:li.Oranges
+:li.Pears
+:li.Plums
+:eul.
+:pc.
+This is a good reason to enjoy
+them often.
 :p.One of the great speeches
 of all time begins like this:
 :lq.

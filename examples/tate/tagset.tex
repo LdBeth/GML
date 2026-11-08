@@ -1,0 +1,234 @@
+% tate/tagset.tex -- vertical Japanese (tategaki) for the tate tag set.
+% A pTeX engine only (ApTeX: gmlpass -tex aptex).  gml.tex inputs it
+% near its end (tex.xsl's tex-tagset), before \gmlbegindocument, with
+% the main vertical list still empty, so the whole body can be set
+% vertically.  The profile is dcfstarter (hint mode); everything here
+% is TeX's side of the layout:
+%   - the main vertical list is tate: lines run top to bottom and stack
+%     from right to left; \hsize is the line length (the height of the
+%     text block on the page), \vsize the width of the text block;
+%   - the page is shipped out as a yoko box: the running heading and
+%     footing (and the folio) are horizontal above the block, the
+%     footnotes horizontal below it, their marks upright in the line;
+%   - Japanese text comes as it is, in UTF-8 (tate/tex.xsl writes the
+%     CJK blocks so; upTeX reads them as kanji): every Latin font switch
+%     also selects the Japanese fonts (yoko \jfont, tate \tfont) that go
+%     with it (the size from its quad, mincho or gothic from the slot);
+%     an input line end after a kanji is no word space (pTeX's rule),
+%     and the space between Japanese and Latin is \xkanjiskip.  Other
+%     characters stay \gmlchar{n}: gml.tex's renderings, else \kchar if
+%     the engine takes the code point as CJK (\kcatcode 16 and up);
+%   - :ruby.base:rt.reading:ert.:eruby. (elements under dcfstarter: the
+%     profile says (elem)); tex.xsl pairs the bases and readings and
+%     places the readings, \gmlruby sets them in half-size type beside
+%     the bases: above them in yoko, to their right in tate (\raise
+%     moves toward the right in a tate list).
+\ifx\tate\undefined
+  \errmessage{tate tag set: needs a pTeX engine (gmlpass -tex aptex)}%
+  \expandafter\endinput
+\fi
+
+% ---- Japanese fonts -------------------------------------------------------------
+% \gml@jf: r (mincho) or g (gothic), set by the Latin font switches below;
+% \gml@jscale: the factor of the Latin quad (ruby: .5).  \gml@tbs, which
+% every switch ends with, selects the Japanese fonts for the new Latin
+% font (\gml@jsel: loaded once for each family and size).
+% \tbaselineshift: a Latin letter in a tate line is rotated with its
+% baseline on the centre line of the kanji, so it would hang off to one
+% side; .25 of its quad moves the middle of its body (descender to cap
+% height) onto that line.  pTeX records the shift with each character,
+% so every Latin font switch sets it for its own size.
+\newdimen\gml@jdim
+\def\gml@jf{r} \def\gml@jscale{1}
+\def\gml@jfam#1{\def\gml@jf{#1}\gml@tbs}
+\def\gml@tbs{\tbaselineshift=.25\fontdimen6\font\gml@jsel}
+\def\gml@jface@r{upjisr} \def\gml@jface@g{upjisg}
+\def\gml@jsel{\gml@jdim=\fontdimen6\font \gml@jdim=\gml@jscale\gml@jdim
+  \expandafter\ifx\csname gml@jy@\gml@jf @\number\gml@jdim\endcsname\relax
+    \gml@jload\fi
+  \csname gml@jy@\gml@jf @\number\gml@jdim\endcsname
+  \csname gml@jt@\gml@jf @\number\gml@jdim\endcsname}
+\def\gml@jload{\edef\gml@tmpa{%
+  \global\jfont\expandafter\noexpand\csname gml@jy@\gml@jf @\number\gml@jdim\endcsname
+    =\csname gml@jface@\gml@jf\endcsname-h at \number\gml@jdim sp\relax
+  \global\tfont\expandafter\noexpand\csname gml@jt@\gml@jf @\number\gml@jdim\endcsname
+    =\csname gml@jface@\gml@jf\endcsname-v at \number\gml@jdim sp\relax}\gml@tmpa}
+% the slot switches of gml.tex's font scheme (the .df fonts are made of
+% them, \gml@sized among them) also choose the Japanese family
+\def\rm{\fam\z@\tenrm\gml@jfam r}
+\def\it{\fam\itfam\tenit\gml@jfam r}
+\def\sl{\fam\slfam\tensl\gml@jfam r}
+\def\tt{\fam\ttfam\tentt\gml@jfam r}
+\def\bf{\fam\bffam\tenbf\gml@jfam g}
+\def\gml@bi{\fam\m@ne\gml@tenbi\gml@jfam g}
+\def\gml@ss{\fam\m@ne\gml@tenss\gml@jfam g}
+\def\gml@ssbf{\fam\m@ne\gml@tenssbf\gml@jfam g}
+\let\gml@tate@sized\gml@sized
+\def\gml@sized#1#2{\gml@tate@sized{#1}{#2}\gml@tate@slotjf{#1}}
+\def\gml@tate@slotjf#1{\def\gml@jf{r}\def\gml@tmpd{#1}%
+  \def\gml@tmpe{bf}\ifx\gml@tmpd\gml@tmpe\def\gml@jf{g}\fi
+  \def\gml@tmpe{bi}\ifx\gml@tmpd\gml@tmpe\def\gml@jf{g}\fi
+  \def\gml@tmpe{ssbf}\ifx\gml@tmpd\gml@tmpe\def\gml@jf{g}\fi
+  \def\gml@tmpe{hd}\ifx\gml@tmpd\gml@tmpe\def\gml@jf{g}\fi\gml@tbs}
+\gmldeffont{hd0}{\fam\m@ne\gml@hdfontA\gml@jfam g}
+\gmldeffont{hd1}{\fam\m@ne\gml@hdfontA\gml@jfam g}
+\gmldeffont{hd2}{\fam\m@ne\gml@hdfontB\gml@jfam g}
+\gmldeffont{hd3}{\fam\m@ne\gml@hdfontC\gml@jfam g}
+\gmldeffont{hd4}{\fam\m@ne\gml@hdfontD\gml@jfam g}
+\gmldeffont{title}{\fam\m@ne\gml@titlefnt\gml@jfam g}
+
+% ---- characters ---------------------------------------------------------------------
+% A \gmlchar{n} (not one of the CJK blocks that tex.xsl writes as they
+% are): gml.tex's own renderings win (Latin-1, typographic punctuation);
+% a code point without one and with a CJK \kcatcode (16 and up) is
+% \kchar, in the Japanese font in effect.
+\let\gml@tate@char\gml@char
+\def\gml@char#1{\expandafter\ifx\csname gml@char@#1\endcsname\relax
+    \ifnum\kcatcode#1>15 \expandafter\expandafter\expandafter\gml@jchar
+    \else\expandafter\expandafter\expandafter\gml@tate@char\fi
+  \else\expandafter\gml@tate@char\fi{#1}}
+\def\gml@jchar#1{\kchar#1\ignorespaces}
+\let\gmlchar\gml@char
+% \xspcode of ":" is 2 in the format (\xkanjiskip only after it, as after
+% a word); here a colon mostly starts a GML tag in the text (と:rt.), so
+% a Latin word that begins with one has the space on both sides too.
+\xspcode`\:=3
+
+% ---- the page --------------------------------------------------------------------
+% A5, 44 characters to the line; the footnotes go in the bottom margin.
+\newdimen\gml@yokowidth
+\gml@pagewidth=148mm \gml@pagelength=210mm
+\gml@leftmargin=18mm \gml@topmargin=24mm \gml@botmargin=30mm
+\def\gml@layout{%
+  \global\gml@yokowidth\gml@pagewidth
+  \global\advance\gml@yokowidth-2\gml@leftmargin
+  \global\vsize\gml@yokowidth
+  \global\hsize\gml@pagelength \global\advance\hsize-\gml@topmargin
+  \global\advance\hsize-\gml@botmargin
+  \global\gml@defaulthsize\hsize \global\gml@elemhsize\hsize
+  \global\voffset\gml@topmargin \global\advance\voffset-1in
+  \global\hoffset\gml@leftmargin \global\advance\hoffset-1in
+  \global\pdfpagewidth\gml@pagewidth \global\pdfpageheight\gml@pagelength}
+\gml@layout
+\gml@basebs=17pt \baselineskip=\gml@basebs
+\rm \gml@chwidth=.5zw
+\tate
+% the page: the tate body in a yoko box, the running heading and footing
+% horizontal (the width of the text block), both above it: the heading,
+% then the footing (dcfstarter's: the section title and the page
+% number), its baseline 14pt above the block as plain's headline; the
+% footnotes, horizontal, below the block (in the bottom margin)
+\def\plainoutput{\shipout\vbox{\yoko
+    \hsize\gml@yokowidth \gml@defaulthsize\gml@yokowidth
+    \vbox to\z@{\vss\line{\vbox to8.5\p@{}\the\headline}%
+      \line{\vbox to8.5\p@{}\the\footline}\vskip14\p@}\nointerlineskip
+    \hbox to\hsize{\hss\vbox{\tate\gml@tatebody}}%
+    \ifvoid\footins\else\nointerlineskip
+      \footnoterule\unvbox\footins\fi}%
+  \advancepageno
+  \ifnum\outputpenalty>-\@MM\else\dosupereject\fi}
+% plain's \pagebody without the footnotes
+\def\gml@tatebody{\vbox to\vsize{\boxmaxdepth\maxdepth
+  \ifvoid\topins\else\unvbox\topins\fi
+  \dimen@=\dp\@cclv \unvbox\@cclv
+  \ifr@ggedbottom\kern-\dimen@\vfil\fi}}
+
+% ---- footnotes ---------------------------------------------------------------------
+% A footnote is a yoko insertion as wide as the text block, set below
+% it.  The page builder measures \vsize across the lines, so a footnote
+% must not take room from it (\count\footins=0, \skip\footins=0: the
+% leader gives the space above them); \dimen\footins keeps them in
+% the bottom margin, 14mm above the edge (a longer one is split and
+% continued on the next page).
+\count\footins=\z@ \skip\footins=\z@skip
+\dimen\footins=\gml@botmargin \advance\dimen\footins-14mm
+\def\gml@vfootnote#1{\insert\footins\bgroup\yoko\hsize\gml@yokowidth
+  \baselineskip12\p@
+  \interlinepenalty\interfootnotelinepenalty
+  \splittopskip\ht\strutbox\splitmaxdepth\dp\strutbox\floatingpenalty\@MM
+  \leftskip\z@skip\rightskip\z@skip\spaceskip\z@skip\xspaceskip\z@skip
+  \parindent\z@\textindent{#1}\footstrut\futurelet\next\fo@t}
+% the leader (.fn leader, dcfstarter's rule) is yoko too
+\gmldefstart{gml:fn}{\gml@aget{kind}\gml@fnkind
+  \ifx\gml@fnkind\gml@leaderstr\global\gml@userleadertrue
+    \global\setbox\gml@fnleader\vbox\bgroup\yoko\gml@runsetup
+  \else\ifgml@incell\gml@tbl@hfnstart\else\let\gml@fnclose\egroup
+    \gml@vfootnote{}\bgroup\gml@fnsetup\fi\fi}
+% the footnote mark (dcfstarter's .dv with a baseline shift) is
+% tate-chu-yoko in a vertical line: a yoko box, upright among the
+% vertical characters, moved to the right by the shift
+\let\gml@tate@dv\gml@hint@dv
+\gmldefhint{dv}{\iftdir\gml@hget{baseline}\gml@tu
+    \ifx\gml@tu\empty\gml@tate@dv\else\gml@tcydv\fi
+  \else\gml@tate@dv\fi}
+\def\gml@tcydv{\gml@hget{text}\gml@dvtext\gml@hget{font}\gml@tv
+  \let\gml@fontcmd\relax
+  \ifx\gml@tv\empty\else\gml@fontlookup\gml@tv\fi
+  \ifx\gml@fontcmd\relax\let\gml@fontcmd\empty\fi
+  \gml@dimtok\gml@tu\gml@dima
+  \leavevmode\raise\gml@dima\hbox{\yoko\gml@fontcmd\gml@dvtext}}
+
+% a running heading or footing is a yoko box of that width, wherever it
+% is made (a static one in the body, a dynamic one in \output); other
+% boxes made with \gml@runsetup keep the direction they are made in
+\def\gml@runsetup{\ifydir\hsize\gml@yokowidth\gml@defaulthsize\hsize
+  \else\hsize\gml@defaulthsize\fi\gml@elemhsize\hsize
+  \gml@elemleft\z@\gml@elemright\z@\def\gml@efont{\rm}\gml@apply}
+\def\gml@runstart#1#2{\gml@aget{page}\gml@runpage\gml@aget{action}\gml@runact
+  \ifx\gml@runact\empty\else\let\gml@hattrs\gml@attrs\gml@runaction{#1}\fi
+  \setbox\gml@box#2\bgroup\yoko\gml@runsetup}
+
+% ---- ruby ----------------------------------------------------------------------------
+% tex.xsl pairs the bases and readings of a :ruby and works out the
+% placement (after pxrubrica); here a ruby is one box (no break inside)
+% and each pair is \gmlruby{k}{m|g}{shift}{base}{reading}: the base at
+% its natural width, the reading in half-size type centred on it (g:
+% spread over it, \gmlrubysp between the characters, 1:2:1) and moved
+% by the shift (a dimension), in a box of no width, height or depth, so
+% a long reading overhangs the characters around it and the line
+% spacing stays.  The reading sits against the base, as pxrubrica puts
+% it: raised by .5zw + .5 of its own zw in tate (to the right of the
+% centre line), .88zw + .12 of its zw in yoko (above the base line).
+% For the next pass the natural widths of pair k go to the aux file,
+% in sp: .se rb@w(k) = base, .se rb@r(k) = reading (the profile puts
+% them on the :rt; they do not depend on the placement, so the second
+% pass has the widths that the last one has).
+\newbox\gml@rbbox \newbox\gml@rtbox
+\def\gmlrubysp{\hskip\z@ plus2fil\relax}
+% pTeX puts \kanjiskip or \xkanjiskip next to a box by the first and last
+% characters that it finds in it, and a shifted box (the reading) hides
+% the ones after it: the end of a ruby is its base, as pTeX wants it,
+% but its start is a reading.  So the space before a ruby is put here,
+% as pTeX would put it before the base's first character (first=, its
+% code point, from tex.xsl): the character before (\lastnodechar) and
+% that one both kanji, \kanjiskip; one kanji and one Latin, \xkanjiskip
+% if the Latin one's \xspcode and the kanji's \inhibitxspcode allow it
+% on that side (1: before the character, 2: after it, 3: both).
+\gmldefhstart{ruby}{\leavevmode\gmlattr{first}\gml@tmpa\gml@rbglue\gml@tmpa
+  \hbox\bgroup}
+\def\gml@rbglue#1{\gml@cnta\lastnodechar
+  \ifnum\gml@cnta<\z@\else\ifx\empty#1\empty\else
+    \ifnum\kcatcode\gml@cnta>15
+      \ifnum\kcatcode#1>15 \hskip\kanjiskip
+      \else\ifnum\inhibitxspcode\gml@cnta>\@ne\ifodd\xspcode#1
+        \hskip\xkanjiskip\fi\fi\fi
+    \else\ifnum\kcatcode#1>15 \ifnum\xspcode\gml@cnta>\@ne
+        \ifodd\inhibitxspcode#1 \hskip\xkanjiskip\fi\fi\fi
+    \fi\fi\fi}
+\def\gml@rubyfont{\def\gml@jscale{.5}\gml@jsel}
+\gmldefhend{ruby}{\egroup}
+\def\gmlruby#1#2#3#4#5{%
+  \setbox\gml@rbbox\hbox{#4}%
+  \setbox\gml@rtbox\hbox{\gml@rubyfont\let\gmlrubysp\relax#5}%
+  \def\gml@tmpa{#1}%
+  \ifgml@reffile\ifx\gml@tmpa\empty\else
+    \immediate\write\gml@refout{.se rb@w(#1) = \number\wd\gml@rbbox}%
+    \immediate\write\gml@refout{.se rb@r(#1) = \number\wd\gml@rtbox}\fi\fi
+  \if g#2\setbox\gml@rtbox\hbox to\wd\gml@rbbox{\gml@rubyfont
+      \hskip\z@ plus1fil#5\hskip\z@ plus1fil}\fi
+  \gml@dima\wd\gml@rbbox \advance\gml@dima-\wd\gml@rtbox
+  \gml@dima.5\gml@dima \advance\gml@dima#3\relax
+  \iftdir\gml@dimb.75zw\else\gml@dimb.94zw\fi
+  \setbox\gml@rtbox\hbox to\z@{\kern\gml@dima\raise\gml@dimb\box\gml@rtbox\hss}%
+  \ht\gml@rtbox\z@ \dp\gml@rtbox\z@
+  \box\gml@rtbox\box\gml@rbbox}
