@@ -739,7 +739,7 @@ let split_text ctx ops =
   if s = "" then Ctx.error ctx ".sx: delimited text expected"
   else
     let d = s.[0] in
-    match String.split_on_char d (String.sub s 1 (String.length s - 1)) with
+    match Line.split_on d (String.sub s 1 (String.length s - 1)) with
     | l :: f :: r :: _ ->
         (* in a running heading or footing the page number symbol stands for
            the page number (SH35-0069 p.128: ".sx c //Introduction/Page &/");
@@ -748,16 +748,16 @@ let split_text ctx ops =
         let out = Doc.output_text (doc ctx) in
         if
           Doc.in_running (doc ctx)
-          && List.exists (fun f -> String.contains f ps) [ l; f; r ]
+          && List.exists (fun f -> Line.index_sep f 0 ps <> None) [ l; f; r ]
         then begin
           (* the fields are put out (translated, text variables) piece by
              piece between the page number symbols, which are written as
              the pagesym= character: the symbol itself, or U+E000 when a
-             piece holds it as text ("&amp." translated to "&", p.259) *)
+             piece holds it as text (a text variable's "&", DSMPROF3's
+             &amp., or a translated one, p.259); the symbol in a text
+             variable is text ([Line.split_on]) *)
           let pieces =
-            List.map
-              (fun f -> List.map out (String.split_on_char ps f))
-              [ l; f; r ]
+            List.map (fun f -> List.map out (Line.split_on ps f)) [ l; f; r ]
           in
           let m =
             if List.exists (List.exists (fun p -> String.contains p ps)) pieces
@@ -1036,8 +1036,9 @@ let define_variable ctx ops =
 (* ---- index ---------------------------------------------------------------------- *)
 
 (* The fields of a delimited string: the first nonblank character is the
-   delimiter; a delimiter at the end closes the last field.  Returns the
-   fields and the rest after [max] fields. *)
+   delimiter; a delimiter at the end closes the last field, one in a text
+   variable is text ([Line.index_sep]).  Returns the fields and the rest
+   after [max] fields. *)
 let delimited ?(max = max_int) s =
   let s = String.trim s in
   if s = "" then ([], "")
@@ -1046,7 +1047,7 @@ let delimited ?(max = max_int) s =
     let rec go i n acc =
       if n = max then (List.rev acc, String.sub s i (String.length s - i))
       else
-        match String.index_from_opt s i d with
+        match Line.index_sep s i d with
         | Some j -> go (j + 1) (n + 1) (String.sub s i (j - i) :: acc)
         | None ->
             let last = String.sub s i (String.length s - i) in

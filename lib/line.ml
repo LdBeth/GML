@@ -227,6 +227,34 @@ let dcf_names =
     "wz";
   ]
 
+(* The first separator [sep] at or after [i] of [s] that is not in a
+   text variable.  A text variable's symbol value is its string between
+   two plane-15 marks ([Chars.dv_mark], [Doc.define_variable]); the
+   string is "known text" (SH35-0069 p.258-261): no code point is given
+   up and it may be used anywhere, so a separator in it (DSMPROF3's
+   [.'dv semi text /;]) is text, never a separator.  The span runs from
+   a start mark through the next end mark, or to the end of the line if
+   unended (as [Doc.split_dvars]); a stray end mark is passed over. *)
+let rec index_sep s i sep =
+  if i >= String.length s then None
+  else if s.[i] = sep then Some i
+  else
+    match Chars.dv_char s i with
+    | Some (0, l) -> index_sep s (i + l) sep
+    | Some (_, l) -> index_sep s (Chars.dv_skip s (i + l)) sep
+    | None -> index_sep s (i + 1) sep
+
+(** [s] split at every [sep] that is not in a text variable ([index_sep]): the
+    fields of [.mg] and [.sx], the pieces of a [.sx] field around the page
+    number symbol. *)
+let split_on sep s =
+  let rec go i =
+    match index_sep s i sep with
+    | Some k -> String.sub s i (k - i) :: go (k + 1)
+    | None -> [ String.sub s i (String.length s - i) ]
+  in
+  go 0
+
 (** The control word separator rule (SH35-0069 p.40-41), applied to a line after
     symbol substitution. Returns the line up to the split and the rest, which
     becomes the next input line.
@@ -247,7 +275,7 @@ let split (ch : Chars.t) ~is_cw s =
       | Control c when c.quoted -> (s, None)
       | Comment _ | Label _ -> (s, None) (* the whole line is ignored, p.44 *)
       | Control _ -> (
-          match String.index_opt s sep with
+          match index_sep s 0 sep with
           | None -> (s, None)
           | Some i ->
               let h, r = cut i in
@@ -261,7 +289,7 @@ let split (ch : Chars.t) ~is_cw s =
             && is_cw (String.lowercase_ascii (String.sub s j 2))
           in
           let rec go i =
-            match index_from_opt s i sep with
+            match index_sep s i sep with
             | None -> (s, None)
             | Some k ->
                 if k + 1 < n && s.[k + 1] = ch.cw_ind && names_cw (k + 2) then

@@ -105,14 +105,20 @@ let ef ctx ops =
 (* .qu / .qq (p.52): processing stops.  Modern edge: no pages, so the two
    are the same. *)
 let qu ctx _ = Ctx.stop ctx
-let ty _ ops = prerr_endline ops
+
+(* .ty text: the line on the terminal, a text variable as its
+   text ([Doc.dvar_text]: DSMPROF3's &amp. &gml. &semi. are & : ;). *)
+let ty ctx ops = prerr_endline (Doc.dvar_text ctx.Ctx.doc ops)
 
 (* .mg /id/text/ or .mg /text/ (SH35-0069 p.62): a message, written
    "+++ID text" after the location.  The last character of the id is the
    severity: I (and R) informational, W warning (return code 4), E error
    (8), S severe (12) and T terminating (16), which stop processing.
    The first non-blank character is the delimiter; the closing one is
-   optional.  No data: ignored.
+   optional.  No data: ignored.  The fields are split first, a delimiter
+   in a text variable's string being text ([Line.split_on]); then each
+   field's text variables are written as their text ([Doc.dvar_text]),
+   so .mg /ASSERTE/&amp.util/ writes "+++ASSERTE &util".
    DCF-VERIFY: we always show the id (as with MESSAGE(ID)); E does not
    stop processing (as with CONTINUE). *)
 let mg ctx ops =
@@ -120,7 +126,9 @@ let mg ctx ops =
   if ops <> "" then begin
     let d = ops.[0] in
     let fields =
-      String.split_on_char d (String.sub ops 1 (String.length ops - 1))
+      List.map
+        (Doc.dvar_text ctx.Ctx.doc)
+        (Line.split_on d (String.sub ops 1 (String.length ops - 1)))
     in
     let fields =
       match List.rev fields with "" :: r -> List.rev r | _ -> fields

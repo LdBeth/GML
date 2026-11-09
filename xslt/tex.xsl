@@ -188,6 +188,15 @@
         or ($n/self::gml:* and not(local-name($n) = ($flows, $generated))))"/>
   </xsl:function>
 
+  <!-- a node that is put out in the line: a text variable (gml:dv, the
+       profiles' &amp. &gml. &semi.), a font change, an element that is
+       not a block (hp1, q ...) -->
+  <xsl:function name="t:is-inline" as="xs:boolean">
+    <xsl:param name="n" as="node()?"/>
+    <xsl:sequence select="exists($n/(self::gml:dv | self::gml:bf | self::gml:pf))
+        or (exists($n[self::*]) and not($n/self::gml:*) and not(t:is-block($n)))"/>
+  </xsl:function>
+
   <!-- the plain text of a heading, for the running footing -->
   <xsl:function name="t:plain" as="xs:string">
     <xsl:param name="e" as="element()"/>
@@ -634,6 +643,14 @@
     <xsl:choose>
       <!-- blanks between the parts of a table cell, even in preserved text -->
       <xsl:when test="normalize-space(.) = '' and parent::c and ../gml:cpart"/>
+      <!-- a blank between a text variable and another one or an inline
+           element ("&amp. &gml.", "&amp. :hp1.") is a word space; a hint
+           (a footnote's callout before its gml:fn) is a block as before -->
+      <xsl:when test="normalize-space(.) = ''
+          and ((preceding-sibling::node()[1][self::gml:dv] and t:is-inline(following-sibling::node()[1]))
+               or (following-sibling::node()[1][self::gml:dv] and t:is-inline(preceding-sibling::node()[1])))">
+        <xsl:value-of select="t:text(., $pre, $word)"/>
+      </xsl:when>
       <!-- a blank between two font changes (.pf .bf: the blank between two
            highlighted phrases, :ehp2. :hp1.) is a word space and stays -->
       <xsl:when test="not($pre) and normalize-space(.) = ''

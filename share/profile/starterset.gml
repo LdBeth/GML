@@ -44,14 +44,15 @@
 .gs tag on
 .*
 .* ---- symbols for text (IG items 15, 27) ---------------------------------
-.* &gml. &amp. &semi. are protected by the output translation (TPG
-.* p.259: ".se amp &X'08" with ".tr 08 &"), so they are never read again
-.* as a tag, a symbol or a separator.  Hex codes are EBCDIC: 7a 50 5e are
-.* : & ; and 41 is the required blank.
-.se gml '&X'01.
-.se amp '&X'02.
-.se semi '&X'04.
-.tr 01 7a 02 50 04 5e
+.* &gml. &amp. &semi. are text variables, as in IBM's DSMPROF3
+.* (TPG p.259-261: no code point is given up, no translate table is
+.* needed, and they may be used anywhere, a heading, a running heading
+.* or a message too): known text, never read again as a tag, a symbol
+.* or a separator; &amp. in a running heading is an ampersand, not the
+.* page number.  &rbl. is EBCDIC 41, the required blank.
+.dv amp text /&
+.dv gml text /:
+.'dv semi text /;
 .se rbl '&X'41.
 .* quotation marks: double at odd :q nesting levels, single at even ones
 .* (IG p.21 item 27)

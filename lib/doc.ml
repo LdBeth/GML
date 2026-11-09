@@ -404,39 +404,25 @@ let line_end t ~counted ~text =
    translate table, may be used anywhere (a heading, a running heading
    or footing, split text), and is put out in its font, shifted.  Its
    symbol's value is the string between two characters of the private
-   use plane 15: U+F0000 + its number (from 1) before, U+F0000 after.
-   The string is substituted like any symbol value (IBM's DSMPROF3
-   defines its list item labels as ".dv @id@l@o1 /&@item#.." under
-   .su off); no other rule reads the two characters (tags, separators,
-   the page number symbol, .tr); when text enters the tree the variable
-   becomes the hint [gml:dv] with [text=] the string and the font and
-   baseline of the definition.  A plain [.dv name /string] is a symbol
+   use plane 15: U+F0000 + its number (from 1) before, U+F0000 after
+   ([Chars.dv_mark], [Chars.dv_end]).  The string is substituted like
+   any symbol value (IBM's DSMPROF3 defines its list item labels as
+   ".dv @id@l@o1 /&@item#.." under .su off); no other rule reads its
+   characters (tags, the separator ([Line.split]), the page number
+   symbol, .tr); when text enters the tree the variable becomes the
+   hint [gml:dv] with [text=] the string and the font and baseline of
+   the definition, and a message ([.ty], [.mg]) writes the string
+   ([dvar_text]).  A plain [.dv name /string] is a symbol
    ([Hints.define_variable]). *)
-let dv_base = 0xF0000
-
-let utf8_of u =
-  let b = Buffer.create 4 in
-  Buffer.add_utf_8_uchar b (Uchar.of_int u);
-  Buffer.contents b
-
-let dv_end = utf8_of dv_base
 
 (** Define a text variable with the attributes of its hint (without [text]);
     returns the value its symbol gets for [string]. *)
 let define_variable t attrs string =
   let i = Hashtbl.length t.dvars + 1 in
   Hashtbl.replace t.dvars i attrs;
-  utf8_of (dv_base + i) ^ string ^ dv_end
+  Chars.dv_mark i ^ string ^ Chars.dv_end
 
-(* the plane-15 code point at [i] of [s] (>= U+F0000), with its length *)
-let dv_char s i =
-  if Char.code s.[i] <> 0xF3 then None
-  else
-    let d = String.get_utf_8_uchar s i in
-    let u = Uchar.to_int (Uchar.utf_decode_uchar d) in
-    if Uchar.utf_decode_is_valid d && u >= dv_base then
-      Some (u - dv_base, Uchar.utf_decode_length d)
-    else None
+let dv_char = Chars.dv_char
 
 (* [s] as pieces: [Either.Left text] and [Either.Right attrs] (a text
    variable, with [text=]); an unmatched end mark is dropped, an

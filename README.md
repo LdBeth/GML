@@ -96,7 +96,8 @@ gml [-I dir]... [-share dir] [-profile file|name] [-set sym=val]...
   The part that does not depend on the output is shared with the
   formatting profile `dcfstarter` (below): `share/profile/starterset.gml`,
   which both profiles imbed (`.im starterset`).  It holds the delimiters,
-  the text symbols (`&gml.`, `&amp.`, `&semi.`, `&rbl.`, the quotation
+  the text symbols (`&gml.`, `&amp.`, `&semi.`: text variables as in
+  IBM's DSMPROF3, so `:` `&` `;` in a message too; `&rbl.`, the quotation
   marks `&oqq.` `&cqq.` `&oq.` `&cq.`), `&date` and `&time`, `:psc`
   (selected by `SYSVARP`), the message catalogue, the out-of-context
   handling and the decisions of the table tags (row definitions, cell
