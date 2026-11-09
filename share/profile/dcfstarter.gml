@@ -48,7 +48,11 @@
 .*    back in the next one (the symbol file, gml -symbols-in), so a
 .*    forward reference is resolved on pass 2; &$PN is a question to
 .*    TeX, answered from the previous pass with the page the place is
-.*    put out on.  DCFS020W and the "ID unknown" text come only on the
+.*    put out on.  Modern edge: a page symbol (.se fp@ID = &$PN) comes
+.*    back with the answer TeX gave in the pass that set it (the page
+.*    provenance, lib/symbols.ml), so a forward reference has the
+.*    right page on pass 2 too, as in DCF, where &$PN is the page on
+.*    pass 1.  DCFS020W and the "ID unknown" text come only on the
 .*    last pass (ss@last), the only one put out; an ID defined twice
 .*    is detected per pass (f@dfid).  In one pass, as before: DCFS020W
 .*    and "ID unknown" for every forward reference.  DCF-VERIFY: the
@@ -1237,6 +1241,7 @@
 .* :tref refid= [page=]: "Table n" (and " on page n"), as :figref
 .dm f@tref on
 .gs attval refid page
+.se *q = &$PN
 .if &L'&REFID gt 0 .go id
 .ss@msg 12 refid
 .me
@@ -1249,7 +1254,7 @@
 ...ok
 .se *t = &ft@&*k
 .se *g = &fu@&*k
-.f@pgr &*g &PAGE
+.f@pgr &*g &*q &PAGE
 .gs insert &f@l@tbl.&rbl.&*t.&f@pgt
 .dm off
 .* :tlist: as :figlist (resolve.xsl writes the list into the element)
@@ -1298,9 +1303,10 @@
 .* -symbols-in, gmlpass), so their existence is no test.  The stamp k@ID
 .* (k@ + a Starter Set ID of up to 7 characters: within the 10 of a
 .* symbol name, TPG p.229) says it was; its name goes into the list
-.* f@dfl, and .f@dfclr (at :egdoc) removes them all, and ss@last,
-.* so that the state of one pass does not go to the next (gmlpass
-.* compares the symbol files of two passes to stop).
+.* f@dfl, and .f@dfclr (at :egdoc) removes them all, and ss@last
+.* and the texts of the last reference (f@pgt f@ut), so that the
+.* state of one pass does not go to the next (gmlpass compares the
+.* symbol files of two passes to stop).
 .dm f@dfid on
 .se *k = &*1.@&U'&*2
 .if &E'&&*k eq 1 .ss@msg 13 &*2
@@ -1310,6 +1316,8 @@
 .dm off
 .dm f@dfclr on
 .se ss@last off
+.se f@pgt off
+.se f@ut off
 .if &E'&f@dfl eq 0 .me
 .se *i = 0
 ...nx
@@ -1332,25 +1340,32 @@
 .if &ss@last eq 0 .se f@ut '&REFID
 .ss@msg 20 &REFID
 .dm off
-.* .f@pgr page yes|no: " on page n" when asked for, or when the target
-.* is on another page.  The pages are &$PN: with passes (gmlpass) each
-.* reference to it is a question that TeX answers with the page the
-.* place of the question is put out on (gml.tex \gmlquery, at
-.* shipout), so the &$PN that a target's APF records (fp@ID fq@ID) is
-.* the page of the target as an anchor would give it; the answer comes
-.* one pass later, and a forward reference sees it a pass after that
-.* (gmlpass runs until the pages are stable).  In one pass &$PN is 1:
-.* only page=yes prints a page.
+.* .f@pgr target here yes|no: " on page n" when asked for, or when
+.* the target's page is not the reference's.  The pages are &$PN:
+.* with passes (gmlpass) each reference to it is a question that TeX
+.* answers with the page the place of the question is put out on
+.* (gml.tex \gmlquery, at shipout), so the &$PN that a target's APF
+.* records (fp@ID fq@ID fu@ID) is the page of the target as an anchor
+.* would give it.  The answer comes one pass later; a forward
+.* reference gets it with the symbol (the page provenance: the symbol
+.* file carries the question, the next pass its answer), so it is
+.* right on pass 2 as well.  The reference asks for its own page (here)
+.* first, on every pass and whether the ID is known or not: a question
+.* asked only once the ID is known would be new on pass 2, and its
+.* answer would change the aux file a pass later (gmlpass runs until
+.* the pages are stable).  In one pass &$PN is 1: only page=yes prints
+.* a page.
 .dm f@pgr on
 .se f@pgt = ''
-.if x&U'&*2 eq xNO .me
-.if x&U'&*2 eq xYES .go p
-.if &*1 eq &$PN .me
+.if x&U'&*3 eq xNO .me
+.if x&U'&*3 eq xYES .go p
+.if &*1 eq &*2 .me
 ...p
 .se f@pgt ' &f@l@page &*1
 .dm off
 .dm f@hdref on
 .gs attval refid page
+.se *q = &$PN
 .if &L'&REFID gt 0 .go id
 .ss@msg 12 refid
 .me
@@ -1363,11 +1378,12 @@
 ...ok
 .se *t '&fh@&*k
 .se *g = &fp@&*k
-.f@pgr &*g &PAGE
+.f@pgr &*g &*q &PAGE
 .gs insert &oqq.&*t.&cqq.&f@pgt
 .dm off
 .dm f@fgref on
 .gs attval refid page
+.se *q = &$PN
 .if &L'&REFID gt 0 .go id
 .ss@msg 12 refid
 .me
@@ -1380,7 +1396,7 @@
 ...ok
 .se *t = &fg@&*k
 .se *g = &fq@&*k
-.f@pgr &*g &PAGE
+.f@pgr &*g &*q &PAGE
 .gs insert &f@l@fig.&rbl.&*t.&f@pgt
 .dm off
 .dm f@fnref on

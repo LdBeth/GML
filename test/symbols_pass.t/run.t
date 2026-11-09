@@ -95,6 +95,18 @@ in the aux file when it has it.
   <gml:tcentry level="1" text="Heading" dot="yes" page="7" break="yes"/>
   <gml:tcentry level="pt" text="A line" dot="yes" anchor="gml.tc.2" break="yes"/>
 
+The symbols of the aux file are read again by every pass, never
+carried: pa@ pq@ pr@ and px@ (a tag set's own, written by its TeX file
+and read by its profile).
+
+  $ printf ".se px@w(1) = 42\n" >> front.gmlaux
+  $ printf '&px@w(1)\n' > px.gml
+  $ gml -aux front.gmlaux -symbols-out px.sym px.gml | grep 42
+  <gml:doc xmlns:gml="urn:x-gml:canonical">42
+  $ grep -c 'p[aqrx]@' px.sym
+  0
+  [1]
+
 Without the file (the first pass) the .tc at the start is empty; a
 symbol file that does not exist is the same.  The file is SCRIPT: what
 is not a .se line is processed as such (here a text line), and a .se

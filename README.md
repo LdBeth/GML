@@ -313,8 +313,12 @@ cross-references in both directions and an index.
 (tategaki) by ApTeX, with the tag set `examples/tate/` (PDF only):
 `profile.gml` is dcfstarter with Japanese literals (図, 表, 目次, the
 quotation marks 「」『』, the date as 1986年6月13日), a title page that
-fits the vertical page, and the ruby tags, the bases and readings
-interleaved as in HTML: `:ruby.日:rt.に:ert.本:rt.ほん:ert.:eruby.`
+fits the vertical page, paragraphs indented one character (`.il 1mh`),
+less space around the headings (`.dh`: across the lines here), and the
+ruby tags, the bases and readings
+interleaved as in HTML: `:ruby.日:rt.に:ert.本:rt.ほん:eruby.` (`.xd rt
+closedby=rt`: a reading is closed by the next `:rt` and by `:eruby`, so
+`:ert` is written only before the next base text)
 (elements: their rules say `elem`).  `tex.xsl` pairs each `:rt` with
 the text before it and works out the placement after pxrubrica: a
 reading centred on its base (spread 1:2:1 over a longer base of two or
@@ -415,7 +419,7 @@ TEXINPUTS=.:share/tex: tex dcfdemo.tex
 ```
 
 `examples/dcfdemo.gml` uses all of it; `cd examples && mk` makes
-`out/dcfdemo.pdf` (four passes) and `out/dcfdemo.html`.
+`out/dcfdemo.pdf` (`-n 4`, stable after pass 2) and `out/dcfdemo.html`.
 
 `-set SYSVARH=yes` numbers the headings (`1.0`, `1.1`, ...; appendix
 headings are lettered); `SYSVART=left|right|center` places the title
@@ -440,7 +444,7 @@ the resolve stage instead (`.xs toc`).  Tags out of context are
 reported and dropped.  A reference to a target that comes later in
 the document needs passes ([gmlpass](#passes-gmlpass)): in one pass it
 gives `DCFS020W` and the Starter Set's "ID unknown" text; with passes
-it is resolved on pass 2, its page a pass later, and `DCFS020W` comes
+it is resolved on pass 2, with its page, and `DCFS020W` comes
 only on the last pass, for an ID that does not exist.
 `test/dcfstarter.t` checks its hints.
 
@@ -487,15 +491,22 @@ The first pass starts from nothing.  After a pass k >= 2 that left
 `JOB.gmlaux` and the symbol file as the pass before it did, the next
 pass would only repeat it: gmlpass goes straight to the last pass
 (numbered N, so the profile and TeX know it is the last).  It warns
-when the last pass still changed them (`-n` too small).  A forward
-reference costs passes: pass 1 does not know its target; pass 2 knows
-the target's symbols (its number) but only the page the target had on
-pass 1; pass 3 prints its page; pass 4 finds that nothing moved.  When
-the page text appears only on pass 3 ("on page n" is left out on the
-target's own page, and pass 1 puts every target on page 1) and moves
-later text, one more pass is needed; `page=yes` prints the page on
-every pass and avoids it.  So `examples/dcfdemo.gml` needs the
-default 4 (with `-n 3` it warns).  The date and time are the same for
+when the last pass still changed them (`-n` too small).  Its last line
+names the passes it ran and the pass that found the files unchanged:
+`gmlpass: out/doc.pdf (3 passes; stable after pass 2: -n 2 is
+enough)`.  A forward
+reference costs one pass, as in LaTeX: pass 1 does not know its
+target; pass 2 knows the target's symbols (its number) and the page
+TeX put the target on in pass 1 (the page provenance of the symbol
+file, below); when that moved nothing, pass 2 finds the files
+unchanged and is the last.  A reference asks for its own page on
+every pass, so that pass 2 asks the same questions as pass 1.  When
+the text that pass 2 adds ("on page n", the target's text for the
+stand-in) moves a page, one more pass is needed; `page=yes` prints
+the page on every pass.  `examples/dcfdemo.gml` and
+`examples/release.gml` are stable after 2 (`-n 2` gives no warning;
+with the default 4 gmlpass stops after 3 runs: pass 2 confirms pass
+1, then the last).  The date and time are the same for
 all passes (`SOURCE_DATE_EPOCH`).  The messages of the passes
 before the last are kept in `DIR/JOB.passK.err`; the last pass prints
 its own.
@@ -519,7 +530,10 @@ in them may be longer than ten characters.
   ```
 
   `pa@` is the page of an anchor, `pr@N` gml.tex's own N-th `when=auto`
-  page reference, `pq@` the answer to a question (a bare number).  The
+  page reference, `pq@` the answer to a question (a bare number),
+  `px@` a tag set's own (written by its TeX file, read by its profile:
+  the ruby widths of examples/tate); none of them is carried to
+  `JOB.sym`.  The
   name after the prefix is the anchor or question id (without its
   `q`) as tex.xsl escapes it (`+code+` for a character other
   than A-Z a-z 0-9 `.` `-`), with `.` written `@` and any other
@@ -561,7 +575,15 @@ in them may be longer than ten characters.
   is written as a blank (DCF-VERIFY).  It is loaded before the profile
   runs, so `-set` and the profile's own `.se` lines win; a forward
   reference finds its target's symbols.  DCF-VERIFY: which symbols
-  DCF keeps from one pass to the next.
+  DCF keeps from one pass to the next.  Modern edge, the page
+  provenance: a symbol that a `.se` set to the answer of the one page
+  question on its line (`.se fp@ID = &$PN`, `.se x = &`) is written
+  not with its value but as `.se gml@pgq(n) = 'NAME SUB ID DEFAULT'`
+  (the question id and the neutral 1 or 60), and the next pass sets it
+  to the answer that `JOB.gmlaux` of the same pass gives to that
+  question.  So the page of a target reaches a forward reference in one
+  pass (in DCF `&$PN` is the page on pass 1 already), and the file
+  stays the same between two passes that ask the same questions.
 
 `&$PASS` is k and `&$TWO` is 1 when N > 1; `&$PASSES` (not a DCF
 symbol) is N.  The dcfstarter profile knows its last pass

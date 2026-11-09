@@ -195,6 +195,18 @@ type t = {
           [f id = None]: not known (the first pass, or a question the previous
           pass did not ask): the neutral constant (1, 60). [None]: no questions
       *)
+  mutable line_queries : (string * string * string) list;
+      (** the questions asked while the current input line is substituted and
+          processed ([query]; reset by [Interp.substitute_and_dispatch]), last
+          first: (id, the value returned, the neutral default) *)
+  page_syms : (string * int, string * string * string) Hashtbl.t;
+      (** the page provenance of global symbols: [(name, sub)] was set by [.se]
+          to the answer of exactly one question (Control.se),
+          [(id, answer, default)]. The symbol file carries the question instead
+          of the value (Symbols.dump, the array gml@pgq), and the next pass sets
+          the symbol to the answer of its own aux file ([Aux.resolve_pages]):
+          the page TeX gave in the pass the symbol was set in, so that a forward
+          page reference is right one pass after its target, not two *)
   mutable page_of : string -> string option;
       (** the page (as printed) of an anchor, for [.tc]: the page TeX put the
           anchor on in the previous pass ([Aux], the symbol [pa@ENC]); [None]:
@@ -329,7 +341,11 @@ let system_value ctx name sub =
    a .se x = &$PN in a macro asks once per call, which is right (each
    call is at another place); a reference whose value is only tested
    is a question nobody needs, harmless.  No question in ignored output
-   (.cs ignore: no hint), nor for a value given by -set. *)
+   (.cs ignore: no hint), nor for a value given by -set.
+
+   The question is also noted in [line_queries]: a [.se] of a global
+   symbol to its answer (and nothing else) gives the symbol a page
+   provenance ([page_syms], Control.se). *)
 let query_id ctx =
   let path, line =
     match Input.current_file ctx.input with
@@ -360,7 +376,9 @@ let query ctx name v =
           ("what", if name = "$PN" then "pn" else "lc");
           ("break", "no");
         ];
-      Option.value (answer id) ~default:v
+      let a = Option.value (answer id) ~default:v in
+      ctx.line_queries <- (id, a, v) :: ctx.line_queries;
+      a
   | _ -> v
 
 let system_symbol ctx name sub =
@@ -435,6 +453,8 @@ let create ?(include_path = []) () =
       query_files = Hashtbl.create 4;
       query_lines = Hashtbl.create 64;
       page_query = None;
+      line_queries = [];
+      page_syms = Hashtbl.create 16;
       page_of = (fun _ -> None);
       coupling = false;
     }

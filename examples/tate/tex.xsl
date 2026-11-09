@@ -76,6 +76,15 @@
     <xsl:variable name="want" select="for $i in 1 to count($pairs) return
         sum($pairs[position() lt $i] ! ?bw) + ($pairs[$i]?bw - $pairs[$i]?w) div 2"/>
     <xsl:variable name="at" select="r:place($want, $pairs ! ?w)"/>
+    <!-- a line scope that the engine began inside the ruby (.il of a
+         paragraph that begins with one) begins before it, empty: inside,
+         in a box, its \parshape would be lost; the parts inside are
+         unwrapped (the template below) -->
+    <xsl:for-each select=".//gml:lines[not(@cont = 'yes')]">
+      <xsl:variable name="next" select="following::gml:lines[1]"/>
+      <xsl:value-of select="concat('\gmlbeginlines{', @word, '}{', t:attrs(@* except @word,
+          if ($next/@cont = 'yes' and $next/@word = @word) then 'more=yes' else ()), '}\gmlendlines{}')"/>
+    </xsl:for-each>
     <!-- the first character of the bases, for the space before the ruby -->
     <xsl:variable name="first" select="string-to-codepoints(
         replace(string-join($pairs[1]?base ! string(.)), '^\s+', ''))[1]"/>
@@ -93,6 +102,12 @@
                       if (?spread) then '\gmlrubysp ' else ''), '}')"/>
     </xsl:for-each>
     <xsl:text>\gmlend{ruby}</xsl:text>
+  </xsl:template>
+
+  <!-- a line scope inside a ruby: its text only (its beginning is before
+       the ruby, see above) -->
+  <xsl:template match="gml:lines[ancestor::ruby]" priority="2">
+    <xsl:apply-templates/>
   </xsl:template>
 
   <!-- the width of a text in zw: full width 1, ASCII and half-width kana .5 -->

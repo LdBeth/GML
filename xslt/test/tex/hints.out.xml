@@ -43,7 +43,7 @@ Back to normal.
 \gmlbeginlines{in}{n=1,after=yes,left=0,unit=ch,break=no}First line at the old margin, then the following lines are indented by\gmlendlines{}
 five characters until the margin changes again, which is right now.
 \gmlhint{in}{left=0,unit=ch,break=yes}%
-\gmlbeginlines{il}{n=1,left=3,unit=mh,break=yes}An indented first line in a paragraph that is long enough to wrap onto a\gmlendlines{}
+\gmlhint{il}{left=3,unit=mh,break=yes}An indented first line in a paragraph that is long enough to wrap onto a
 second line so the effect can be seen.
 \gmlhint{of}{offset=4,unit=ch,break=yes}%
 Offset: the first line is at the margin and every following line is

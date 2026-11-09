@@ -18,7 +18,8 @@
 %     and the space between Japanese and Latin is \xkanjiskip.  Other
 %     characters stay \gmlchar{n}: gml.tex's renderings, else \kchar if
 %     the engine takes the code point as CJK (\kcatcode 16 and up);
-%   - :ruby.base:rt.reading:ert.:eruby. (elements under dcfstarter: the
+%   - :ruby.base:rt.reading:eruby. (:ert only before the next base;
+%     .xd rt closedby=rt) (elements under dcfstarter: the
 %     profile says (elem)); tex.xsl pairs the bases and readings and
 %     places the readings, \gmlruby sets them in half-size type beside
 %     the bases: above them in yoko, to their right in tate (\raise
@@ -154,9 +155,15 @@
     \global\setbox\gml@fnleader\vbox\bgroup\yoko\gml@runsetup
   \else\ifgml@incell\gml@tbl@hfnstart\else\let\gml@fnclose\egroup
     \gml@vfootnote{}\bgroup\gml@fnsetup\fi\fi}
-% the footnote mark (dcfstarter's .dv with a baseline shift) is
-% tate-chu-yoko in a vertical line: a yoko box, upright among the
-% vertical characters, moved to the right by the shift
+% the footnote mark (dcfstarter's .dv with a baseline shift) in a
+% vertical line: set beside the line at its right, as a note number is
+% in vertical Japanese, taking no room in it: an upright yoko box (in a
+% tate list it runs ht+dp along the line and is centred across it), in
+% a box of no length that ends where the mark is put (so it stands
+% beside the character before it), moved to the right (\raise in a
+% tate list) by half the kanji and half its own width; the shift that
+% dcfstarter asks for is for a horizontal line
+\newbox\gml@fnmbox
 \let\gml@tate@dv\gml@hint@dv
 \gmldefhint{dv}{\iftdir\gml@hget{baseline}\gml@tu
     \ifx\gml@tu\empty\gml@tate@dv\else\gml@tcydv\fi
@@ -165,8 +172,9 @@
   \let\gml@fontcmd\relax
   \ifx\gml@tv\empty\else\gml@fontlookup\gml@tv\fi
   \ifx\gml@fontcmd\relax\let\gml@fontcmd\empty\fi
-  \gml@dimtok\gml@tu\gml@dima
-  \leavevmode\raise\gml@dima\hbox{\yoko\gml@fontcmd\gml@dvtext}}
+  \setbox\gml@fnmbox\hbox{\yoko\gml@fontcmd\gml@dvtext}%
+  \gml@dima.5\wd\gml@fnmbox \advance\gml@dima.5zw
+  \leavevmode\hbox to\z@{\hss\raise\gml@dima\box\gml@fnmbox}}
 
 % a running heading or footing is a yoko box of that width, wherever it
 % is made (a static one in the body, a dynamic one in \output); other
@@ -190,9 +198,11 @@
 % it: raised by .5zw + .5 of its own zw in tate (to the right of the
 % centre line), .88zw + .12 of its zw in yoko (above the base line).
 % For the next pass the natural widths of pair k go to the aux file,
-% in sp: .se rb@w(k) = base, .se rb@r(k) = reading (the profile puts
-% them on the :rt; they do not depend on the placement, so the second
-% pass has the widths that the last one has).
+% in sp: .se px@rbw(k) = base, .se px@rbr(k) = reading (the profile
+% puts them on the :rt; they do not depend on the placement, so the
+% second pass has the widths that the last one has).  px@ is the aux
+% prefix of a tag set's own symbols: the engine keeps them out of the
+% symbol file, so they do not make two passes' JOB.sym differ.
 \newbox\gml@rbbox \newbox\gml@rtbox
 \def\gmlrubysp{\hskip\z@ plus2fil\relax}
 % pTeX puts \kanjiskip or \xkanjiskip next to a box by the first and last
@@ -222,8 +232,8 @@
   \setbox\gml@rtbox\hbox{\gml@rubyfont\let\gmlrubysp\relax#5}%
   \def\gml@tmpa{#1}%
   \ifgml@reffile\ifx\gml@tmpa\empty\else
-    \immediate\write\gml@refout{.se rb@w(#1) = \number\wd\gml@rbbox}%
-    \immediate\write\gml@refout{.se rb@r(#1) = \number\wd\gml@rtbox}\fi\fi
+    \immediate\write\gml@refout{.se px@rbw(#1) = \number\wd\gml@rbbox}%
+    \immediate\write\gml@refout{.se px@rbr(#1) = \number\wd\gml@rtbox}\fi\fi
   \if g#2\setbox\gml@rtbox\hbox to\wd\gml@rbbox{\gml@rubyfont
       \hskip\z@ plus1fil#5\hskip\z@ plus1fil}\fi
   \gml@dima\wd\gml@rbbox \advance\gml@dima-\wd\gml@rtbox

@@ -13,8 +13,9 @@
 %   \gmlhint{NAME}{k=v,...}       a DCF formatting hint (point event):
 %       break=yes calls \gml@break (\par), then \gml@hint@NAME.
 %   \gmlbeginlines{WORD}{k=v,...} ... \gmlendlines    a gml:lines scope
-%       (.ce .ri .us .up .uc .in/.ir after/for .il .un .rc *); handlers
+%       (.ce .ri .us .up .uc .in/.ir after/for .rc *); handlers
 %       \gml@lines@WORD@pre (before the group) @begin @end @post (after).
+%       A one-line scope (.il .un) comes as the hint il/un before its text.
 %   \gmlnum{label}                gml:num, dispatched on the current
 %       element: \gml@num@NAME{label} (h1: label+quad, li: hanging label,
 %       figcap: bold hanging label, fn: dropped - the mark is a key).
@@ -76,13 +77,16 @@
 %                           anchor is put out on, written at shipout
 %   .se pr@N = 'FOLIO'      the page of the N-th when=auto reference
 %   .se pq@ENC = VALUE      \gmlquery{id}{pn|lc}: the answer (a number)
+%   .se px@NAME = VALUE     a tag set's own (its TeX file writes it to
+%                           \gml@refout, its profile reads it; like
+%                           the others, never carried to JOB.sym)
 % ENC is the name as tex.xsl escaped it (A-Z a-z 0-9 . - and
 % +code+) with "." written "@", "-" "#2D" and "+" "#2B" (\gml@enc), so
 % that it is a SCRIPT symbol name; a question id loses its leading "q"
 % (q1.12.3: pq@1@12@3).  The file is read by \gmlbegindocument
 % (\gml@readrefs, under a catcode regime, \gml@auxfile; pa@ENC defines
-% \gml@pg@ENC, pr@N \gml@rpg@N, pq@ lines are skipped), so references
-% are right on the second run ("??" on the first).  A when=auto
+% \gml@pg@ENC, pr@N \gml@rpg@N, pq@ and px@ lines are skipped), so
+% references are right on the second run ("??" on the first).  A when=auto
 % reference prints " label page" only if the target is on another page
 % (on the first run it always prints).  \gmlenddocument re-reads the
 % new file and says when TeX must be run again.
@@ -705,6 +709,14 @@
     \gml@apply\fi}
 \gmldefhint{in}{\gml@indent{left}\gml@hintleft}
 \gmldefhint{ir}{\gml@indent{right}\gml@hintright}
+% .il h / .un h: the next output line moved right / left (tex.xsl sends
+% the one-line gml:lines scope as this hint, before the text): a one-line
+% \parshape relative to the margin, which ends with the paragraph; in
+% format-off mode the next input line is that paragraph.  left is the
+% absolute margin (the engine added h to the .in margin).
+\gmldefhint{il}{\gml@hdim{left}{unit}\gml@dima\advance\gml@dima-\gml@hintleft
+  \edef\gml@tdelta{\the\gml@dima}\gml@shape0{1}\gml@tdelta\z@}
+\expandafter\let\csname gml@hint@un\expandafter\endcsname\csname gml@hint@il\endcsname
 \def\gml@tempindent#1#2{\gml@hdim{#1}{unit}\gml@dima\advance\gml@dima-#2%
   \edef\gml@tdelta{\the\gml@dima}%
   \gml@hget{for}\gml@tv\gml@hget{for-unit}\gml@tu
@@ -1168,9 +1180,13 @@
 \def\gml@pagenumber#1{\expandafter\gml@pagecs\csname gml@pg@\gml@enc{#1}\endcsname}
 \def\gml@pagecs#1{\ifx#1\relax\global\gml@refschangedtrue??\else#1\fi}
 % a \write to the aux file at shipout (#1 expanded now); in vertical mode
-% held to what follows by \nobreak
+% held to what follows by \nobreak, with a breakpoint before it (\vskip
+% \z@: legal only after a box, so no break that was not allowed already):
+% the \nobreak also takes the breakpoint of the glue after it (the space
+% before a heading), and without one before the write the page could
+% not break before a heading that has an anchor
 \def\gml@shipwrite#1{\edef\gml@tmpa{\write\gml@refout{#1}}%
-  \ifvmode\gml@tmpa\nobreak\else\gml@tmpa\fi}
+  \ifvmode\vskip\z@\gml@tmpa\nobreak\else\gml@tmpa\fi}
 \def\gmlanchor#1{\ifgml@reffile
   \gml@shipwrite{.se pa@\gml@enc{#1} = '\noexpand\gml@folio'}\fi}
 % the questions of the pass model (an unknown kind is ignored)

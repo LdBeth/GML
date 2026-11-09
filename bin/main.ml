@@ -32,9 +32,10 @@
    and a .tc entry gets the page of its anchor.  -symbols-in FILE loads
    the symbols (and the TOC entries) of the previous pass before the
    profile runs, so that the profile's own .se lines win, with the array
-   index counters reset to 0 (TPG p.256);
-   -symbols-out FILE writes them at the end of the pass (Symbols.dump,
-   Toc.dump). *)
+   index counters reset to 0 (TPG p.256), and a symbol set to the
+   answer of a page question gets the answer of FILE's pass (-aux) to
+   it (Aux.resolve_pages); -symbols-out FILE writes them at the end of
+   the pass (Symbols.dump, Toc.dump). *)
 
 let usage = "usage: gml [-I dir]... [-lib dir]... [-share dir] [-profile file|name] [-set sym=val]... [-maxgo n] [-undef-tags text|element|error] [-o out.xml] [-pass k] [-passes n] [-aux file] [-symbols-in file] [-symbols-out file] input.gml"
 
@@ -165,6 +166,7 @@ let () =
      win (lib/aux.ml) *)
   Option.iter (Gml.Aux.load_symbols ctx) !sym_in;
   Option.iter (Gml.Aux.load ctx) !aux;
+  Gml.Aux.resolve_pages ctx;
   ctx.undef_tags <- !undef;
   let open_or_fail name =
     match Gml.Input.imbed ctx.input name with
@@ -198,7 +200,9 @@ let () =
   in
   Option.iter
     (fun f ->
-      write f (Gml.Symbols.file (Gml.Symbols.dump ctx.syms @ Gml.Toc.dump ctx.toc)))
+      write f
+        (Gml.Symbols.file
+           (Gml.Symbols.dump ~pages:ctx.page_syms ctx.syms @ Gml.Toc.dump ctx.toc)))
     !sym_out;
   (match !output with
    | None -> print_string (Gml.Be_xml.document root)

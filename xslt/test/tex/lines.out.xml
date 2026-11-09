@@ -17,7 +17,7 @@ permanent
 \gmlbeginlines{in}{n=1,left=3,unit=ch,delta=+3,break=no}temporary\gmlendlines{}
 back
 \gmlhint{in}{left=0,unit=ch,break=yes}%
-\gmlbeginlines{il}{n=1,left=3,unit=mh,break=yes}first line indented\gmlendlines{}
+\gmlhint{il}{left=3,unit=mh,break=yes}first line indented
 second line
 \gmlbeginlines{us}{n=3,break=no}\gmlusword{Do} \gmlusword{not}
 \gmlusword{destroy} \gmlusword{this} \gmlusword{letter}

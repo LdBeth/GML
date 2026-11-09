@@ -17,14 +17,19 @@
 空白は入りません。
 欧文のGML (Generalized Markup Language) や数字の1986のような語は、
 縦組みの行の中で横に倒して組まれます。
-:p.:ruby.振:rt.ふ:ert.:eruby.り:ruby.仮名:rt.がな:ert.:eruby.、つまり:ruby.ruby:rt.ルビ:ert.:eruby.は
+:p.:ruby.振:rt.ふ:eruby.り:ruby.仮名:rt.がな:eruby.、
+つまり:ruby.ruby:rt.ルビ:eruby.は
 :hp2.&gml.ruby.:ehp2.タグの中に親文字と:hp2.&gml.rt.:ehp2.タグの読みを交互に書いて付けます。
-:ruby.漢:rt.かん:ert.字:rt.じ:ert.:eruby.の右側に小さな仮名で:ruby.読:rt.よ:ert.:eruby.みが置かれ、
-:ruby.日:rt.に:ert.本:rt.ほん:ert.語:rt.ご:ert.:eruby.のように読みは一字ずつに付きます。
-:ruby.明日:rt.あす:ert.:eruby.のように読みが親文字より短いときは、読みを親文字の幅に割り付けます。
-:ruby.承:rt.うけたまわ:ert.:eruby.るのように読みが親文字より長いときは、読みが前後の文字に掛かり、
+:ruby.漢:rt.かん:ert.字:rt.じ:eruby.の右側に小さな仮名で:ruby.読:rt.よ:eruby.みが置かれ、
+:ruby.日:rt.に:ert.本:rt.ほん:ert.語:rt.ご:eruby.のように読みは一
+字ずつに付きます。
+:ruby.明日:rt.あす:eruby.のように読みが親文字より短いときは、
+読みを親文字の幅に割り付けます。
+:ruby.承:rt.うけたまわ:eruby.るのように読みが親文字より長いときは、
+読みが前後の文字に掛かり、
 親文字の前後は空きません。
-:ruby.東:rt.とう:ert.京:rt.きょう:ert.:eruby.では二つの読みが重ならずに並び、熟語の前後に同じだけ掛かります。
+:ruby.東:rt.とう:ert.京:rt.きょう:eruby.では二つの読みが重ならずに並び、
+熟語の前後に同じだけ掛かります。
 :h1 id=shikumi.仕組み
 :p.処理は三つの段階に分かれます:fn.横書きの文書と同じ段階です。HTMLは意味的な
 プロファイルstarterから作ります。:efn.。

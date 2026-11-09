@@ -247,6 +247,9 @@ let substitute_and_dispatch ctx mode s =
   match Line.classify ctx.Ctx.chars s with
   | Line.Comment _ | Line.Label _ -> () (* step 3: never substituted *)
   | Line.Control _ | Line.Text _ -> (
+      (* a new input line: no questions yet (Ctx.line_queries; with .su
+         off a .se asks while it substitutes its own operands) *)
+      ctx.Ctx.line_queries <- [];
       let force = mode = Ctx.Force_subst in
       let on = force || ctx.subst_on in
       if mode = Ctx.Raw && ctx.su_lines > 0 then begin

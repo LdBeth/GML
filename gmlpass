@@ -6,8 +6,8 @@
 #   gmlpass [-n N] [-tex ENGINE] [-profile p | -tagset t]
 #           [-set name=value]... [-p name=value]... [-o DIR] doc.gml
 #
-#   -n        the number of passes (default 4, IBM's FPASSES limit:
-#             examples/dcfdemo.gml needs 4)
+#   -n        the number of passes (default 4, IBM's FPASSES limit;
+#             examples/dcfdemo.gml is stable after 2)
 #   -tex      the TeX engine (default pdftex; aptex, tex): DIR/JOB.pdf, or
 #             DIR/JOB.dvi with tex
 #   -profile  the gml profile (default dcfstarter: a formatting profile;
@@ -36,8 +36,10 @@
 # before (cmp), the next pass would do the same again: the run goes
 # straight to the last pass (numbered N, so that the profile and TeX
 # know it is the last).  A warning when the last pass still changed
-# them.  The date and time are fixed for all passes (SOURCE_DATE_EPOCH,
-# when it is not set already).
+# them.  The last line names the output, the passes run and, when a
+# pass k >= 2 found the files unchanged, "stable after pass k": -n k is
+# enough for the document.  The date and time are fixed for all passes
+# (SOURCE_DATE_EPOCH, when it is not set already).
 #
 # Tools: GML (default: the dune build through opam, made once before
 # the passes and run with -share GMLROOT/share, as gmlfmt; also the
@@ -153,6 +155,7 @@ fn same {
 
 k=1
 runs=()
+settled=()
 while(true){
 	runs=($runs x)
 	if(test -f $base.gmlaux) cp $base.gmlaux $base.gmlaux.prev
@@ -168,12 +171,14 @@ while(true){
 	typeset $k
 	stable=no
 	if(same $base.gmlaux $base.gmlaux.prev && same $base.sym.new $base.sym) stable=yes
+	if(~ $stable yes && ! ~ $k 1 && ~ $#settled 0) settled=$k
 	mv $base.sym.new $base.sym
 	if(~ $k $n){
 		if(~ $stable no && ! ~ $n 1)
 			echo gmlpass: warning: the pages or symbols still changed on the last pass '('$n'): run with a larger -n' >[1=2]
 		rm -f $base.gmlaux.prev
-		echo gmlpass: $out '('$#runs passes')'
+		if(~ $#settled 0) echo gmlpass: $out '('$#runs passes')'
+		if not echo gmlpass: $out '('$#runs' passes; stable after pass '$settled': -n '$settled' is enough)'
 		exit
 	}
 	if(~ $stable yes && ! ~ $k 1){

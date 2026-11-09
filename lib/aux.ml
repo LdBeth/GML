@@ -9,12 +9,16 @@
    ([imbed]) before -set and the profile, so that these win:
 
    - the symbol file JOB.sym (gml -symbols-in), written by the engine:
-     its format is described in lib/symbols.ml (Symbols.dump);
+     its format is described in lib/symbols.ml (Symbols.dump); a symbol
+     with a page provenance (gml@pgq) gets the answer of the aux file
+     written by the same pass ([resolve_pages], after both);
    - the aux file JOB.gmlaux (gml -aux), written by TeX: its format is
      described in share/tex/gml.tex (the header comment, "Page
      references and the aux file").  It sets pa@ENC (the page of an
-     anchor), pr@N (gml.tex's own, not used here) and pq@ENC (the answer
-     to a question).
+     anchor), pr@N (gml.tex's own, not used here), pq@ENC (the answer
+     to a question) and px@NAME (a tag set's own: written by its TeX
+     file, read by its profile; not used here).  None of them is
+     carried to the symbol file (Symbols.aux_prefixes).
 
    ENC(name): the name escaped as xslt/tex.xsl escapes it (t:name, [tex_name]
    here: a character other than A-Z a-z 0-9 . - becomes +code+),
@@ -101,3 +105,24 @@ let load (ctx : Ctx.t) f =
   ctx.Ctx.page_query <-
     Some (fun id -> Symbols.get ctx.Ctx.syms (query_name id));
   ctx.Ctx.page_of <- (fun a -> Symbols.get ctx.Ctx.syms (anchor_name a))
+
+(** After [load_symbols] and [load] (either may be missing): the symbols of the
+    previous pass that carry a page question (gml@pgq, Symbols.dump) get the
+    answer of the aux file to it, the neutral default if it has none (no aux
+    file, or TeX did not reach the place); gml@pgq is undefined again. *)
+let resolve_pages (ctx : Ctx.t) =
+  let syms = ctx.Ctx.syms in
+  List.iter
+    (fun e ->
+      match String.split_on_char ' ' e with
+      | [ name; sub; id; dflt ] -> (
+          match int_of_string_opt sub with
+          | Some sub ->
+              let v =
+                Option.value (Symbols.get syms (query_name id)) ~default:dflt
+              in
+              ignore (Symbols.set ~sub syms name v)
+          | None -> ())
+      | _ -> ())
+    (Symbols.elements syms Symbols.page_name);
+  ignore (Symbols.unset syms Symbols.page_name)

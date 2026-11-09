@@ -209,6 +209,7 @@ let unset ?(sub = 0) t name =
      .dc cw off                       a value with ; is not split
      .se NAME = 'value'               one line per symbol ...
      .se NAME(n) = 'value'            ... and per array element (n >= 1)
+     .se gml@pgq(n) = 'NAME SUB ID D' the page provenance (below)
      .se gml@toc(n) = '...'           the TOC entries (lib/toc.ml)
      .dc cw
      .su on
@@ -218,13 +219,25 @@ let unset ?(sub = 0) t name =
    blank (DCF-VERIFY: what DCF's own carry-over does with it).  Every
    global symbol that is defined at the end of the pass, except the date
    and time symbols ([date_names], set again by every pass: they would
-   make two passes differ), the answers of the aux file ([aux_prefixes],
-   read again from it by every pass) and gml@toc (lib/toc.ml writes the
+   make two passes differ), the symbols of the aux file ([aux_prefixes]:
+   pa@ pq@ pr@ px@, read again from it by every pass) and gml@toc (lib/toc.ml writes the
    entries itself).  Sorted by name and subscript, so that two passes
    that end in the same state write the same file.  DCF-VERIFY: the set
    of symbols DCF keeps from one pass to the next (TPG p.233: symbols
    unresolved on the first pass are resolved on the second) is not
-   documented in our manuals. *)
+   documented in our manuals.
+
+   Modern edge: the page provenance.  A symbol that a .se set to the
+   answer of one page question (.se fp@ID = &$PN, Ctx.page_syms) is not
+   written with its value but as an element of gml@pgq: its name, its
+   subscript, the question id and the neutral default (1, 60).  The next
+   pass sets it to the answer of its own aux file to that question, the
+   default when there is none (Aux.resolve_pages): the page TeX put the
+   target on in the pass that set the symbol.  A forward reference to a
+   page is then right on pass 2, as in LaTeX (and in DCF, where &$PN is
+   the page on pass 1), not on pass 3; and the file stays the same from
+   one pass to the next when the questions are the same (gmlpass compares
+   it), though the answer changed. *)
 
 (** [.se NAME = 'value'] ([sub] = 0) or [.se NAME(sub) = 'value']. *)
 let se_line ?(sub = 0) name v =
@@ -300,38 +313,61 @@ let date_symbols () =
 let date_names = List.map fst (date_symbols ())
 
 (** The prefixes of the aux file's symbols (lib/aux.ml): [pa@] the page of an
-    anchor, [pq@] the answer to a question. *)
+    anchor, [pq@] the answer to a question, [pr@] gml.tex's own auto page
+    references, [px@] a tag set's own (written by its TeX file, read by its
+    profile, e.g. examples/tate's ruby widths). *)
 let anchor_prefix = "pa@"
 
 let query_prefix = "pq@"
+let tagset_prefix = "px@"
 
-(** The symbols of the aux file (lib/aux.ml): not carried. *)
-let aux_prefixes = [ anchor_prefix; query_prefix; "pr@" ]
+(** The symbols of the aux file (lib/aux.ml): not carried, every pass reads them
+    again from the file. *)
+let aux_prefixes = [ anchor_prefix; query_prefix; "pr@"; tagset_prefix ]
 
 (** The array the TOC entries travel in (lib/toc.ml). *)
 let toc_name = "gml@toc"
 
+(** The array the page provenance travels in ([dump]). *)
+let page_name = "gml@pgq"
+
 let carried name =
   name <> ""
   && (not (String.starts_with ~prefix:"$" name))
-  && name <> toc_name
+  && name <> toc_name && name <> page_name
   && (not (List.mem name date_names))
   && not
        (List.exists
           (fun prefix -> String.starts_with ~prefix name)
           aux_prefixes)
 
-(** The [.se] lines of the symbols (without line ends). *)
-let dump t =
+(** The [.se] lines of the symbols (without line ends). [pages]: the page
+    provenance ([Ctx.page_syms]): a symbol whose value is still the answer it
+    was set to is written as an element of gml@pgq, not with its value. *)
+let dump ?(pages = Hashtbl.create 0) t =
   let entries name s =
     List.map (fun v -> ((name, 0), v)) (Option.to_list s.value)
     @ Hashtbl.fold (fun k v acc -> ((name, k), v) :: acc) s.elems []
   in
-  Hashtbl.fold
-    (fun name s acc -> if carried name then entries name s @ acc else acc)
-    t.global []
-  |> List.sort (fun (a, _) (b, _) -> compare a b)
-  |> List.map (fun ((name, sub), v) -> se_line ~sub name v)
+  let page ((name, sub), v) =
+    match Hashtbl.find_opt pages (name, sub) with
+    | Some (id, ans, dflt) when ans = v ->
+        Some (Printf.sprintf "%s %d %s %s" name sub id dflt)
+    | _ -> None
+  in
+  let all =
+    Hashtbl.fold
+      (fun name s acc -> if carried name then entries name s @ acc else acc)
+      t.global []
+    |> List.sort (fun (a, _) (b, _) -> compare a b)
+  in
+  List.filter_map
+    (fun (((name, sub), v) as e) ->
+      if page e = None then Some (se_line ~sub name v) else None)
+    all
+  @ List.mapi
+      (fun i q -> se_line ~sub:(i + 1) page_name q)
+      (List.filter_map page all)
 
 (** The whole symbol file around [lines] (the [.se] lines of [dump] and
     [Toc.dump]), with line ends. *)

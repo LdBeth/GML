@@ -286,6 +286,40 @@ let check_name ctx cw name k =
       Symbols.max_name_len
   else Ctx.error ctx "%s: invalid symbol name %s" cw name
 
+(* The page provenance of a global symbol (Ctx.page_syms): set to the
+   answer of the one question asked on its line (.se fp = &$PN, .se fp =
+   &), the symbol file carries the question and the next pass the answer
+   TeX gave to it (Aux.resolve_pages).  The question is used up: a second
+   .se on the same line (a ;-split line) does not claim it.  Set to
+   anything else (two questions, &$PN+1, a constant), [.se name()] (an
+   element by the counter, p.256) or OFF: no provenance.  An entry that
+   another command made stale (.se x lib) is not written: its value is
+   no longer the answer (Symbols.dump). *)
+let page_provenance ctx name x v =
+  let key = (Symbols.norm name, x) in
+  match ctx.Ctx.line_queries with
+  | [ ((_, ans, _) as q) ] when ans = v && not (Symbols.is_local name) ->
+      Hashtbl.replace ctx.Ctx.page_syms key q;
+      ctx.Ctx.line_queries <- []
+  | _ -> Hashtbl.remove ctx.Ctx.page_syms key
+
+(* .se name off: the whole symbol, every element of it *)
+let page_unset ctx name x =
+  let n = Symbols.norm name in
+  if x <> 0 then Hashtbl.remove ctx.Ctx.page_syms (n, x)
+  else
+    Hashtbl.filter_map_inplace
+      (fun (m, _) q -> if m = n then None else Some q)
+      ctx.Ctx.page_syms
+
+(* .se name() = v: the counter and the element it now names *)
+let page_appended ctx name =
+  let n = Symbols.norm name in
+  Hashtbl.remove ctx.Ctx.page_syms (n, 0);
+  Option.iter
+    (fun c -> Hashtbl.remove ctx.Ctx.page_syms (n, c))
+    (Option.bind (Symbols.get ctx.Ctx.syms n) int_of_string_opt)
+
 (* .se name[(n)] = expression | 'string
    .se name[(n)] 'string
    .se name() = v    (the next element, p.256)
@@ -337,8 +371,14 @@ let se ctx ops =
             let set v =
               result
                 (match sub with
-                | `Next -> Symbols.append ctx.Ctx.syms name v
-                | `At x -> Symbols.set ~sub:x ctx.Ctx.syms name v)
+                | `Next ->
+                    let r = Symbols.append ctx.Ctx.syms name v in
+                    if r = Ok () then page_appended ctx name;
+                    r
+                | `At x ->
+                    let r = Symbols.set ~sub:x ctx.Ctx.syms name v in
+                    if r = Ok () then page_provenance ctx name x v;
+                    r)
             in
             let value rhs =
               if String.trim rhs = "&" then
@@ -352,7 +392,9 @@ let se ctx ops =
               value (String.sub rest 1 (String.length rest - 1))
             else if String.lowercase_ascii (String.trim rest) = "off" then
               match sub with
-              | `At x -> result (Symbols.unset ~sub:x ctx.syms name)
+              | `At x ->
+                  page_unset ctx name x;
+                  result (Symbols.unset ~sub:x ctx.syms name)
               | `Next -> Ctx.error ctx ".se %s(): OFF needs a subscript" name
             else if rest = "" then
               (* DCF-VERIFY: [.se name] alone sets the null string *)

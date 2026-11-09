@@ -56,6 +56,35 @@
 .pa
 .dm off
 .*
+.* ---- headings ----------------------------------------------------------
+.* dcfstarter's space before and after a heading is across the lines
+.* here, from the right edge of the text block toward the left: its
+.* 1.3i before a chapter (h0, h1: a new page) would be a third of the
+.* block.  A chapter heading begins at the edge; the other headings
+.* have less space around them (.dh changes only what it names).
+.dh 0 spbf 0 spaf 2
+.dh 1 spbf 0 spaf 2
+.dh 2 skbf 2 spaf 1
+.dh 3 skbf 2 spaf 1
+.dh 4 skbf 2 spaf 1
+.*
+.* ---- paragraphs --------------------------------------------------------
+.* A Japanese paragraph begins one full-width character in (字下げ):
+.* dcfstarter's :p APFs (f@para, and f@para1 for the first paragraph
+.* after a heading) with .il 1mh, the first line indented by the em of
+.* the font (the kanji are set at the Latin quad: 1zw).  Not after a
+.* run-in heading (the paragraph begins on the heading's line), nor at
+.* :pc (a continuation, f@pcont).
+.dm f@para on
+.sk .75
+.il 1mh
+.dm off
+.dm f@para1 on
+.aa p f@para (noatt)
+.if &f@hrun eq 0 .sk .75
+.if &f@hrun eq 0 .il 1mh
+.dm off
+.*
 .* ---- literals (dcfstarter's, starterset.gml's quotation marks) ------
 .se f@l@note '注：
 .se f@l@fig '図
@@ -87,16 +116,21 @@
 .* pairs them and places the readings, tagset.tex sets them.
 .* The widths come from the passes: :rt numbers its pair (k=, in the
 .* order of the document); TeX writes the measured widths of the pair
-.* to the aux file (.se rb@w(k) = base, .se rb@r(k) = reading, in sp),
-.* and the next pass puts them on the :rt (bw= rw=).  Without them
-.* (the first pass) tex.xsl estimates the widths from the characters.
+.* to the aux file (.se px@rbw(k) = base, .se px@rbr(k) = reading, in
+.* sp), and the next pass puts them on the :rt (bw= rw=).  px@ is the
+.* aux prefix of a tag set's own symbols: they are not carried to the
+.* symbol file (so the passes' JOB.sym do not differ by them).  Without
+.* them (the first pass) tex.xsl estimates the widths from the characters.
 .se rb@k = 0
 .dm rubyapf on
 .dm off
 .dm rtapf on
 .se rb@k = &rb@k + 1
 .xa k=&rb@k
-.if &L'&rb@w(&rb@k) gt 0 .if &L'&rb@r(&rb@k) gt 0 .xa bw=&rb@w(&rb@k) rw=&rb@r(&rb@k)
+.if &L'&px@rbw(&rb@k) gt 0 .if &L'&px@rbr(&rb@k) gt 0 .xa bw=&px@rbw(&rb@k) rw=&px@rbr(&rb@k)
 .dm off
 .aa ruby rubyapf (elem) rubyapf (elem)
 .aa rt rtapf (elem) rubyapf (elem)
+.* :ert is needed only before the next base text: a reading is closed
+.* implicitly by the next :rt and by :eruby (the .xd model), as in HTML.
+.xd rt closedby=rt
