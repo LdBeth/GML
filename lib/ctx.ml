@@ -467,9 +467,9 @@ let create ?(include_path = []) () =
   ctx.doc.Doc.here <- (fun () -> Loc.to_string ctx.loc);
   ctx.syms.Symbols.local <-
     (fun () ->
-      match Input.current_scope ctx.input with
-      | Some sc -> sc
-      | None -> ctx.syms.Symbols.base);
+      Option.value
+        (Input.current_scope ctx.input)
+        ~default:ctx.syms.Symbols.base);
   ctx.syms.Symbols.in_macro <- (fun () -> Input.in_macro ctx.input);
   ctx
 
@@ -520,12 +520,9 @@ let set_cond ctx v = Input.set_cond ctx.input v
     the blank after the name, p.253). *)
 let macro_of ctx (c : Line.control) =
   if ctx.ms_on && not c.Line.quoted then
-    match c.Line.long with
-    | Some name -> (
-        match Macro.find ctx.macros name with
-        | Some m -> Some (name, m, Line.drop_blank c.Line.long_args)
-        | None -> None)
-    | None -> None
+    Option.bind c.Line.long (fun name ->
+        Macro.find ctx.macros name
+        |> Option.map (fun m -> (name, m, Line.drop_blank c.Line.long_args)))
   else None
 
 (** Is [name] a control word name, for the text-line separator rule. *)

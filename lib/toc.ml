@@ -129,32 +129,14 @@ let next_id t =
     [.pt] line; returns it. *)
 let add t ?page kind text =
   let id = next_id t in
-  let e =
+  let skip, indent, font, dot =
     match kind with
     | Head n ->
         let d = t.defs.(n) in
-        {
-          id;
-          kind;
-          text;
-          skip = d.skip;
-          indent = d.indent;
-          font = d.font;
-          dot = d.dot;
-          page;
-        }
-    | Line | Control _ ->
-        {
-          id;
-          kind;
-          text;
-          skip = false;
-          indent = "0";
-          font = None;
-          dot = true;
-          page;
-        }
+        (d.skip, d.indent, d.font, d.dot)
+    | Line | Control _ -> (false, "0", None, true)
   in
+  let e = { id; kind; text; skip; indent; font; dot; page } in
   t.entries <- e :: t.entries;
   e
 

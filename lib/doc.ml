@@ -256,8 +256,7 @@ let plain_stack t = List.filter (fun e -> not (is_scope e)) t.stack
 (** Names of the open elements, innermost first (root and scopes excluded). *)
 let open_elements t =
   let l = plain_stack t in
-  let n = List.length l - 1 in
-  List.filteri (fun i _ -> i < n) l |> List.map (fun e -> e.name)
+  List.take (List.length l - 1) l |> List.map (fun e -> e.name)
 
 let is_open t name = List.mem name (open_elements t)
 
@@ -300,12 +299,7 @@ let end_element ?(force = false) t name =
   if t.mute then Closed []
   else if not (List.mem name opened) then Not_open
   else begin
-    let rec above = function
-      | n :: _ when n = name -> []
-      | n :: rest -> n :: above rest
-      | [] -> []
-    in
-    let inner = above opened in
+    let inner = List.take_while (fun n -> n <> name) opened in
     let provisional n =
       List.exists (fun e -> e.name = n && e.provisional) t.stack
     in
@@ -399,7 +393,7 @@ let line_end t ~counted ~text =
     (* innermost first; the scopes inside an expired one go on *)
     List.iter (fun sc -> resume t (suspend_to t sc.word)) expired;
     if text then add t (Tree.Text "\n");
-    List.iter (fun sc -> List.iter (push_scope t) sc.next) (List.rev expired)
+    List.iter (fun sc -> resume t sc.next) (List.rev expired)
   end
 
 (* ---- .dv text variables ------------------------------------------------ *)
@@ -484,29 +478,27 @@ let split_dvars t s =
     go 0 0 []
   end
 
-(* [s] with its text variables replaced by their text (an attribute value) *)
-let dvar_text t s =
+(* [s] with its text variables replaced by their text, [left] applied to
+   the text around them *)
+let join_dvars t left s =
   match split_dvars t s with
-  | [ Either.Left s ] -> s
+  | [ Either.Left s ] -> left s
   | l ->
       String.concat ""
         (List.map
            (function
-             | Either.Left s -> s
+             | Either.Left s -> left s
              | Either.Right a ->
                  Option.value (List.assoc_opt "text" a) ~default:"")
            l)
 
+(* [s] with its text variables replaced by their text (an attribute value) *)
+let dvar_text t s = join_dvars t Fun.id s
+
 (** [s] as it is put out, for text in a hint's attribute (the fields of [.sx]):
     translated ([.tr]), its text variables replaced by their text (which is not
     translated). *)
-let output_text t s =
-  String.concat ""
-    (List.map
-       (function
-         | Either.Left s -> translate t s
-         | Either.Right a -> Option.value (List.assoc_opt "text" a) ~default:"")
-       (split_dvars t s))
+let output_text t s = join_dvars t (translate t) s
 
 (* Text enters the tree translated ([.tr]).  In a running heading or
    footing the page number symbol is split off first, as the hint
@@ -567,11 +559,10 @@ let rec last_text nodes =
   | [] -> Absent
   | Tree.Text "" :: rest -> skip (Tree.Text "") rest
   | Tree.Text a :: rest ->
-      Found
-        (a, fun t -> match t with None -> rest | Some t -> Tree.Text t :: rest)
-  | Tree.Hint (_, attrs) :: rest when List.assoc_opt "break" attrs <> Some "yes"
-    ->
-      skip (List.hd nodes) rest
+      Found (a, function None -> rest | Some t -> Tree.Text t :: rest)
+  | (Tree.Hint (_, attrs) as h) :: rest
+    when List.assoc_opt "break" attrs <> Some "yes" ->
+      skip h rest
   | Tree.Hint _ :: _ | Tree.Raw _ :: _ -> Blocked
   | (Tree.Element (n, a, ch) as e) :: rest -> (
       match last_text (List.rev ch) with

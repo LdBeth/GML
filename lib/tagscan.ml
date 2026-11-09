@@ -157,13 +157,7 @@ type token =
 let token d s i =
   let n = String.length s in
   let j = name_end s i in
-  let bad () =
-    let k = ref i in
-    while !k < n && (not (is_blank s.[!k])) && s.[!k] <> d.mcs do
-      incr k
-    done;
-    T_bad (max !k (i + 1))
-  in
+  let bad () = T_bad (max (bare ~mcs:d.mcs s i) (i + 1)) in
   if j = i then bad ()
   else begin
     let k = skip_blanks s j in

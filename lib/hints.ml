@@ -263,9 +263,10 @@ let indent side ctx ops =
                   and for_n = Option.bind for_ Units.lines in
                   let uncounted name = function
                     | Some o when Units.lines o = None ->
-                        amount_attrs o
-                        |> List.map (fun (k, x) ->
-                            ((if k = "n" then name else name ^ "-unit"), x))
+                        [
+                          (name, Units.show_operand o);
+                          (name ^ "-unit", o.value.unit);
+                        ]
                     | _ -> []
                   in
                   match for_ with
@@ -716,7 +717,7 @@ let toc ctx ops =
               @ (if e.indent = "0" then []
                  else [ ("indent", norm Units.Horizontal e.indent) ])
               @ (match e.font with Some f -> [ ("font", f) ] | None -> [])
-              @ [ ("dot", if e.dot then "yes" else "no") ]
+              @ [ ("dot", yn e.dot) ]
               @
               match page with
               | Some p -> [ ("page", p) ]
@@ -763,13 +764,12 @@ let split_text ctx ops =
             then "\u{E000}"
             else String.make 1 ps
           in
-          match List.map (String.concat m) pieces with
-          | [ l; f; r ] ->
-              emit ctx "sx" ~brk:true
-                ([ ("left", l); ("fill", f); ("right", r) ]
-                @ fl
-                @ [ ("pagesym", m) ])
-          | _ -> assert false
+          emit ctx "sx" ~brk:true
+            (List.combine
+               [ "left"; "fill"; "right" ]
+               (List.map (String.concat m) pieces)
+            @ fl
+            @ [ ("pagesym", m) ])
         end
         else
           emit ctx "sx" ~brk:true
@@ -991,11 +991,6 @@ let translate ctx ops =
    the line after its delimiter (the first character after the keywords),
    without a closing delimiter.  DCF-VERIFY: with no string the variable
    is the null string; BASELINE without FONT is allowed. *)
-let is_name_start c =
-  match c with
-  | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '@' | '#' | '$' -> true
-  | _ -> false
-
 let define_variable ctx ops =
   let name, rest = first_word ops in
   if name = "" then Ctx.error ctx ".dv: symbol name expected"
@@ -1014,7 +1009,7 @@ let define_variable ctx ops =
     in
     match keys [] rest with
     | Error e -> Ctx.error ctx ".dv %s: %s" name e
-    | Ok (_, rest) when rest <> "" && is_name_start rest.[0] ->
+    | Ok (_, rest) when rest <> "" && Chars.is_tag_char rest.[0] ->
         Ctx.error ctx ".dv %s: FONT, BASELINE, TEXT or /string expected, not %s"
           name
           (fst (first_word rest))

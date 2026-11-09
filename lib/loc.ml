@@ -30,18 +30,19 @@ let to_string l =
   | [] -> base
   | vs ->
       (* runs of identical entries (recursion) are shown once with a count *)
-      let rec runs = function
-        | [] -> []
-        | v :: rest -> (
-            match runs rest with
+      let runs =
+        List.fold_right
+          (fun v acc ->
+            match acc with
             | (w, k) :: r when w = v -> (v, k + 1) :: r
             | r -> (v, 1) :: r)
+          vs []
       in
       let show (v, k) =
         Printf.sprintf "in macro %s line %d%s" v.macro v.mline
           (if k > 1 then Printf.sprintf " [%d times]" k else "")
       in
-      base ^ " (" ^ String.concat ", " (List.map show (runs vs)) ^ ")"
+      base ^ " (" ^ String.concat ", " (List.map show runs) ^ ")"
 
 (* ---- diagnostics ------------------------------------------------------ *)
 

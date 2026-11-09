@@ -87,12 +87,12 @@ let step t n =
 let set t ps =
   Array.fill t.v 0 (levels + 1) 0;
   Array.fill t.style 0 (levels + 1) Arabic;
+  (* fresh: the deepest position given that is not 0: "A.0" is the A of
+     level 1 *)
+  t.fresh <- 0;
   List.iteri
     (fun i (v, s) ->
       t.v.(i + 1) <- v;
-      t.style.(i + 1) <- s)
-    ps;
-  (* the deepest position given that is not 0: "A.0" is the A of level 1 *)
-  t.fresh <-
-    List.fold_left max 0
-      (List.mapi (fun i (v, _) -> if v <> 0 then i + 1 else 0) ps)
+      t.style.(i + 1) <- s;
+      if v <> 0 then t.fresh <- i + 1)
+    ps

@@ -9,8 +9,8 @@
 .se b 'B'
 .ty first &b;.ty second &b
 .se b 'changed';.ty after set: &b
-.* comment &nosuch(&'bad(1)) not substituted
-...label&'bad(1)
+.* comment &nosuch(&semi.) not substituted
+...label&semi.
 .cm also &nosuch substituted, then ignored
 .se star '.*'
 &star. a comment made by substitution is dropped

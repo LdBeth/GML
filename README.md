@@ -50,7 +50,7 @@ the semantic tree only (`doc.sem.xml`).
 
 ## Prerequisites
 
-- OCaml and dune in the opam switch `gml` (stdlib and `unix` only):
+- OCaml 5.3 or later and dune in the opam switch `gml` (stdlib and `unix` only):
   `opam switch create gml ocaml-base-compiler.5.4.1 && opam install --switch=gml -y dune`.
   Every build runs through `opam exec --switch=gml -- dune ...`.
 - SaxonC-HE, the native `transform` binary at `/usr/local/bin/transform`
@@ -376,8 +376,7 @@ in the notes.  They include how far an ignored conditional section is
 both Starter Set profiles), the EBCDIC code page (037) for hex codes, the neutral values of device system
 symbols, and APF lookup under
 `.ms off`.  Deliberate extensions are marked EXT: the automatic element
-per tag, `&'substr(`-style functions, footnotes inside figures, and
-2-digit years taken as 20xx.
+per tag, footnotes inside figures, and 2-digit years taken as 20xx.
 
 ## Formatting profile (dcfstarter)
 

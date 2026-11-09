@@ -33,227 +33,19 @@
    control word separator, the line is split there and the rest of the
    value starts a new input line (substituted on its own; the rest of the
    line after the reference is already substituted).  [line] returns the
-   pieces.
-
-   [&'name(args)] built-in functions are our extension (they are not in
-   SH35-0069): their arguments, being to the right, are substituted
-   first; quoted arguments lose their quotes; the result is not scanned
-   again. *)
+   pieces. *)
 
 let max_steps = 10_000
 let max_length = 100_000
 
 exception Runaway of string
-exception Fn_error of string
 
 type st = {
   ctx : Ctx.t;
   amp : char;
-  seen : (string, unit) Hashtbl.t;  (** messages already reported *)
   mutable steps : int;
   split : bool;  (** apply the extended symbol rule *)
 }
-
-(* Report each distinct message once per line. *)
-let report st sev msg =
-  if not (Hashtbl.mem st.seen msg) then begin
-    Hashtbl.add st.seen msg ();
-    match sev with
-    | `Warn -> Ctx.warn st.ctx "%s" msg
-    | `Err -> Ctx.error st.ctx "%s" msg
-  end
-
-(* A quote starts a delimited string only at the start of a function
-   argument: after '(' or ',' and optional blanks. *)
-let quote_starts s i =
-  let rec back k =
-    if k < 0 then true
-    else match s.[k] with ' ' -> back (k - 1) | '(' | ',' -> true | _ -> false
-  in
-  Expr.is_quote s.[i] && back (i - 1)
-
-(* Index of the ')' matching the '(' at [i]. *)
-let find_close s i =
-  let n = String.length s in
-  let rec go k depth =
-    if k >= n then None
-    else
-      match s.[k] with
-      | '(' -> go (k + 1) (depth + 1)
-      | ')' -> if depth = 1 then Some k else go (k + 1) (depth - 1)
-      | _ when quote_starts s k -> go (Expr.close_quote s k + 1) depth
-      | _ -> go (k + 1) depth
-  in
-  go (i + 1) 1
-
-(* Split function arguments at top-level commas. *)
-let split_args s =
-  let n = String.length s in
-  let args = ref [] and start = ref 0 in
-  let rec go k depth =
-    if k >= n then args := String.sub s !start (n - !start) :: !args
-    else
-      match s.[k] with
-      | '(' -> go (k + 1) (depth + 1)
-      | ')' -> go (k + 1) (depth - 1)
-      | ',' when depth = 0 ->
-          args := String.sub s !start (k - !start) :: !args;
-          start := k + 1;
-          go (k + 1) depth
-      | _ when quote_starts s k -> go (Expr.close_quote s k + 1) depth
-      | _ -> go (k + 1) depth
-  in
-  go 0 0;
-  List.rev !args
-
-(* ---- built-in functions ------------------------------------------------ *)
-
-let num name a =
-  match Expr.parse_int (String.trim a) with
-  | Some v -> v
-  | None -> raise (Fn_error (Printf.sprintf "&'%s: %s is not a number" name a))
-
-let pad_char name = function
-  | None -> ' '
-  | Some p when String.length p = 1 -> p.[0]
-  | Some p ->
-      raise
-        (Fn_error
-           (Printf.sprintf "&'%s: pad must be one character, not '%s'" name p))
-
-(* REXX-style: [n] chars of [s] starting at 1-based [start], padded. *)
-let substr s start len pad =
-  let l = String.length s in
-  String.init (max 0 len) (fun k ->
-      let p = start - 1 + k in
-      if p >= 0 && p < l then s.[p] else pad)
-
-let words_of s = String.split_on_char ' ' s |> List.filter (( <> ) "")
-
-let find_sub hay needle from =
-  let lh = String.length hay and ln = String.length needle in
-  let rec go i =
-    if i + ln > lh then 0
-    else if String.sub hay i ln = needle then i + 1
-    else go (i + 1)
-  in
-  if from < 0 then 0 else go from
-
-let strip s opt ch =
-  let n = String.length s in
-  let i = ref 0 and j = ref n in
-  if opt = 'B' || opt = 'L' then
-    while !i < n && s.[!i] = ch do
-      incr i
-    done;
-  if opt = 'B' || opt = 'T' then
-    while !j > !i && s.[!j - 1] = ch do
-      decr j
-    done;
-  String.sub s !i (!j - !i)
-
-let apply name args =
-  let arity lo hi =
-    let k = List.length args in
-    if k < lo || k > hi then
-      raise
-        (Fn_error
-           (Printf.sprintf "&'%s: %d argument%s given, %s expected" name k
-              (if k = 1 then "" else "s")
-              (if lo = hi then string_of_int lo
-               else Printf.sprintf "%d to %d" lo hi)))
-  in
-  let arg k = List.nth_opt args k in
-  let a k = Option.value (arg k) ~default:"" in
-  let opt k = match arg k with Some "" | None -> None | Some v -> Some v in
-  let int_opt k d = match opt k with None -> d | Some v -> num name v in
-  match name with
-  | "length" ->
-      arity 1 1;
-      string_of_int (String.length (a 0))
-  | "substr" ->
-      arity 2 4;
-      let s = a 0 and n = num name (a 1) in
-      if n < 1 then raise (Fn_error "&'substr: start must be positive");
-      let len = int_opt 2 (max 0 (String.length s - n + 1)) in
-      substr s n len (pad_char name (opt 3))
-  | "index" ->
-      arity 2 3;
-      let st = int_opt 2 1 in
-      string_of_int (find_sub (a 0) (a 1) (st - 1))
-  | "left" ->
-      arity 2 3;
-      substr (a 0) 1 (num name (a 1)) (pad_char name (opt 2))
-  | "right" ->
-      arity 2 3;
-      let s = a 0 and len = num name (a 1) in
-      substr s (String.length s - len + 1) len (pad_char name (opt 2))
-  | "upper" | "lower" ->
-      arity 1 3;
-      let s = a 0 in
-      let l = String.length s in
-      let st = int_opt 1 1 in
-      let len = int_opt 2 (l - st + 1) in
-      let f =
-        if name = "upper" then Char.uppercase_ascii else Char.lowercase_ascii
-      in
-      String.mapi
-        (fun i c -> if i >= st - 1 && i < st - 1 + len then f c else c)
-        s
-  | "strip" ->
-      arity 1 3;
-      let o =
-        match opt 1 with None -> 'B' | Some o -> Char.uppercase_ascii o.[0]
-      in
-      if not (String.contains "BLT" o) then
-        raise
-          (Fn_error
-             (Printf.sprintf "&'strip: option must be B, L or T, not %s" (a 1)));
-      strip (a 0) o (pad_char name (opt 2))
-  | "copies" ->
-      arity 2 2;
-      let k = num name (a 1) in
-      if k < 0 then raise (Fn_error "&'copies: count must not be negative");
-      String.concat "" (List.init k (fun _ -> a 0))
-  | "delstr" ->
-      arity 2 3;
-      let s = a 0 and n = num name (a 1) in
-      let l = String.length s in
-      if n < 1 then raise (Fn_error "&'delstr: start must be positive");
-      if n > l then s
-      else
-        let len = int_opt 2 (l - n + 1) in
-        let e = min l (n - 1 + len) in
-        String.sub s 0 (n - 1) ^ String.sub s e (l - e)
-  | "insert" ->
-      arity 2 5;
-      let nw = a 0 and target = a 1 in
-      let n = int_opt 2 0 in
-      let pad = pad_char name (opt 4) in
-      let len = int_opt 3 (String.length nw) in
-      let nw = substr nw 1 len pad in
-      let tl = String.length target in
-      let target =
-        if n > tl then target ^ String.make (n - tl) pad else target
-      in
-      let tl = String.length target in
-      String.sub target 0 n ^ nw ^ String.sub target n (tl - n)
-  | "word" -> (
-      arity 2 2;
-      let k = num name (a 1) in
-      match List.nth_opt (words_of (a 0)) (k - 1) with
-      | Some w when k >= 1 -> w
-      | _ -> "")
-  | "words" ->
-      arity 1 1;
-      string_of_int (List.length (words_of (a 0)))
-  | "min" | "max" ->
-      if args = [] then
-        raise (Fn_error (Printf.sprintf "&'%s: arguments expected" name));
-      let vs = List.map (num name) args in
-      let f = if name = "min" then min else max in
-      string_of_int (List.fold_left f (List.hd vs) (List.tl vs))
-  | _ -> raise (Fn_error (Printf.sprintf "unknown function &'%s" name))
 
 (* ---- attribute values ------------------------------------------------------ *)
 
@@ -403,39 +195,6 @@ let attr_before st s k =
     else None
   else None
 
-(* [&'name(args)] at [i]; [None] if it is not a well-formed call.  The
-   arguments are already substituted. *)
-let call st s i =
-  let n = String.length s in
-  let j = ref (i + 2) in
-  while
-    !j < n && match s.[!j] with 'a' .. 'z' | 'A' .. 'Z' -> true | _ -> false
-  do
-    incr j
-  done;
-  if !j = i + 2 || !j >= n || s.[!j] <> '(' then None
-  else
-    match find_close s !j with
-    | None -> None
-    | Some k -> (
-        let name = String.lowercase_ascii (String.sub s (i + 2) (!j - i - 2)) in
-        let arg a =
-          let a = String.trim a in
-          let l = String.length a in
-          if l >= 2 && Expr.is_quote a.[0] && a.[l - 1] = a.[0] then
-            String.sub a 1 (l - 2)
-          else a
-        in
-        let inner = String.sub s (!j + 1) (k - !j - 1) in
-        let args =
-          if String.trim inner = "" then [] else List.map arg (split_args inner)
-        in
-        match apply name args with
-        | v -> Some (k + 1, v)
-        | exception Fn_error m ->
-            report st `Err m;
-            Some (k + 1, String.sub s i (k + 1 - i)))
-
 type operand =
   | Str of string  (** a character string *)
   | Ref of bool * string option * string  (** defined, value, as written *)
@@ -457,16 +216,11 @@ let eval_attr st s prot a o =
             if !e < n && s.[!e] = '.' then !e + 1 else !e )
         in
         if o < n && s.[o] = st.amp then
-          if o + 1 < n && s.[o + 1] = '\'' then
-            match call st s o with
-            | Some (stop, v) -> (Str v, stop)
-            | None -> literal ()
-          else
-            match parse_ref s o with
-            | Some (b, nm, sub, written) ->
-                let defined = Symbols.defined st.ctx.Ctx.syms nm in
-                (Ref (defined, lookup st nm sub, written), b)
-            | None -> literal ()
+          match parse_ref s o with
+          | Some (b, nm, sub, written) ->
+              let defined = Symbols.defined st.ctx.Ctx.syms nm in
+              (Ref (defined, lookup st nm sub, written), b)
+          | None -> literal ()
         else literal ()
   in
   let text =
@@ -511,21 +265,15 @@ let at st s prot k =
   match attr_before st s k with
   | Some a -> eval_attr st s prot a k
   | None -> (
-      let n = String.length s in
-      if k + 1 < n && s.[k + 1] = '\'' then
-        match call st s k with
-        | Some (stop, v) -> Attr (k, stop, v)
-        | None -> Nothing
-      else
-        match attr_at s k with
-        | Some (_, plen) -> eval_attr st s prot k (k + plen)
-        | None -> (
-            match parse_ref s k with
-            | None -> Nothing
-            | Some (b, name, sub, _) -> (
-                match lookup st name sub with
-                | Some v -> Value (k, b, v)
-                | None -> Nothing)))
+      match attr_at s k with
+      | Some (_, plen) -> eval_attr st s prot k (k + plen)
+      | None -> (
+          match parse_ref s k with
+          | None -> Nothing
+          | Some (b, name, sub, _) -> (
+              match lookup st name sub with
+              | Some v -> Value (k, b, v)
+              | None -> Nothing)))
 
 let rec expand st s =
   let buf = ref s in
@@ -598,12 +346,11 @@ let run ctx ~split s =
   let amp = ctx.Ctx.chars.Chars.symbol in
   if not (String.contains s amp) then [ s ]
   else
-    let st = { ctx; amp; seen = Hashtbl.create 4; steps = 0; split } in
-    match expand st s with
-    | r -> r
-    | exception Runaway m ->
-        Ctx.error ctx "%s" m;
-        [ s ]
+    let st = { ctx; amp; steps = 0; split } in
+    try expand st s
+    with Runaway m ->
+      Ctx.error ctx "%s" m;
+      [ s ]
 
 (** Substitute the symbols of an input line, with the extended symbol rule: the
     result is the line and the new lines split off it. On a runaway substitution

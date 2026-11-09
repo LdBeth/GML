@@ -1,7 +1,7 @@
 Diagnostics: undefined .go label, unbalanced .do (stray .do end, .do
 begin never ended, a skipped group running to end of input), bad .do
 operand, .th without .if, bad conditions, bad expressions, runaway
-substitution, unknown function.
+substitution.
 
   $ gml in.gml
   in.gml:1: error: .go: label nowhere not found in in.gml
@@ -14,10 +14,8 @@ substitution, unknown function.
   in.gml:8: error: .se x: missing )
   in.gml:10: error: symbol substitution result too long
   in.gml:15: error: symbol substitution does not terminate (more than 10000 steps)
-  in.gml:16: error: unknown function &'bogus
-  unknown: &'bogus(1)
-  in.gml:17: error: .do begin without .do end
-  in.gml:18: error: .do begin without .do end (skipped to end of input)
+  in.gml:16: error: .do begin without .do end
+  in.gml:17: error: .do begin without .do end (skipped to end of input)
   <?xml version="1.0" encoding="UTF-8"?>
   <gml:doc xmlns:gml="urn:x-gml:canonical">Runaway: &amp;a
   Cycle: &amp;p

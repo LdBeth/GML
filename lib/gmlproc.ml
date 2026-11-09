@@ -362,9 +362,7 @@ and tag ctx d (f : Tagscan.found) apf (rules : Ctx.rules) s ~had_text ~eol =
      whole next line if the markup ended a line (SH35-0050 p.7) *)
   let after, had_text =
     if after = "" && at_eol && not had_text then
-      match next_text_line ctx d with
-      | Some l -> (l, false)
-      | None -> ("", false)
+      (Option.value (next_text_line ctx d) ~default:"", false)
     else (after, had_text)
   in
   let residual, remainder =
@@ -457,8 +455,7 @@ let valid_tag_name t =
 let aa ctx ops =
   match items ops with
   | Error e -> Ctx.error ctx ".aa: %s" e
-  | Ok [] -> Ctx.error ctx ".aa: tag name required"
-  | Ok (G _ :: _) -> Ctx.error ctx ".aa: tag name required"
+  | Ok ([] | G _ :: _) -> Ctx.error ctx ".aa: tag name required"
   | Ok (W t :: rest) ->
       if not (valid_tag_name t) then Ctx.error ctx ".aa: invalid tag name %s" t
       else begin
@@ -494,25 +491,19 @@ let gs_rules ctx ops =
         || List.length groups > 2
       then Ctx.error ctx ".gs rules: (tag rules) [(end-tag rules)] expected"
       else begin
-        let set get put g =
-          match apply_rules (get ()) g with
+        let set rules put g =
+          match apply_rules rules g with
           | Ok r -> put r
           | Error kw -> Ctx.error ctx ".gs rules: unknown rule %s" kw
         in
-        (match groups with
-        | g :: _ ->
-            set
-              (fun () -> ctx.Ctx.tag_rules)
-              (fun r -> ctx.Ctx.tag_rules <- r)
-              g
-        | [] -> ());
         match groups with
-        | [ _; g ] ->
-            set
-              (fun () -> ctx.Ctx.end_rules)
-              (fun r -> ctx.Ctx.end_rules <- r)
-              g
-        | _ -> ()
+        | g :: e ->
+            set ctx.Ctx.tag_rules (fun r -> ctx.Ctx.tag_rules <- r) g;
+            (* e: the end-tag rules, if given *)
+            List.iter
+              (set ctx.Ctx.end_rules (fun r -> ctx.Ctx.end_rules <- r))
+              e
+        | [] -> ()
       end
 
 (* "name [as x] name [as x] ..." *)
@@ -537,11 +528,7 @@ let exatt ctx args =
         let l = List.map (fun (k, a) -> (String.uppercase_ascii k, a)) l in
         let l =
           List.filteri
-            (fun i (k, _) ->
-              not
-                (List.exists
-                   (fun (k', _) -> k' = k)
-                   (List.filteri (fun j _ -> j < i) l)))
+            (fun i (k, _) -> not (List.mem_assoc k (List.take i l)))
             l
         in
         (* not specified: skipped (p.293) *)
@@ -675,12 +662,9 @@ let is_arg_key k =
 
 let gs_args ctx ops =
   let scope = ctx.Ctx.syms.Symbols.local () in
-  let old =
-    Hashtbl.fold
-      (fun k _ acc -> if is_arg_key k then k :: acc else acc)
-      scope []
-  in
-  List.iter (Hashtbl.remove scope) old;
+  Hashtbl.filter_map_inplace
+    (fun k v -> if is_arg_key k then None else Some v)
+    scope;
   let ops = String.trim ops in
   let toks = args_tokens ops in
   if toks <> [] then Macro.bind_args_list scope ops toks
@@ -733,21 +717,19 @@ let qatt ctx = function
 let hctr ctx args =
   let c = ctx.Ctx.hctr and syms = ctx.Ctx.syms in
   let xref n =
+    let ps = Headctr.parts c n in
     ignore (Symbols.unset syms "xref");
-    List.iteri
-      (fun i p -> ignore (Symbols.set ~sub:(i + 1) syms "xref" p))
-      (Headctr.parts c n);
-    ignore (Symbols.set syms "xref" (String.concat "." (Headctr.parts c n)))
+    List.iteri (fun i p -> ignore (Symbols.set ~sub:(i + 1) syms "xref" p)) ps;
+    ignore (Symbols.set syms "xref" (String.concat "." ps))
   in
   match args with
   | [] ->
       Headctr.reset c;
-      ignore (Symbols.unset syms "xref");
-      ignore (Symbols.set syms "xref" "")
+      xref 0
   | [ v ] -> (
       let ps = List.map Headctr.position (String.split_on_char '.' v) in
-      match (ps, int_of_string_opt v) with
-      | _, Some n when n >= 1 && n <= Headctr.levels ->
+      match int_of_string_opt v with
+      | Some n when n >= 1 && n <= Headctr.levels ->
           Headctr.step c n;
           xref n
       | _ when List.length ps <= Headctr.levels && not (List.mem None ps) ->

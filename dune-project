@@ -3,4 +3,7 @@
 (name gml)
 (package
  (name gml)
- (synopsis "IBM DCF SCRIPT/VS + GML processor emitting canonical XML"))
+ (synopsis "IBM DCF SCRIPT/VS + GML processor emitting canonical XML")
+ (depends
+  (ocaml
+   (>= 5.3))))

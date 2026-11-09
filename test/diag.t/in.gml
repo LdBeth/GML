@@ -13,7 +13,6 @@ Runaway: &a
 .se q '&p'
 .su on
 Cycle: &p
-.ty unknown: &'bogus(1)
 .do begin
 .if 1 eq 2 .do begin
 never closed

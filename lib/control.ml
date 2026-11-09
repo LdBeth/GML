@@ -50,7 +50,7 @@ let set_file_params ctx cw args =
         if List.length toks > max_file_params then begin
           Ctx.warn ctx ".%s: more than %d parameters; the rest are ignored" cw
             max_file_params;
-          List.filteri (fun i _ -> i < max_file_params) toks
+          List.take max_file_params toks
         end
         else toks
       in
@@ -276,8 +276,10 @@ let dc ctx ops =
    pq@ENC: an encoded anchor or question id, lib/aux.ml) may be longer
    than ten characters while such a file is imbedded. *)
 let check_name ctx cw name k =
-  if Symbols.valid_name name then k ()
-  else if ctx.Ctx.coupling && Symbols.valid_name ~long:true name then k ()
+  if
+    Symbols.valid_name name
+    || (ctx.Ctx.coupling && Symbols.valid_name ~long:true name)
+  then k ()
   else if
     String.length name
     > Symbols.max_name_len + if Symbols.is_local name then 1 else 0
@@ -501,12 +503,16 @@ let eval_condition ctx cw ops =
       Ctx.error ctx ".%s: %s" cw e;
       None
 
-let if_ ctx ops =
-  match eval_condition ctx "if" ops with
+(* A comparison whose result [f b] becomes the current one. *)
+let test ctx cw f ops =
+  match eval_condition ctx cw ops with
   | Some (b, rest) ->
-      Ctx.set_cond ctx (Some b);
-      conditional ctx b rest
+      let r = f b in
+      Ctx.set_cond ctx (Some r);
+      conditional ctx r rest
   | None -> Ctx.set_cond ctx (Some false)
+
+let if_ ctx ops = test ctx "if" Fun.id ops
 
 let need_cond ctx cw k =
   match Ctx.cond ctx with
@@ -525,13 +531,7 @@ let el ctx ops =
 (* .an / .or (p.265) combine with the preceding comparison, and like .if
    process their own object. *)
 let combine cw f ctx ops =
-  need_cond ctx cw (fun prev ->
-      match eval_condition ctx cw ops with
-      | Some (b, rest) ->
-          let r = f prev b in
-          Ctx.set_cond ctx (Some r);
-          conditional ctx r rest
-      | None -> Ctx.set_cond ctx (Some false))
+  need_cond ctx cw (fun prev -> test ctx cw (f prev) ops)
 
 let an = combine "an" ( && )
 let or_ = combine "or" ( || )

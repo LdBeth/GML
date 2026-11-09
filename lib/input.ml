@@ -134,7 +134,7 @@ let candidates t name =
     else if Filename.check_suffix name ".gml" then [ name ]
     else [ name; name ^ ".gml" ]
   in
-  let in_dir d = List.map (fun f -> Filename.concat d f) forms in
+  let in_dir d = List.map (Filename.concat d) forms in
   if List.for_all Filename.is_relative forms then
     forms @ List.concat_map in_dir t.search_path
   else forms
@@ -145,13 +145,15 @@ let resolve t name =
     (candidates t name)
 
 let split_lines s =
-  let ls = String.split_on_char '\n' s in
-  let ls = match List.rev ls with "" :: r -> List.rev r | _ -> ls in
+  (* reversed, without the empty piece after a final newline *)
+  let rls =
+    match List.rev (String.split_on_char '\n' s) with "" :: r -> r | r -> r
+  in
   let strip_cr l =
     let n = String.length l in
     if n > 0 && l.[n - 1] = '\r' then String.sub l 0 (n - 1) else l
   in
-  Array.of_list (List.map strip_cr ls)
+  Array.of_list (List.rev_map strip_cr rls)
 
 let read_file path =
   match In_channel.with_open_bin path In_channel.input_all with
@@ -299,15 +301,9 @@ let clear t =
 
 (* The next line of a macro: its index in [m.lines ()], subscript, text. *)
 let macro_next m =
-  let a = m.lines () in
-  let n = Array.length a in
-  let rec go i =
-    if i >= n then None
-    else
-      let sub, l = a.(i) in
-      if sub > m.last then Some (i, sub, l) else go (i + 1)
-  in
-  go 0
+  Array.find_mapi
+    (fun i (sub, l) -> if sub > m.last then Some (i, sub, l) else None)
+    (m.lines ())
 
 let macro_loc m i =
   let cf = m.called_from in
@@ -381,18 +377,18 @@ let peek_in_frame t =
 (* ---- the current frame ------------------------------------------------ *)
 
 (* The frame a [.go] (or a .do group, or a comparison) belongs to: the
-   topmost File or Macro frame, with the frames above it.  Lines frames
-   are transparent: they hold the rest of lines of the frame below. *)
-let rec split_current = function
-  | [] -> None
-  | ((File _ | Macro _) as f) :: rest -> Some (f, rest)
-  | Lines _ :: rest -> split_current rest
+   topmost File or Macro frame.  Lines frames are transparent: they hold
+   the rest of lines of the frame below. *)
+let current_frame t =
+  List.find_opt
+    (function File _ | Macro _ -> true | Lines _ -> false)
+    t.frames
 
 let current_frame_id t =
-  match split_current t.frames with
-  | Some (File ff, _) -> ff.id
-  | Some (Macro m, _) -> m.mid
-  | Some (Lines _, _) | None -> 0
+  match current_frame t with
+  | Some (File ff) -> ff.id
+  | Some (Macro m) -> m.mid
+  | Some (Lines _) | None -> 0
 
 (** The ids of the File and Macro frames on the stack. *)
 let frame_ids t =
@@ -401,42 +397,40 @@ let frame_ids t =
     t.frames
 
 let current_scope t =
-  match split_current t.frames with
-  | Some (Macro m, _) -> Some m.mscope
-  | _ -> None
+  match current_frame t with Some (Macro m) -> Some m.mscope | _ -> None
 
 let in_macro t =
-  match split_current t.frames with Some (Macro _, _) -> true | _ -> false
+  match current_frame t with Some (Macro _) -> true | _ -> false
 
 (** [&$LNUM]: the number of the current line: in a macro its subscript
     (SH35-0050 p.16: 10 for the first line of an inline definition), else its
     line number in the file. *)
 let current_lnum t =
-  match split_current t.frames with
-  | Some (Macro m, _) when m.last <> min_int -> Some m.last
-  | Some (File ff, _) -> Some ff.idx
+  match current_frame t with
+  | Some (Macro m) when m.last <> min_int -> Some m.last
+  | Some (File ff) -> Some ff.idx
   | _ -> None
 
 (** The result of the most recent comparison in the current file or macro
     (p.265). *)
 let cond t =
-  match split_current t.frames with
-  | Some (File ff, _) -> ff.fcond
-  | Some (Macro m, _) -> m.mcond
+  match current_frame t with
+  | Some (File ff) -> ff.fcond
+  | Some (Macro m) -> m.mcond
   | _ -> t.cond0
 
 let set_cond t v =
-  match split_current t.frames with
-  | Some (File ff, _) -> ff.fcond <- v
-  | Some (Macro m, _) -> m.mcond <- v
+  match current_frame t with
+  | Some (File ff) -> ff.fcond <- v
+  | Some (Macro m) -> m.mcond <- v
   | _ -> t.cond0 <- v
 
 (** [.me]: leave the current macro (the frames above it are pushed-back
     remainders of its lines and go with it). Returns the macro name, or [None]
     if the current frame is not a macro. *)
 let end_macro t =
-  match split_current t.frames with
-  | Some (Macro m, _) ->
+  match current_frame t with
+  | Some (Macro m) ->
       ignore
         (drop_through t (function Macro m' -> m'.mid = m.mid | _ -> false));
       Some m.name
@@ -499,9 +493,9 @@ let pick_target idxs ~from =
     nothing changes. Returns the id of the frame jumped in. *)
 let goto t ~label_of name =
   let key = String.lowercase_ascii name in
-  match split_current t.frames with
-  | None | Some (Lines _, _) -> Error "no current file"
-  | Some (File ff, _) -> (
+  match current_frame t with
+  | None | Some (Lines _) -> Error "no current file"
+  | Some (File ff) -> (
       match
         pick_target
           (Hashtbl.find_all (label_index ff ~label_of) key)
@@ -513,7 +507,7 @@ let goto t ~label_of name =
           drop_lines_above t;
           t.pending <- [];
           Ok ff.id)
-  | Some (Macro m, _) -> (
+  | Some (Macro m) -> (
       match
         pick_target
           (Hashtbl.find_all (macro_label_index m ~label_of) key)

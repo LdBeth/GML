@@ -18,6 +18,13 @@ let parse_int s =
 
 let is_blank c = c = ' ' || c = '\t'
 
+(** The index of the first non-blank character at or after [i] (or [i] when [i]
+    is past the end). *)
+let skip_blanks s i =
+  let n = String.length s in
+  let rec go i = if i < n && is_blank s.[i] then go (i + 1) else i in
+  go i
+
 (** SCRIPT/VS delimits strings with the single quotation mark only (SH35-0069
     p.230: [.se type 'prepared on a "word processing" machine] keeps the double
     quotes). *)
@@ -116,41 +123,33 @@ let eval_tokens toks =
   let peek () = match !toks with t :: _ -> Some t | [] -> None in
   let advance () = match !toks with _ :: r -> toks := r | [] -> () in
   let rec expr () =
-    let v = ref (term ()) in
-    let rec more () =
+    let rec more v =
       match peek () with
       | Some (Op "+") ->
           advance ();
-          v := !v + term ();
-          more ()
+          more (v + term ())
       | Some (Op "-") ->
           advance ();
-          v := !v - term ();
-          more ()
-      | _ -> ()
+          more (v - term ())
+      | _ -> v
     in
-    more ();
-    !v
+    more (term ())
   and term () =
-    let v = ref (unary ()) in
-    let rec more () =
+    let rec more v =
       match peek () with
       | Some (Op "*") ->
           advance ();
-          v := !v * unary ();
-          more ()
+          more (v * unary ())
       | Some (Op (("/" | "//") as o)) ->
           advance ();
           let d = unary () in
           if d = 0 then raise (Bad "division by zero");
           (* integer division truncates toward zero; // is the remainder
            (DCF-VERIFY: // remainder operator) *)
-          v := if o = "/" then !v / d else !v mod d;
-          more ()
-      | _ -> ()
+          more (if o = "/" then v / d else v mod d)
+      | _ -> v
     in
-    more ();
-    !v
+    more (unary ())
   and unary () =
     match peek () with
     | Some (Op "-") ->
@@ -187,27 +186,30 @@ let eval_tokens toks =
    quote is optional, p.230) and blank-delimited words, with their
    extents in [s]. *)
 type setok = Q of string | W of string
+type term = { text : string; quoted : bool; stop : int }
+
+(* One blank-delimited or quoted token starting at or after [i]. *)
+let read_term s i =
+  let n = String.length s in
+  let i = skip_blanks s i in
+  if i >= n then None
+  else if is_quote s.[i] then
+    let text, j = delimited s i in
+    Some { text; quoted = true; stop = min n (j + 1) }
+  else
+    let j = ref i in
+    while !j < n && not (is_blank s.[!j]) do
+      incr j
+    done;
+    Some { text = String.sub s i (!j - i); quoted = false; stop = !j }
 
 let se_tokens s =
-  let n = String.length s in
   let rec go i acc =
-    let i = ref i in
-    while !i < n && is_blank s.[!i] do
-      incr i
-    done;
-    let i = !i in
-    if i >= n then List.rev acc
-    else if is_quote s.[i] then begin
-      let body, j = delimited s i in
-      go (j + 1) ((Q body, i, min n (j + 1)) :: acc)
-    end
-    else begin
-      let j = ref i in
-      while !j < n && not (is_blank s.[!j]) do
-        incr j
-      done;
-      go !j ((W (String.sub s i (!j - i)), i, !j) :: acc)
-    end
+    let i = skip_blanks s i in
+    match read_term s i with
+    | None -> List.rev acc
+    | Some t ->
+        go t.stop (((if t.quoted then Q t.text else W t.text), i, t.stop) :: acc)
   in
   go 0 []
 
@@ -283,9 +285,8 @@ let se_value ?(sub = Fun.id) rhs =
         List.fold_left
           (fun pos (t, i, j) ->
             Buffer.add_string b (String.sub rhs pos (i - pos));
-            (match t with
-            | W w -> Buffer.add_string b (sub w)
-            | Q _ -> Buffer.add_string b (String.sub rhs i (j - i)));
+            Buffer.add_string b
+              (match t with W w -> sub w | Q _ -> String.sub rhs i (j - i));
             j)
           0 toks
       in
@@ -313,28 +314,6 @@ let op_of_string s =
   | "ge" | ">=" | "\xc2\xac<" | "^<" -> Some Ge
   | _ -> None
 
-type term = { text : string; quoted : bool; stop : int }
-
-(* One blank-delimited or quoted token starting at or after [i]. *)
-let read_term s i =
-  let n = String.length s in
-  let i = ref i in
-  while !i < n && is_blank s.[!i] do
-    incr i
-  done;
-  if !i >= n then None
-  else if is_quote s.[!i] then begin
-    let text, j = delimited s !i in
-    Some { text; quoted = true; stop = min n (j + 1) }
-  end
-  else begin
-    let j = ref !i in
-    while !j < n && not (is_blank s.[!j]) do
-      incr j
-    done;
-    Some { text = String.sub s !i (!j - !i); quoted = false; stop = !j }
-  end
-
 (* The shorter comparand is padded with blanks (SH35-0069 p.264). *)
 let compare_strings a b =
   let la = String.length a and lb = String.length b in
@@ -359,12 +338,8 @@ let test op c =
   | Ge -> c >= 0
 
 let rest_from s i =
-  let n = String.length s in
-  let i = ref i in
-  while !i < n && is_blank s.[!i] do
-    incr i
-  done;
-  String.sub s !i (n - !i)
+  let i = skip_blanks s i in
+  String.sub s i (String.length s - i)
 
 (** Parse and evaluate [term1 op term2 [remainder]]. Returns the truth value and
     the remainder (leading blanks removed). Numeric comparison when both
@@ -376,7 +351,6 @@ let rest_from s i =
     [.su on] the line is already substituted and [sub] is the identity.
     DCF-VERIFY: a quoted number compares as characters. *)
 let condition ?(sub = Fun.id) s =
-  let empty i = { text = ""; quoted = true; stop = i } in
   let subst t = if t.quoted then t else { t with text = sub t.text } in
   match read_term s 0 with
   | None -> Error "condition expected"
@@ -389,9 +363,8 @@ let condition ?(sub = Fun.id) s =
               Error (Printf.sprintf "invalid comparison operator %s" opt.text)
           | Some op ->
               let rhs =
-                match read_term s opt.stop with
-                | Some t -> t
-                | None -> empty opt.stop
+                Option.value (read_term s opt.stop)
+                  ~default:{ text = ""; quoted = true; stop = opt.stop }
               in
               Ok
                 ( test op (compare_terms (subst t0) (subst rhs)),

@@ -361,13 +361,15 @@ let dump ?(pages = Hashtbl.create 0) t =
       t.global []
     |> List.sort (fun (a, _) (b, _) -> compare a b)
   in
-  List.filter_map
-    (fun (((name, sub), v) as e) ->
-      if page e = None then Some (se_line ~sub name v) else None)
-    all
-  @ List.mapi
-      (fun i q -> se_line ~sub:(i + 1) page_name q)
-      (List.filter_map page all)
+  let plain, pgq =
+    List.partition_map
+      (fun (((name, sub), v) as e) ->
+        match page e with
+        | None -> Either.Left (se_line ~sub name v)
+        | Some q -> Either.Right q)
+      all
+  in
+  plain @ List.mapi (fun i q -> se_line ~sub:(i + 1) page_name q) pgq
 
 (** The whole symbol file around [lines] (the [.se] lines of [dump] and
     [Toc.dump]), with line ends. *)

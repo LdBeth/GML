@@ -115,14 +115,14 @@ let resolve_pages (ctx : Ctx.t) =
   List.iter
     (fun e ->
       match String.split_on_char ' ' e with
-      | [ name; sub; id; dflt ] -> (
-          match int_of_string_opt sub with
-          | Some sub ->
+      | [ name; sub; id; dflt ] ->
+          Option.iter
+            (fun sub ->
               let v =
                 Option.value (Symbols.get syms (query_name id)) ~default:dflt
               in
-              ignore (Symbols.set ~sub syms name v)
-          | None -> ())
+              ignore (Symbols.set ~sub syms name v))
+            (int_of_string_opt sub)
       | _ -> ())
     (Symbols.elements syms Symbols.page_name);
   ignore (Symbols.unset syms Symbols.page_name)

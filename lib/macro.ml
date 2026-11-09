@@ -85,14 +85,6 @@ let scan_name s i =
   done;
   !j
 
-let skip_blanks s i =
-  let n = String.length s in
-  let i = ref i in
-  while !i < n && Expr.is_blank s.[!i] do
-    incr i
-  done;
-  !i
-
 (** Parse the operands of [.dm].
 
     [.dm name /a/b/]: the first non-blank character after the name is the
@@ -106,7 +98,7 @@ let skip_blanks s i =
     delimiter is the line (a second delimiter is part of it). *)
 let parse_dm ops =
   let n = String.length ops in
-  let i = skip_blanks ops 0 in
+  let i = Expr.skip_blanks ops 0 in
   let j = scan_name ops i in
   if j = i then
     if String.trim ops = "" then Bad ".dm: macro name required"
@@ -129,7 +121,7 @@ let parse_dm ops =
               | Some k when k > 0 -> Ok (Some k)
               | _ -> Error t
           in
-          let k = skip_blanks ops (e + 1) in
+          let k = Expr.skip_blanks ops (e + 1) in
           let rest = String.sub ops k (n - k) in
           match sub with
           | Error t ->
@@ -148,7 +140,7 @@ let parse_dm ops =
                 Set_line (name, sub, String.sub rest 1 (String.length rest - 1))
           )
     else begin
-      let k = skip_blanks ops j in
+      let k = Expr.skip_blanks ops j in
       let rest = String.sub ops k (n - k) in
       match String.lowercase_ascii (String.trim rest) with
       | "on" -> Begin name
@@ -165,16 +157,10 @@ let parse_dm ops =
               (Printf.sprintf
                  ".dm %s: ON, OFF or a delimited definition expected" name)
           else
-            let pieces =
-              String.split_on_char d
-                (String.sub rest 1 (String.length rest - 1))
-            in
-            let pieces =
-              match List.rev pieces with
-              | "" :: r when r <> [] -> List.rev r
-              | _ -> pieces
-            in
-            Lines (name, pieces)
+            (* the final delimiter is optional *)
+            let e = String.length rest in
+            let e = if e > 1 && rest.[e - 1] = d then e - 1 else e in
+            Lines (name, String.split_on_char d (String.sub rest 1 (e - 1)))
     end
   end
 
@@ -212,7 +198,7 @@ let is_delim_op = function
 let tokens s =
   let n = String.length s in
   let rec go i acc =
-    let i = skip_blanks s i in
+    let i = Expr.skip_blanks s i in
     if i >= n then List.rev acc
     else if s.[i] = '\'' then
       let v, j = quoted s i in

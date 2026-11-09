@@ -122,7 +122,7 @@ Lines that start with one of them are never filled.  Tags given
 (defface gml-symbol-face '((t :inherit font-lock-variable-use-face))
   "Face for symbol references (&name.).")
 (defface gml-symbol-function-face '((t :inherit font-lock-builtin-face))
-  "Face for symbol attributes and functions (&L' &'substr).")
+  "Face for symbol attributes (&L' &U').")
 (defface gml-separator-face '((t :inherit font-lock-warning-face))
   "Face for the control word separator `;' where it splits a line.")
 (defface gml-example-face '((t :inherit fixed-pitch))
@@ -571,7 +571,7 @@ the line; quoted attribute values are skipped."
       (1 'gml-attribute-face) (2 'gml-attribute-value-face nil t))
      (gml--match-mcs nil nil (0 gml--tag-mcs-face)))
     ;; symbol attributes and functions, then references
-    ("&\\(?:[A-Za-z][A-Za-z]?'\\|'[A-Za-z]+\\)" (0 'gml-symbol-function-face))
+    ("&[A-Za-z][A-Za-z]?'" (0 'gml-symbol-function-face))
     ("&\\(?:\\*[A-Za-z0-9@#$]*\\|[A-Za-z0-9@#$]+\\)\\(?:([^)\n]*)\\)?\\.?"
      (0 'gml-symbol-face))
     ;; examples
