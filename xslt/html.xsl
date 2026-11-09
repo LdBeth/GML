@@ -646,6 +646,42 @@
     <xsl:value-of select="." disable-output-escaping="yes"/>
   </xsl:template>
 
+  <!-- A line end between two East Asian wide characters is no space: the
+       engine writes each input line end as a newline (SCRIPT/VS joins
+       filled lines with a blank, and has no rule for CJK), which a browser
+       would show as a space between 日本 and 語.  The rule is the segment
+       break transformation of CSS Text 3 (as markdown-it-cjk-breaks):
+       removed, with the blanks around it, when the characters on both
+       sides are wide, fullwidth or halfwidth, and neither is Hangul
+       (Korean puts spaces between its words).  The neighbours are looked
+       for across inline markup, within the same block; preserved text
+       (pre, white-space: pre*, figure bodies) keeps its line ends.  TeX
+       needs none of this: pTeX drops such a line end itself, by its
+       \kcatcode. -->
+  <xsl:variable name="h:wide" as="xs:string" select="'[&#x2E80;-&#x303E;&#x3041;-&#x312F;&#x3190;-&#x33FF;&#x3400;-&#x4DBF;&#x4E00;-&#x9FFF;&#xA000;-&#xA4CF;&#xF900;-&#xFAFF;&#xFE10;-&#xFE19;&#xFE30;-&#xFE6F;&#xFF00;-&#xFF9F;&#xFFE0;-&#xFFE6;&#x20000;-&#x2FFFD;&#x30000;-&#x3FFFD;]'"/>
+  <xsl:template mode="h:out" match="text()[contains(., '&#10;')]">
+    <xsl:choose>
+      <xsl:when test="ancestor::*[local-name() = 'pre' or contains(@class, 'gml-figbody')
+                                  or contains(@style, 'white-space: pre')]">
+        <xsl:value-of select="."/>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:variable name="block" select="ancestor::*[local-name() = $h:blocks][1]"/>
+        <xsl:variable name="texts" select="$block//text()[normalize-space() != '']"/>
+        <xsl:variable name="before" select="($texts[. &lt;&lt; current()])[last()]"/>
+        <xsl:variable name="after" select="($texts[. &gt;&gt; current()])[1]"/>
+        <!-- one character of context on each side, removed again below -->
+        <xsl:variable name="p" select="if (exists($before)) then substring($before, string-length($before)) else ' '"/>
+        <xsl:variable name="n" select="if (exists($after)) then substring($after, 1, 1) else ' '"/>
+        <xsl:variable name="re" select="'(' || $h:wide || ')[ &#9;]*&#10;[ &#9;]*(' || $h:wide || ')'"/>
+        <!-- twice: a match takes the character after the line end, which
+             may be the one before the next line end (日\n本\n語) -->
+        <xsl:variable name="s" select="replace(replace($p || . || $n, $re, '$1$2'), $re, '$1$2')"/>
+        <xsl:value-of select="substring($s, 2, string-length($s) - 2)"/>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+
   <xsl:template match="gml:doc">
     <html lang="{$lang}">
       <head>

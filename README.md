@@ -378,6 +378,12 @@ both Starter Set profiles), the EBCDIC code page (037) for hex codes, the neutra
 symbols, and APF lookup under
 `.ms off`.  Deliberate extensions are marked EXT: the automatic element
 per tag, footnotes inside figures, and 2-digit years taken as 20xx.
+SCRIPT/VS has no rule for CJK: the engine keeps an input line end
+as a newline, which pTeX drops between Japanese characters by its
+`\kcatcode`, and `html.xsl` removes between two East Asian wide
+characters other than Hangul (the CSS Text 3 segment break rule, as
+Markdown's cjk-breaks; `html/cjk` fixture), so that a browser shows
+no space there.
 
 ## Formatting profile (dcfstarter)
 

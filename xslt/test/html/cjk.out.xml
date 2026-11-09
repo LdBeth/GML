@@ -1,0 +1,32 @@
+<!DOCTYPE HTML><html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="GML html.xsl">
+<title>改行と空白</title>
+<link rel="stylesheet" href="gml.css">
+</head>
+<body class="gml">
+<main class="gml-doc">
+<article class="gml-gdoc">
+<section class="gml-body">
+<h1 id="gml-h1-1" class="gml-h1">改行と空白</h1>
+<p>原稿の行末は語の区切りにはならず、日本語の文字が改行をまたいでも空白は入りません。
+</p>
+<p>行末は<em class="gml-hp1">強調</em><em class="gml-hp1">をまたいでも</em>同じ。「括弧」（全角）もｶﾀｶﾅ半角も。
+</p>
+<p>GML (Generalized Markup Language)
+や 1986
+の前後は空白のまま。
+English words
+stay apart.
+</p>
+<p>한국어는 단어
+사이에 공백을 둡니다.
+</p>
+<p>結合<span class="gml-scope" style="white-space: pre-wrap">改行を
+保つ</span>
+</p></section></article>
+</main>
+</body>
+</html>

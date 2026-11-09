@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><body><h1 anchor="gml-h1-1">改行と空白</h1>
+<p>原稿の行末は語の区切りにはならず、
+日本語の文字が改行を
+またいでも空白は入りません。
+</p>
+<p>行末は<hp1>強調</hp1>
+<hp1>をまたいでも</hp1>
+同じ。「括弧」
+（全角）も
+ｶﾀｶﾅ半角も。
+</p>
+<p>GML (Generalized Markup Language)
+や 1986
+の前後は空白のまま。
+English words
+stay apart.
+</p>
+<p>한국어는 단어
+사이에 공백을 둡니다.
+</p>
+<p>結合<gml:scope kind="block" fill="no">改行を
+保つ</gml:scope>
+</p>
+</body></gdoc></gml:doc>

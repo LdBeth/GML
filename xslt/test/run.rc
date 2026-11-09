@@ -53,7 +53,8 @@
 #        html/starter and html/params are gml/starter.gml scoped,
 #        fn-chapter reuses fn; features, nesting, state, values are
 #        copies of scope/*.out.xml; html/index-pi is resolve/index-pi.out.xml
-#        | scope.xsl (the .pi entries and .ix placement).  HTML is made
+#        | scope.xsl (the .pi entries and .ix placement); html/cjk (line
+#        ends between CJK characters) is hand-written.  HTML is made
 #        only from the semantic profile (starter), not from dcfstarter.
 
 if(~ $#SAXON 0) SAXON=/usr/local/bin/transform
