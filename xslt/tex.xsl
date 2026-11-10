@@ -107,7 +107,7 @@
   <!-- font scheme: share/tex/gmlfont-NAME.tex (ncs, cm, ...); empty = the
        gml.tex default.  Written as \def\gmlfonts{NAME} before \input. -->
   <xsl:param name="tex-fonts" as="xs:string" select="''"/>
-  <!-- tag-set TeX file (gmlfmt -tagset: BUNDLE/tagset.tex); empty = none.
+  <!-- tag-set TeX file (gmlfmt -app: BUNDLE/tagset.tex); empty = none.
        Written as \def\gmltagset{PATH} before \input: gml.tex inputs it
        at its end, before gmllocal.tex. -->
   <xsl:param name="tex-tagset" as="xs:string" select="''"/>

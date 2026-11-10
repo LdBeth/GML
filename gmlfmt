@@ -1,8 +1,8 @@
 #!/usr/local/plan9/bin/rc
 # gmlfmt - run the GML pipeline on one file, result on standard output.
 #
-#   gmlfmt [-to xml|resolved|scoped|semantic|html|tex] [-profile p]
-#          [-tagset t] [-set name=value]... [-p name=value]... [-I dir]...
+#   gmlfmt [-to xml|resolved|scoped|semantic|html|tex|STAGE] [-profile p]
+#          [-app t] [-set name=value]... [-p name=value]... [-I dir]...
 #          in.gml
 #
 #   -to       the stage to stop at (default xml):
@@ -12,9 +12,12 @@
 #               semantic  + xslt/strip-hints.xsl      (from resolved)
 #               html      + xslt/html.xsl             (from scoped)
 #               tex       + xslt/tex.xsl              (from resolved)
+#               STAGE     + STAGE.xsl of the tag set  (from scoped): a
+#                         stage of the bundle's own, e.g. -app memo
+#                         -to mail (share/gmlapp/memo/mail.xsl)
 #   -profile  the gml profile (default starter)
-#   -tagset   a tag set: a bundle directory (t contains a /, or
-#             GMLROOT/share/tagset/t), else a profile name (= -profile t).
+#   -app      a tag set: a bundle directory (t contains a /, or
+#             GMLROOT/share/gmlapp/t), else a profile name (= -profile t).
 #             A bundle holds profile.gml (required: the profile, unless
 #             -profile is given; the directory is also the last -I),
 #             optionally resolve.xsl scope.xsl strip-hints.xsl html.xsl
@@ -27,8 +30,8 @@
 #             -to below.
 #   -set      a symbol for gml (-set) and a parameter for every stylesheet
 #
-# The device: -to html, scoped and semantic (the semantic path, the HTML
-# and what it is made from) give gml -set '$LDEV=HTML' (to gml only:
+# The device: -to html, scoped, semantic and a bundle's own stage (the
+# semantic path, the HTML and what it is made from) give gml -set '$LDEV=HTML' (to gml only:
 # $LDEV is not a valid stylesheet parameter name), before the -set
 # options; xml, resolved and tex keep gml's default device (3800N6).
 #   -p        a parameter for the stylesheets only (e.g. -p h1-prefix=Chapter)
@@ -42,7 +45,7 @@
 # and the tag set are share/rc/gmlenv.rc, shared with gmlpass.
 
 fn usage {
-	echo 'usage: gmlfmt [-to xml|resolved|scoped|semantic|html|tex] [-profile p] [-tagset t] [-set name=value]... [-p name=value]... [-I dir]... in.gml' >[1=2]
+	echo 'usage: gmlfmt [-to xml|resolved|scoped|semantic|html|tex|STAGE] [-profile p] [-app t] [-set name=value]... [-p name=value]... [-I dir]... in.gml' >[1=2]
 	exit usage
 }
 
@@ -60,7 +63,7 @@ while(! ~ $#* 0 && ~ $1 -*){
 		to=$2
 	case -profile
 		profileopt=$2
-	case -tagset
+	case -app
 		tagset=$2
 	case -set
 		sets=($sets $2)
@@ -75,7 +78,6 @@ while(! ~ $#* 0 && ~ $1 -*){
 }
 if(! ~ $#* 1) usage
 in=$1
-if(! ~ $to xml resolved scoped semantic html tex) usage
 
 if(~ $#GMLROOT 0) GMLROOT=`{/usr/local/plan9/bin/basename -d $0}
 root=`{cd $GMLROOT && pwd}
@@ -87,6 +89,12 @@ if(! ~ $#bundle 0){
 	gmlargs=($gmlargs -I $bundle)
 }
 if(! ~ $#profileopt 0) profile=$profileopt
+# a stage of the tag set's own: STAGE.xsl in the bundle
+own=()
+if(! ~ $to xml resolved scoped semantic html tex){
+	if(~ $#bundle 0 || ~ $to */* || ! test -f $bundle/$to.xsl) usage
+	own=$to
+}
 
 if(~ $#TMPDIR 0) TMPDIR=/tmp
 tmp=$TMPDIR/gmlfmt.$pid
@@ -97,7 +105,7 @@ for(s in $sets) setargs=($setargs -set $s)
 # the semantic stages (html, scoped, semantic) are for the logical device
 # HTML: gml gets -set $LDEV=HTML (gml only: $LDEV is not a valid name
 # for a stylesheet parameter), before the -set words
-if(~ $to html scoped semantic) setargs=(-set '$LDEV=HTML' $setargs)
+if(~ $to html scoped semantic || ! ~ $#own 0) setargs=(-set '$LDEV=HTML' $setargs)
 
 # xsl stylesheet input [-o:output]
 fn xsl {
@@ -145,5 +153,9 @@ case html
 	xsl resolve $tmp.xml -o:$tmp.r.xml
 	xsl scope $tmp.r.xml -o:$tmp.s.xml
 	xsl html $tmp.s.xml
+case *
+	xsl resolve $tmp.xml -o:$tmp.r.xml
+	xsl scope $tmp.r.xml -o:$tmp.s.xml
+	xsl $own $tmp.s.xml
 }
 exit $gmlrc

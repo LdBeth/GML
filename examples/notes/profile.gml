@@ -1,5 +1,5 @@
 .* profile.gml -- the "notes" tag set: the Starter Set plus a :warn tag
-.* and math.  Used through  ./gmlfmt -tagset examples/notes ...  (or
+.* and math.  Used through  ./gmlfmt -app examples/notes ...  (or
 .* gmlpass, or mk TAGSET=...), which runs gml -profile notes/profile.gml
 .* -I notes; the other files of this bundle (resolve.xsl, html.xsl,
 .* tex.xsl, tagset.tex) handle the tags in each output.

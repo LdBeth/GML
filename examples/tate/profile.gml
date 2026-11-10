@@ -1,6 +1,6 @@
 .* profile.gml -- the "tate" tag set: the formatting profile dcfstarter
 .* in Japanese, set vertically (tategaki) by tagset.tex.  PDF only, with
-.* a pTeX engine:  gmlpass -tex aptex -tagset examples/tate doc.gml
+.* a pTeX engine:  gmlpass -tex aptex -app examples/tate doc.gml
 .* (or the examples' mkfile, out/tategaki.pdf).
 .* The title page starts where a vertical line starts, at the top
 .* (dcfstarter's default SYSVART is right: the foot of the line here).

@@ -3,7 +3,7 @@
 # tree, so this file is not installed).
 #
 # In:  root (the project root), prog (the script's name, for messages),
-#      tagset (the -tagset value, or empty), profile (the default
+#      tagset (the -app value, or empty), profile (the default
 #      profile), SAXON, GML.
 # Out: SAXON (default /usr/local/bin/transform); gml, the gml command:
 #      GML as given, else the dune build of the project, built here once
@@ -11,7 +11,7 @@
 #      are read from the source tree (the copy in _build is not
 #      refreshed); bundle, the tag set's directory (it has profile.gml),
 #      or profile set to the tag set when that names a profile.  -profile
-#      is applied by the caller (it wins over -tagset in any order).
+#      is applied by the caller (it wins over -app in any order).
 
 if(~ $#SAXON 0) SAXON=/usr/local/bin/transform
 if(~ $#GML 0){
@@ -23,13 +23,13 @@ if(~ $#GML 0){
 }
 if not gml=`{echo $GML}
 
-# the tag set: a directory (with a /, or in root/share/tagset), else a
+# the tag set: a directory (with a /, or in root/share/gmlapp), else a
 # profile name
 bundle=()
 if(! ~ $#tagset 0){
 	dir=()
 	if(~ $tagset */*) dir=$tagset
-	if(~ $#dir 0 && test -d $root/share/tagset/$tagset) dir=$root/share/tagset/$tagset
+	if(~ $#dir 0 && test -d $root/share/gmlapp/$tagset) dir=$root/share/gmlapp/$tagset
 	if(~ $#dir 0){
 		if(test -f $root/share/profile/$tagset.gml) profile=$tagset
 		if not { echo $prog: no tag set $tagset >[1=2]; exit 1 }

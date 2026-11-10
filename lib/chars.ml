@@ -93,6 +93,24 @@ let rec dv_skip s i =
     | Some (_, l) -> dv_skip s (i + l)
     | None -> dv_skip s (i + 1)
 
+(** [s] without the marks of its text variables: their strings stay (the value
+    of an element's attribute, which takes no hint). *)
+let dv_plain s =
+  if not (String.contains s '\xf3') then s
+  else begin
+    let b = Buffer.create (String.length s) in
+    let rec go i =
+      if i < String.length s then
+        match dv_char s i with
+        | Some (_, l) -> go (i + l)
+        | None ->
+            Buffer.add_char b s.[i];
+            go (i + 1)
+    in
+    go 0;
+    Buffer.contents b
+  end
+
 (* ---- the marks of a deferred symbol reference (running headings) ------- *)
 
 (* Rel 4: a symbol in a running heading or footing is replaced when the

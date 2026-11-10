@@ -276,6 +276,34 @@ allowed inside `:fig`/`:xmp` (DSMFTNT refuses it there because keeps and
 floats exclude footnotes, SH35-0050 p.129; the tree has no such
 conflict) (`starter_nesting.t`).
 
+## Memo application (`share/gmlapp/memo`; G544-3305-00 ch. 2)
+IBM's DSMMPROF (which imbeds DSMPROF3) as a semantic tag set for one
+use, mail (`gmlfmt -app memo -to html|mail`, `emacs/gml-mail.el`).
+The tags and attributes are the guide's (p.6–9): `:logo logoname=`, `:to
+name= company= addr1= addr2=`, `:from name= addr1= addr2= phone= dept=
+title=`, `:memodate :security :subject :ref` (one line, on the tag's
+line or the next), `:memotxt memtype=`, `:sign`, `:cc name= addr1=
+addr2=`.  As in DSMMPROF the tags before `:memotxt` only collect; here
+each is an element and the stylesheet places them.  MEMTYPE takes
+`INTERNAL`/`EXTERNAL` or any abbreviation (p.8; default INTERNAL); a
+memo is not inside `:gdoc` (p.10, p.12).  A tag given twice: the last
+one counts (as a symbol set twice would), except `:to`, `:cc`.
+**Messages:** 015 for another MEMTYPE value (INTERNAL is used), 038 for
+a second `:memotxt` (ignored).  DCF-VERIFY: which messages DSMMPROF
+itself issues (the guide's Appendix A is not transcribed).  Known
+limit: a MEMTYPE value with a blank comes out split in the text of 015
+(`ss@msg` takes the value as one word, as for starter's own 015).
+**EXT** (none in G544-3305): `email=` on `:to :from :cc`; `:bcc`;
+`:attach name=`; `:link href=`…`:elink`; `:cc :bcc :attach` also before
+`:memotxt`.  **Not modelled:** the current date for a memo without
+`:memodate` (a message has its Date field); the two page layouts of
+MEMTYPE (external only adds the address blocks) (`memo.t`,
+`xslt/test/memo-html`, `memo-mail`).
+**Engine:** text-variable marks (`&amp.` and the like) are now removed
+from attribute values as from other attribute text, so `href='a?b&amp.c'`
+is `a?b&c` (`lib/doc.ml` `attr_text`).  `gmlfmt -to STAGE` (ours) runs a
+bundle's own stylesheet on the scoped XML.
+
 ## Tables (SH20-9186-06 ch. 7, p.51–71; SH20-9187-06 §3.31–3.36)
 In this section a bare "p.n" is SH20-9186-06 and "§x" is SSR.  The Rel 3.2 tag set: `:rdef :table :thd :tft :row :c :tcap :tdesc :tnote
 :tref :tlist`.  The profile checks attributes and context; `xslt/resolve.xsl`

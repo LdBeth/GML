@@ -5,7 +5,9 @@
 #   xslt/test/run [-update] [name...]
 #
 # Each test is a file STAGE/NAME.in.xml, STAGE being the stylesheet
-# (resolve, scope, strip-hints, html, tex).  It is
+# (resolve, scope, strip-hints, html, tex), or TAGSET-STAGE for a stage
+# of a tag set bundle when there is no xslt/TAGSET-STAGE.xsl (memo-html,
+# memo-mail: share/gmlapp/TAGSET/STAGE.xsl).  It is
 # transformed with xslt/STAGE.xsl, with the parameters listed in
 # STAGE/NAME.params (name=value words), and the result is compared with
 # STAGE/NAME.out.xml; the xsl:message output (standard error) is compared
@@ -59,6 +61,10 @@
 #        | scope.xsl (the .pi entries and .ix placement); html/cjk (line
 #        ends between CJK characters) is hand-written.  HTML is made
 #        only from the semantic profile (starter), not from dcfstarter.
+# The tag set stages, without the G dates (a memo has no default date):
+#   memo-html  gmlfmt -app memo -to scoped gml/memo-NAME.gml
+#              -> memo-html/NAME.in.xml (internal, external, reply, text)
+#   memo-mail  copies of memo-html/NAME.in.xml (internal, external, reply)
 
 if(~ $#SAXON 0) SAXON=/usr/local/bin/transform
 here=`{cd `{/usr/local/plan9/bin/basename -d $0} && pwd}
@@ -79,7 +85,10 @@ for(in in $here/*/*.in.xml){
 		base=$here/$stage/$name
 		params=()
 		if(test -f $base.params) params=`{cat $base.params}
-		if(! $SAXON -s:$in -xsl:$xslt/$stage.xsl -o:$tmp.out $params >[2]$tmp.err){
+		sheet=$xslt/$stage.xsl
+		if(! test -f $sheet && ~ $stage *-*)
+			sheet=$xslt/../share/gmlapp/`{echo $stage | sed 's/-.*//'}^/^`{echo $stage | sed 's/^[^-]*-//'}^.xsl
+		if(! $SAXON -s:$in -xsl:$sheet -o:$tmp.out $params >[2]$tmp.err){
 			echo FAIL $stage/$name: transform failed
 			cat $tmp.err
 			fail=`{echo $fail + 1 | bc}

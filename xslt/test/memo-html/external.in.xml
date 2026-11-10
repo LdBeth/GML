@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><to name="Ms. Priya Raman" company="Harbourside Print Ltd." addr1="14 Quay Street" addr2="Bristol BS1 4DJ" email="p.raman@harbourside.example"/><from name="Tomás Ferreira" email="t.ferreira@example.org" addr1="Northgate Press, 3 Mill Lane" addr2="Leeds LS2 7HQ" title="Production Editor"/><memodate>2 April 2026</memodate>
+<subject>Proofs for the spring catalogue</subject>
+<ref>Order 2026/118</ref>
+<memotxt memtype="external"><p>Thank you for the second set of proofs, which reached us this
+morning.  The colour on pages 4 to 9 is now right.
+</p><p>Two things remain:
+</p><ol nest="1"><li num="1"><gml:num>1.</gml:num>the caption on page 12 is cut off at the right;
+</li><li num="2"><gml:num>2.</gml:num>the index still refers to the old page numbers.
+</li></ol><p>Once these are corrected we can approve the job for printing.
+</p></memotxt><sign>Tomás Ferreira</sign>
+<cc name="Accounts, Northgate Press" email="accounts@example.org"/></gml:doc>

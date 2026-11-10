@@ -321,6 +321,12 @@ Lines that start with one of them are never filled.  Tags given
     ("iref" ref "index reference" "refid pg see seeid"))
   "GML Starter Set tags: (NAME KIND DESCRIPTION ATTRIBUTES).")
 
+(defvar-local gml-tagset-tags nil
+  "Tags of the tag set the buffer uses, in the format of `gml-starter-tags'.
+They are known to completion, eldoc, tag insertion and closing like
+the Starter Set tags, and take precedence over them.  A package for
+a tag set sets it in its buffers (e.g. gml-mail for the memo tags).")
+
 (defconst gml-system-symbols
   '("SYSYEAR" "SYSMONTH" "SYSDAYOFM" "SYSDAYOFW" "SYSDAYOFY" "SYSHOUR"
     "SYSMINUTE" "SYSSECOND" "SYSVARH" "SYSVARP" "SYSVARD" "SYSVARS" "SYSVART"
@@ -376,8 +382,9 @@ Lines that start with one of them are never filled.  Tags given
           (gml--collect "^\\.'?xd[ \t]+\\([A-Za-z0-9@#$]+\\)[^\n]*\\_<eol\\_>" 1)))
 
 (defun gml--tag-info (name)
-  "The `gml-starter-tags' entry of NAME."
-  (assoc (downcase name) gml-starter-tags))
+  "The `gml-tagset-tags' or `gml-starter-tags' entry of NAME."
+  (let ((name (downcase name)))
+    (or (assoc name gml-tagset-tags) (assoc name gml-starter-tags))))
 
 (defun gml--paired-p (name)
   "Non-nil if tag NAME has an end tag."
@@ -695,9 +702,10 @@ JUSTIFY is passed on to `fill-paragraph'."
 ;;;; Tag insertion and closing
 
 (defun gml--all-tags ()
-  "Every known tag name: the Starter Set and the buffer's .aa tags."
+  "Every known tag name: the tag set's, the Starter Set and the buffer's .aa tags."
   (cl-remove-duplicates
-   (append (mapcar #'car gml-starter-tags) (mapcar #'downcase (gml--buffer-tags)))
+   (append (mapcar #'car gml-tagset-tags) (mapcar #'car gml-starter-tags)
+           (mapcar #'downcase (gml--buffer-tags)))
    :test #'string= :from-end t))
 
 (defun gml--tag-kind (name)

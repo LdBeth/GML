@@ -8,11 +8,11 @@
 .*
 .* Build (one document, one profile per application: notes/profile.gml
 .* imbeds starter for the logical device HTML, else dcfstarter):
-.*   HTML  ./gmlfmt -tagset examples/notes -to html examples/release.gml
-.*         ./gmlfmt -tagset examples/notes -to html -set audience=internal \
+.*   HTML  ./gmlfmt -app examples/notes -to html examples/release.gml
+.*         ./gmlfmt -app examples/notes -to html -set audience=internal \
 .*                  examples/release.gml
 .*         (gmlfmt -to html gives gml -set $LDEV=HTML: starter)
-.*   PDF   cd examples && ../gmlpass -tagset ./notes -o out/passes release.gml
+.*   PDF   cd examples && ../gmlpass -app ./notes -o out/passes release.gml
 .*         (the default device: dcfstarter, TeX in hint mode)
 .*   all   cd examples && mk   (examples/mkfile: out/)
 .*

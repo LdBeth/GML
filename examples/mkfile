@@ -88,7 +88,7 @@ out/gml.css: $ROOT/share/html/gml.css
 # project's mkfile, with its own GMLFLAGS: the default device, so
 # release.pdf comes from notes/profile.gml with dcfstarter
 out/release.pdf: release.gml $TAGSET/profile.gml
-	$ROOT/gmlpass -n $FEWPASSES -tex $TEXENGINE -tagset $TAGSET -o $PASSDIR release.gml
+	$ROOT/gmlpass -n $FEWPASSES -tex $TEXENGINE -app $TAGSET -o $PASSDIR release.gml
 	mv $PASSDIR/release.pdf $target
 
 out/dcfdemo.pdf: dcfdemo.gml $DCFPROFILE
@@ -99,7 +99,7 @@ out/dcfdemo.pdf: dcfdemo.gml $DCFPROFILE
 # pTeX engine, whatever TEXENGINE says); the tag set tate/ is dcfstarter
 # with Japanese literals and :ruby (mk -a after changing tate/tagset.tex)
 out/tategaki.pdf: tategaki.gml tate/profile.gml tate/tex.xsl
-	$ROOT/gmlpass -n $FEWPASSES -tex aptex -tagset $ROOT/examples/tate -o $PASSDIR tategaki.gml
+	$ROOT/gmlpass -n $FEWPASSES -tex aptex -app $ROOT/examples/tate -o $PASSDIR tategaki.gml
 	mv $PASSDIR/tategaki.pdf $target
 
 # the HTML of dcfdemo.gml: the project's stage rules (out/dcfdemo.xml,

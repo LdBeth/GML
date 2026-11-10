@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- notes/html.xsl: html.xsl plus rules for the :warn and math tags of the
-     notes tag set.  gmlfmt -tagset uses it in place of xslt/html.xsl.
+     notes tag set.  gmlfmt -app uses it in place of xslt/html.xsl.
      Shows the override mechanism: import the shipped stylesheet and add or
      replace templates.
 

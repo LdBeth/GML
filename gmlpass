@@ -3,7 +3,7 @@
 # FPASSES(n) or TWOPASS (SH20-9186-06 p.126, p.129): every pass formats
 # the whole document, only the last one is put out.
 #
-#   gmlpass [-n N] [-tex ENGINE] [-profile p | -tagset t]
+#   gmlpass [-n N] [-tex ENGINE] [-profile p | -app t]
 #           [-set name=value]... [-p name=value]... [-o DIR] doc.gml
 #
 #   -n        the number of passes (default 4, IBM's FPASSES limit;
@@ -12,8 +12,8 @@
 #             DIR/JOB.dvi with tex
 #   -profile  the gml profile (default dcfstarter: a formatting profile;
 #             a semantic one, starter, works too)
-#   -tagset   a tag set, as for gmlfmt (a bundle directory, or a name in
-#             GMLROOT/share/tagset, else a profile name)
+#   -app      a tag set, as for gmlfmt (a bundle directory, or a name in
+#             GMLROOT/share/gmlapp, else a profile name)
 #   -set      a symbol for gml and a parameter for every stylesheet
 #   -p        a parameter for the stylesheets only
 #   -o        the directory for JOB.xml ... JOB.tex, JOB.gmlaux, JOB.sym
@@ -50,7 +50,7 @@
 # of the passes before the last are in DIR/JOB.passK.err.
 
 fn usage {
-	echo 'usage: gmlpass [-n N] [-tex ENGINE] [-profile p | -tagset t] [-set name=value]... [-p name=value]... [-o DIR] doc.gml' >[1=2]
+	echo 'usage: gmlpass [-n N] [-tex ENGINE] [-profile p | -app t] [-set name=value]... [-p name=value]... [-o DIR] doc.gml' >[1=2]
 	exit usage
 }
 
@@ -71,7 +71,7 @@ while(! ~ $#* 0 && ~ $1 -*){
 		engine=$2
 	case -profile
 		profileopt=$2
-	case -tagset
+	case -app
 		tagset=$2
 	case -set
 		sets=($sets $2)

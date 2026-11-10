@@ -310,9 +310,13 @@ let strip_symrefs _t s =
     Buffer.contents b
   end
 
+(* an attribute of an element: no symbol reference, and a text variable
+   (&amp. in a URL) as its string *)
+let attr_text t v = Chars.dv_plain (strip_symrefs t v)
+
 let strip_attrs t attrs =
-  if Hashtbl.length t.symrefs = 0 then attrs
-  else List.map (fun (k, v) -> (k, strip_symrefs t v)) attrs
+  if Hashtbl.length t.symrefs = 0 && Hashtbl.length t.dvars = 0 then attrs
+  else List.map (fun (k, v) -> (k, attr_text t v)) attrs
 
 let start_element ?(eol = false) ?(provisional = false) t name attrs =
   if not t.mute then begin
@@ -369,7 +373,7 @@ let end_element ?(force = false) t name =
 (** Set (or replace) attribute [k] of the innermost open element; false if there
     is none. *)
 let set_attr t k v =
-  let v = strip_symrefs t v in
+  let v = attr_text t v in
   if t.mute then true
   else
     match plain_stack t with

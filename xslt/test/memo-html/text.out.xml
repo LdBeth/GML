@@ -1,0 +1,159 @@
+<!DOCTYPE HTML><html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="x-apple-disable-message-reformatting">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<meta name="generator" content="GML memo html.xsl">
+<title>Notes on the migration</title>
+<style>
+:root { color-scheme: light dark; supported-color-schemes: light dark; }
+@media (prefers-color-scheme: dark) {
+  body { background-color: #0f1215 !important; }
+  .gml-memo-page { background-color: #0f1215 !important; }
+  .gml-memo { background-color: #171b20 !important; border-color: #30363d !important; border-top-color: #8fbbe6 !important; color: #e4e7eb !important; }
+  .gml-masthead { border-bottom-color: #30363d !important; }
+  .gml-security { border-color: #f0938c !important; color: #f0938c !important; }
+  .gml-subject { color: #e4e7eb !important; }
+  .gml-memo-meta { color: #9ba5b0 !important; }
+  .gml-from-name { color: #e4e7eb !important; }
+  .gml-sep { color: #46505b !important; }
+  .gml-from-address { color: #9ba5b0 !important; }
+  .gml-ref { color: #e4e7eb !important; }
+  .gml-ref-label { color: #9ba5b0 !important; }
+  .gml-to-label { color: #9ba5b0 !important; }
+  .gml-receiver { color: #e4e7eb !important; }
+  h1, h2, h3, h4, h5, h6 { color: #e4e7eb !important; }
+  .gml-h6, .gml-h-6 { color: #9ba5b0 !important; }
+  a { color: #8fbbe6 !important; }
+  .gml-note { background-color: #1a2532 !important; border-left-color: #8fbbe6 !important; }
+  .gml-note-label { color: #8fbbe6 !important; }
+  blockquote { border-left-color: #46505b !important; color: #9ba5b0 !important; }
+  pre { background-color: #1d2228 !important; border-color: #30363d !important; color: #e4e7eb !important; }
+  hr, .gml-hr { border-top-color: #30363d !important; }
+  .gml-dthd, .gml-ddhd { color: #9ba5b0 !important; }
+  .gml-frame-rule { border-top-color: #46505b !important; border-bottom-color: #46505b !important; }
+  .gml-frame-box { border-color: #46505b !important; }
+  .gml-frame-chars { color: #9ba5b0 !important; }
+  figcaption { color: #e4e7eb !important; }
+  .gml-figdesc, .gml-tdesc { color: #9ba5b0 !important; }
+  th { border-color: #30363d !important; background-color: #1d2228 !important; }
+  td { border-color: #30363d !important; }
+  .gml-tnote { color: #9ba5b0 !important; }
+  .gml-cpart { border-top-color: #30363d !important; }
+  .gml-fn-callout, .gml-fnref { color: #8fbbe6 !important; }
+  .gml-footnotes { color: #9ba5b0 !important; }
+  .gml-footnotes-rule { border-top-color: #46505b !important; }
+  .gml-sign-name { color: #e4e7eb !important; }
+  .gml-sign-detail { color: #9ba5b0 !important; }
+  .gml-copies { border-top-color: #30363d !important; }
+  .gml-copies-label { color: #9ba5b0 !important; }
+  .gml-copies-names { color: #9ba5b0 !important; }
+  .gml-unresolved { color: #f0938c !important; }
+}
+@media screen and (max-width: 600px) {
+  .gml-memo-page { padding: 0 !important; }
+  .gml-memo { padding: 24px 18px 22px !important; border-radius: 0 !important; border-left: 0 !important; border-right: 0 !important; }
+  .gml-subject { font-size: 21px !important; line-height: 27px !important; }
+  .gml-logo { height: 36px !important; margin-left: 12px !important; }
+  ul, ol { padding-left: 24px !important; }
+}
+</style>
+</head>
+<body class="gml gml-memo-body" style="margin: 0; padding: 0; background-color: #eef1f4; -webkit-text-size-adjust: 100%">
+<div class="gml-memo-page" style="margin: 0; padding: 32px 12px; background-color: #eef1f4"><!--[if mso]><table role="presentation" align="center" width="640" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+<div class="gml-memo gml-memtype-internal" style="box-sizing: border-box; max-width: 640px; margin: 0 auto; padding: 36px 40px; background-color: #ffffff; border: 1px solid #dde2e7; border-top: 4px solid #2b5b84; border-radius: 8px; color: #1f2328; font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif; font-size: 16px; line-height: 26px; text-align: left; overflow-wrap: break-word; word-wrap: break-word">
+<div class="gml-masthead" style="margin: 0 0 28px; padding: 0 0 20px; border-bottom: 1px solid #dde2e7">
+<h1 class="gml-subject" style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-weight: 600; color: #1f2328; font-size: 24px; line-height: 31px; letter-spacing: -0.01em">Notes on the migration</h1></div>
+<div class="gml-memotxt">
+<h2 class="gml-h1" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-weight: 600; color: #1f2328; margin: 28px 0 10px; font-size: 20px; line-height: 26px">Plan</h2>
+<p style="margin: 0 0 16px; font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif; font-size: 16px; line-height: 26px">The migration has <span class="gml-q">“three <span class="gml-q">‘short’</span> stages”</span>, each with its own
+<strong class="gml-hp2">go/no-go</strong> check.
+</p>
+<ol class="gml-ol gml-nest-1" type="1" style="margin: 0 0 16px; padding: 0 0 0 28px; list-style-type: decimal">
+<li value="1" style="margin: 0 0 6px; font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif; font-size: 16px; line-height: 26px">Freeze the old system.
+<ol class="gml-ol gml-nest-2" type="a" style="margin: 0 0 16px; padding: 0 0 0 28px; list-style-type: lower-alpha; margin-top: 6px; margin-bottom: 0">
+<li style="margin: 0 0 6px; font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif; font-size: 16px; line-height: 26px">Announce the freeze.
+</li>
+<li style="margin: 0 0 6px; font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif; font-size: 16px; line-height: 26px">Stop the batch jobs.
+</li></ol></li>
+<li value="2" style="margin: 0 0 6px; font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif; font-size: 16px; line-height: 26px">Copy the data.
+</li>
+<li class="gml-lp" style="font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif; font-size: 16px; line-height: 26px; margin: 6px 0 6px -12px; list-style-type: none">This takes most of the weekend.
+</li>
+<li value="3" style="margin: 0 0 6px; font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif; font-size: 16px; line-height: 26px">Switch over.
+</li></ol>
+<ul class="gml-ul gml-nest-1" style="margin: 0 0 16px; padding: 0 0 0 28px; list-style-type: disc">
+<li style="margin: 0 0 6px; font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif; font-size: 16px; line-height: 26px">Owners
+<ul class="gml-ul gml-compact gml-nest-2" style="margin: 0 0 16px; padding: 0 0 0 28px; list-style-type: circle; margin-top: 6px; margin-bottom: 0">
+<li style="margin: 0 0 6px; font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif; font-size: 16px; line-height: 26px; margin-bottom: 0">Data team
+</li>
+<li style="margin: 0 0 6px; font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif; font-size: 16px; line-height: 26px; margin-bottom: 0">Network team
+</li></ul></li>
+<li style="margin: 0 0 6px; font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif; font-size: 16px; line-height: 26px">Reviewers
+</li></ul>
+<ul class="gml-sl" style="margin: 0 0 16px; padding: 0 0 0 28px; list-style-type: none">
+<li style="margin: 0 0 6px; font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif; font-size: 16px; line-height: 26px; list-style-type: none">Room 4.12
+</li>
+<li style="margin: 0 0 6px; font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif; font-size: 16px; line-height: 26px; list-style-type: none">Bridge line 3
+</li></ul>
+<h3 class="gml-h2" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-weight: 600; color: #1f2328; margin: 24px 0 8px; font-size: 18px; line-height: 24px">Terms</h3>
+<dl class="gml-dl gml-termhi-1" style="margin: 0 0 16px; padding: 0">
+<dt class="gml-dthd" style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 11px; line-height: 16px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5c6670; margin-bottom: 6px">Term
+</dt>
+<dd class="gml-ddhd" style="margin: 0 0 10px 24px; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 11px; line-height: 16px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5c6670; margin-bottom: 6px">Meaning
+</dd>
+<dt style="margin: 0; font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif; font-size: 16px; line-height: 26px; font-weight: normal; font-style: italic">Freeze</dt>
+<dd style="margin: 0 0 10px 24px; padding: 0; font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif; font-size: 16px; line-height: 26px">No changes are made to the old system.
+</dd>
+<dt style="margin: 0; font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif; font-size: 16px; line-height: 26px; font-weight: normal; font-style: italic">Cut-over</dt>
+<dd style="margin: 0 0 10px 24px; padding: 0; font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif; font-size: 16px; line-height: 26px">The moment the new system takes the traffic.
+</dd></dl>
+<dl class="gml-gl" style="margin: 0 0 16px; padding: 0">
+<dt class="gml-gt" style="margin: 0; font-weight: 700; font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif; font-size: 16px; line-height: 26px">RPO:</dt>
+<dd class="gml-gd" style="margin: 0 0 10px 24px; padding: 0; font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif; font-size: 16px; line-height: 26px">How much data we can afford to lose.
+</dd></dl>
+<table class="gml-table gml-span-page gml-split-no" style="width: 100%; margin: 0 0 16px; border-collapse: collapse; border-spacing: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 14px; line-height: 20px">
+<colgroup>
+<col style="width: 75%">
+<col style="width: 25%"></colgroup>
+<thead class="gml-thd">
+<tr class="gml-row gml-split-no">
+<th class="gml-c" data-cell="1" style="padding: 7px 10px; border: 1px solid #dde2e7; background-color: #f5f7f9; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 14px; line-height: 20px; text-align: left; vertical-align: top">Stage</th>
+<th class="gml-c" data-cell="2" style="padding: 7px 10px; border: 1px solid #dde2e7; background-color: #f5f7f9; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 14px; line-height: 20px; text-align: left; vertical-align: top">Hours
+</th></tr></thead>
+<tbody>
+<tr class="gml-row gml-split-no">
+<td class="gml-c" data-cell="1" style="padding: 7px 10px; border: 1px solid #dde2e7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 14px; line-height: 20px; text-align: left; vertical-align: top">Copy</td>
+<td class="gml-c" data-cell="2" style="padding: 7px 10px; border: 1px solid #dde2e7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 14px; line-height: 20px; text-align: left; vertical-align: top">30
+</td></tr>
+<tr class="gml-row gml-split-no">
+<td class="gml-c" data-cell="1" style="padding: 7px 10px; border: 1px solid #dde2e7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 14px; line-height: 20px; text-align: left; vertical-align: top">Switch over</td>
+<td class="gml-c" data-cell="2" style="padding: 7px 10px; border: 1px solid #dde2e7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 14px; line-height: 20px; text-align: left; vertical-align: top">2
+</td></tr>
+<tr class="gml-tnote" style="color: #5c6670">
+<td colspan="2" style="padding: 7px 10px; border: 1px solid #dde2e7; vertical-align: top; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 14px; line-height: 20px"><strong class="gml-tnote-label" style="font-weight: 700">Note:</strong>&nbsp;Estimates from the rehearsal.
+</td></tr></tbody></table>
+<p style="margin: 0 0 16px; font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif; font-size: 16px; line-height: 26px">The copy job is started with:
+</p>
+<pre class="gml-xmp" style="margin: 0 0 16px; padding: 12px 14px; background-color: #f5f7f9; border: 1px solid #dde2e7; border-radius: 6px; color: #1f2328; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; font-size: 13px; line-height: 20px; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere; text-align: left">copyjob --from old-db --to new-db \
+        --parallel 8 --verify
+</pre>
+<blockquote class="gml-lq" style="margin: 0 0 16px; padding: 2px 0 2px 16px; border-left: 3px solid #c4ccd4; color: #5c6670">
+<p style="margin: 0 0 16px; font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif; font-size: 16px; line-height: 26px">Plan for the copy to take twice as long as the rehearsal.
+</p>
+<p style="margin: 0 0 16px; font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif; font-size: 16px; line-height: 26px; margin-bottom: 0">Last year's note
+</p></blockquote>
+<p style="margin: 0 0 16px; font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif; font-size: 16px; line-height: 26px; margin-bottom: 0">See <span class="gml-hdref">“Plan”</span> for the stages, the check<sup class="gml-fnref" style="font-size: 11px; line-height: 0; vertical-align: super; padding-left: 1px; color: #2b5b84; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-weight: 600">1</sup>
+again, <em class="gml-hp1">and</em> <cite class="gml-cit">The Runbook</cite><sup class="gml-fn-callout" style="font-size: 11px; line-height: 0; vertical-align: super; padding-left: 1px; color: #2b5b84; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-weight: 600">2</sup>.
+Status is on <a class="gml-link" href="https://status.example.net/migration" style="color: #2b5b84; text-decoration: underline; word-break: break-word; overflow-wrap: anywhere">the status page</a>
+and <a class="gml-link" href="https://status.example.net/" style="color: #2b5b84; text-decoration: underline; word-break: break-word; overflow-wrap: anywhere">https://status.example.net/</a>.
+</p></div>
+<div class="gml-footnotes" role="doc-endnotes" style="margin: 32px 0 0; color: #5c6670; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 13px; line-height: 19px">
+<hr class="gml-footnotes-rule" style="width: 96px; height: 0; margin: 0 0 12px; border: 0; border-top: 1px solid #c4ccd4; text-align: left">
+<ol class="gml-footnote-list" type="1" style="margin: 0; padding: 0 0 0 22px; list-style-type: decimal">
+<li class="gml-footnote" style="margin: 0 0 6px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 13px; line-height: 19px">Held at 09:00 on the day.</li>
+<li class="gml-footnote" style="margin: 0 0 6px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 13px; line-height: 19px">Version 3.</li></ol></div></div><!--[if mso]></td></tr></table><![endif]--></div>
+</body>
+</html>

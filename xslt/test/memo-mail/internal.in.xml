@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><logo logoname="images/ops-logo.png"/><security>Company Confidential</security>
+<memodate>12 March 2026</memodate>
+<to name="Okafor, Adaeze" email="a.okafor@example.com"/><to name="Jürgen Weiß" email="jweiss@example.de"/><to name="Facilities desk"/><from name="Rosa Lindqvist" email="rosa.lindqvist@example.com" title="Operations Manager" dept="Site Services" phone="+46 8 555 0142"/><cc name="M. Brennan" email="mbrennan@example.com"/><cc name="Records office"/><bcc email="archive@example.com"/><subject>Loading dock repairs <gml:dv name="amp" text="&amp;" break="no"/> delivery times</subject>
+<ref>Your note of 9 March</ref>
+<memotxt memtype="internal"><p>The resurfacing of the north loading dock starts on Monday and
+takes about two weeks.  Deliveries move to the south gate for that
+time; the revised slots are in <link href="https://intranet.example.com/docks?site=2&amp;view=week">the
+dock schedule</link>.
+</p><note>Vehicles over 7.5 tonnes cannot use the south gate before 07:00.
+</note><p>Please pass this on to the suppliers you deal with.
+</p></memotxt><sign/><p>P.S. The contractor's site plan is attached.
+</p><attach name="dock-plan.pdf"/><attach name="slots week 12.xlsx"/></gml:doc>

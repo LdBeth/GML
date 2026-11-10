@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><subject>Notes on the migration</subject>
+<memotxt memtype="internal"><h1 id="plan" anchor="plan">Plan</h1>
+<p>The migration has <q>three <q>short</q> stages</q>, each with its own
+<hp2>go/no-go</hp2> check<fn id="check" num="1" anchor="check" callout="no"><gml:num>1</gml:num>Held at 09:00 on the day.</fn>.
+</p><ol nest="1"><li num="1"><gml:num>1.</gml:num>Freeze the old system.
+<ol nest="2"><li num="a"><gml:num>a.</gml:num>Announce the freeze.
+</li><li num="b"><gml:num>b.</gml:num>Stop the batch jobs.
+</li></ol></li><li num="2"><gml:num>2.</gml:num>Copy the data.
+</li><lp>This takes most of the weekend.
+</lp><li num="3"><gml:num>3.</gml:num>Switch over.
+</li></ol><ul nest="1"><li>Owners
+<ul compact="compact" nest="2"><li>Data team
+</li><li>Network team
+</li></ul></li><li>Reviewers
+</li></ul><sl><li>Room 4.12
+</li><li>Bridge line 3
+</li></sl><h2 anchor="gml-h2-1">Terms</h2>
+<dl termhi="1"><dthd>Term
+</dthd><ddhd>Meaning
+</ddhd><dt>Freeze</dt>
+<dd>No changes are made to the old system.
+</dd><dt>Cut-over</dt>
+<dd>The moment the new system takes the traffic.
+</dd></dl><gl><gt>RPO</gt>
+<gd>How much data we can afford to lose.
+</gd></gl><rdef id="r" cwidths="3* 1*"/><table refid="r" anchor="gml-table-1" span="page" split="no" rotate="0"><thd><row rdef="r" cols="2" subrows="1" cwidths="3* 1*" split="no"><c n="1" col="1" colspan="1" subrow="1" rowspan="1" hp="0" align="left" valign="top" concat="yes" rotate="0" mindepth="*" shade="0">Stage</c><c n="2" col="2" colspan="1" subrow="1" rowspan="1" hp="0" align="left" valign="top" concat="yes" rotate="0" mindepth="*" shade="0">Hours
+</c></row></thd><row rdef="r" cols="2" subrows="1" cwidths="3* 1*" split="no"><c n="1" col="1" colspan="1" subrow="1" rowspan="1" hp="0" align="left" valign="top" concat="yes" rotate="0" mindepth="*" shade="0">Copy</c><c n="2" col="2" colspan="1" subrow="1" rowspan="1" hp="0" align="left" valign="top" concat="yes" rotate="0" mindepth="*" shade="0">30
+</c></row><row rdef="r" cols="2" subrows="1" cwidths="3* 1*" split="no"><c n="1" col="1" colspan="1" subrow="1" rowspan="1" hp="0" align="left" valign="top" concat="yes" rotate="0" mindepth="*" shade="0">Switch over</c><c n="2" col="2" colspan="1" subrow="1" rowspan="1" hp="0" align="left" valign="top" concat="yes" rotate="0" mindepth="*" shade="0">2
+</c></row><tnote><gml:num>Note:</gml:num>Estimates from the rehearsal.
+</tnote></table><p>The copy job is started with:
+</p><xmp xml:space="preserve"><gml:scope kind="block" fill="no" align="left">copyjob --from old-db --to new-db \
+        --parallel 8 --verify
+</gml:scope></xmp><lq><p>Plan for the copy to take twice as long as the rehearsal.
+</p><p>Last year's note
+</p></lq><p>See <hdref refid="plan" resolved="yes" target="h1">“Plan”<gml:pageref refid="plan" when="auto" label="on page"/></hdref> for the stages, the check<fnref refid="check" resolved="yes" target="fn" num="1">1</fnref>
+again, <hp1>and</hp1> <cit>The Runbook</cit><fn num="2" anchor="gml-fn-2" callout="yes"><gml:num>2</gml:num>Version 3.</fn>.
+Status is on <link href="https://status.example.net/migration">the status page</link>
+and <link href="https://status.example.net/"/>.
+</p></memotxt></gml:doc>

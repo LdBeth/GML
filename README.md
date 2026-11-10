@@ -129,8 +129,8 @@ From the source tree:
 ### `gmlfmt`: the whole pipeline to standard output
 
 ```
-./gmlfmt [-to xml|resolved|scoped|semantic|html|tex] [-profile p]
-         [-tagset t] [-set name=value]... [-p name=value]... [-I dir]... in.gml
+./gmlfmt [-to xml|resolved|scoped|semantic|html|tex|STAGE] [-profile p]
+         [-app t] [-set name=value]... [-p name=value]... [-I dir]... in.gml
 ```
 
 `-set` goes to gml and to every stylesheet.  `-p` goes to the
@@ -142,10 +142,13 @@ It uses the project's gml with `-share <root>/share`, so edits to
 `share/profile/starter.gml` take effect at once.  Set `GML`, `SAXON` or
 `GMLROOT` to use other tools.
 
-`-tagset t` selects a tag set (see Customising): a bundle directory when
-`t` contains a `/` or `share/tagset/t` exists, otherwise the profile
+`-app t` selects a tag set (see Customising): a bundle directory when
+`t` contains a `/` or `share/gmlapp/t` exists, otherwise the profile
 `share/profile/t.gml` (the same as `-profile t`).  An explicit
 `-profile` overrides the bundle's `profile.gml`, in either order.
+`-to STAGE` with any other name runs the bundle's own `STAGE.xsl` on
+the scoped XML (with the device `HTML`, as for `-to html`): `-app
+memo -to mail` is `share/gmlapp/memo/mail.xsl`.
 
 ### `mk`: the pipeline as files
 
@@ -215,15 +218,15 @@ The stylesheet parameters (`SYSVARS`/`SYSVARD`/`SYSVART` page layouts,
   `gmlfont-ncs.tex` lists one per line, so a face is switched by editing
   its line.  One slot can also be changed on top of a scheme, e.g. in
   `gmllocal.tex`: `\gmlfontname{ti}{pncbi7t}\gmlusefonts{}`.
-- **Tag sets.** A tag set bundle is a directory (`share/tagset/NAME`, or
-  any path given to `gmlfmt -tagset`) holding `profile.gml` (required:
+- **Tag sets.** A tag set bundle is a directory (`share/gmlapp/NAME`, or
+  any path given to `gmlfmt -app`) holding `profile.gml` (required:
   the gml profile, e.g. `.im starter` and then the bundle's own tags;
   the directory is also on the `.im` path, after the `-I` dirs) and
   optionally stage overrides `resolve.xsl`, `scope.xsl`,
   `strip-hints.xsl`, `html.xsl`, `tex.xsl`, used instead of the stock
   stylesheets.  An override normally does `xsl:import` of the
   stock one by relative path (e.g. `../../xslt/html.xsl` from a bundle
-  in `share/tagset/NAME`) and adds or overrides template rules.  An
+  in `share/gmlapp/NAME`) and adds or overrides template rules.  An
   optional `tagset.tex` is passed to tex.xsl as `tex-tagset`, which
   writes `\def\gmltagset{path}` before `\input gml`; gml.tex inputs it at
   its end, before `gmllocal.tex` (so the most local file wins).  For
@@ -241,6 +244,9 @@ The stylesheet parameters (`SYSVARS`/`SYSVARD`/`SYSVART` page layouts,
   `&@blk`), and its tags that need elements under dcfstarter say so in
   their `.aa` rules (`elem`, for the start and the end tag: the
   profile's default rules are `noelem`).
+  A bundle may also hold stages of its own: any other `NAME.xsl` is run
+  by `gmlfmt -to NAME` on the scoped XML.  The shipped bundle
+  `share/gmlapp/memo` has one (`mail.xsl`): see [Mail](#mail-the-memo-tag-set).
 - **HTML.** Every element has a class `gml-NAME`.  Restyle
   `share/html/gml.css` or replace it (parameters `css`, `css-inline`,
   `css-file`).
@@ -291,6 +297,100 @@ Inside the project the tools are found automatically: the `gml` built in
 or `gml-program` and `gml-gmlfmt-program`.  `gml-profile` and
 `gml-symbols` (an alist for `-set`, safe as a file-local variable) are
 passed to both.
+
+## Mail: the memo tag set
+
+`share/gmlapp/memo` is the GML memo application of DCF Release 3.2 (GML
+Applications Guide G544-3305, chapter 2) as a tag set for writing mail:
+the memo tags give the header fields, the Starter Set tags the text, and
+the result is the HTML body of a message.  `examples/memo.gml`:
+
+```
+:to name='Daniel Osei' email='d.osei@example.com'.
+:from name='Hana Kobayashi' email='h.kobayashi@example.com' title='IT Services Lead'.
+:subject.Weekend backup window moves to Sunday
+:memotxt.
+:p.From the weekend of 21 November ...
+:sign.
+```
+
+| tag | |
+|---|---|
+| `:to name= company= addr1= addr2=` | a receiver, one tag for each |
+| `:from name= addr1= addr2= phone= dept= title=` | the sender |
+| `:memodate.` `:security.` `:subject.` `:ref.` | one line each, on the tag's line or the next |
+| `:logo logoname='file'` | the logo, an image file sent with the message |
+| `:memotxt memtype=internal\|external.` | the text follows; `external` shows the address blocks |
+| `:sign.name` | ends the text; the signature (default: the name of `:from`) |
+| `:cc name= addr1= addr2=` | the copy list |
+
+**EXT** (not in G544-3305): `email='address'` on `:to`, `:from` and
+`:cc` (the To, From and Cc fields); `:bcc name= email=` (the Bcc field
+only, never shown); `:attach name='file'` (a file sent with the
+message); `:link href='url'.text:elink.`; and `:cc`, `:bcc`, `:attach`
+may stand before `:memotxt` as well as after the text.  A memo without
+`:memodate` shows no date (the message has its Date field).
+
+```
+./gmlfmt -app memo -to html memo.gml    # the HTML, for a browser
+./gmlfmt -app memo -to mail memo.gml    # a line of JSON, then the HTML
+```
+
+The HTML is made for mail clients: every style is inline, nothing is
+loaded from elsewhere, and the one `<style>` element only adds dark
+mode and a small-screen layout.  Colours, fonts, the width and the
+literals ("From", "cc:" ...) are parameters of
+`share/gmlapp/memo/html.xsl` (`-p accent='#7a3b2e'`; the list is at its
+top).  `-to mail` writes first one line, a JSON object
+
+```
+{"headers":{"From":…,"To":…,"Cc":…,"Bcc":…,"Subject":…},"inline":[{"cid":…,"file":…}],"attachments":[{"file":…}]}
+```
+
+(file names as written in the memo; the images of the HTML are `cid:`
+references to `inline`), then the HTML document.
+
+### Wanderlust: `emacs/gml-mail.el`
+
+Makes a Wanderlust draft of a memo: `multipart/alternative` of a
+text/plain part (made from the HTML with shr) and the HTML, with the
+logo as an inline part and the `:attach` files after it.  It needs
+Wanderlust (SEMI, FLIM, APEL) for the draft commands only.
+
+```elisp
+(autoload 'gml-mail-maybe-enable "gml-mail")
+(autoload 'gml-mail-memo-from-draft "gml-mail" nil t)
+(add-hook 'gml-mode-hook #'gml-mail-maybe-enable)
+(setq gml-root "/path/to/GML")   ; for memos outside the project
+(with-eval-after-load 'wl-draft
+  (define-key wl-draft-mode-map (kbd "C-c , m") #'gml-mail-memo-from-draft))
+```
+
+`gml-mail-mode` is a minor mode of gml-mode, turned on by
+`gml-mail-maybe-enable` in a file that has a `:memotxt` line or is in
+`gml-mail-directory`.  It makes the memo tags known to completion,
+eldoc and flymake, and binds:
+
+| key | command | |
+|---|---|---|
+| `C-c , c` | `gml-mail-compose` | a new draft with the memo's header fields and body |
+| `C-c , e` | `gml-mail-export` | the memo's body into an existing draft (a reply), replacing the previous export; `C-u`: Subject, To, Cc and Bcc too |
+| `C-c , d` | `gml-mail-select-draft` | choose the draft to export to |
+| `C-c , v` | `gml-mail-preview` | the HTML in a browser |
+
+In a draft, `gml-mail-memo-from-draft` starts a memo from it: `:to`,
+`:cc` and `:subject` from the header, the cited text as `:lq`
+quotations (nested by citation level).  Exporting that memo replaces
+the draft's body; text typed into the draft by hand is only discarded
+after a question.
+
+Options (group `gml-mail`): `gml-mail-alternative` (the text/plain
+part, default on), `gml-mail-text-width` (72), `gml-mail-encode-html`
+(the HTML goes into the draft base64-encoded and hidden, so nothing in
+the draft can be taken for a mime-edit tag; default on),
+`gml-mail-export-headers`, `gml-mail-directory`,
+`gml-mail-citation-regexp`, `gml-mail-app`.  Engine messages of a
+run are shown in the buffer `*gml-mail*`.
 
 ## Example
 
@@ -352,7 +452,7 @@ rule; pTeX puts `\xkanjiskip` between Japanese and Latin), and sets
 each reading in
 half-size type against its base, to its right in a vertical line, in
 a box of no size (one ruby is not broken across lines).
-`../gmlpass -tex aptex -tagset ./tate -o out tategaki.gml` in examples/, or `mk
+`../gmlpass -tex aptex -app ./tate -o out tategaki.gml` in examples/, or `mk
 out/tategaki.pdf`.
 
 `examples/mkfile` makes everything in `examples/out/` (`cd examples &&
@@ -476,7 +576,7 @@ SH35-0069 p.254) is 1 and `&$LC` is 60; a `.tc` entry carries
 give its page on the second TeX run.  With passes they come from TeX:
 
 ```
-gmlpass [-n N] [-tex ENGINE] [-profile p | -tagset t] [-set name=value]...
+gmlpass [-n N] [-tex ENGINE] [-profile p | -app t] [-set name=value]...
         [-p name=value]... [-o DIR] doc.gml
 
 cd examples && ../gmlpass -o out dcfdemo.gml       # out/dcfdemo.pdf

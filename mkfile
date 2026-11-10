@@ -28,7 +28,7 @@
 # be quoted for mk:  mk "XSLTFLAGS='h1-prefix=Chapter'" doc.html
 # List-valued parameters take commas: ol-identifiers=I.,A.,1.,a.
 #
-# TAGSET is a tag-set bundle directory, as for gmlfmt -tagset: its
+# TAGSET is a tag-set bundle directory, as for gmlfmt -app: its
 # profile.gml is the profile (instead of PROFILE) and the last -I, its
 # resolve.xsl scope.xsl strip-hints.xsl html.xsl tex.xsl replace the
 # stock stages that it has, and its tagset.tex is given to tex.xsl
@@ -111,7 +111,7 @@ $OUTDIR%.xml:Q: %.gml
 # the passes, with $TEXENGINE for doc.pdf and $TEX for doc.dvi; the
 # profile or tag set and SETS/XSLTFLAGS as for the stages (gmlpass
 # makes them with this file)
-GMLPASSARGS=`{if(~ $"TAGSET '') echo -profile $PROFILE; if not echo -tagset $TAGSET}
+GMLPASSARGS=`{if(~ $"TAGSET '') echo -profile $PROFILE; if not echo -app $TAGSET}
 $OUTDIR%.pdf $OUTDIR%.dvi: %.gml
 	setargs=()
 	for(s in `{echo $SETS}) setargs=($setargs -set $s)
