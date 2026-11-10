@@ -283,14 +283,14 @@ the control words below go on across paragraphs.
 output lines, counted from the first line of text, so the skip of the
 paragraph tag before it does not count.
 .in +4 for 4
-:p.This paragraph and the start of the next one are indented four
-characters more than the text around them.  The first line of text
+:p.The next four output lines are indented four characters more than
+the text around them, wherever a paragraph ends.  The first line of text
 starts the count, and the lines are counted as they are printed, not
 as they were entered.
-:p.The skip between the two paragraphs, three quarters of a line, is
-part of the distance: the first line of this paragraph ends the four
-lines and is still indented, and the lines after it are back at the
-margin of the text.
+:p.The skip between two paragraphs, three quarters of a line here, is
+part of the distance.  If the paragraph above is shorter than the
+distance, this one begins indented and goes back to the margin of the
+text where the four lines end; if not, all of it is at the margin.
 :p.With AFTER, the indention starts later: in the next paragraph the
 first two lines are at the margin, the next two indented, and the rest
 at the margin again.
