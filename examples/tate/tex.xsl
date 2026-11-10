@@ -30,12 +30,16 @@
      centres each reading on the base as it measures it and adds the
      shift worked out here, so an estimate only moves the readings.
 
-     Each pair is written \gmlruby{k}{m|g}{shift}{base}{reading}: m a
-     reading at its natural width, g one spread over the base; the
-     shift (in sp, or zw when estimated) moves it from the centre of
-     its base toward the end of the line.  The characters of a spread
-     reading are separated by \gmlrubysp.  The readings are not part of
-     the plain text of a heading (the running footing). -->
+     The ruby is the element <ruby first=N>..<> (N the code point of the
+     first character of the bases); each pair in it is a hint with the
+     base and the reading as brace arguments:
+       <,rb k=K,shift=S>{base}{reading}        a reading at its natural width
+       <,rb k=K,shift=S,spread>{base}{r<,rs>e} one spread over the base
+     k= the pair's number (left out when the rt has none); the shift (in
+     sp, or zw when estimated) moves the reading from the centre of its
+     base toward the end of the line; the characters of a spread reading
+     are separated by <,rs>.  The readings are not part of the plain
+     text of a heading (the running footing). -->
 <xsl:stylesheet version="3.0"
     xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
     xmlns:xs="http://www.w3.org/2001/XMLSchema"
@@ -81,27 +85,27 @@
          in a box, its \parshape would be lost; the parts inside are
          unwrapped (the template below) -->
     <xsl:for-each select=".//gml:lines[not(@cont = 'yes')]">
-      <xsl:variable name="next" select="following::gml:lines[1]"/>
-      <xsl:value-of select="concat('\gmlbeginlines{', @word, '}{', t:attrs(@* except @word,
-          if ($next/@cont = 'yes' and $next/@word = @word) then 'more=yes' else ()), '}\gmlendlines{}')"/>
+      <xsl:value-of select="t:open('gml:lines', t:attrs(@*, t:extra(.)), false()) || t:close(false())"/>
     </xsl:for-each>
     <!-- the first character of the bases, for the space before the ruby -->
     <xsl:variable name="first" select="string-to-codepoints(
         replace(string-join($pairs[1]?base ! string(.)), '^\s+', ''))[1]"/>
-    <xsl:value-of select="concat('\gmlstart{ruby}{', if (exists($first)) then 'first=' || $first else '', '}')"/>
+    <xsl:value-of select="t:open('ruby', if (exists($first)) then 'first=' || $first else '', false())"/>
     <xsl:for-each select="$pairs">
       <xsl:variable name="i" select="position()"/>
       <xsl:variable name="b" as="xs:string*">
         <xsl:apply-templates select="?base"/>
       </xsl:variable>
-      <xsl:value-of select="concat('\gmlruby{', t:name(?k), '}{', if (?spread) then 'g' else 'm', '}{',
-          if ($sp) then format-number(round($at[$i] - $want[$i]), '0') || 'sp'
-          else format-number($at[$i] - $want[$i], '0.###') || 'zw',
-          '}{', string-join($b), '}{',
-          string-join(for $c in string-to-codepoints(?rt) return t:esc(codepoints-to-string($c), false()),
-                      if (?spread) then '\gmlrubysp ' else ''), '}')"/>
+      <xsl:value-of select="t:hint('rb', string-join((
+            ('k=' || t:name(?k))[current()?k != ''],
+            'shift=' || (if ($sp) then format-number(round($at[$i] - $want[$i]), '0') || 'sp'
+                         else format-number($at[$i] - $want[$i], '0.###') || 'zw'),
+            'spread'[current()?spread]), ','), false())
+          || '{' || string-join($b) || '}{'
+          || string-join(for $c in string-to-codepoints(?rt) return t:esc(codepoints-to-string($c), false()),
+                         if (?spread) then t:hint('rs', '', false()) else '') || '}'"/>
     </xsl:for-each>
-    <xsl:text>\gmlend{ruby}</xsl:text>
+    <xsl:value-of select="t:close(false())"/>
   </xsl:template>
 
   <!-- a line scope inside a ruby: its text only (its beginning is before
@@ -160,8 +164,8 @@
        punctuation, kana and the CJK compatibility block), the
        compatibility ideographs, the vertical forms, the full-width
        and half-width forms and the ideographs beyond the BMP.  Any
-       other character is tex.xsl's \gmlchar{n} (gml.tex's renderings
-       of the typographic punctuation shared with Latin text, — “ …). -->
+       other character is tex.xsl's &n; (gml.tex's renderings of the
+       typographic punctuation shared with Latin text, — “ …). -->
   <xsl:function name="t:char" as="xs:string">
     <xsl:param name="c" as="xs:string"/>
     <xsl:variable name="n" select="string-to-codepoints($c)[1]"/>
@@ -170,9 +174,8 @@
             or ($n ge 65072 and $n le 65103) or ($n ge 65280 and $n le 65519)
             or $n ge 131072) then $c
         else if ($c = ' ') then '\ '
-        else if ($c = ('$', '&amp;', '#', '%')) then '\' || $c
         else if ($n lt 32 or $n = 127) then ''
-        else '\gmlchar{' || $n || '}'"/>
+        else t:ref($n)"/>
   </xsl:function>
 
   <!-- the plain text of a heading, without the readings -->

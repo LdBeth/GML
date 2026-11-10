@@ -1,106 +1,105 @@
 \input gml
-\gmlbegindocument%
-\gmlstart{gdoc}{}%
-\gmlstart{gml:rh}{break=yes}%
-\gmlbeginlines{ce}{n=1,break=yes}Hint test running head\gmlendlines{}\gmlend{gml:rh}%
-\gmlstart{body}{}%
-\gmlstart{h1}{anchor=gml-h1-1,text=Formatting hints}%
-\gmlanchor{gml-h1-1}Formatting hints\gmlend{h1}%
-\gmlstart{p}{}%
-Normal filled text that goes on for a while so that it wraps at least
+\gml
+<
+gdoc><
+:rh break><:lines word=ce,n=1,break>Hint test running head<><
+><
+body><
+h1 anchor=gml-h1-1,text=Formatting hints>Formatting hints<
+><
+p>Normal filled text that goes on for a while so that it wraps at least
 once in the justified paragraph mode of the formatter.
-\gmlhint{in}{left=4,unit=ch,break=yes}%
-Indented by four characters, still in the same paragraph? No: .in breaks.
-\gmlhint{in}{left=4ch+1i,unit=mixed,delta=+1i,break=yes}%
-A mixed indent of four characters plus one inch.
-\gmlhint{in}{left=0,unit=ch,break=yes}%
-\gmlhint{ir}{right=10,unit=mh,break=yes}%
-Right margin pulled in by ten ems so that this text wraps earlier than the
+<
+.in left=4,unit=ch>Indented by four characters, still in the same paragraph? No: .in breaks.
+<
+.in left=4ch+1i,unit=mixed,delta=+1i>A mixed indent of four characters plus one inch.
+<
+.in left=0,unit=ch><
+.ir right=10,unit=mh>Right margin pulled in by ten ems so that this text wraps earlier than the
 others do on the page.
-\gmlhint{ir}{right=0,unit=ch,break=yes}%
-\gmlhint{sp}{n=2,unit=line,break=yes}%
-After two blank lines.
-\gmlhint{sk}{n=1,unit=line,break=yes}%
-\gmlhint{sk}{n=2,unit=line,break=yes}%
-After skips of one and two lines: only the larger counts.
-\gmlbeginlines{ce}{n=2,break=yes}These two lines
-are centered.\gmlendlines{}
-\gmlbeginlines{ri}{n=on,break=yes}Flush right one
+<
+.ir right=0,unit=ch><
+.sp n=2,unit=line>After two blank lines.
+<
+.sk n=1,unit=line><
+.sk n=2,unit=line>After skips of one and two lines: only the larger counts.
+<:lines word=ce,n=2,break>These two lines
+are centered.<>
+<:lines word=ri,n=on,break>Flush right one
 flush right two
-\gmlendlines{}\gmlhint{fo}{fill=no,align=left,overdraw=extend,break=yes}%
-No\ fill:\ this\ line
+<><
+.fo fill=no,align=left,overdraw=extend>No\ fill:\ this\ line
 and\ this\ line
 \ \ are\ kept\ as\ lines.
-\gmlhint{fo}{fill=yes,align=justify,overdraw=extend,break=yes}%
-\gmlhint{fo}{fill=yes,align=center,overdraw=extend,break=yes}%
-Centered fill mode text.
-\gmlhint{fo}{fill=yes,align=justify,overdraw=extend,break=yes}%
-\gmlbeginlines{us}{n=2,break=no}\gmlusword{Underscored} \gmlusword{words} \gmlusword{here}
-\gmlusword{and} \gmlusword{here}\gmlendlines{}
-\gmlbeginlines{up}{n=1,break=no}\gmlupword{Upper} \gmlupword{case} \gmlupword{line} \gmlupword{with} \gmlupword{caf\gmlchar{233}}\gmlendlines{}
+<
+.fo fill,align=justify,overdraw=extend><
+.fo fill,align=center,overdraw=extend>Centered fill mode text.
+<
+.fo fill,align=justify,overdraw=extend><:lines word=us,n=2,break=no><_Underscored> <_words> <_here>
+<_and> <_here><>
+<:lines word=up,n=1,break=no><!Upper case line with caf&233;><>
 Back to normal.
-\gmlhint{in}{left=5,unit=ch,after=1,after-unit=line,break=yes}%
-First line at the old margin, then the following lines are indented by
+<
+.in left=5,unit=ch,after=1,after-unit=line>First line at the old margin, then the following lines are indented by
 five characters until the margin changes again, which is right now.
-\gmlhint{in}{left=0,unit=ch,break=yes}%
-\gmlhint{il}{shift=3,unit=mh,break=yes}%
-An indented first line in a paragraph that is long enough to wrap onto a
+<
+.in left=0,unit=ch><
+.il shift=3,unit=mh>An indented first line in a paragraph that is long enough to wrap onto a
 second line so the effect can be seen.
-\gmlhint{of}{offset=4,unit=ch,break=yes}%
-Offset: the first line is at the margin and every following line is
+<
+.of offset=4,unit=ch>Offset: the first line is at the margin and every following line is
 indented by four characters, for this paragraph and the next.
-\gmlhint{br}{break=yes}%
-Next paragraph still offset by the .of control word, all of its lines.
-\gmlhint{in}{left=0,unit=ch,offset=0,break=yes}%
-\gmlhint{bf}{font=hi2,break=no}Bold from a font change,
-\gmlstart{hp1}{}italic inside it\gmlend{hp1},
-\gmlhint{pf}{initial=yes,break=no}and back to the initial font.
-\gmlhint{df}{name=big,spec=type(bold italic),break=no,bold=yes,italic=yes}\gmlhint{bf}{font=big,break=no}Defined bold italic font.
-\gmlhint{pf}{initial=yes,break=no}\gmlhint{tp}{action=set,stops=10mh 20mh 30mh,break=yes}%
-\gmlhint{fo}{fill=no,align=left,overdraw=extend,break=yes}%
-\gmltabline{Name\gmltab Value\gmltab Note}
-\gmltabline{Apple\gmltab 12\gmltab red}
-\gmlhint{tp}{action=set,stops=./25m,break=yes}%
-\gmltabline{Leader\gmltab dots}
-\gmlhint{tp}{action=set,stops=,break=yes}%
-\gmlhint{fo}{fill=yes,align=justify,overdraw=extend,break=yes}%
-\gmlhint{sx}{left=Left side,fill=.,right=Right side,break=yes}%
-\gmlhint{hr}{repeat=yes,break=yes}%
-\gmlhint{bx}{action=on,spec=1ch 40ch,break=yes}%
-Text inside a box.
-\gmlhint{bx}{action=off,break=yes}%
-\gmlhint{hy}{mode=on,break=no}\gmlhint{hw}{word=ex-cep-tion-al,break=no}Hyphenation is now on for exceptional words.
-\gmlhint{hy}{mode=off,break=no}\gmlhint{cp}{n=5,unit=line,break=yes}%
-\gmlhint{kp}{mode=on,break=yes}%
-Kept text one.
+<
+.br>Next paragraph still offset by the .of control word, all of its lines.
+<
+.in left=0,unit=ch,offset=0><,bf font=hi2>Bold from a font change,
+<hp1>italic inside it<>,
+<,pf initial>and back to the initial font.
+<,df name=big,spec=type(bold italic),bold,italic><,bf font=big>Defined bold italic font.
+<,pf initial><
+.tp action=set,stops=10mh 20mh 30mh><
+.fo fill=no,align=left,overdraw=extend><,tabline>{Name&9;Value&9;Note}
+<,tabline>{Apple&9;12&9;red}
+<
+.tp action=set,stops=./25m><,tabline>{Leader&9;dots}
+<
+.tp action=set,stops=><
+.fo fill,align=justify,overdraw=extend><
+.sx left=Left side,fill=.,right=Right side><
+.hr repeat><
+.bx action=on,spec=1ch 40ch>Text inside a box.
+<
+.bx action=off><,hy mode=on><,hw word=ex-cep-tion-al>Hyphenation is now on for exceptional words.
+<,hy mode=off><
+.cp n=5,unit=line><
+.kp mode=on>Kept text one.
 Kept text two.
-\gmlhint{kp}{mode=off,break=yes}%
-\gmlhint{ls}{spec=by 1.5,break=yes}%
-Wider line spacing for a while so that a couple of lines of text show
+<
+.kp mode=off><
+.ls spec=by 1.5>Wider line spacing for a while so that a couple of lines of text show
 the change in spacing between the lines of one paragraph.
-\gmlhint{br}{break=yes}%
-\gmlhint{ls}{spec=normal,break=yes}%
-\gmlhint{ws}{spec=by 2,break=no}Wide word spaces.
-\gmlhint{ws}{spec=normal,break=no}\gmlhint{rc}{code=1,char=*,break=no}\gmlhint{br}{break=yes}%
-\gmlhint{rc}{code=1,mode=on,break=no}Revised text marked in the margin.
-\gmlhint{br}{break=yes}%
-\gmlhint{rc}{code=1,mode=off,break=no}\gmlhint{ll}{length=4,unit=i,break=yes}%
-A shorter line length of four inches for this paragraph which is long
+<
+.br><
+.ls spec=normal><,ws spec=by 2>Wide word spaces.
+<,ws spec=normal><,rc code=1,char=*><
+.br><,rc code=1,mode=on>Revised text marked in the margin.
+<
+.br><,rc code=1,mode=off><
+.ll length=4,unit=i>A shorter line length of four inches for this paragraph which is long
 enough to wrap at that length.
-\gmlhint{ll}{length=default,break=yes}%
-\gmlstart{gml:fn}{}An unnumbered footnote from .fn on.
-\gmlend{gml:fn}\gmlhint{dh}{level=2,spec=font bold,break=no,font=bold}\gmlhint{vr}{break=yes}%
-\gmlhint{pa}{break=yes}%
-\gmlhint{pn}{spec=roman,break=no}After a page eject, roman page numbers.
-\gmlstart{gml:h}{level=2,break=yes,text=A control word heading}%
-\gmlhint{tcmark}{anchor=gml.tc.1,break=no}A control word heading\gmlend{gml:h}%
-
+<
+.ll length=default><:fn>An unnumbered footnote from .fn on.
+<><,dh level=2,spec=font bold,font=bold><
+.vr><
+.pa><,pn spec=roman>After a page eject, roman page numbers.
+<
+:h level=2,break,text=A control word heading><,tcmark anchor=gml.tc.1>A control word heading<
+>
 Text after .h2.
-\gmlhint{pa}{side=odd,break=yes}%
-On an odd page.
-\gmlend{p}%
-\gmlend{body}%
-\gmlend{gdoc}%
-%
-\gmlenddocument
-\bye
+<
+.pa side=odd>On an odd page.
+<
+><
+><
+><
+>

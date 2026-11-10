@@ -343,7 +343,7 @@ let system_value ctx name sub =
 (* A reference to &$PN or &$LC with the pass model on (gml -aux): a
    question to the layout engine.  It is the hint gml:query id=ID
    what=pn|lc at the output cursor (the place in the text where the
-   line is processed); TeX answers in the aux file (gml.tex \gmlquery:
+   line is processed); TeX answers in the aux file (gml.tex <?pn|lc ID>:
    pn the page that place is put out on, lc the lines left on the page
    there), and the next pass answers from it ([page_query]).
 

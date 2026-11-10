@@ -8,11 +8,16 @@
   \advance\leftskip 1em \advance\rightskip 1em \noindent}
 \gmldefend{warn}{\par\smallskip\hrule\medskip}
 %
-% Math (notes/tex.xsl writes the math text unescaped).  :m. is inline
-% math; :fml. a display inside the current paragraph, numbered with
-% \eqno(n) from its num attribute (num=no: no number, set by resolve.xsl);
-% :fmlref's text "(n)" comes from resolve.xsl.  \gmlstart's group
-% encloses the whole math list, so nothing leaks into or out of it.
+% Math (notes/tex.xsl writes the math text unescaped, but for < and &,
+% which are markup in the body: they are \noteslt and \notesamp, the
+% relation and the alignment tab, defined here, where < and & still have
+% their plain catcodes).  :m. is inline math; :fml. a display inside the
+% current paragraph, numbered with \eqno(n) from its num attribute
+% (num=no: no number, set by resolve.xsl); :fmlref's text "(n)" comes
+% from resolve.xsl.  The element's group encloses the whole math list,
+% so nothing leaks into or out of it.
+\def\noteslt{<}
+\let\notesamp=&
 \gmldefstart{m}{$}
 \gmldefend{m}{$}
 \gmldefstart{fml}{\ifvmode\noindent\fi$$}

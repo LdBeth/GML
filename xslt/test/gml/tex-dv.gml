@@ -1,4 +1,4 @@
-.* .dv, .sx with the page number symbol, .hr (test/dv.t): \gmlpageno, \&
+.* .dv, .sx with the page number symbol, .hr (test/dv.t): <,pageno>, &38;
 .se amp '&X'02.
 .tr 02 50
 .dv sup font hi1 baseline p3 /1/

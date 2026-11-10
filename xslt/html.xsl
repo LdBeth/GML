@@ -65,8 +65,10 @@
     different cwidths, the union of their column boundaries for a
     nominal width, width= or $table-width, in percent), thead (thd,
     cells th), tfoot (tft), tbody (rows, tnote as one full-width td);
-    a row with subrows=k is k tr, cells with rowspan/colspan, empty
-    td.gml-hole for squares no cell covers; cell hp -> class gml-hpN,
+    a row and its cells take what they do not state from the row's rdef
+    (its gml:cell, h:ta); a row with subrows=k is k tr, cells with
+    rowspan/colspan, empty td.gml-hole for squares no cell covers; cell
+    hp -> class gml-hpN,
     align/valign -> text-align/vertical-align, concat=no -> white-space:
     pre-wrap, mindepth -> height, rotate/shade -> classes; gml:cpart ->
     div.gml-cpart (gml.css rules between them); rdef -> nothing; tref ->
@@ -234,7 +236,7 @@
   <xsl:variable name="h:gml-used" select="('doc', 'scope', 'lines', 'br', 'sp', 'sk', 'pa',
       'cp', 'cc', 'cb', 'hr', 'sx', 'h', 'fn', 'rh', 'rf', 'raw', 'num', 'pageref',
       'toc-entries', 'toc-entry', 'entry-text', 'figlist-entries', 'figlist-entry',
-      'tlist-entries', 'tlist-entry', 'cpart', 'dv', 'pi', 'symref',
+      'tlist-entries', 'tlist-entry', 'cpart', 'cell', 'dv', 'pi', 'symref',
       'index-entries', 'index-group', 'index-entry', 'index-term', 'see')"/>
   <!-- gml: hints with no HTML meaning: dropped (the state hints too, in
        case the input was not scoped).  A temporary in/ir and il/un have
@@ -1277,6 +1279,23 @@
     <xsl:sequence select="0, for $i in 1 to count($each) return round(sum(subsequence($each, 1, $i)), 2)"/>
   </xsl:function>
 
+  <!-- A table attribute of a row (cols subrows cwidths) or of a cell (n col
+       colspan subrow rowspan hp align valign concat rotate mindepth shade)
+       in force: its own, else, for a row that names its rdef and states
+       no cwidths, that of the rdef (the last one of that id before the
+       row): the k-th gml:cell for the k-th c -->
+  <xsl:key name="h:rdef" match="rdef[gml:cell]" use="string(@id)"/>
+  <xsl:function name="h:ta" as="attribute()?">
+    <xsl:param name="e" as="element()"/>
+    <xsl:param name="name" as="xs:string"/>
+    <xsl:variable name="row" select="if ($e/self::c) then $e/.. else $e"/>
+    <xsl:variable name="def" select="if ($row/@cwidths or empty($row/@rdef)) then ()
+        else key('h:rdef', string($row/@rdef), root($row))[. &lt;&lt; $row][last()]"/>
+    <xsl:sequence select="($e/@*[local-name() = $name and namespace-uri() = ''],
+        (if ($e/self::c) then $def/gml:cell[count($e/preceding-sibling::c) + 1] else $def)
+          /@*[local-name() = $name])[1]"/>
+  </xsl:function>
+
   <!-- The column grid of a table: one grid when all its rows share their
        cwidths (the widths as written: absolute ones converted, k* a share
        of what remains); else the union of the column boundaries of its
@@ -1284,7 +1303,7 @@
        or $table-width), the widths in percent. -->
   <xsl:function name="h:grid" as="element(grid)">
     <xsl:param name="t" as="element()"/>
-    <xsl:variable name="cws" select="distinct-values($t//row/normalize-space(@cwidths))"/>
+    <xsl:variable name="cws" select="distinct-values($t//row ! normalize-space(h:ta(., 'cwidths')))"/>
     <xsl:variable name="tw" select="(h:dcf-len($t/@width, 'ch')[2], h:dcf-len($table-width, 'ch')[2], 468)[1]"/>
     <xsl:choose>
       <xsl:when test="count($cws) le 1">
@@ -1320,12 +1339,12 @@
     <xsl:param name="c" as="element()"/>
     <xsl:param name="grid" as="element(grid)"/>
     <xsl:param name="tw" as="xs:double"/>
-    <xsl:variable name="col" select="xs:integer($c/@col)"/>
-    <xsl:variable name="span" select="xs:integer($c/@colspan)"/>
+    <xsl:variable name="col" select="xs:integer(h:ta($c, 'col'))"/>
+    <xsl:variable name="span" select="xs:integer(h:ta($c, 'colspan'))"/>
     <xsl:choose>
       <xsl:when test="$grid/@single = 'yes'"><xsl:sequence select="$col, $span"/></xsl:when>
       <xsl:otherwise>
-        <xsl:variable name="b" select="h:bounds($c/../@cwidths, $tw)"/>
+        <xsl:variable name="b" select="h:bounds(string(h:ta($c/.., 'cwidths')), $tw)"/>
         <xsl:variable name="from" select="$b[$col]"/>
         <xsl:variable name="to" select="$b[$col + $span]"/>
         <xsl:variable name="first" select="count($grid/col[number(@at) lt $from]) + 1"/>
@@ -1390,10 +1409,10 @@
     <xsl:variable name="place" as="element(p)*">
       <xsl:for-each select="c">
         <xsl:variable name="cc" select="h:cell-cols(., $grid, $tw)"/>
-        <p r="{@subrow}" rs="{(@rowspan, 1)[1]}" f="{$cc[1]}" n="{$cc[2]}"/>
+        <p r="{h:ta(., 'subrow')}" rs="{(h:ta(., 'rowspan'), 1)[1]}" f="{$cc[1]}" n="{$cc[2]}"/>
       </xsl:for-each>
     </xsl:variable>
-    <xsl:for-each select="1 to max((xs:integer(@subrows), 1))">
+    <xsl:for-each select="1 to max((xs:integer(h:ta(., 'subrows')), 1))">
       <xsl:variable name="s" select="."/>
       <tr class="gml-row">
         <xsl:if test="$s = 1">
@@ -1423,29 +1442,33 @@
     <xsl:param name="tw" as="xs:double" tunnel="yes"/>
     <xsl:param name="cell" as="xs:string" tunnel="yes" select="'td'"/>
     <xsl:variable name="cc" select="h:cell-cols(., $grid, $tw)"/>
+    <xsl:variable name="align" select="h:ta(., 'align')"/>
+    <xsl:variable name="valign" select="h:ta(., 'valign')"/>
+    <xsl:variable name="mindepth" select="h:ta(., 'mindepth')"/>
+    <xsl:variable name="rowspan" select="h:ta(., 'rowspan')"/>
     <xsl:variable name="css" as="xs:string*">
       <xsl:choose>
-        <xsl:when test="@align = ('left', 'right', 'center', 'justify')">
-          <xsl:sequence select="'text-align: ' || @align"/>
+        <xsl:when test="$align = ('left', 'right', 'center', 'justify')">
+          <xsl:sequence select="'text-align: ' || $align"/>
         </xsl:when>
-        <xsl:when test="@align = 'inside'">text-align: start</xsl:when>
-        <xsl:when test="@align = 'outside'">text-align: end</xsl:when>
+        <xsl:when test="$align = 'inside'">text-align: start</xsl:when>
+        <xsl:when test="$align = 'outside'">text-align: end</xsl:when>
       </xsl:choose>
-      <xsl:sequence select="'vertical-align: ' || (if (@valign = 'center') then 'middle' else (@valign, 'top')[1])"/>
-      <xsl:if test="@concat = 'no'">white-space: pre-wrap</xsl:if>
-      <xsl:if test="h:dcf-len(@mindepth, 'line')[1]">
-        <xsl:sequence select="'height: ' || h:dcf-len(@mindepth, 'line')[1]"/>
+      <xsl:sequence select="'vertical-align: ' || (if ($valign = 'center') then 'middle' else ($valign, 'top')[1])"/>
+      <xsl:if test="h:ta(., 'concat') = 'no'">white-space: pre-wrap</xsl:if>
+      <xsl:if test="h:dcf-len($mindepth, 'line')[1]">
+        <xsl:sequence select="'height: ' || h:dcf-len($mindepth, 'line')[1]"/>
       </xsl:if>
     </xsl:variable>
     <xsl:element name="{$cell}">
       <xsl:call-template name="h:id"/>
       <xsl:attribute name="class" select="string-join(('gml-c',
-          (@hp[. = ('1', '2', '3')] ! ('gml-hp' || .)),
-          (@rotate[not(. = ('0', ''))] ! ('gml-rotate-' || replace(., '^-', 'm'))),
-          (@shade[not(. = ('0', ''))] ! ('gml-shade-' || .))), ' ')"/>
+          (h:ta(., 'hp')[. = ('1', '2', '3')] ! ('gml-hp' || .)),
+          (h:ta(., 'rotate')[not(. = ('0', ''))] ! ('gml-rotate-' || replace(., '^-', 'm'))),
+          (h:ta(., 'shade')[not(. = ('0', ''))] ! ('gml-shade-' || .))), ' ')"/>
       <xsl:if test="$cc[2] gt 1"><xsl:attribute name="colspan" select="$cc[2]"/></xsl:if>
-      <xsl:if test="xs:integer((@rowspan, 1)[1]) gt 1"><xsl:attribute name="rowspan" select="@rowspan"/></xsl:if>
-      <xsl:attribute name="data-cell" select="@n"/>
+      <xsl:if test="xs:integer(($rowspan, 1)[1]) gt 1"><xsl:attribute name="rowspan" select="$rowspan"/></xsl:if>
+      <xsl:attribute name="data-cell" select="h:ta(., 'n')"/>
       <xsl:attribute name="style" select="string-join($css, '; ')"/>
       <xsl:apply-templates>
         <xsl:with-param name="ctx" select="'flow'" tunnel="yes"/>

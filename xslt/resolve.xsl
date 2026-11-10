@@ -116,17 +116,33 @@
     entries; otherwise each gets them all.
 
   Tables (SH20-9186-06 ch.7, SH20-9187-06 3.31-3.36): rdef stays in
-    place.  table gets num (only with a tcap), anchor, span (page|column,
-    the engine's span= or the COLUMN/PAGE value attribute), split (yes|no,
-    default no), rotate; its children are thd, tft, then the rows and
-    tnotes in document order, then tcap (with gml:num "Table n.") and
-    tdesc.  Each row (thd and tft hold rows too) is
-      <row rdef cols subrows cwidths split [auto="yes"]> c+ </row>
-    with every cell of its row definition, ordered by (subrow, col):
-      <c n col colspan subrow rowspan hp align valign concat rotate
-         mindepth shade [xml:space="preserve" for concat=no]>
-    The row definition is the row's refid, else the previous row's (the
-    table's for the first); thd/tft likewise among themselves.  ARRANGE
+    place, resolved: its options are written once, one gml:cell per cell
+    of a row, ordered by (subrow, col):
+      <rdef id cols subrows cwidths>
+        <gml:cell n col colspan subrow rowspan hp align valign concat
+                  rotate mindepth shade/>+ </rdef>
+    (ARRANGE and the value lists are dropped; an rdef with gml:cell is
+    taken as it is).  table gets num (only with a tcap), anchor, span
+    (page|column, the engine's span= or the COLUMN/PAGE value attribute),
+    split (yes|no, default no), rotate; its children are thd, tft, then
+    the rows and tnotes in document order, then tcap (with gml:num "Table
+    n.") and tdesc.  Each row (thd and tft hold rows too) has a c for
+    every cell of its row definition, in the order of the gml:cell:
+      <row rdef split [auto="yes"]> <c [xml:space="preserve"]>+ </row>
+    the k-th c takes the options of the k-th gml:cell of the last rdef
+    with that id before it (xml:space for concat=no).  A row is written
+    in full instead, as
+      <row rdef cols subrows cwidths split [auto="yes"]>
+        <c n col colspan subrow rowspan hp align valign concat rotate
+           mindepth shade [xml:space="preserve"]>+ </row>
+    when its row definition does not exist (the cells make one line), or
+    when a reader of the output in order could find another one: the rdef
+    is inside the table (whose parts are reordered) or the table holds an
+    rdef of that id (r:short-form).  For a reader, an attribute on a c
+    wins over the gml:cell, and a row with its own cwidths takes nothing
+    from an rdef.  The row definition is the row's refid, else the
+    previous row's (the table's for the first); thd/tft likewise among
+    themselves.  ARRANGE
     lines are split at "/"; lines of different lengths, or a value that
     is not a positive integer, give one cell (DSMGML021W, SH35-0048-09
     p.8); a cell number's squares must make a rectangle (else an error,
@@ -618,7 +634,9 @@
        value applies to the first cell"; DCF-VERIFY: with cell numbers
        that leave gaps, the k-th lowest is taken for the k-th cell, not in
        Rel 4 manuals).  The diagnostics are given once, by the rdef
-       template (r:rdef-problems). -->
+       template (r:rdef-problems).  The rdef template writes the model on
+       the rdef (cols subrows cwidths, a gml:cell per cell, without k);
+       an rdef already so written is its own model. -->
   <!-- the lines of ARRANGE as written -->
   <xsl:function name="r:arrange-lines" as="element(line)*">
     <xsl:param name="rd" as="element()?"/>
@@ -707,6 +725,29 @@
   </xsl:function>
 
   <xsl:function name="r:rdef-model" as="element(m)" cache="yes">
+    <xsl:param name="rd" as="element()?"/>
+    <xsl:param name="n" as="xs:integer"/>
+    <xsl:choose>
+      <!-- a resolved rdef: its cells are the model -->
+      <xsl:when test="$rd/gml:cell">
+        <xsl:variable name="nums" select="sort(distinct-values($rd/gml:cell/xs:integer(@n)))"/>
+        <m>
+          <xsl:copy-of select="$rd/@cols, $rd/@subrows, $rd/@cwidths"/>
+          <xsl:for-each select="$rd/gml:cell">
+            <cell k="{index-of($nums, xs:integer(@n))[1]}">
+              <xsl:copy-of select="@*"/>
+            </cell>
+          </xsl:for-each>
+        </m>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:sequence select="r:rdef-model-src($rd, $n)"/>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:function>
+
+  <!-- the model of an rdef as written -->
+  <xsl:function name="r:rdef-model-src" as="element(m)">
     <xsl:param name="rd" as="element()?"/>
     <xsl:param name="n" as="xs:integer"/>
     <xsl:variable name="lines" select="r:rdef-lines($rd, $n)"/>
@@ -832,10 +873,10 @@
        physical units) leave no room (LR .TD remark 4 p.383) -->
   <xsl:function name="r:check-width">
     <xsl:param name="t" as="element()"/>
-    <xsl:param name="rows" as="element()*"/>
+    <xsl:param name="cwidths" as="xs:string*"/>
     <xsl:variable name="tw" select="r:points($t/@width)"/>
     <xsl:if test="exists($tw)">
-      <xsl:for-each select="distinct-values($rows/@cwidths)">
+      <xsl:for-each select="distinct-values($cwidths)">
         <xsl:variable name="ws" select="tokenize(., ' ')"/>
         <xsl:variable name="abs" select="$ws[not(contains(., '*'))]"/>
         <xsl:variable name="pts" select="$abs ! r:points(.)"/>
@@ -854,7 +895,17 @@
     <xsl:for-each select="r:rdef-problems(.)">
       <xsl:message select="concat('resolve: rdef id=&quot;', $rd/@id, '&quot;: ', .)"/>
     </xsl:for-each>
-    <xsl:next-match/>
+    <xsl:variable name="m" select="r:rdef-model(., 1)"/>
+    <xsl:copy>
+      <xsl:apply-templates select="@*[not(local-name() = ('arrange', 'cols', 'subrows', 'cwidths', $r:cell-attr-names))]"/>
+      <xsl:copy-of select="$m/@cols, $m/@subrows, $m/@cwidths"/>
+      <xsl:for-each select="$m/cell">
+        <gml:cell>
+          <xsl:copy-of select="for $a in $r:cell-gen return @*[local-name() = $a]"/>
+        </gml:cell>
+      </xsl:for-each>
+      <xsl:apply-templates select="node() except gml:cell"/>
+    </xsl:copy>
   </xsl:template>
 
   <!-- the row definition named $id in force at $e: the last rdef with that
@@ -863,6 +914,20 @@
     <xsl:param name="e" as="element()"/>
     <xsl:param name="id" as="xs:string"/>
     <xsl:sequence select="$e/preceding::rdef[upper-case(normalize-space(@id)) = upper-case(normalize-space($id))][1]"/>
+  </xsl:function>
+
+  <!-- A row of $src may refer to its row definition $rd (the short form)
+       when a reader that keeps the last rdef of each id seen so far, in
+       the order of the output, finds $rd: when $rd comes before the
+       (outermost) table and the table holds no rdef of that id.  The
+       table's parts are reordered (thd and tft first), so an rdef inside
+       it could be seen too late or too early. -->
+  <xsl:function name="r:short-form" as="xs:boolean">
+    <xsl:param name="src" as="element()"/>
+    <xsl:param name="rd" as="element()?"/>
+    <xsl:variable name="t" select="$src/ancestor::table[last()]"/>
+    <xsl:sequence select="exists($rd) and exists($t) and $rd &lt;&lt; $t
+        and empty($t//rdef[upper-case(normalize-space(@id)) = upper-case(normalize-space($rd/@id))])"/>
   </xsl:function>
 
   <xsl:function name="r:yes-no" as="xs:string?">
@@ -887,7 +952,9 @@
        first row is an automatic one.  A :c without a valid number takes
        the next higher cell number; past the last, a new row (auto="yes")
        with the same definition starts at the lowest.  A cell number used
-       again within a row repeats the cell (gml:cpart). -->
+       again within a row repeats the cell (gml:cpart).  The rows are
+       written short (r:short-form) or in full; a row resolved short, read
+       again, has its k-th c placed in the k-th cell. -->
   <xsl:function name="r:rows" as="element()*">
     <xsl:param name="src" as="element()"/>
     <xsl:param name="id" as="xs:string"/>
@@ -897,6 +964,9 @@
     <xsl:variable name="m" select="r:rdef-model($rd,
         max((count($cells), $cells/@n[. castable as xs:integer]/xs:integer(.), 1)))"/>
     <xsl:variable name="nums" select="$m/cell/xs:integer(@n) => sort()"/>
+    <xsl:variable name="short" select="r:short-form($src, $rd)"/>
+    <!-- a row resolved in the short form: its k-th c is the k-th cell -->
+    <xsl:variable name="placed" select="exists($src/@rdef) and empty($src/@cwidths)"/>
     <xsl:variable name="lead" select="$src/node()[empty(preceding-sibling::c) and not(self::c)]
                                       [not(. instance of text() and normalize-space() = '')]"/>
     <xsl:if test="exists($lead[. instance of text() or not(self::gml:*)])">
@@ -907,7 +977,9 @@
       <xsl:iterate select="$cells">
         <xsl:param name="cur" as="xs:integer" select="0"/>
         <xsl:param name="ri" as="xs:integer" select="1"/>
-        <xsl:variable name="g" select="normalize-space(@n)"/>
+        <xsl:variable name="i" select="position()"/>
+        <xsl:variable name="g" select="if (empty(@n) and $placed) then string($m/cell[$i]/@n)
+                                       else normalize-space(@n)"/>
         <xsl:variable name="valid" select="$g castable as xs:integer and xs:integer($g) = $nums"/>
         <xsl:if test="$g ne '' and not($valid)">
           <xsl:message select="concat('resolve: c n=&quot;', $g, '&quot;: +++DSMGML010E CELL ''', $g,
@@ -936,9 +1008,11 @@
       <row>
         <xsl:apply-templates select="$src[self::row]/@*[not(local-name() = ('rdef', 'cols', 'subrows', 'cwidths', 'split', 'auto'))]"/>
         <xsl:attribute name="rdef" select="($rd/@id, $id)[1]"/>
-        <xsl:attribute name="cols" select="$m/@cols"/>
-        <xsl:attribute name="subrows" select="$m/@subrows"/>
-        <xsl:attribute name="cwidths" select="$m/@cwidths"/>
+        <xsl:if test="not($short)">
+          <xsl:attribute name="cols" select="$m/@cols"/>
+          <xsl:attribute name="subrows" select="$m/@subrows"/>
+          <xsl:attribute name="cwidths" select="$m/@cwidths"/>
+        </xsl:if>
         <xsl:attribute name="split" select="$split"/>
         <xsl:if test="$ri gt 1 or $src/@auto = 'yes'"><xsl:attribute name="auto" select="'yes'"/></xsl:if>
         <xsl:for-each select="$m/cell">
@@ -953,7 +1027,9 @@
           </xsl:variable>
           <c>
             <xsl:apply-templates select="$occ[1]/@*[not(local-name() = ($r:cell-gen, 'space'))]"/>
-            <xsl:copy-of select="@n | @col | @colspan | @subrow | @rowspan | @*[local-name() = $r:cell-attr-names]"/>
+            <xsl:if test="not($short)">
+              <xsl:copy-of select="@n | @col | @colspan | @subrow | @rowspan | @*[local-name() = $r:cell-attr-names]"/>
+            </xsl:if>
             <xsl:if test="@concat = 'no'"><xsl:attribute name="xml:space" select="'preserve'"/></xsl:if>
             <xsl:choose>
               <xsl:when test="count($parts) gt 1">
@@ -1047,7 +1123,10 @@
         </xsl:choose>
       </xsl:iterate>
     </xsl:variable>
-    <xsl:sequence select="r:check-width(., $parts/descendant-or-self::row)"/>
+    <!-- the cwidths of the rows: a row in the short form has its rdef's,
+         which comes before the table (r:short-form) -->
+    <xsl:sequence select="r:check-width(., $parts/descendant-or-self::row !
+        (if (@cwidths) then string(@cwidths) else string(r:rdef-model(r:rdef-for($t, @rdef), 1)/@cwidths)))"/>
     <xsl:copy>
       <xsl:apply-templates select="@*[not(local-name() = ('column', 'page', 'span', 'split', 'rotate'))]"/>
       <xsl:if test="$num ne ''"><xsl:attribute name="num" select="$num"/></xsl:if>

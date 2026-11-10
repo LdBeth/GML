@@ -1,151 +1,150 @@
 \def\gmlmode{hints}
 \input gml
-\gmlbegindocument%
-\gmlhint{df}{name=hi0,spec=type(normal),break=no}\gmlhint{df}{name=hi1,spec=type(italic),break=no,italic=yes}\gmlhint{df}{name=hi2,spec=type(bold),break=no,bold=yes}\gmlhint{df}{name=hi3,spec=type(bold italic),break=no,bold=yes,italic=yes}\gmlhint{df}{name=hd0,spec=type(bold 20 italic),break=no,size=20,bold=yes,italic=yes}\gmlhint{df}{name=hd1,spec=type(bold 20),break=no,size=20,bold=yes}\gmlhint{df}{name=hd2,spec=type(bold 18 italic),break=no,size=18,bold=yes,italic=yes}\gmlhint{df}{name=hd3,spec=type(bold 14),break=no,size=14,bold=yes}\gmlhint{df}{name=hd4,spec=type(bold 12 italic),break=no,size=12,bold=yes,italic=yes}\gmlhint{df}{name=hd5,spec=type(bold),break=no,bold=yes}\gmlhint{df}{name=hd6,spec=type(bold italic),break=no,bold=yes,italic=yes}\gmlhint{df}{name=title,spec=type(bold 24),break=no,size=24,bold=yes}\gmlhint{df}{name=xmp,spec=type('courier'),break=no,face=courier,family=mono}\gmlhint{df}{name=f@sup,spec=type(7),break=no,size=7}\gmlhint{dr}{spec=f@frule,break=no,rule=f@frule}\gmlhint{dr}{spec=f@fnrule weight 0.2mm,break=no,rule=f@fnrule,weight=0.2mm}\gmlhint{dh}{level=0,spec=pa spbf 1.3i spaf 5 font hd0 up nohy left nto,break=no,pa=yes,spbf=1.3i,spaf=5line,font=hd0,up=yes,hy=no,align=left}\gmlhint{dh}{level=1,spec=pa spbf 1.3i spaf 3 font hd1 up nohy left,break=no,pa=yes,spbf=1.3i,spaf=3line,font=hd1,up=yes,hy=no,align=left}\gmlhint{dh}{level=2,spec=skbf 3 spaf 2 font hd2 up nohy left,break=no,skbf=3line,spaf=2line,font=hd2,up=yes,hy=no,align=left}\gmlhint{dh}{level=3,spec=skbf 3 spaf 2 font hd3 nohy left,break=no,skbf=3line,spaf=2line,font=hd3,hy=no,align=left}\gmlhint{dh}{level=4,spec=skbf 3 spaf 2 font hd4 nohy left,break=no,skbf=3line,spaf=2line,font=hd4,hy=no,align=left}\gmlhint{dh}{level=5,spec=skbf 1 nbr font hd5 nohy,break=no,skbf=1line,runin=yes,font=hd5,hy=no}\gmlhint{dh}{level=6,spec=skbf 1 nbr font hd6 nohy,break=no,skbf=1line,runin=yes,font=hd6,hy=no}\gmlstart{gml:fn}{kind=leader}\gmlhint{sp}{n=1,unit=line,break=yes}%
-\gmlhint{hr}{spec=f@fnrule 0ch for 16ch,break=yes}%
-\gmlend{gml:fn}\gmlstart{gml:rf}{break=yes}%
-\gmlrundyn{\gmlhint{bf}{font=hi0,break=no}\gmlhint{sx}{left=\gmlsymref{f+64+shead}{},fill=,right=\gmlpageno{},pagesym=\&,break=yes}%
-\gmlhint{pf}{initial=yes,break=no}}\gmlend{gml:rf}%
-\gmlhint{in}{left=0,unit=ch,break=yes}%
-\gmlhint{ir}{right=0,unit=ch,break=yes}%
-\gmlstart{frontm}{}%
-\gmlhint{dh}{level=0,spec=ntc,break=no}\gmlhint{dh}{level=1,spec=ntc,break=no}\gmlhint{dh}{level=2,spec=ntc,break=no}\gmlhint{dh}{level=3,spec=ntc,break=no}\gmlhint{dh}{level=4,spec=ntc,break=no}\gmlhint{pa}{page=1,break=yes}%
-\gmlhint{pn}{spec=roman,break=no}\gmlhint{in}{left=0,unit=ch,break=yes}%
-\gmlhint{ir}{right=0,unit=ch,break=yes}%
-\gmlhint{pa}{break=yes}%
-\gmlsymval{f+64+shead}{List of Tables}\gmlstart{gml:rf}{break=yes}%
-\gmlrundyn{\gmlhint{bf}{font=hi0,break=no}\gmlhint{sx}{left=\gmlsymref{f+64+shead}{List of Tables},fill=,right=\gmlpageno{},pagesym=\&,break=yes}%
-\gmlhint{pf}{initial=yes,break=no}}\gmlend{gml:rf}%
-\gmlstart{tlist}{}%
-\gmltlistbegin{List of Tables}%
-\gmltlistentry{refid=planets,num=1}{Table\gmlchar{160}1}{Table 1. Some planets}{\gmlpageref{planets}{always}{}}%
-\gmltlistentry{refid=sched,num=2}{Table\gmlchar{160}2}{Table 2. A timetable}{\gmlpageref{sched}{always}{}}%
-\gmltlistend%
-\gmlend{tlist}%
-\gmlhint{in}{left=0,unit=ch,break=yes}%
-\gmlhint{ir}{right=0,unit=ch,break=yes}%
-\gmlend{frontm}%
-\gmlstart{body}{}%
-\gmlhint{dh}{level=0,spec=tc,break=no}\gmlhint{dh}{level=1,spec=tc,break=no}\gmlhint{dh}{level=2,spec=tc,break=no}\gmlhint{dh}{level=3,spec=tc,break=no}\gmlhint{dh}{level=4,spec=tc,break=no}\gmlhint{pa}{page=1,break=yes}%
-\gmlhint{pn}{spec=arabic,break=no}\gmlsymval{f+64+shead}{}\gmlstart{gml:rf}{break=yes}%
-\gmlrundyn{\gmlhint{bf}{font=hi0,break=no}\gmlhint{sx}{left=\gmlsymref{f+64+shead}{},fill=,right=\gmlpageno{},pagesym=\&,break=yes}%
-\gmlhint{pf}{initial=yes,break=no}}\gmlend{gml:rf}%
-\gmlhint{in}{left=0,unit=ch,break=yes}%
-\gmlhint{ir}{right=0,unit=ch,break=yes}%
-\gmlhint{pa}{break=yes}%
-\gmlsymval{f+64+shead}{Tables}\gmlstart{gml:rf}{break=yes}%
-\gmlrundyn{\gmlhint{bf}{font=hi0,break=no}\gmlhint{sx}{left=\gmlsymref{f+64+shead}{Tables},fill=,right=\gmlpageno{},pagesym=\&,break=yes}%
-\gmlhint{pf}{initial=yes,break=no}}\gmlend{gml:rf}%
-\gmlstart{h1}{anchor=gml-h1-1,text=Tables}%
-\gmlanchor{gml-h1-1}\gmlstart{gml:h}{level=1,break=yes,text=Tables}%
-\gmlhint{tcmark}{anchor=gml.tc.1,break=no}\gmlupword{Tables}\gmlend{gml:h}%
-\gmlend{h1}%
-\gmlhint{sk}{n=0.75,unit=line,break=yes}%
-The timetable is Table ID unknown.
-\gmlstart{rdef}{id=planet,hp=2 0,align=l r c,cwidths=6* 5p *}%
-\gmlend{rdef}%
-\gmlstart{rdef}{id=phead,hp=2,align=c,valign=bot,cwidths=6* 5p *}%
-\gmlend{rdef}%
-\gmlhint{sk}{n=0.1,unit=i,break=yes}%
-\gmlstart{table}{id=planets,refid=planet,num=1,anchor=planets,span=column,split=yes,rotate=0}%
-\gmlanchor{planets}\gmlstart{thd}{refid=phead}%
-\gmlstart{row}{rdef=phead,cols=3,subrows=1,cwidths=6* 5p 1*,split=yes}%
-\gmlstart{c}{n=1,col=1,colspan=1,subrow=1,rowspan=1,hp=2,align=center,valign=bottom,concat=yes,rotate=0,mindepth=*,shade=0}%
-Planet\gmlend{c}%
-\gmlstart{c}{n=2,col=2,colspan=1,subrow=1,rowspan=1,hp=2,align=center,valign=bottom,concat=yes,rotate=0,mindepth=*,shade=0}%
-Moons\gmlend{c}%
-\gmlstart{c}{n=3,col=3,colspan=1,subrow=1,rowspan=1,hp=2,align=center,valign=bottom,concat=yes,rotate=0,mindepth=*,shade=0}%
-Notes
-\gmlend{c}%
-\gmlend{row}%
-\gmlend{thd}%
-\gmlstart{tft}{refid=phead}%
-\gmlstart{row}{rdef=phead,cols=3,subrows=1,cwidths=6* 5p 1*,split=yes}%
-\gmlstart{c}{n=1,col=1,colspan=1,subrow=1,rowspan=1,hp=2,align=center,valign=bottom,concat=yes,rotate=0,mindepth=*,shade=0}%
-Planet\gmlend{c}%
-\gmlstart{c}{n=2,col=2,colspan=1,subrow=1,rowspan=1,hp=2,align=center,valign=bottom,concat=yes,rotate=0,mindepth=*,shade=0}%
-Moons\gmlend{c}%
-\gmlstart{c}{n=3,col=3,colspan=1,subrow=1,rowspan=1,hp=2,align=center,valign=bottom,concat=yes,rotate=0,mindepth=*,shade=0}%
-Notes
-\gmlend{c}%
-\gmlend{row}%
-\gmlend{tft}%
-\gmlstart{row}{rdef=planet,cols=3,subrows=1,cwidths=6* 5p 1*,split=yes}%
-\gmlstart{c}{n=1,col=1,colspan=1,subrow=1,rowspan=1,hp=2,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-Mercury\gmlend{c}%
-\gmlstart{c}{n=2,col=2,colspan=1,subrow=1,rowspan=1,hp=0,align=right,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-0\gmlend{c}%
-\gmlstart{c}{n=3,col=3,colspan=1,subrow=1,rowspan=1,hp=0,align=center,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-Closest to the Sun.
-\gmlend{c}%
-\gmlend{row}%
-\gmlstart{row}{rdef=planet,cols=3,subrows=1,cwidths=6* 5p 1*,split=no}%
-\gmlstart{c}{n=1,col=1,colspan=1,subrow=1,rowspan=1,hp=2,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-Earth
-\gmlend{c}%
-\gmlstart{c}{n=2,col=2,colspan=1,subrow=1,rowspan=1,hp=0,align=right,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-1
-\gmlend{c}%
-\gmlstart{c}{n=3,col=3,colspan=1,subrow=1,rowspan=1,hp=0,align=center,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-Our home, given first.
-\gmlend{c}%
-\gmlend{row}%
-\gmlstart{row}{rdef=planet,cols=3,subrows=1,cwidths=6* 5p 1*,split=yes}%
-\gmlstart{c}{n=1,col=1,colspan=1,subrow=1,rowspan=1,hp=2,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-Mars\gmlend{c}%
-\gmlstart{c}{n=2,col=2,colspan=1,subrow=1,rowspan=1,hp=0,align=right,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-2\gmlend{c}%
-\gmlstart{c}{n=3,col=3,colspan=1,subrow=1,rowspan=1,hp=0,align=center,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-Two small moons.\gmlhint{dv}{name=f@fnc,font=f@sup,baseline=3pt,text=1,break=no}\gmlstart{gml:fn}{}\gmlhint{sp}{n=1,unit=line,break=yes}%
-\gmlhint{dv}{name=f@fnc,font=f@sup,baseline=3pt,text=1,break=no}
-Both were found in 1877.\gmlend{gml:fn}\gmlend{c}%
-\gmlend{row}%
-\gmlstart{tnote}{}%
-\gmlnum{Note:}\gmlhint{bf}{font=hi2,break=no}Note:
-\gmlhint{pf}{initial=yes,break=no}Moon counts change.
-\gmlend{tnote}%
-\gmlstart{tcap}{desc=yes}%
-\gmlnum{Table\gmlchar{160}1.}\gmlhint{sk}{n=1,unit=line,break=yes}%
-\gmlhint{bf}{font=hi2,break=no}Table 1.
-\gmlhint{pf}{initial=yes,break=no}Some planets\gmlend{tcap}%
-\gmlstart{tdesc}{}%
-:
+\gml
+<,df name=hi0,spec=type(normal)><,df name=hi1,spec=type(italic),italic><,df name=hi2,spec=type(bold),bold><,df name=hi3,spec=type(bold italic),bold,italic><,df name=hd0,spec=type(bold 20 italic),size=20,bold,italic><,df name=hd1,spec=type(bold 20),size=20,bold><,df name=hd2,spec=type(bold 18 italic),size=18,bold,italic><,df name=hd3,spec=type(bold 14),size=14,bold><,df name=hd4,spec=type(bold 12 italic),size=12,bold,italic><,df name=hd5,spec=type(bold),bold><,df name=hd6,spec=type(bold italic),bold,italic><,df name=title,spec=type(bold 24),size=24,bold><,df name=xmp,spec=type('courier'),face=courier,family=mono><,df name=f@sup,spec=type(7),size=7><,dr spec=f@frule,rule=f@frule><,dr spec=f@fnrule weight 0.2mm,rule=f@fnrule,weight=0.2mm><,dh level=0,spec=pa spbf 1.3i spaf 5 font hd0 up nohy left nto,pa,spbf=1.3i,spaf=5line,font=hd0,up,hy=no,align=left><,dh level=1,spec=pa spbf 1.3i spaf 3 font hd1 up nohy left,pa,spbf=1.3i,spaf=3line,font=hd1,up,hy=no,align=left><,dh level=2,spec=skbf 3 spaf 2 font hd2 up nohy left,skbf=3line,spaf=2line,font=hd2,up,hy=no,align=left><,dh level=3,spec=skbf 3 spaf 2 font hd3 nohy left,skbf=3line,spaf=2line,font=hd3,hy=no,align=left><,dh level=4,spec=skbf 3 spaf 2 font hd4 nohy left,skbf=3line,spaf=2line,font=hd4,hy=no,align=left><,dh level=5,spec=skbf 1 nbr font hd5 nohy,skbf=1line,runin,font=hd5,hy=no><,dh level=6,spec=skbf 1 nbr font hd6 nohy,skbf=1line,runin,font=hd6,hy=no><:fn kind=leader><
+.sp n=1,unit=line><
+.hr spec=f@fnrule 0ch for 16ch><><
+:rf break><,rundyn>{<,bf font=hi0><
+.sx left={<,symref name=f+64+shead>{}},fill=,right={<,pageno>},pagesym=&38;><,pf initial>}<
+><
+.in left=0,unit=ch><
+.ir right=0,unit=ch><
+frontm><,dh level=0,spec=ntc><,dh level=1,spec=ntc><,dh level=2,spec=ntc><,dh level=3,spec=ntc><,dh level=4,spec=ntc><
+.pa page=1><,pn spec=roman><
+.in left=0,unit=ch><
+.ir right=0,unit=ch><
+.pa><,symval name=f+64+shead,value=List of Tables><
+:rf break><,rundyn>{<,bf font=hi0><
+.sx left={<,symref name=f+64+shead>{List of Tables}},fill=,right={<,pageno>},pagesym=&38;><,pf initial>}<
+><
+tlist><
+:tlist-entries title=List of Tables><
+,tlist-entry refid=planets,num=1>{Table&160;1}{Table 1. Some planets}{<,pageref refid=planets>}<
+,tlist-entry refid=sched,num=2>{Table&160;2}{Table 2. A timetable}{<,pageref refid=sched>}<
+><
+><
+.in left=0,unit=ch><
+.ir right=0,unit=ch><
+><
+body><,dh level=0,spec=tc><,dh level=1,spec=tc><,dh level=2,spec=tc><,dh level=3,spec=tc><,dh level=4,spec=tc><
+.pa page=1><,pn spec=arabic><,symval name=f+64+shead,value=><
+:rf break><,rundyn>{<,bf font=hi0><
+.sx left={<,symref name=f+64+shead>{}},fill=,right={<,pageno>},pagesym=&38;><,pf initial>}<
+><
+.in left=0,unit=ch><
+.ir right=0,unit=ch><
+.pa><,symval name=f+64+shead,value=Tables><
+:rf break><,rundyn>{<,bf font=hi0><
+.sx left={<,symref name=f+64+shead>{Tables}},fill=,right={<,pageno>},pagesym=&38;><,pf initial>}<
+><
+h1 anchor=gml-h1-1,text=Tables><
+:h level=1,break,text=Tables><,tcmark anchor=gml.tc.1><!Tables><
+><
+><
+.sk n=0.75,unit=line>The timetable is Table ID unknown.
+<
+rdef id=planet,cwidths=6* 5p 1*><,cell hp=2><,cell align=right><,cell align=center><
+><
+rdef id=phead,cwidths=6* 5p 1*><,cell hp=2,align=center,valign=bottom><,cell hp=2,align=center,valign=bottom><,cell hp=2,align=center,valign=bottom><
+><
+.sk n=0.1,unit=i><
+table id=planets,refid=planet,num=1,anchor=planets,span=column,split><
+thd refid=phead><
+row rdef=phead,split><
+c>Planet<
+><
+c>Moons<
+><
+c>Notes
+<
+><
+><
+><
+tft refid=phead><
+row rdef=phead,split><
+c>Planet<
+><
+c>Moons<
+><
+c>Notes
+<
+><
+><
+><
+row rdef=planet,split><
+c>Mercury<
+><
+c>0<
+><
+c>Closest to the Sun.
+<
+><
+><
+row rdef=planet,split=no><
+c>Earth
+<
+><
+c>1
+<
+><
+c>Our home, given first.
+<
+><
+><
+row rdef=planet,split><
+c>Mars<
+><
+c>2<
+><
+c>Two small moons.<,dv name=f@fnc,font=f@sup,baseline=3pt,text=1><:fn><
+.sp n=1,unit=line><,dv name=f@fnc,font=f@sup,baseline=3pt,text=1>
+Both were found in 1877.<><
+><
+><
+tnote><=Note:><,bf font=hi2>Note:
+<,pf initial>Moon counts change.
+<
+><
+tcap desc><=Table&160;1.><
+.sk n=1,unit=line><,bf font=hi2>Table 1.
+<,pf initial>Some planets<
+><
+tdesc>:
 Three of the eight.
-\gmlend{tdesc}%
-\gmlend{table}%
-\gmlhint{sk}{n=0.1,unit=i,break=yes}%
-\gmlstart{rdef}{id=sched,concat=y y n y,arrange=1 1 2 / 3 4 2,cwidths=2i 2i 1.5i}%
-\gmlend{rdef}%
-\gmlhint{sk}{n=0.1,unit=i,break=yes}%
-\gmlstart{table}{id=sched,refid=sched,width=5.5i,num=2,anchor=sched,span=page,split=no,rotate=0}%
-\gmlanchor{sched}\gmlstart{row}{rdef=sched,cols=3,subrows=2,cwidths=2i 2i 1.5i,split=no}%
-\gmlstart{c}{n=1,col=1,colspan=2,subrow=1,rowspan=1,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-Morning
-\gmlend{c}%
-\gmlstart{c}{n=2,col=3,colspan=1,subrow=1,rowspan=2,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-Afternoon
-\gmlend{c}%
-\gmlstart{c}{n=3,col=1,colspan=1,subrow=2,rowspan=1,hp=0,align=left,valign=top,concat=no,rotate=0,mindepth=*,shade=0,xml:space=preserve}%
-\gmlhint{fo}{fill=no,align=left,overdraw=extend,break=yes}%
-first\ line
+<
+><
+><
+.sk n=0.1,unit=i><
+rdef id=sched,subrows=2,cwidths=2i 2i 1.5i><,cell colspan=2><,cell n=2,col=3,rowspan=2><,cell n=3,col=1,subrow=2,concat=no><,cell n=4,col=2,subrow=2><
+><
+.sk n=0.1,unit=i><
+table id=sched,refid=sched,width=5.5i,num=2,anchor=sched,span=page><
+row rdef=sched><
+c>Morning
+<
+><
+c>Afternoon
+<
+><
+c xml:space=preserve><
+.fo fill=no,align=left,overdraw=extend>first\ line
 \ \ second\ line,\ indented
-\gmlhint{fo}{fill=yes,align=justify,overdraw=extend,break=yes}%
-\gmlend{c}%
-\gmlstart{c}{n=4,col=2,colspan=1,subrow=2,rowspan=1,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-Lab work
-\gmlend{c}%
-\gmlend{row}%
-\gmlstart{tcap}{}%
-\gmlnum{Table\gmlchar{160}2.}\gmlhint{sk}{n=1,unit=line,break=yes}%
-\gmlhint{bf}{font=hi2,break=no}Table 2.
-\gmlhint{pf}{initial=yes,break=no}A timetable\gmlend{tcap}%
-\gmlend{table}%
-\gmlhint{sk}{n=0.1,unit=i,break=yes}%
-\gmlhint{sk}{n=0.75,unit=line,break=yes}%
-The planets are in Table\gmlchar{160}1 on page 1.
-\gmlhint{in}{left=0,unit=ch,break=yes}%
-\gmlhint{ir}{right=0,unit=ch,break=yes}%
-\gmlend{body}%
-%
-\gmlenddocument
-\bye
+<
+.fo fill,align=justify,overdraw=extend><
+><
+c>Lab work
+<
+><
+><
+tcap><=Table&160;2.><
+.sk n=1,unit=line><,bf font=hi2>Table 2.
+<,pf initial>A timetable<
+><
+><
+.sk n=0.1,unit=i><
+.sk n=0.75,unit=line>The planets are in Table&160;1 on page 1.
+<
+.in left=0,unit=ch><
+.ir right=0,unit=ch><
+><
+>

@@ -23,9 +23,9 @@
 <dd>The moment the new system takes the traffic.
 </dd></dl><gl><gt>RPO</gt>
 <gd>How much data we can afford to lose.
-</gd></gl><rdef id="r" cwidths="3* 1*"/><table refid="r" anchor="gml-table-1" span="page" split="no" rotate="0"><thd><row rdef="r" cols="2" subrows="1" cwidths="3* 1*" split="no"><c n="1" col="1" colspan="1" subrow="1" rowspan="1" hp="0" align="left" valign="top" concat="yes" rotate="0" mindepth="*" shade="0">Stage</c><c n="2" col="2" colspan="1" subrow="1" rowspan="1" hp="0" align="left" valign="top" concat="yes" rotate="0" mindepth="*" shade="0">Hours
-</c></row></thd><row rdef="r" cols="2" subrows="1" cwidths="3* 1*" split="no"><c n="1" col="1" colspan="1" subrow="1" rowspan="1" hp="0" align="left" valign="top" concat="yes" rotate="0" mindepth="*" shade="0">Copy</c><c n="2" col="2" colspan="1" subrow="1" rowspan="1" hp="0" align="left" valign="top" concat="yes" rotate="0" mindepth="*" shade="0">30
-</c></row><row rdef="r" cols="2" subrows="1" cwidths="3* 1*" split="no"><c n="1" col="1" colspan="1" subrow="1" rowspan="1" hp="0" align="left" valign="top" concat="yes" rotate="0" mindepth="*" shade="0">Switch over</c><c n="2" col="2" colspan="1" subrow="1" rowspan="1" hp="0" align="left" valign="top" concat="yes" rotate="0" mindepth="*" shade="0">2
+</gd></gl><rdef id="r" cols="2" subrows="1" cwidths="3* 1*"><gml:cell n="1" col="1" colspan="1" subrow="1" rowspan="1" hp="0" align="left" valign="top" concat="yes" rotate="0" mindepth="*" shade="0"/><gml:cell n="2" col="2" colspan="1" subrow="1" rowspan="1" hp="0" align="left" valign="top" concat="yes" rotate="0" mindepth="*" shade="0"/></rdef><table refid="r" anchor="gml-table-1" span="page" split="no" rotate="0"><thd><row rdef="r" split="no"><c>Stage</c><c>Hours
+</c></row></thd><row rdef="r" split="no"><c>Copy</c><c>30
+</c></row><row rdef="r" split="no"><c>Switch over</c><c>2
 </c></row><tnote><gml:num>Note:</gml:num>Estimates from the rehearsal.
 </tnote></table><p>The copy job is started with:
 </p><xmp xml:space="preserve"><gml:scope kind="block" fill="no" align="left">copyjob --from old-db --to new-db \

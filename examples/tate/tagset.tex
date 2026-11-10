@@ -1,6 +1,6 @@
 % tate/tagset.tex -- vertical Japanese (tategaki) for the tate tag set.
 % A pTeX engine only (ApTeX: gmlpass -tex aptex).  gml.tex inputs it
-% near its end (tex.xsl's tex-tagset), before \gmlbegindocument, with
+% near its end (tex.xsl's tex-tagset), before the body (\gml), with
 % the main vertical list still empty, so the whole body can be set
 % vertically.  The profile is dcfstarter (hint mode); everything here
 % is TeX's side of the layout:
@@ -16,12 +16,12 @@
 %     with it (the size from its quad, mincho or gothic from the slot);
 %     an input line end after a kanji is no word space (pTeX's rule),
 %     and the space between Japanese and Latin is \xkanjiskip.  Other
-%     characters stay \gmlchar{n}: gml.tex's renderings, else \kchar if
+%     characters stay &n;: gml.tex's renderings, else \kchar if
 %     the engine takes the code point as CJK (\kcatcode 16 and up);
 %   - :ruby.base:rt.reading:eruby. (:ert only before the next base;
 %     .xd rt closedby=rt) (elements under dcfstarter: the
 %     profile says (elem)); tex.xsl pairs the bases and readings and
-%     places the readings, \gmlruby sets them in half-size type beside
+%     places the readings, <,rb ..> sets them in half-size type beside
 %     the bases: above them in yoko, to their right in tate (\raise
 %     moves toward the right in a tate list).
 \ifx\tate\undefined
@@ -79,8 +79,8 @@
 \gmldeffont{title}{\fam\m@ne\gml@titlefnt\gml@jfam g}
 
 % ---- characters ---------------------------------------------------------------------
-% A \gmlchar{n} (not one of the CJK blocks that tex.xsl writes as they
-% are): gml.tex's own renderings win (Latin-1, typographic punctuation);
+% A character &n; (not one of the CJK blocks that tex.xsl writes as they
+% are; gml.tex's \gml@char{n}): gml.tex's own renderings win (Latin-1, typographic punctuation);
 % a code point without one and with a CJK \kcatcode (16 and up) is
 % \kchar, in the Japanese font in effect.
 \let\gml@tate@char\gml@char
@@ -89,7 +89,6 @@
     \else\expandafter\expandafter\expandafter\gml@tate@char\fi
   \else\expandafter\gml@tate@char\fi{#1}}
 \def\gml@jchar#1{\kchar#1\ignorespaces}
-\let\gmlchar\gml@char
 % \xspcode of ":" is 2 in the format (\xkanjiskip only after it, as after
 % a word); here a colon mostly starts a GML tag in the text (と:rt.), so
 % a Latin word that begins with one has the space on both sides too.
@@ -191,10 +190,10 @@
 % ---- ruby ----------------------------------------------------------------------------
 % tex.xsl pairs the bases and readings of a :ruby and works out the
 % placement (after pxrubrica); here a ruby is one box (no break inside)
-% and each pair is \gmlruby{k}{m|g}{shift}{base}{reading}: the base at
-% its natural width, the reading in half-size type centred on it (g:
-% spread over it, \gmlrubysp between the characters, 1:2:1) and moved
-% by the shift (a dimension), in a box of no width, height or depth, so
+% and each pair is <,rb k=K,shift=S[,spread]>{base}{reading}: the base
+% at its natural width, the reading in half-size type centred on it
+% (spread: spread over it, <,rs> between the characters, 1:2:1) and
+% moved by the shift (a dimension), in a box of no width, height or depth, so
 % a long reading overhangs the characters around it and the line
 % spacing stays.  The reading sits against the base, as pxrubrica puts
 % it: raised by .5zw + .5 of its own zw in tate (to the right of the
@@ -206,7 +205,7 @@
 % prefix of a tag set's own symbols: the engine keeps them out of the
 % symbol file, so they do not make two passes' JOB.sym differ.
 \newbox\gml@rbbox \newbox\gml@rtbox
-\def\gmlrubysp{\hskip\z@ plus2fil\relax}
+\gmldefhint{rs}{\hskip\z@ plus2fil\relax}
 % pTeX puts \kanjiskip or \xkanjiskip next to a box by the first and last
 % characters that it finds in it, and a shifted box (the reading) hides
 % the ones after it: the end of a ruby is its base, as pTeX wants it,
@@ -229,17 +228,18 @@
     \fi\fi\fi}
 \def\gml@rubyfont{\def\gml@jscale{.5}\gml@jsel}
 \gmldefhend{ruby}{\egroup}
-\def\gmlruby#1#2#3#4#5{%
-  \setbox\gml@rbbox\hbox{#4}%
-  \setbox\gml@rtbox\hbox{\gml@rubyfont\let\gmlrubysp\relax#5}%
-  \def\gml@tmpa{#1}%
-  \ifgml@reffile\ifx\gml@tmpa\empty\else
-    \immediate\write\gml@refout{.se px@rbw(#1) = \number\wd\gml@rbbox}%
-    \immediate\write\gml@refout{.se px@rbr(#1) = \number\wd\gml@rtbox}\fi\fi
-  \if g#2\setbox\gml@rtbox\hbox to\wd\gml@rbbox{\gml@rubyfont
-      \hskip\z@ plus1fil#5\hskip\z@ plus1fil}\fi
+\gmldefhint{rb}#1#2{\gml@hget{k}\gml@rbk \gml@hget{shift}\gml@rbshift
+  \gml@hget{spread}\gml@rbspread
+  \setbox\gml@rbbox\hbox{#1}%
+  \setbox\gml@rtbox\hbox{\gml@rubyfont
+    \expandafter\let\csname gml@hint@rs\endcsname\empty#2}%
+  \ifgml@reffile\ifx\gml@rbk\empty\else
+    \immediate\write\gml@refout{.se px@rbw(\gml@rbk) = \number\wd\gml@rbbox}%
+    \immediate\write\gml@refout{.se px@rbr(\gml@rbk) = \number\wd\gml@rtbox}\fi\fi
+  \ifx\gml@rbspread\gml@yes\setbox\gml@rtbox\hbox to\wd\gml@rbbox{\gml@rubyfont
+      \hskip\z@ plus1fil#2\hskip\z@ plus1fil}\fi
   \gml@dima\wd\gml@rbbox \advance\gml@dima-\wd\gml@rtbox
-  \gml@dima.5\gml@dima \advance\gml@dima#3\relax
+  \gml@dima.5\gml@dima \advance\gml@dima\gml@rbshift\relax
   \iftdir\gml@dimb.75zw\else\gml@dimb.94zw\fi
   \setbox\gml@rtbox\hbox to\z@{\kern\gml@dima\raise\gml@dimb\box\gml@rtbox\hss}%
   \ht\gml@rtbox\z@ \dp\gml@rtbox\z@

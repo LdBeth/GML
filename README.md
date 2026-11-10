@@ -201,8 +201,16 @@ The stylesheet parameters (`SYSVARS`/`SYSVARD`/`SYSVART` page layouts,
   (raw backend text).  `.xd name [closes=a,b] [closedby=x,y] [empty]
   [eol] [noid] [inline|block]` gives an element model for implicit closing
   (`noid`: its `id` is not a document id, as for `:rdef`).
-- **TeX.** `share/tex/gml.tex` reads `gmllocal.tex` from TEXINPUTS at
-  its end.  Redefine styles there with `\gmldefstart{h1}{...}`,
+- **TeX.** The file tex.xsl writes is a few settings, `\input gml` and,
+  after `\gml`, a body in a compact markup that gml.tex reads natively
+  (`<` and `&` are its only active characters): `<NAME ATTRS>` ... `<>`
+  an element (`<:NAME ..>` for `gml:NAME`), `<.NAME ATTRS>` a breaking
+  hint and `<,NAME ATTRS>` one that does not, `&N;` a character by its
+  code point, `<?pn ID>` a page question, and a few hints with brace
+  arguments (`<,toc-entry level=1>{num}{text}{page}`); ATTRS is
+  `k=v,k=v`, a bare `k` for `k=yes`.  The headers of `xslt/tex.xsl`
+  and `gml.tex` list every form.  `share/tex/gml.tex` reads
+  `gmllocal.tex` from TEXINPUTS at its end.  Redefine styles there with `\gmldefstart{h1}{...}`,
   `\gmldefend`, `\gmldefhint{sp}{...}`, `\gmldeflines`, `\gmldefnum`,
   `\gmldefchar` and `\gmldeffont`.  The tex.xsl parameters
   `tex-input`/`tex-preamble` load your own macro file or preamble.
@@ -231,7 +239,13 @@ The stylesheet parameters (`SYSVARS`/`SYSVARD`/`SYSVART` page layouts,
   writes `\def\gmltagset{path}` before `\input gml`; gml.tex inputs it at
   its end, before `gmllocal.tex` (so the most local file wins).  For
   hint mode (a formatting profile) it gives its elements styles with
-  `\gmldefhstart`/`\gmldefhend`.
+  `\gmldefhstart`/`\gmldefhend`.  A bundle's `tex.xsl` writes markup
+  only through the writer functions of the stock one (`t:open`,
+  `t:close`, `t:hint`, `t:anchor`, `t:attrs`, `t:ref` ...: its header),
+  and raw TeX in it may use backslash commands but never a raw `<` or
+  `&`; its own constructs are hints that `tagset.tex` defines with
+  `\gmldefhint{NAME}#1#2{...}` (brace arguments after the tag), and
+  `tagset.tex` may redefine `\gml@char` (what `&N;` calls).
   A bundle's profile may choose its master by the logical device, as
   DCF profiles do: `.if &$LDEV eq HTML` imbed `starter` (the semantic
   profile, for the HTML), else `dcfstarter` (the formatting profile,
@@ -403,7 +417,10 @@ insert`, with an `.xd` model, and math (`:m`, `:fml` numbered displays,
 `:fmlref`).  The tags are handled per backend without touching the
 shipped files, by the tag set `examples/notes/`: its `profile.gml`
 defines them, its stylesheets import the stock stages and add rules for
-them, and `tagset.tex` styles them for TeX.  One document, one profile
+them, and `tagset.tex` styles them for TeX (the math text is TeX,
+written as it is but for `<`, `&` and `%`, which are `\noteslt`,
+`\notesamp` and `\%`: in the generated body `<` and `&` are markup).
+One document, one profile
 per application: `profile.gml` imbeds `starter` for the logical device
 HTML (`-set '$LDEV=HTML'`, given by `gmlfmt -to html` and the examples'
 mkfile), so the HTML is the semantic profile's, and `dcfstarter`
@@ -435,11 +452,14 @@ spacing the base, and the readings of one ruby moved apart as little
 as they can be where they would overlap (東京/とうきょう).  The widths
 come from the passes: the profile numbers each `:rt`, TeX writes the
 measured widths of each base and reading to the aux file (`.se
-rb@w(k)`, `.se rb@r(k)`, in sp), and the next pass's profile puts them
+px@rbw(k)`, `.se px@rbr(k)`, in sp), and the next pass's profile puts them
 on the `:rt` (`.xa bw= rw=`) for tex.xsl; on the first pass they are
-estimated from the characters.  `tex.xsl` also writes Japanese text as
-it is, in UTF-8 (the CJK blocks, which upTeX reads as kanji), not as
-`\gmlchar{n}`.  `tagset.tex` (a pTeX engine only) makes
+estimated from the characters.  Each pair is a hint with the base and
+the reading as arguments, `<,rb k=10,shift=0sp,spread>{明日}{あ<,rs>す}`
+(`spread`: spread over the base, `<,rs>` between its characters).
+`tex.xsl` also writes Japanese text as it is, in UTF-8 (the CJK
+blocks, which upTeX reads as kanji), not as character references
+`&n;`.  `tagset.tex` (a pTeX engine only) makes
 the main vertical list tate (A5, 44 characters to the line), ships each
 page in a horizontal box so that the running heading and footing (the
 page number) stay horizontal, both at the top of the page, sets the
@@ -654,7 +674,7 @@ in them may be longer than ten characters.
   character that is not a letter or digit as `#HH` (hexadecimal), so
   `gml.tc.1` is `pa@gml@tc@1` and `q1.12.3` is `pq@1@12@3`.  With `-aux`, every reference to `&$PN` or `&$LC` (also
   `.se x = &`) is a question: the hint `gml:query id=ID what=pn|lc`
-  where it is made, `\gmlquery{ID}{pn|lc}` in the TeX (scope.xsl
+  where it is made, `<?pn ID>` or `<?lc ID>` in the TeX (scope.xsl
   passes it, html.xsl and strip-hints.xsl drop it), answered from the
   previous pass's file (1 and 60 when it has no answer).  `pn` is the
   page number (absolute) of the page the place of the question is put
@@ -750,7 +770,7 @@ still differs from IBM's output: `.cd` columns are ignored, the
 table of contents is empty (DSMPROF3's `.tc` comes before the
 headings, and there is one pass; see `&$PASS`), and some quotation
 marks are not right yet.  The page number `&` in running headings and
-footings (`\gmlpageno`, so a text `&` there stays an ampersand) and
+footings (`<,pageno>`, so a text `&` there stays an ampersand) and
 the `.pi`/`.ix` index with its page numbers are typeset.
 
 The SH35-0070 Language Reference, which defines most of these, has no

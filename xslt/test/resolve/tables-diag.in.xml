@@ -8,7 +8,10 @@
      before the table wins; a quarter turn without MINDEPTH (022 for the
      one with a MINDEPTH of *), a zero proportional width, absolute widths
      that fill a WIDTH= in picas, too few CWIDTHS (no message), a :c past
-     the last cell of a header (023: its text joins the cell before) -->
+     the last cell of a header (023: its text joins the cell before); an rdef
+     inside a table: the rows of that id, and the footer that comes first
+     in the output, are written in full; a row of another id refers to
+     its rdef -->
 <gml:doc xmlns:gml="urn:x-gml:canonical"><body>
 <rdef id="hole" arrange="1 1 2 / 3 1 1" cwidths="* * *"/>
 <rdef id="ragged" arrange="1 2 3 / 4 x" cwidths="1i *"/>
@@ -29,4 +32,5 @@
 <table refid="rot"><thd><c>h1</c><c>h2</c><c>h3</c></thd><row><c>u</c></row></table>
 <table refid="wide" width="40p"><row><c>v</c></row></table>
 <table refid="few"><row><c>f</c></row></table>
+<table refid="wide"><row><c>w1</c></row><rdef id="Wide" cwidths="1i"/><row><c>w2</c></row><row refid="few"><c>w3</c></row><tft refid="wide"><c>w4</c></tft></table>
 </body></gml:doc>

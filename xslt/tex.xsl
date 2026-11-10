@@ -10,83 +10,89 @@
   Output (method text, pure ASCII):
     [\def\gmlfonts{$tex-fonts}] [\def\gmltagset{$tex-tagset}]
     [\def\gmlmode{hints}] [\def\gmlpassno{K}\def\gmlpasses{N}: the root's
-    pass= passes=, gml -pass/-passes, for gml.tex's \gmlpass]
-    \input gml ($tex-input), then $tex-preamble
-    \gmlbegindocument ... \gmlenddocument \bye
-  Dispatch scheme - one rule for source elements, one for generated ones:
-    source element NAME (h1, p, ol, fig, gml:h, gml:fn, gml:rh, gml:rf,
-      user tags ...)       \gmlstart{NAME}{k=v,...} content \gmlend{NAME}
-      gml.tex calls \gml@NAME@start / \gml@NAME@end (overridable per
-      element; an undefined element is plain text).  All attributes are
-      passed; added: text= (plain text of h0-h6, gml:h, title: for the
-      running footing), desc=yes on a figcap followed by a figdesc.
-      An element with @anchor gets \gmlanchor{anchor} as first content.
-      Tables (rdef table thd tft row c tnote tcap tdesc, and gml:cpart, a
-      part of a cell) are source elements too; gml.tex lays them out from
-      the attributes resolve.xsl puts on row and c.  tcap gets desc=yes
-      when a tdesc follows.
-      Index tags (i1 i2 i3 ih1 ih2 ih3 iref) get only the anchor (their
-      text is in gml:index-entries).
-    hint gml:NAME (empty)  \gmlhint{NAME}{k=v,...}      -> \gml@hint@NAME
-                           (gml:pageno: the page number symbol in the text of
-                           a running heading or footing, SH35-0069 p.128)
-    gml:lines              \gmlbeginlines{WORD}{k=v,...[,more=yes]}...\gmlendlines
-                           more=yes: the next gml:lines is its cont="yes"
-                           continuation (the line does not end here).
-                           (.in/.ir FOR/AFTER and .il/.un are plain hints:
-                           gml.tex counts their output lines.)
-    gml:query              \gmlquery{id}{pn|lc}  (a question of the pass model)
-    gml:symref             \gmlsymref{name}{value} (a deferred symbol reference
-                           in a running heading or footing, LR p.316)
-    gml:symval             \gmlsymval{name}{value} (its new value here)
-    gml:num                \gmlnum{label}
-    gml:pageref            \gmlpageref{anchor}{always|auto}{label}
-    generated lists        \gmltocbegin{title} \gmltocentry{level=..,..}{num}{text}{\gmlpageref..}
-                           \gmlfiglistbegin{title} \gmlfiglistentry{num=..}{label}{text}{page}
-                           \gmltlistbegin{title} \gmltlistentry{...}{label}{text}{page} \gmltlistend
-                           \gmlindexbegin{title} \gmlindexgroup{letter}
-                           \gmlindexentry{level}{term}{refs} ... \gmlindexend
-  Attribute values and text are escaped by t:esc: TeX specials $ & # %
-  become \$ \& \# \%; \ { } ^ _ ~ < > | " and every character outside
-  printable ASCII become \gmlchar{decimal code point}; "-" "-" -> "-{}-"
-  (no en-dash ligature).  In attribute values "," and "=" are \gmlchar
-  too (the key=value list).  Anchor names are reduced to [A-Za-z0-9.-]
-  (other characters as +n+) so they are safe in \csname and \write.
+    pass= passes=, for gml.tex's \gmlpass]
+    \input gml ($tex-input), $tex-preamble, [\def\gmltitlealign{..}]
+    \gml         the body starts: < and & are active from here
+    body<
+    >            closes the root: ends the document
+  Body: a tag is <...>, its first character selects the kind:
+    <NAME ATTRS> .. <>   source element NAME (h1, p, c, user tags ...),
+                         and gml:NAME as <:NAME ..>: h fn rh rf cpart
+                         lines toc-entries figlist-entries tlist-entries
+                         index-entries.  <> ends the innermost element.
+    <.NAME ATTRS>        hint gml:NAME (an empty element) that breaks
+    <,NAME ATTRS>        one that does not (break= is never written)
+    <?WHAT ID>           gml:query (a question of the pass model)
+    <=LABEL>             gml:num
+    <@NAME>              an anchor that is not an element's own (tag sets)
+    <!TEXT>              upper-case text, one per text segment
+    <_WORD> <*WORD>      a word in a .us / .uc scope
+    &N;                  the character with code point N
+  ATTRS is k=v,k=v: all attributes, a value "yes" as the bare key, a
+  value holding markup in braces.  An element with anchor= sets its
+  anchor itself.  Computed attributes (t:extra): text= on h0-h6, gml:h
+  and title (plain text, for the running footing), desc on a
+  figcap/tcap followed by a figdesc/tdesc, more on a gml:lines whose
+  next gml:lines is its cont="yes" continuation, and the keys parsed
+  from the spec of gml:df gml:dh gml:dr (below).  Index tags (i1 i2 i3
+  ih1 ih2 ih3 iref) are written empty (their text is in
+  gml:index-entries).
+  A hint may take brace arguments after the tag:
+    <,symref name=N>{value}   a deferred symbol reference (LR p.316),
+                              also in .sx fields; <,symval name=N,value=V>
+                              is its new value (a mark)
+    <:rh ..><,rundyn>{..}<>   a running heading or footing typeset on
+                              every page (page number symbol, symref)
+    <,pageno>                 the page number symbol in a .sx field
+    <,pageref refid=A,when=auto,label=L>  (when= left out if always)
+    <,toc-entry ATTRS>{num}{text}{page}   (figlist-entry, tlist-entry)
+    <,index-group letter=L> <,index-entry level=N>{term}{refs}, refs:
+      <,ixfirst> <,ixref refid=A,..> <,ixsep> <,ixrangesep>
+      <,see kind=K,label=L>{text}
+    <,tabline>{seg&9;seg}     a line holding tab characters
+    <,islabel>                before the label that a .is TO measures
+  Escaping (t:esc text, t:attr attribute values, t:name names): every
+  TeX special ($ & # % \ { } ^ _ ~ < > | ") and every character outside
+  printable ASCII is &N;, in attribute values "," and "=" too; two
+  hyphens are "-{}-".  Names (anchor, refid, symbol names) keep
+  [A-Za-z0-9.-], other characters are +n+.
+  Line ends, for lay-out only, and no "%" anywhere in the body: a tag
+  may have a newline right after its "<" (a blank inside a tag); the
+  start and end tag of a block element, every breaking hint and each
+  entry of a generated list (toc-entry ... index-entry) have one, so
+  they start a line.
   Text: in xml:space="preserve" text each blank is "\ " and lines are
-  kept (gml.tex obeys lines in format-off mode); elsewhere runs of
-  blank lines collapse to one line end (a TeX empty line would be \par)
-  and whitespace-only text next to block elements is dropped.  A line
-  containing tab characters is \gmltabline{seg\gmltab seg...}.  Words
-  inside .us/.up/.uc scopes are \gmlusword{} \gmlupword{} \gmlucword{}.
-  Lay-out only: "%" + line end after block elements and breaking hints.
-  Format-off text: text that follows a gml:fo/gml:nf hint with fill="no"
-  (until one with fill="yes") is written like xml:space="preserve" text:
-  DCF keeps the input lines, their leading blanks and blank lines when
-  formatting is off (SH35-0069 .FO), and a real profile (DSMXMP) does not
-  mark its examples xml:space="preserve".
-  Parsed operands: three definition hints get keys parsed from their spec
-  (the spec itself is kept), so gml.tex need not parse DCF syntax:
-    gml:df  os=yes us=yes up=yes (line functions; uc = us+up), font=NAME
-            (FONT operand, left out when it is an unresolved &symbol),
-            and from TYPE(...): face=quoted typeface, family=mono|sans|
-            pi|serif (guessed from the typeface), size=N|+N|-N, bold=yes,
-            italic=yes
-    gml:dh  font= tfont= spbf= skbf= spaf= (vertical: a bare number is
-            lines, p-notation "p14"/"1p6" is points), pa=yes|no,
-            align=left|right|center|inside|outside, runin=yes (NBR) |no
-            (BR), up=yes|no, us=yes|no, hy=yes|no, reset=yes (no options)
+  kept; elsewhere runs of blank lines collapse to one line end and
+  whitespace-only text next to block elements is dropped.  Format-off
+  text (after a gml:fo/gml:nf with fill="no", until fill="yes") is
+  written like preserved text: DCF keeps the input lines, their leading
+  blanks and blank lines (SH35-0069 .FO; DSMXMP marks no xml:space).
+  Parsed operands, so gml.tex need not parse DCF syntax:
+    gml:df  os us up (line functions; uc = us+up), font=NAME (FONT
+            operand, left out when an unresolved &symbol), from
+            TYPE(...): face=quoted typeface, family=mono|sans|pi|serif
+            (guessed from the typeface), size=N|+N|-N, bold, italic
+    gml:dh  font= tfont= spbf= skbf= spaf= (a bare number is lines,
+            p-notation "p14"/"1p6" points), pa=yes|no, align=left|right|
+            center|inside|outside, runin=yes (NBR)|no (BR), up= us= hy=
+            yes|no, reset (no options)
     gml:dr  rule=NAME, weight=h (WEIGHT or W operand)
-  Upper case fonts: words of text whose current font (the first name of
-  the last .bf/.pf font list that a gml:df defined; in a gml:h heading,
-  its .dh font, default hdN) has UP or UC, or in a heading whose .dh says
-  UP, are \gmlupword{} (\gmlucword{} inside .us scopes): plain TeX cannot
-  upper-case text by a font switch.
-  Mode (tex-mode): "hints" writes \def\gmlmode{hints} before \input:
-  gml.tex then leaves the layout to the hints (a real DCF profile such as
-  IBM's DSMPROF3 formats every tag with control words) and styles only
-  gml:h, gml:fn, gml:rh, gml:rf and the fig float.  "auto" (default)
-  chooses hints when a .df/.dh/.dr hint comes before the first source
-  element (a formatting profile), else "elements".
+  Upper case fonts: text whose current font (the first name of the last
+  .bf/.pf font list that a gml:df defined; in a gml:h heading, its .dh
+  font, default hdN) has UP or UC, or in a heading whose .dh says UP, is
+  <!..> (<*..> inside .us scopes): plain TeX cannot upper-case text by a
+  font switch.
+  Mode (tex-mode): "hints" writes \def\gmlmode{hints}: gml.tex then
+  leaves the layout to the hints (a real DCF profile formats every tag
+  with control words) and styles only gml:h, gml:fn, gml:rh, gml:rf and
+  the fig float.  "auto" (default) chooses hints when a .df/.dh/.dr hint
+  comes before the first source element (a formatting profile), else
+  "elements".
+  Tag sets (xsl:import): write syntax only through the functions of the
+  writer section (t:open t:close t:hint t:tag t:anchor t:attrs t:kv
+  t:arg t:esc t:attr t:name t:char t:ref); t:value t:omit t:extra
+  decide the attributes.  Raw TeX may use backslash commands but never
+  a raw "<" or "&".
 -->
 <xsl:stylesheet version="3.0"
     xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -133,18 +139,133 @@
        'rdef', 'table', 'thd', 'tft', 'row', 'c', 'tnote', 'tcap', 'tdesc', 'tlist')"/>
   <xsl:variable name="index-tags" as="xs:string*"
       select="('i1', 'i2', 'i3', 'ih1', 'ih2', 'ih3', 'iref')"/>
-  <!-- gml:* elements that are not hints -->
+  <!-- gml:* elements that are another flow, not hints -->
   <xsl:variable name="flows" as="xs:string*" select="('h', 'fn', 'rh', 'rf')"/>
+  <!-- gml:* written <:NAME ..>..<> (all others are hints) -->
+  <xsl:variable name="elements" as="xs:string*" select="
+      ($flows, 'cpart', 'lines', 'toc-entries', 'figlist-entries', 'tlist-entries',
+       'index-entries')"/>
+  <!-- generated gml:* that are neither hints nor blocks -->
   <xsl:variable name="generated" as="xs:string*" select="
-      ('doc', 'lines', 'num', 'pageref', 'toc-entries', 'toc-entry', 'entry-text',
-       'figlist-entries', 'figlist-entry', 'tlist-entries', 'tlist-entry',
-       'index-entries', 'index-group',
-       'index-entry', 'index-term', 'see', 'symref', 'symval')"/>
+      ('doc', 'lines', 'num', 'pageref', 'toc-entry', 'entry-text', 'figlist-entry',
+       'tlist-entry', 'index-group', 'index-entry', 'index-term', 'see', 'symref', 'symval')"/>
+  <!-- hints whose content is their brace argument -->
+  <xsl:variable name="arg-hints" as="xs:string*" select="('symref', 'see')"/>
+
+  <!-- ==== writers: all of the syntax ===================================== -->
+  <!-- <SIGIL NAME ATTRS>; NAME and ATTRS are escaped by the caller; $nl:
+       the tag starts a new line (a newline right after the "<") -->
+  <xsl:function name="t:tag" as="xs:string">
+    <xsl:param name="sigil" as="xs:string"/>
+    <xsl:param name="name" as="xs:string"/>
+    <xsl:param name="attrs" as="xs:string"/>
+    <xsl:param name="nl" as="xs:boolean"/>
+    <xsl:sequence select="'&lt;' || (if ($nl) then '&#10;' else '') || $sigil || $name
+                          || (if ($attrs = '') then '' else ' ' || $attrs) || '&gt;'"/>
+  </xsl:function>
+
+  <!-- an element start and end; "gml:NAME" is written ":NAME"; $block:
+       on a new line -->
+  <xsl:function name="t:open" as="xs:string">
+    <xsl:param name="name" as="xs:string"/>
+    <xsl:param name="attrs" as="xs:string"/>
+    <xsl:param name="block" as="xs:boolean"/>
+    <xsl:sequence select="t:tag('', replace($name, '^gml:', ':'), $attrs, $block)"/>
+  </xsl:function>
+
+  <xsl:function name="t:close" as="xs:string">
+    <xsl:param name="block" as="xs:boolean"/>
+    <xsl:sequence select="t:tag('', '', '', $block)"/>
+  </xsl:function>
+
+  <!-- a hint; a breaking one is on a new line -->
+  <xsl:function name="t:hint" as="xs:string">
+    <xsl:param name="name" as="xs:string"/>
+    <xsl:param name="attrs" as="xs:string"/>
+    <xsl:param name="break" as="xs:boolean"/>
+    <xsl:sequence select="t:tag(if ($break) then '.' else ',', $name, $attrs, $break)"/>
+  </xsl:function>
+
+  <xsl:function name="t:anchor" as="xs:string">
+    <xsl:param name="name" as="xs:string"/>
+    <xsl:sequence select="t:tag('@', t:name($name), '', false())"/>
+  </xsl:function>
+
+  <!-- the character reference &N; -->
+  <xsl:function name="t:ref" as="xs:string">
+    <xsl:param name="n" as="xs:integer"/>
+    <xsl:sequence select="'&amp;' || $n || ';'"/>
+  </xsl:function>
+
+  <!-- one key: "yes" is the bare key, a value holding markup is braced -->
+  <xsl:function name="t:kv" as="xs:string">
+    <xsl:param name="k" as="xs:string"/>
+    <xsl:param name="v" as="xs:string"/>
+    <xsl:sequence select="if ($v = 'yes') then $k
+        else $k || '=' || t:arg($v)"/>
+  </xsl:function>
+
+  <!-- a value holding markup in braces -->
+  <xsl:function name="t:arg" as="xs:string">
+    <xsl:param name="v" as="xs:string"/>
+    <xsl:sequence select="if (contains($v, '&lt;')) then '{' || $v || '}' else $v"/>
+  </xsl:function>
+
+  <!-- the attribute list: $atts (escaped by t:value, less t:omit) and
+       $extra, "key=value" strings with the value escaped -->
+  <xsl:function name="t:attrs" as="xs:string">
+    <xsl:param name="atts" as="attribute()*"/>
+    <xsl:param name="extra" as="xs:string*"/>
+    <xsl:sequence select="string-join((
+        for $a in $atts[not(t:omit(.))] return t:kv(name($a), t:value($a)),
+        for $x in $extra return if (contains($x, '='))
+          then t:kv(substring-before($x, '='), substring-after($x, '=')) else $x), ',')"/>
+  </xsl:function>
+
+  <!-- an attribute's value: names, the fields of a .sx, or a value -->
+  <xsl:function name="t:value" as="xs:string">
+    <xsl:param name="a" as="attribute()"/>
+    <xsl:sequence select="
+        if (local-name($a) = 'anchor' or name($a) = 'refid'
+            or (name($a) = 'name' and $a/(parent::gml:symref | parent::gml:symval)))
+        then t:name($a)
+        else if ($a/parent::gml:sx and name($a) = ('left', 'fill', 'right'))
+        then t:sx-field(string($a), string($a/../@pagesym))
+        else t:attr($a)"/>
+  </xsl:function>
+
+  <!-- attributes left out: break= of a hint (its sigil), a pageref's
+       when=always and empty label=, an empty title= of a generated list,
+       and in a table what gml.tex assumes or does not read: of a gml:cell of
+       a row definition, and of a c in a row that states its own cwidths (a
+       row that names its rdef takes the cells' options from it, so its c
+       are written as they are), the defaults, col= when it is the place
+       among its siblings and n= when it is col=; cols=; subrows=1; rdef= of
+       a row with its own cwidths; split=no and rotate=0 of the table,
+       split=no of a row in such a table -->
+  <xsl:variable name="cell-defaults" as="map(xs:string, xs:string)" select="map{
+      'colspan': '1', 'subrow': '1', 'rowspan': '1', 'hp': '0', 'align': 'left',
+      'valign': 'top', 'concat': 'yes', 'rotate': '0', 'mindepth': '*', 'shade': '0'}"/>
+  <xsl:function name="t:omit" as="xs:boolean">
+    <xsl:param name="a" as="attribute()"/>
+    <xsl:sequence select="(name($a) = 'break' and $a/parent::gml:*[not(local-name() = $elements)])
+        or ($a/parent::gml:pageref and (name($a) = 'when' and $a = 'always'
+                                        or name($a) = 'label' and $a = ''))
+        or (name($a) = 'title' and $a = '' and $a/parent::gml:*[ends-with(local-name(), '-entries')])
+        or ($a/(parent::c[parent::row/@cwidths] | parent::gml:cell) and (string($a) = $cell-defaults(name($a))
+            or name($a) = 'col' and string($a) = string(count($a/../preceding-sibling::*[name() = name($a/..)]) + 1)
+            or name($a) = 'n' and string($a) = string($a/../@col)))
+        or ($a/(parent::row | parent::rdef[gml:cell]) and (name($a) = 'cols' or name($a) = 'subrows' and $a = '1'))
+        or ($a/parent::row and (name($a) = 'rdef' and exists($a/../@cwidths)
+            or name($a) = 'split' and $a = 'no' and $a/ancestor::table[1]/@split = 'no'))
+        or ($a/parent::table and (name($a) = 'split' and $a = 'no' or name($a) = 'rotate' and $a = '0'))"/>
+  </xsl:function>
 
   <!-- ==== escaping ===================================================== -->
   <xsl:variable name="special"
       select="'[\\{}$&amp;#\^_%~&lt;&gt;|&quot;]|[^&#x20;-&#x7E;]'"/>
 
+  <!-- text; $pre: a blank is "\ " too -->
   <xsl:function name="t:esc" as="xs:string">
     <xsl:param name="s" as="xs:string"/>
     <xsl:param name="pre" as="xs:boolean"/>
@@ -154,20 +275,20 @@
     <xsl:sequence select="replace(replace($e, '--', '-{}-'), '--', '-{}-')"/>
   </xsl:function>
 
+  <!-- one character to escape (tag sets may pass some through) -->
   <xsl:function name="t:char" as="xs:string">
     <xsl:param name="c" as="xs:string"/>
     <xsl:variable name="n" select="string-to-codepoints($c)[1]"/>
     <xsl:sequence select="
         if ($c = ' ') then '\ '
-        else if ($c = ('$', '&amp;', '#', '%')) then '\' || $c
         else if ($n lt 32 or $n = 127) then ''
-        else '\gmlchar{' || $n || '}'"/>
+        else t:ref($n)"/>
   </xsl:function>
 
   <xsl:function name="t:attr" as="xs:string">
     <xsl:param name="v" as="xs:string"/>
     <xsl:sequence select="replace(replace(t:esc(translate($v, '&#9;&#10;&#13;', '   '), false()),
-                                          ',', '\\gmlchar{44}'), '=', '\\gmlchar{61}')"/>
+                                          ',', '&amp;44;'), '=', '&amp;61;')"/>
   </xsl:function>
 
   <xsl:function name="t:name" as="xs:string">
@@ -177,14 +298,7 @@
                 then codepoints-to-string($c) else concat('+', $c, '+')))"/>
   </xsl:function>
 
-  <xsl:function name="t:attrs" as="xs:string">
-    <xsl:param name="atts" as="attribute()*"/>
-    <xsl:param name="extra" as="xs:string*"/>
-    <xsl:sequence select="string-join((for $a in $atts return
-        concat(name($a), '=', if (local-name($a) = 'anchor' or name($a) = 'refid')
-                              then t:name($a) else t:attr($a)), $extra), ',')"/>
-  </xsl:function>
-
+  <!-- ==== classification ================================================= -->
   <xsl:function name="t:is-block" as="xs:boolean">
     <xsl:param name="n" as="node()?"/>
     <xsl:sequence select="exists($n[self::*]) and (name($n) = $blocks
@@ -207,160 +321,118 @@
         and not(ancestor::*[local-name() = $index-tags])]))"/>
   </xsl:function>
 
+  <!-- the computed attributes of an element or hint, "key=value" -->
+  <xsl:function name="t:extra" as="xs:string*">
+    <xsl:param name="e" as="element()"/>
+    <xsl:variable name="next" select="$e/following::gml:lines[1]"/>
+    <xsl:sequence select="
+        if ($e/(self::h0 | self::h1 | self::h2 | self::h3 | self::h4 | self::h5 | self::h6
+                | self::gml:h | self::title)) then 'text=' || t:attr(t:plain($e))
+        else if ($e/(self::figcap[following-sibling::*[1][self::figdesc]]
+                     | self::tcap[following-sibling::*[1][self::tdesc]])) then 'desc=yes'
+        else if ($e/self::gml:lines) then
+          (if ($next/@cont = 'yes' and $next/@word = $e/@word) then 'more=yes' else ())
+        else if ($e/(self::gml:df | self::gml:dh | self::gml:dr)) then
+          for $k in (if ($e/self::gml:df) then t:df-keys(string($e/@spec))
+                     else if ($e/self::gml:dh) then t:dh-keys(string($e/@spec))
+                     else t:dr-keys(string($e/@spec)))
+          return substring-before($k, '=') || '=' || t:attr(substring-after($k, '='))
+        else ()"/>
+  </xsl:function>
+
+  <!-- a running heading or footing holding the page number symbol (a .sx
+       with pagesym=, or "&" alone in its operands or text: .dc PS
+       default) or a deferred symbol reference (gml:symref, or one in a
+       .sx field): typeset by gml.tex on every page -->
+  <xsl:function name="t:is-rundyn" as="xs:boolean">
+    <xsl:param name="e" as="element()"/>
+    <xsl:sequence select="exists($e/(self::gml:rh | self::gml:rf)[
+        .//gml:sx[@pagesym or @left = '&amp;' or @fill = '&amp;' or @right = '&amp;'
+                  or (@left | @fill | @right)[contains(., '&#xE001;')]]
+        or .//gml:pageno or .//gml:symref
+        or .//text()[matches(., '(^|\s)&amp;(\s|$)')]])"/>
+  </xsl:function>
+
   <!-- ==== document ======================================================= -->
   <xsl:template match="/">
-    <xsl:if test="$tex-fonts != ''">
-      <xsl:value-of select="concat('\def\gmlfonts{', $tex-fonts, '}', $nl)"/>
-    </xsl:if>
-    <xsl:if test="$tex-tagset != ''">
-      <xsl:value-of select="concat('\def\gmltagset{', $tex-tagset, '}', $nl)"/>
-    </xsl:if>
-    <xsl:if test="$mode = 'hints'">
-      <xsl:value-of select="concat('\def\gmlmode{hints}', $nl)"/>
-    </xsl:if>
-    <!-- the pass model (gml -pass/-passes): gml.tex's \gmlpass reads them -->
-    <xsl:if test="$root/@pass and $root/@passes">
-      <xsl:value-of select="concat('\def\gmlpassno{', t:name($root/@pass), '}\def\gmlpasses{',
-                                   t:name($root/@passes), '}', $nl)"/>
-    </xsl:if>
-    <xsl:text>\input </xsl:text>
-    <xsl:value-of select="$tex-input"/>
-    <xsl:value-of select="$nl"/>
-    <xsl:if test="$tex-preamble != ''">
-      <xsl:value-of select="$tex-preamble, $nl" separator=""/>
-    </xsl:if>
-    <xsl:if test="lower-case($SYSVART) = ('right', 'left', 'center')">
-      <xsl:value-of select="concat('\def\gmltitlealign{', lower-case($SYSVART), '}', $nl)"/>
-    </xsl:if>
-    <xsl:text>\gmlbegindocument%&#10;</xsl:text>
+    <!-- the settings (pass=/passes=: the pass model, gml.tex's \gmlpass) -->
+    <xsl:value-of separator="&#10;" select="
+        ('\def\gmlfonts{' || $tex-fonts || '}')[$tex-fonts != ''],
+        ('\def\gmltagset{' || $tex-tagset || '}')[$tex-tagset != ''],
+        '\def\gmlmode{hints}'[$mode = 'hints'],
+        ('\def\gmlpassno{' || t:name(string($root/@pass)) || '}\def\gmlpasses{'
+         || t:name(string($root/@passes)) || '}')[$root/@pass and $root/@passes],
+        '\input ' || $tex-input, $tex-preamble[. != ''],
+        ('\def\gmltitlealign{' || lower-case($SYSVART) || '}')
+          [lower-case($SYSVART) = ('right', 'left', 'center')],
+        '\gml', ''"/>
     <xsl:apply-templates select="(gml:doc, *)[1]/node()"/>
-    <xsl:text>%&#10;\gmlenddocument&#10;\bye&#10;</xsl:text>
+    <xsl:value-of select="t:close(true()) || $nl"/>
   </xsl:template>
 
-  <!-- ==== source elements ================================================ -->
+  <!-- ==== elements ========================================================= -->
   <xsl:template match="*">
     <xsl:call-template name="element"/>
   </xsl:template>
 
   <xsl:template name="element">
-    <xsl:variable name="name" select="name()"/>
-    <xsl:variable name="extra" as="xs:string*">
-      <xsl:if test="self::h0 or self::h1 or self::h2 or self::h3 or self::h4 or self::h5
-                    or self::h6 or self::gml:h or self::title">
-        <xsl:sequence select="'text=' || t:attr(t:plain(.))"/>
-      </xsl:if>
-      <xsl:if test="(self::figcap and following-sibling::*[1][self::figdesc])
-                    or (self::tcap and following-sibling::*[1][self::tdesc])">
-        <xsl:sequence select="'desc=yes'"/>
-      </xsl:if>
-    </xsl:variable>
     <xsl:variable name="block" select="t:is-block(.)"/>
-    <xsl:value-of select="concat('\gmlstart{', $name, '}{', t:attrs(@*, $extra), '}')"/>
-    <xsl:if test="$block">%&#10;</xsl:if>
-    <xsl:if test="@anchor">
-      <xsl:value-of select="concat('\gmlanchor{', t:name(@anchor), '}')"/>
-    </xsl:if>
-    <xsl:if test="not($name = $index-tags)">
-      <xsl:apply-templates/>
-    </xsl:if>
-    <xsl:value-of select="concat('\gmlend{', $name, '}')"/>
-    <xsl:if test="$block">%&#10;</xsl:if>
+    <xsl:value-of select="t:open(name(), t:attrs(@*, t:extra(.)), $block)"/>
+    <xsl:choose>
+      <xsl:when test="name() = $index-tags"/>
+      <xsl:when test="t:is-rundyn(.)">
+        <xsl:value-of select="t:hint('rundyn', '', false()) || '{'"/>
+        <xsl:apply-templates/>
+        <xsl:text>}</xsl:text>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:apply-templates/>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:value-of select="t:close($block)"/>
   </xsl:template>
 
   <!-- ==== hints ============================================================= -->
-  <xsl:template match="gml:*">
-    <xsl:value-of select="concat('\gmlhint{', local-name(), '}{', t:attrs(@*, ()), '}')"/>
-    <xsl:if test="@break = 'yes'">%&#10;</xsl:if>
+  <xsl:template match="gml:*[not(local-name() = $elements)]">
+    <xsl:value-of select="t:hint(local-name(), t:attrs(@*, t:extra(.)), @break = 'yes')"/>
+    <xsl:if test="local-name() = $arg-hints">{</xsl:if>
     <xsl:apply-templates/>
+    <xsl:if test="local-name() = $arg-hints">}</xsl:if>
   </xsl:template>
 
   <!-- a question of the pass model (gml -aux, Ctx.query): gml.tex
        writes the answer to the aux file -->
   <xsl:template match="gml:query" priority="1">
-    <xsl:value-of select="concat('\gmlquery{', t:name(string(@id)), '}{', t:name(string(@what)), '}')"/>
+    <xsl:value-of select="t:tag('?', t:name(@what), t:name(@id), false())"/>
   </xsl:template>
 
-  <!-- a .sx in a running heading or footing: the page number symbol
-       (@pagesym) in its fields is the page number, \gmlpageno; any other
-       character, a text "&" too, is text.  A deferred symbol reference
-       in a field (U+E001 NAME U+E002 value U+E003, lib/doc.ml) is
-       \gmlsymref{NAME}{value} (see gml:symref); its value is text, not
-       split at the page number symbol -->
-  <xsl:template match="gml:sx[@pagesym != '' or (@left | @fill | @right)[contains(., '&#xE001;')]]"
-                priority="1">
-    <xsl:variable name="ps" select="string(@pagesym)"/>
-    <xsl:value-of select="concat('\gmlhint{sx}{', string-join(for $a in @* return
-        if (name($a) = ('left', 'fill', 'right'))
-        then name($a) || '=' || string-join(
-            analyze-string(string($a), '&#xE001;([^&#xE002;]*)&#xE002;([^&#xE003;]*)&#xE003;')/*/
-              (if (self::*:match)
-               then '\gmlsymref{' || t:name(string(*:group[@nr = 1])) || '}{'
-                    || t:attr(string(*:group[@nr = 2])) || '}'
-               else t:sx-text(string(.), $ps)))
-        else t:attrs($a, ()), ','), '}')"/>
-    <xsl:if test="@break = 'yes'">%&#10;</xsl:if>
+  <xsl:template match="gml:num" priority="1">
+    <xsl:variable name="label">
+      <xsl:apply-templates/>
+    </xsl:variable>
+    <xsl:value-of select="t:tag('=', t:arg(string($label)), '', false())"/>
   </xsl:template>
 
-  <!-- the text of a .sx field: the page number symbol $ps (none: '') is
-       \gmlpageno -->
-  <xsl:function name="t:sx-text" as="xs:string">
+  <!-- a .sx field in a running heading or footing: the page number
+       symbol $ps (none: '') is <,pageno>, any other character, a text
+       "&" too, is text.  A deferred symbol reference (U+E001 NAME U+E002
+       value U+E003, lib/doc.ml) is <,symref name=NAME>{value}; its value
+       is text, not split at the page number symbol -->
+  <xsl:function name="t:sx-field" as="xs:string">
     <xsl:param name="s" as="xs:string"/>
     <xsl:param name="ps" as="xs:string"/>
-    <xsl:sequence select="if ($ps = '') then t:attr($s)
-        else string-join(for $p in tokenize($s, $ps, 'q') return t:attr($p), '\gmlpageno{}')"/>
+    <xsl:sequence select="string-join(
+        analyze-string($s, '&#xE001;([^&#xE002;]*)&#xE002;([^&#xE003;]*)&#xE003;')/*/
+          (if (self::*:match)
+           then t:hint('symref', 'name=' || t:name(*:group[@nr = 1]), false())
+                || '{' || t:attr(*:group[@nr = 2]) || '}'
+           else if ($ps = '') then t:attr(.)
+           else string-join(tokenize(., $ps, 'q') ! t:attr(.), t:hint('pageno', '', false()))))"/>
   </xsl:function>
-
-  <!-- Rel 4: a symbol in a running heading or footing is replaced when
-       the heading is placed on a page (LR p.316).  gml:symref is a
-       reference to symbol NAME, its content the value where the heading
-       was defined: \gmlsymref{NAME}{value}, set by gml.tex with the value
-       in effect where the page starts.  gml:symval is a new value of
-       NAME at this point of the flow: \gmlsymval{NAME}{value} (a mark).
-       NAME is written as an anchor name (t:name: [A-Za-z0-9.-]). -->
-  <xsl:template match="gml:symref" priority="1">
-    <xsl:value-of select="concat('\gmlsymref{', t:name(string(@name)), '}{')"/>
-    <xsl:apply-templates/>
-    <xsl:text>}</xsl:text>
-  </xsl:template>
-  <xsl:template match="gml:symval" priority="1">
-    <xsl:value-of select="concat('\gmlsymval{', t:name(string(@name)), '}{', t:attr(string(@value)), '}')"/>
-  </xsl:template>
-
-  <xsl:template match="gml:df | gml:dh | gml:dr" priority="1">
-    <xsl:variable name="keys" as="xs:string*" select="
-        if (self::gml:df) then t:df-keys(string(@spec))
-        else if (self::gml:dh) then t:dh-keys(string(@spec))
-        else t:dr-keys(string(@spec))"/>
-    <xsl:value-of select="concat('\gmlhint{', local-name(), '}{', t:attrs(@*, ()),
-        string-join(for $k in $keys return ',' || substring-before($k, '=') || '='
-                    || t:attr(substring-after($k, '='))), '}')"/>
-  </xsl:template>
-
-  <!-- gml:h & co. are elements (another flow), not hints; gml:cpart (a
-       part of a table cell, :c n repeated) is a block element -->
-  <xsl:template match="gml:h | gml:fn | gml:rh | gml:rf | gml:cpart" priority="1">
-    <xsl:call-template name="element"/>
-  </xsl:template>
-
-  <!-- a running heading or footing holding the page number symbol (a .sx
-       with pagesym=, or "&" alone in its operands or text: .dc PS
-       default) or a deferred symbol reference (gml:symref, or one in a
-       .sx field): the content is an argument of \gmlrundyn, typeset by
-       gml.tex on every page -->
-  <xsl:template match="(gml:rh | gml:rf)[.//gml:sx[@pagesym or @left = '&amp;'
-                         or @fill = '&amp;' or @right = '&amp;'
-                         or (@left | @fill | @right)[contains(., '&#xE001;')]]
-                         or .//gml:pageno or .//gml:symref
-                         or .//text()[matches(., '(^|\s)&amp;(\s|$)')]]" priority="2">
-    <xsl:value-of select="concat('\gmlstart{', name(), '}{', t:attrs(@*, ()), '}%', $nl,
-                                 '\gmlrundyn{')"/>
-    <xsl:apply-templates/>
-    <xsl:value-of select="concat('}\gmlend{', name(), '}%', $nl)"/>
-  </xsl:template>
 
   <!-- .is TO after a label: the text (and .bf/.pf) between the last
        breaking hint and the gml:is is the start of an output line, so
-       \gmlislabel before it lets gml.tex box and measure it -->
+       <,islabel> before it lets gml.tex box and measure it -->
   <xsl:function name="t:is-label-start" as="xs:boolean">
     <xsl:param name="n" as="node()"/>
     <xsl:variable name="is" select="$n/following-sibling::node()
@@ -378,109 +450,40 @@
   </xsl:function>
 
   <xsl:template match="text() | gml:bf | gml:pf" priority="10">
-    <xsl:if test="t:is-label-start(.)">\gmlislabel </xsl:if>
+    <xsl:if test="t:is-label-start(.)">
+      <xsl:value-of select="t:hint('islabel', '', false())"/>
+    </xsl:if>
     <xsl:next-match/>
   </xsl:template>
 
-  <!-- ==== generated nodes ======================================================= -->
-  <xsl:template match="gml:num">
-    <xsl:text>\gmlnum{</xsl:text>
-    <xsl:apply-templates/>
+  <!-- ==== generated lists ======================================================= -->
+  <xsl:template match="gml:toc-entry | gml:figlist-entry | gml:tlist-entry" priority="1">
+    <xsl:value-of select="t:tag(',', local-name(), t:attrs(@*, ()), true()) || '{'"/>
+    <xsl:apply-templates select="gml:num/node()"/>
+    <xsl:text>}{</xsl:text>
+    <xsl:apply-templates select="gml:entry-text/node()"/>
+    <xsl:text>}{</xsl:text>
+    <xsl:apply-templates select="gml:pageref"/>
     <xsl:text>}</xsl:text>
   </xsl:template>
 
-  <xsl:template match="gml:pageref">
-    <xsl:value-of select="concat('\gmlpageref{', t:name(@refid), '}{',
-        (@when, 'always')[1], '}{', t:attr(string(@label)), '}')"/>
-  </xsl:template>
-
-  <xsl:template match="gml:lines">
-    <xsl:variable name="next" select="following::gml:lines[1]"/>
-    <xsl:variable name="more" select="if ($next/@cont = 'yes' and $next/@word = @word)
-                                      then 'more=yes' else ()"/>
-    <xsl:value-of select="concat('\gmlbeginlines{', @word, '}{', t:attrs(@* except @word, $more), '}')"/>
-    <xsl:apply-templates/>
-    <xsl:text>\gmlendlines{}</xsl:text>
-  </xsl:template>
-
-  <xsl:template match="gml:toc-entries">
-    <xsl:value-of select="concat('\gmltocbegin{', t:esc(string(@title), false()), '}%', $nl)"/>
-    <xsl:apply-templates select="gml:toc-entry"/>
-    <xsl:text>\gmltocend%&#10;</xsl:text>
-  </xsl:template>
-
-  <xsl:template match="gml:toc-entry">
-    <xsl:value-of select="concat('\gmltocentry{', t:attrs(@*, ()), '}{')"/>
-    <xsl:apply-templates select="gml:num/node()"/>
-    <xsl:text>}{</xsl:text>
-    <xsl:apply-templates select="gml:entry-text/node()"/>
-    <xsl:text>}{</xsl:text>
-    <xsl:apply-templates select="gml:pageref"/>
-    <xsl:text>}%&#10;</xsl:text>
-  </xsl:template>
-
-  <xsl:template match="gml:figlist-entries">
-    <xsl:value-of select="concat('\gmlfiglistbegin{', t:esc(string(@title), false()), '}%', $nl)"/>
-    <xsl:apply-templates select="gml:figlist-entry"/>
-    <xsl:text>\gmlfiglistend%&#10;</xsl:text>
-  </xsl:template>
-
-  <xsl:template match="gml:figlist-entry">
-    <xsl:value-of select="concat('\gmlfiglistentry{', t:attrs(@*, ()), '}{')"/>
-    <xsl:apply-templates select="gml:num/node()"/>
-    <xsl:text>}{</xsl:text>
-    <xsl:apply-templates select="gml:entry-text/node()"/>
-    <xsl:text>}{</xsl:text>
-    <xsl:apply-templates select="gml:pageref"/>
-    <xsl:text>}%&#10;</xsl:text>
-  </xsl:template>
-
-  <xsl:template match="gml:tlist-entries">
-    <xsl:value-of select="concat('\gmltlistbegin{', t:esc(string(@title), false()), '}%', $nl)"/>
-    <xsl:apply-templates select="gml:tlist-entry"/>
-    <xsl:text>\gmltlistend%&#10;</xsl:text>
-  </xsl:template>
-
-  <xsl:template match="gml:tlist-entry">
-    <xsl:value-of select="concat('\gmltlistentry{', t:attrs(@*, ()), '}{')"/>
-    <xsl:apply-templates select="gml:num/node()"/>
-    <xsl:text>}{</xsl:text>
-    <xsl:apply-templates select="gml:entry-text/node()"/>
-    <xsl:text>}{</xsl:text>
-    <xsl:apply-templates select="gml:pageref"/>
-    <xsl:text>}%&#10;</xsl:text>
-  </xsl:template>
-
-  <xsl:template match="gml:index-entries">
-    <xsl:value-of select="concat('\gmlindexbegin{', t:esc(string(@title), false()), '}%', $nl)"/>
-    <xsl:apply-templates select="gml:index-group"/>
-    <xsl:text>\gmlindexend%&#10;</xsl:text>
-  </xsl:template>
-
-  <xsl:template match="gml:index-group">
-    <xsl:value-of select="concat('\gmlindexgroup{', t:esc(string(@letter), false()), '}%', $nl)"/>
+  <xsl:template match="gml:index-group" priority="1">
+    <xsl:value-of select="t:tag(',', 'index-group', t:attrs(@*, ()), true())"/>
     <xsl:apply-templates select="gml:index-entry"/>
   </xsl:template>
 
-  <xsl:template match="gml:index-entry">
-    <xsl:value-of select="concat('\gmlindexentry{', (@level, '1')[1], '}{')"/>
+  <xsl:template match="gml:index-entry" priority="1">
+    <xsl:value-of select="t:tag(',', 'index-entry', t:kv('level', t:attr((@level, '1')[1])), true()) || '{'"/>
     <xsl:apply-templates select="gml:index-term/node()"/>
     <xsl:text>}{</xsl:text>
-    <xsl:if test="gml:pageref">\gmlindexfirst </xsl:if>
     <xsl:for-each select="gml:pageref">
-      <xsl:if test="position() gt 1">
-        <xsl:value-of select="if (preceding-sibling::gml:pageref[1]/@range = 'start')
-                              then '\gmlindexrangesep ' else '\gmlindexsep '"/>
-      </xsl:if>
-      <xsl:value-of select="concat('\gmlindexref{', t:name(@refid), '}{',
-          t:attrs(@major | @range | @text, ()), '}')"/>
+      <xsl:value-of select="t:hint(if (position() = 1) then 'ixfirst'
+          else if (preceding-sibling::gml:pageref[1]/@range = 'start') then 'ixrangesep'
+          else 'ixsep', '', false()),
+          t:hint('ixref', t:attrs((@refid, @major, @range, @text), ()), false())" separator=""/>
     </xsl:for-each>
-    <xsl:for-each select="gml:see">
-      <xsl:value-of select="concat('\gmlsee{', @kind, '}{', t:esc(string(@label), false()), '}{')"/>
-      <xsl:apply-templates/>
-      <xsl:text>}</xsl:text>
-    </xsl:for-each>
-    <xsl:text>}%&#10;</xsl:text>
+    <xsl:apply-templates select="gml:see"/>
+    <xsl:text>}</xsl:text>
     <xsl:apply-templates select="gml:index-entry"/>
   </xsl:template>
 
@@ -703,6 +706,7 @@
     </xsl:choose>
   </xsl:template>
 
+  <!-- text: lines, a line with tabs is <,tabline>{seg&9;seg..} -->
   <xsl:function name="t:text" as="xs:string">
     <xsl:param name="s" as="xs:string"/>
     <xsl:param name="pre" as="xs:boolean"/>
@@ -711,22 +715,23 @@
     <xsl:sequence select="string-join(
         for $line in tokenize($s1, '\n') return
           if (contains($line, '&#9;'))
-          then concat('\gmltabline{', string-join(for $seg in tokenize($line, '&#9;')
-                                                  return t:seg($seg, $pre, $word), '\gmltab '), '}')
+          then t:hint('tabline', '', false()) || '{' || string-join(
+                 for $seg in tokenize($line, '&#9;') return t:seg($seg, $pre, $word), t:ref(9)) || '}'
           else t:seg($line, $pre, $word),
         $nl)"/>
   </xsl:function>
 
+  <!-- a segment of text; $word: up = one <!..> around its words, us uc =
+       <_..> <*..> around each word -->
   <xsl:function name="t:seg" as="xs:string">
     <xsl:param name="s" as="xs:string"/>
     <xsl:param name="pre" as="xs:boolean"/>
     <xsl:param name="word" as="xs:string"/>
-    <xsl:variable name="wrap" select="if ($word = 'us') then '\gmlusword{'
-        else if ($word = 'up') then '\gmlupword{' else if ($word = 'uc') then '\gmlucword{' else ''"/>
-    <xsl:sequence select="if ($wrap = '') then t:esc($s, $pre)
-        else string-join(analyze-string($s, '\S+')/*/
-            (if (self::*:match) then concat($wrap, t:esc(string(.), $pre), '}')
-             else t:esc(string(.), $pre)))"/>
+    <xsl:variable name="sigil" select="map{'up': '!', 'us': '_', 'uc': '*'}($word)"/>
+    <xsl:variable name="re" select="if ($word = 'up') then '\S(.*\S)?' else '\S+'"/>
+    <xsl:sequence select="if (empty($sigil)) then t:esc($s, $pre)
+        else string-join(analyze-string($s, $re)/*/
+            (if (self::*:match) then t:tag($sigil, t:esc(., $pre), '', false()) else t:esc(., $pre)))"/>
   </xsl:function>
 
 </xsl:stylesheet>

@@ -1,6 +1,7 @@
 % write the value the footing gets on each page to JOB.heads
+% (<,symref name=N>{V} puts out \gml@symref{N}{V})
 \catcode`\@=11
 \newwrite\heads \immediate\openout\heads=\jobname.heads
-\def\gmlsymref#1#2{\gml@symget{#1}{#2}\gml@symv
+\def\gml@symref#1#2{\gml@symget{#1}{#2}\gml@symv
   \immediate\write\heads{page \the\pageno: #1 = [\gml@symv]}}
 \catcode`\@=12

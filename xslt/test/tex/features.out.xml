@@ -1,127 +1,126 @@
 \input gml
-\gmlbegindocument%
-\gmlstart{gdoc}{}%
-\gmlstart{frontm}{}%
-\gmlstart{titlep}{}%
-\gmlstart{title}{text=Test}%
-Test\gmlend{title}%
-\gmlend{titlep}%
-\gmlstart{toc}{}%
-\gmltocbegin{Table of Contents}%
-\gmltocentry{level=1,refid=intro,section=body,num=1.0}{1.0}{Introduction}{\gmlpageref{intro}{always}{}}%
-\gmltocentry{level=2,refid=sub,section=body,num=1.1}{1.1}{Sub \gmlstart{hp1}{}section\gmlend{hp1}}{\gmlpageref{sub}{always}{}}%
-\gmltocentry{level=3,refid=gml-h3-1,section=body,num=1.1.1}{1.1.1}{Third}{\gmlpageref{gml-h3-1}{always}{}}%
-\gmltocentry{level=4,refid=gml-h4-1,section=body,num=1.1.1.1}{1.1.1.1}{Fourth}{\gmlpageref{gml-h4-1}{always}{}}%
-\gmltocentry{level=1,refid=appa,section=appendix,num=A}{Appendix A.}{Extra}{\gmlpageref{appa}{always}{}}%
-\gmltocentry{level=2,refid=gml-h2-2,section=appendix,num=A.1}{A.1}{Appsub}{\gmlpageref{gml-h2-2}{always}{}}%
-\gmltocend%
-\gmlend{toc}%
-\gmlstart{figlist}{}%
-\gmlfiglistbegin{List of Illustrations}%
-\gmlfiglistentry{refid=f1,num=1}{Figure\gmlchar{160}1}{First fig}{\gmlpageref{f1}{always}{}}%
-\gmlfiglistentry{refid=gml-fig-2,num=2}{Figure\gmlchar{160}2}{Second}{\gmlpageref{gml-fig-2}{always}{}}%
-\gmlfiglistend%
-\gmlend{figlist}%
-\gmlstart{preface}{}%
-\gmlstart{h1}{anchor=gml-h1-1,text=Preface head}%
-\gmlanchor{gml-h1-1}Preface head\gmlend{h1}%
-\gmlstart{p}{}%
-Pre.
-\gmlend{p}%
-\gmlend{preface}%
-\gmlend{frontm}%
-\gmlstart{body}{}%
-\gmlstart{h1}{id=intro,num=1.0,anchor=intro,text=Introduction}%
-\gmlanchor{intro}\gmlnum{1.0}Introduction\gmlend{h1}%
-\gmlstart{p}{}%
-Text.\gmlstart{fn}{id=fa,num=1,anchor=fa,callout=no}\gmlanchor{fa}\gmlnum{1}Footnote with id.\gmlend{fn} More\gmlstart{fn}{num=2,anchor=gml-fn-2,callout=yes}\gmlanchor{gml-fn-2}\gmlnum{2}Plain footnote.\gmlend{fn}
-See \gmlstart{fnref}{refid=fa,resolved=yes,target=fn,num=1}1\gmlend{fnref}.
-\gmlend{p}%
-\gmlstart{ol}{nest=1}%
-\gmlstart{li}{id=l1,num=1,anchor=l1}%
-\gmlanchor{l1}\gmlnum{1.}one
-\gmlend{li}%
-\gmlstart{li}{num=2}%
-\gmlnum{2.}two
-\gmlstart{ol}{nest=2}%
-\gmlstart{li}{id=l2,num=a,anchor=l2}%
-\gmlanchor{l2}\gmlnum{a.}two-a
-\gmlstart{ul}{nest=1}%
-\gmlstart{li}{}%
-bullet
-\gmlstart{ol}{nest=3}%
-\gmlstart{li}{id=l3,num=1,anchor=l3}%
-\gmlanchor{l3}\gmlnum{1)}deep
-\gmlend{li}%
-\gmlend{ol}%
-\gmlend{li}%
-\gmlend{ul}%
-\gmlend{li}%
-\gmlend{ol}%
-\gmlend{li}%
-\gmlend{ol}%
-\gmlstart{p}{}%
-Ref \gmlstart{liref}{refid=l2,resolved=yes,target=li,num=a}a.\gmlpageref{l2}{auto}{on page}\gmlend{liref} and \gmlstart{liref}{refid=nope,resolved=no}LI nope unknown\gmlend{liref} and \gmlstart{hdref}{refid=sub,page=yes,resolved=yes,target=h2,num=1.1}\gmlchar{8220}Sub \gmlstart{hp1}{}section\gmlend{hp1}\gmlchar{8221}\gmlpageref{sub}{always}{on page}\gmlend{hdref} \gmlstart{hdref}{refid=bad,resolved=no}Heading bad unknown\gmlend{hdref}.
-\gmlend{p}%
-\gmlstart{h2}{id=sub,num=1.1,anchor=sub,text=Sub section}%
-\gmlanchor{sub}\gmlnum{1.1}Sub \gmlstart{hp1}{}section\gmlend{hp1}\gmlend{h2}%
-\gmlstart{fig}{id=f1,num=1,anchor=f1}%
-\gmlanchor{f1}body
-\gmlstart{figcap}{}%
-\gmlnum{Figure\gmlchar{160}1.}First fig\gmlend{figcap}%
-\gmlend{fig}%
-\gmlstart{fig}{num=2,anchor=gml-fig-2}%
-\gmlanchor{gml-fig-2}\gmlstart{figcap}{desc=yes}%
-\gmlnum{Figure\gmlchar{160}2.}Second\gmlend{figcap}%
-\gmlstart{figdesc}{}%
-desc
-\gmlend{figdesc}%
-\gmlend{fig}%
-\gmlstart{p}{}%
-\gmlstart{figref}{refid=f1,resolved=yes,target=fig,num=1}Figure\gmlchar{160}1\gmlpageref{f1}{auto}{on page}\gmlend{figref} \gmlstart{figref}{refid=f1,page=no,resolved=yes,target=fig,num=1}Figure\gmlchar{160}1\gmlpageref{f1}{auto}{on page}\gmlend{figref} \gmlstart{figref}{refid=zz,resolved=no}Figure zz unknown\gmlend{figref}.
-\gmlstart{i1}{id=ia,anchor=ia}\gmlanchor{ia}\gmlend{i1}
-\gmlstart{i2}{id=ib,anchor=ib}\gmlanchor{ib}\gmlend{i2}
-\gmlstart{i3}{anchor=gml-i3-1}\gmlanchor{gml-i3-1}\gmlend{i3}
-\gmlstart{i1}{pg=major,anchor=gml-i1-2}\gmlanchor{gml-i1-2}\gmlend{i1}
-\gmlstart{ih1}{see=Apple,anchor=gml-ih1-1}\gmlanchor{gml-ih1-1}\gmlend{ih1}
-\gmlstart{ih1}{seeid=ia,anchor=gml-ih1-2}\gmlanchor{gml-ih1-2}\gmlend{ih1}
-\gmlstart{iref}{refid=ia,anchor=gml-iref-1}\gmlanchor{gml-iref-1}\gmlend{iref}\gmlstart{iref}{refid=ib,pg=start,anchor=gml-iref-2}\gmlanchor{gml-iref-2}\gmlend{iref}\gmlstart{i2}{refid=ia,anchor=gml-i2-2}\gmlanchor{gml-i2-2}\gmlend{i2}\gmlhint{in}{left=5,unit=ch,break=yes}%
-\gmlend{p}%
-\gmlstart{p}{}%
-indented
-\gmlhint{bf}{font=hi1,break=no}font
-\gmlend{p}%
-\gmlstart{h3}{num=1.1.1,anchor=gml-h3-1,text=Third}%
-\gmlanchor{gml-h3-1}\gmlnum{1.1.1}Third\gmlend{h3}%
-\gmlstart{h4}{num=1.1.1.1,anchor=gml-h4-1,text=Fourth}%
-\gmlanchor{gml-h4-1}\gmlnum{1.1.1.1}Fourth\gmlend{h4}%
-\gmlstart{h5}{anchor=gml-h5-1,text=Fifth}%
-\gmlanchor{gml-h5-1}Fifth\gmlend{h5}%
-\gmlend{body}%
-\gmlstart{appendix}{}%
-\gmlstart{h1}{id=appa,num=A,anchor=appa,text=Extra}%
-\gmlanchor{appa}\gmlnum{Appendix A.}Extra\gmlend{h1}%
-\gmlstart{h2}{num=A.1,anchor=gml-h2-2,text=Appsub}%
-\gmlanchor{gml-h2-2}\gmlnum{A.1}Appsub\gmlend{h2}%
-\gmlend{appendix}%
-\gmlstart{backm}{}%
-\gmlstart{index}{}%
-\gmlindexbegin{Index}%
-\gmlindexgroup{A}%
-\gmlindexentry{1}{Apple}{\gmlindexfirst \gmlindexref{ia}{}\gmlindexsep \gmlindexref{gml-iref-1}{}}%
-\gmlindexentry{2}{Green}{\gmlindexfirst \gmlindexref{gml-i2-2}{}}%
-\gmlindexentry{2}{Red}{\gmlindexfirst \gmlindexref{ib}{}\gmlindexsep \gmlindexref{gml-iref-2}{range=start}}%
-\gmlindexentry{3}{Deep}{\gmlindexfirst \gmlindexref{gml-i3-1}{}}%
-\gmlindexgroup{B}%
-\gmlindexentry{1}{banana}{\gmlindexfirst \gmlindexref{gml-i1-2}{major=yes}}%
-\gmlindexgroup{F}%
-\gmlindexentry{1}{Fruit}{\gmlsee{see}{See}{Apple}}%
-\gmlindexgroup{P}%
-\gmlindexentry{1}{Pome}{\gmlsee{see}{See}{Apple}}%
-\gmlindexend%
-\gmlend{index}%
-\gmlend{backm}%
-\gmlend{gdoc}%
-%
-\gmlenddocument
-\bye
+\gml
+<
+gdoc><
+frontm><
+titlep><
+title text=Test>Test<
+><
+><
+toc><
+:toc-entries title=Table of Contents><
+,toc-entry level=1,refid=intro,section=body,num=1.0>{1.0}{Introduction}{<,pageref refid=intro>}<
+,toc-entry level=2,refid=sub,section=body,num=1.1>{1.1}{Sub <hp1>section<>}{<,pageref refid=sub>}<
+,toc-entry level=3,refid=gml-h3-1,section=body,num=1.1.1>{1.1.1}{Third}{<,pageref refid=gml-h3-1>}<
+,toc-entry level=4,refid=gml-h4-1,section=body,num=1.1.1.1>{1.1.1.1}{Fourth}{<,pageref refid=gml-h4-1>}<
+,toc-entry level=1,refid=appa,section=appendix,num=A>{Appendix A.}{Extra}{<,pageref refid=appa>}<
+,toc-entry level=2,refid=gml-h2-2,section=appendix,num=A.1>{A.1}{Appsub}{<,pageref refid=gml-h2-2>}<
+><
+><
+figlist><
+:figlist-entries title=List of Illustrations><
+,figlist-entry refid=f1,num=1>{Figure&160;1}{First fig}{<,pageref refid=f1>}<
+,figlist-entry refid=gml-fig-2,num=2>{Figure&160;2}{Second}{<,pageref refid=gml-fig-2>}<
+><
+><
+preface><
+h1 anchor=gml-h1-1,text=Preface head>Preface head<
+><
+p>Pre.
+<
+><
+><
+><
+body><
+h1 id=intro,num=1.0,anchor=intro,text=Introduction><=1.0>Introduction<
+><
+p>Text.<fn id=fa,num=1,anchor=fa,callout=no><=1>Footnote with id.<> More<fn num=2,anchor=gml-fn-2,callout><=2>Plain footnote.<>
+See <fnref refid=fa,resolved,target=fn,num=1>1<>.
+<
+><
+ol nest=1><
+li id=l1,num=1,anchor=l1><=1.>one
+<
+><
+li num=2><=2.>two
+<
+ol nest=2><
+li id=l2,num=a,anchor=l2><=a.>two-a
+<
+ul nest=1><
+li>bullet
+<
+ol nest=3><
+li id=l3,num=1,anchor=l3><=1)>deep
+<
+><
+><
+><
+><
+><
+><
+><
+><
+p>Ref <liref refid=l2,resolved,target=li,num=a>a.<,pageref refid=l2,when=auto,label=on page><> and <liref refid=nope,resolved=no>LI nope unknown<> and <hdref refid=sub,page,resolved,target=h2,num=1.1>&8220;Sub <hp1>section<>&8221;<,pageref refid=sub,label=on page><> <hdref refid=bad,resolved=no>Heading bad unknown<>.
+<
+><
+h2 id=sub,num=1.1,anchor=sub,text=Sub section><=1.1>Sub <hp1>section<><
+><
+fig id=f1,num=1,anchor=f1>body
+<
+figcap><=Figure&160;1.>First fig<
+><
+><
+fig num=2,anchor=gml-fig-2><
+figcap desc><=Figure&160;2.>Second<
+><
+figdesc>desc
+<
+><
+><
+p><figref refid=f1,resolved,target=fig,num=1>Figure&160;1<,pageref refid=f1,when=auto,label=on page><> <figref refid=f1,page=no,resolved,target=fig,num=1>Figure&160;1<,pageref refid=f1,when=auto,label=on page><> <figref refid=zz,resolved=no>Figure zz unknown<>.
+<i1 id=ia,anchor=ia><>
+<i2 id=ib,anchor=ib><>
+<i3 anchor=gml-i3-1><>
+<i1 pg=major,anchor=gml-i1-2><>
+<ih1 see=Apple,anchor=gml-ih1-1><>
+<ih1 seeid=ia,anchor=gml-ih1-2><>
+<iref refid=ia,anchor=gml-iref-1><><iref refid=ib,pg=start,anchor=gml-iref-2><><i2 refid=ia,anchor=gml-i2-2><><
+.in left=5,unit=ch><
+><
+p>indented
+<,bf font=hi1>font
+<
+><
+h3 num=1.1.1,anchor=gml-h3-1,text=Third><=1.1.1>Third<
+><
+h4 num=1.1.1.1,anchor=gml-h4-1,text=Fourth><=1.1.1.1>Fourth<
+><
+h5 anchor=gml-h5-1,text=Fifth>Fifth<
+><
+><
+appendix><
+h1 id=appa,num=A,anchor=appa,text=Extra><=Appendix A.>Extra<
+><
+h2 num=A.1,anchor=gml-h2-2,text=Appsub><=A.1>Appsub<
+><
+><
+backm><
+index><
+:index-entries title=Index><
+,index-group letter=A><
+,index-entry level=1>{Apple}{<,ixfirst><,ixref refid=ia><,ixsep><,ixref refid=gml-iref-1>}<
+,index-entry level=2>{Green}{<,ixfirst><,ixref refid=gml-i2-2>}<
+,index-entry level=2>{Red}{<,ixfirst><,ixref refid=ib><,ixsep><,ixref refid=gml-iref-2,range=start>}<
+,index-entry level=3>{Deep}{<,ixfirst><,ixref refid=gml-i3-1>}<
+,index-group letter=B><
+,index-entry level=1>{banana}{<,ixfirst><,ixref refid=gml-i1-2,major>}<
+,index-group letter=F><
+,index-entry level=1>{Fruit}{<,see kind=see,label=See>{Apple}}<
+,index-group letter=P><
+,index-entry level=1>{Pome}{<,see kind=see,label=See>{Apple}}<
+><
+><
+><
+><
+>

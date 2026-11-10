@@ -12,10 +12,10 @@ string is a value.  hook.tex writes what the footing got to in.heads.
   $ transform -s:in.xml -xsl:../../xslt/resolve.xsl -o:in.r.xml
   $ transform -s:in.r.xml -xsl:../../xslt/tex.xsl -o:in.tex 'tex-preamble=\input hook'
   $ grep symval in.tex
-  \gmlsymval{sec}{Beta}Second page text.
-  \gmlsymval{sec}{Gamma}\gmlhint{pa}{break=yes}%
-  \gmlsymval{sec}{Delta}More text on the third page.
-  \gmlsymval{sec}{}\gmlhint{pa}{break=yes}%
+  .pa><,symval name=sec,value=Beta>Second page text.
+  <,symval name=sec,value=Gamma><
+  <,symval name=sec,value=Delta>More text on the third page.
+  <,symval name=sec,value=><
   $ pdftex -interaction batchmode in.tex > /dev/null
   $ cat in.heads
   page 1: sec = [Alpha]

@@ -7,7 +7,7 @@ hand.  Each pass is gml -pass k -passes n -aux JOB.gmlaux
 Pass 1 of 2: the forward references are not known yet; the profile
 prints a stand-in (the ID) and no message (DSMGML013W waits for the last
 pass, ss@last); the .tc of :toc (&$TWO = 1) is empty; every &$PN is
-a question (gml:query, \gmlquery in the TeX), answered with the neutral
+a question (gml:query, <?pn ID> in the TeX), answered with the neutral
 1 (no aux file yet).  A reference asks for its own page (q1.6.1-3)
 whether its ID is known or not, so that pass 2 asks the same
 questions.  The root element has pass= and passes=, which

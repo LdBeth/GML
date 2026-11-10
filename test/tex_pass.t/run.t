@@ -53,9 +53,9 @@ and the symbol file are those of pass 1: two passes are enough
   $ gml -profile dcfstarter -pass 2 -passes 2 -aux in.gmlaux -symbols-in in.sym -symbols-out in.sym2 -o in.xml in.gml
   $ totex
   $ grep 'See\|Back\|Lines' in.tex
-  See \gmlquery{q1.4.1}{pn}\gmlchar{8220}Two\gmlchar{8221} on page 2.
-  \gmlquery{q1.5.1}{lc}Lines left here: 37.
-  Back to \gmlquery{q1.8.1}{pn}\gmlchar{8220}One\gmlchar{8221} on page 1.
+  >See <?pn q1.4.1>&8220;Two&8221; on page 2.
+  <?lc q1.5.1>Lines left here: 37.
+  >Back to <?pn q1.8.1>&8220;One&8221; on page 1.
   $ tex -interaction batchmode in.tex > /dev/null
   $ grep 'changed' in.log
   [1]

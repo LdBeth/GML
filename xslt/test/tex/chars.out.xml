@@ -1,54 +1,53 @@
 \input gml
-\gmlbegindocument%
-\gmlstart{gdoc}{}%
-\gmlstart{body}{}%
-\gmlstart{h1}{anchor=gml-h1-1,text=Characters \& specials}%
-\gmlanchor{gml-h1-1}Characters \& specials\gmlend{h1}%
-\gmlstart{p}{}%
-TeX specials: \$5 \& 10\% \#1 a\gmlchar{95}b x\gmlchar{94}2 \gmlchar{126}tilde \gmlchar{92}back \gmlchar{123}braces\gmlchar{125} \gmlchar{60}angle\gmlchar{62} \gmlchar{124}bar\gmlchar{124} \gmlchar{34}quoted\gmlchar{34}.
-Dashes: a-{}-b and a-{}-{}-b; Latin-1: caf\gmlchar{233}, Stra\gmlchar{223}e, \gmlchar{198}r\gmlchar{248}, na\gmlchar{239}ve, \gmlchar{241}, \gmlchar{191}qu\gmlchar{233}?, \gmlchar{169}, \gmlchar{176}, \gmlchar{177}, \gmlchar{215}.
-Typographic: \gmlchar{8220}double\gmlchar{8221} \gmlchar{8216}single\gmlchar{8217} \gmlchar{8212} em \gmlchar{8211} en \gmlchar{8230} \gmlchar{8226} \gmlchar{8364} \gmlchar{8482} and an unknown \gmlchar{9731} snowman.
-\gmlend{p}%
-\gmlstart{xmp}{xml:space=preserve}%
-\gmlhint{fo}{fill=no,align=left,overdraw=extend,break=yes}%
-\ \ \$x\ =\ \gmlchar{123}a\gmlchar{95}b\gmlchar{125}\ \&\ \gmlchar{126}y;\ \#\ \%\ \gmlchar{92}z
-\gmltabline{\gmltab tab\gmltab separated}
-\gmlhint{fo}{fill=yes,align=justify,overdraw=extend,break=yes}%
-\gmlend{xmp}%
-\gmlstart{ol}{nest=1}%
-\gmlstart{li}{num=1}%
-\gmlnum{1.}First
-\gmlend{li}%
-\gmlstart{li}{num=2}%
-\gmlnum{2.}Second \gmlstart{hp3}{}bold italic\gmlend{hp3}\gmlend{li}%
-\gmlend{ol}%
-\gmlstart{sl}{}%
-\gmlstart{li}{}%
-simple
-\gmlend{li}%
-\gmlend{sl}%
-\gmlstart{gl}{}%
-\gmlstart{gt}{}%
-Term\gmlend{gt}%
-\gmlstart{gd}{}%
-Glossary definition.
-\gmlend{gd}%
-\gmlend{gl}%
-\gmlstart{dl}{break=break}%
-\gmlstart{dthd}{}%
-Heading term
-\gmlend{dthd}%
-\gmlstart{ddhd}{}%
-Heading description
-\gmlend{ddhd}%
-\gmlstart{dt}{}%
-A very long definition term\gmlend{dt}%
-\gmlstart{dd}{}%
-Description on its own line.
-\gmlend{dd}%
-\gmlend{dl}%
-\gmlend{body}%
-\gmlend{gdoc}%
-%
-\gmlenddocument
-\bye
+\gml
+<
+gdoc><
+body><
+h1 anchor=gml-h1-1,text=Characters &38; specials>Characters &38; specials<
+><
+p>TeX specials: &36;5 &38; 10&37; &35;1 a&95;b x&94;2 &126;tilde &92;back &123;braces&125; &60;angle&62; &124;bar&124; &34;quoted&34;.
+Dashes: a-{}-b and a-{}-{}-b; Latin-1: caf&233;, Stra&223;e, &198;r&248;, na&239;ve, &241;, &191;qu&233;?, &169;, &176;, &177;, &215;.
+Typographic: &8220;double&8221; &8216;single&8217; &8212; em &8211; en &8230; &8226; &8364; &8482; and an unknown &9731; snowman.
+<
+><
+xmp xml:space=preserve><
+.fo fill=no,align=left,overdraw=extend>\ \ &36;x\ =\ &123;a&95;b&125;\ &38;\ &126;y;\ &35;\ &37;\ &92;z
+<,tabline>{&9;tab&9;separated}
+<
+.fo fill,align=justify,overdraw=extend><
+><
+ol nest=1><
+li num=1><=1.>First
+<
+><
+li num=2><=2.>Second <hp3>bold italic<><
+><
+><
+sl><
+li>simple
+<
+><
+><
+gl><
+gt>Term<
+><
+gd>Glossary definition.
+<
+><
+><
+dl break=break><
+dthd>Heading term
+<
+><
+ddhd>Heading description
+<
+><
+dt>A very long definition term<
+><
+dd>Description on its own line.
+<
+><
+><
+><
+><
+>

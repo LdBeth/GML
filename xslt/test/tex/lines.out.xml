@@ -1,37 +1,36 @@
 \input gml
-\gmlbegindocument%
-\gmlbeginlines{ce}{n=2,break=yes}After this control word is processed,
-the next two lines are centered.\gmlendlines{}
+\gml
+<:lines word=ce,n=2,break>After this control word is processed,
+the next two lines are centered.<>
 However, this one is not.
-\gmlbeginlines{ce}{n=1,break=yes}Chapter 1\gmlendlines{}
-\gmlbeginlines{ri}{n=on,break=yes}These lines must
+<:lines word=ce,n=1,break>Chapter 1<>
+<:lines word=ri,n=on,break>These lines must
 be flush right.
-\gmlendlines{}\gmlhint{in}{left=5,unit=ch,after=1,after-unit=line,break=yes}%
-Subsequent text will be indented,
+<><
+.in left=5,unit=ch,after=1,after-unit=line>Subsequent text will be indented,
 except for the first line.
-\gmlhint{in}{left=0,unit=ch,break=yes}%
-\gmlhint{in}{left=2,unit=ch,delta=+2,temporary=yes,for=2,for-unit=line,break=yes}%
-temporary one
+<
+.in left=0,unit=ch><
+.in left=2,unit=ch,delta=+2,temporary,for=2,for-unit=line>temporary one
 temporary two
 permanent
-\gmlhint{in}{left=3,unit=ch,delta=+3,temporary=yes,for=1,for-unit=line,after=1,after-unit=line,break=yes}%
-old margin
+<
+.in left=3,unit=ch,delta=+3,temporary,for=1,for-unit=line,after=1,after-unit=line>old margin
 temporary
 back
-\gmlhint{in}{left=0,unit=ch,break=yes}%
-\gmlhint{il}{shift=3,unit=mh,break=yes}%
-first line indented
+<
+.in left=0,unit=ch><
+.il shift=3,unit=mh>first line indented
 second line
-\gmlbeginlines{us}{n=3,break=no}\gmlusword{Do} \gmlusword{not}
-\gmlusword{destroy} \gmlusword{this} \gmlusword{letter}
-\gmlusword{until}\gmlendlines{}
+<:lines word=us,n=3,break=no><_Do> <_not>
+<_destroy> <_this> <_letter>
+<_until><>
 its expiration date.
-\gmlbeginlines{ce}{n=2,break=yes,more=yes}before \gmlendlines{}\gmlstart{hp}{}\gmlbeginlines{ce}{cont=yes,more=yes}a phrase\gmlendlines{}\gmlend{hp}\gmlbeginlines{ce}{cont=yes} after
-and a second line\gmlendlines{}
+<:lines word=ce,n=2,break,more>before <><hp><:lines word=ce,cont,more>a phrase<><><:lines word=ce,cont> after
+and a second line<>
 outside
-\gmlhint{in}{left=1,unit=i,temporary=yes,for=2,for-unit=i,break=yes}%
-a distance in inches, measured by TeX
+<
+.in left=1,unit=i,temporary,for=2,for-unit=i>a distance in inches, measured by TeX
 not centered
-%
-\gmlenddocument
-\bye
+<
+>

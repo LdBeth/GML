@@ -1,246 +1,245 @@
 \input gml
-\gmlbegindocument%
-\gmlstart{gdoc}{}%
-\gmlstart{frontm}{}%
-\gmlstart{tlist}{}%
-\gmltlistbegin{List of Tables}%
-\gmltlistentry{refid=tn,num=1}{Table\gmlchar{160}1}{Note, caption and description}{\gmlpageref{tn}{always}{}}%
-\gmltlistentry{refid=gml-table-5,num=2}{Table\gmlchar{160}2}{A table with a heading and a footing}{\gmlpageref{gml-table-5}{always}{}}%
-\gmltlistend%
-\gmlend{tlist}%
-\gmlend{frontm}%
-\gmlstart{body}{}%
-\gmlstart{h1}{anchor=h1,text=Tables}%
-\gmlanchor{h1}Tables\gmlend{h1}%
-\gmlstart{p}{}%
-A table with star widths, as wide as the column.
-\gmlend{p}%
-\gmlstart{rdef}{id=simple,cwidths=1.8i 1.8i *}%
-\gmlend{rdef}%
-\gmlstart{table}{refid=simple,span=column,split=no,rotate=0,anchor=gml-table-1}%
-\gmlanchor{gml-table-1}\gmlstart{row}{rdef=simple,cols=3,subrows=1,cwidths=1.8i 1.8i 1*,split=no}%
-\gmlstart{c}{n=1,col=1,colspan=1,subrow=1,rowspan=1,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-First cell.
-\gmlend{c}%
-\gmlstart{c}{n=2,col=2,colspan=1,subrow=1,rowspan=1,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-Second cell, a little longer.
-\gmlend{c}%
-\gmlstart{c}{n=3,col=3,colspan=1,subrow=1,rowspan=1,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-Third.
-\gmlend{c}%
-\gmlend{row}%
-\gmlstart{row}{rdef=simple,cols=3,subrows=1,cwidths=1.8i 1.8i 1*,split=no}%
-\gmlstart{c}{n=1,col=1,colspan=1,subrow=1,rowspan=1,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-The second row starts here.
-\gmlend{c}%
-\gmlstart{c}{n=2,col=2,colspan=1,subrow=1,rowspan=1,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-All rows of this table share one definition, so their cells line up.
-\gmlend{c}%
-\gmlstart{c}{n=3,col=3,colspan=1,subrow=1,rowspan=1,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-The tallest cell decides the depth of the row; this one has the most words in it and wraps over several lines in the narrow third column.
-\gmlend{c}%
-\gmlend{row}%
-\gmlstart{row}{rdef=simple,cols=3,subrows=1,cwidths=1.8i 1.8i 1*,split=no}%
-\gmlstart{c}{n=1,col=1,colspan=1,subrow=1,rowspan=1,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-Third row.
-\gmlend{c}%
-\gmlstart{c}{n=2,col=2,colspan=1,subrow=1,rowspan=1,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-\gmlend{c}%
-\gmlstart{c}{n=3,col=3,colspan=1,subrow=1,rowspan=1,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-Cell 2 of this row is empty.
-\gmlend{c}%
-\gmlend{row}%
-\gmlend{table}%
-\gmlstart{p}{}%
-A row arrangement with spans (width 24 picas).
-\gmlend{p}%
-\gmlstart{rdef}{id=arr,arrange=1 1 5 6 7 / 2 3 5 8 8 / 4 4 5 8 8,cwidths=3p 3p 12p 3p 3p}%
-\gmlend{rdef}%
-\gmlstart{table}{refid=arr,width=24p,span=page,split=no,rotate=0,anchor=gml-table-2}%
-\gmlanchor{gml-table-2}\gmlstart{row}{rdef=arr,cols=5,subrows=3,cwidths=3p 3p 12p 3p 3p,split=no}%
-\gmlstart{c}{n=1,col=1,colspan=2,subrow=1,rowspan=1,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-One spans two.
-\gmlend{c}%
-\gmlstart{c}{n=5,col=3,colspan=1,subrow=1,rowspan=3,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-Five runs from the top of the row to its bottom, the only cell to do so.
-\gmlend{c}%
-\gmlstart{c}{n=6,col=4,colspan=1,subrow=1,rowspan=1,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-6
-\gmlend{c}%
-\gmlstart{c}{n=7,col=5,colspan=1,subrow=1,rowspan=1,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-7
-\gmlend{c}%
-\gmlstart{c}{n=2,col=1,colspan=1,subrow=2,rowspan=1,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-2
-\gmlend{c}%
-\gmlstart{c}{n=3,col=2,colspan=1,subrow=2,rowspan=1,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-3
-\gmlend{c}%
-\gmlstart{c}{n=8,col=4,colspan=2,subrow=2,rowspan=2,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-Eight: two by two.
-\gmlend{c}%
-\gmlstart{c}{n=4,col=1,colspan=2,subrow=3,rowspan=1,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-Four, as wide as one.
-\gmlend{c}%
-\gmlend{row}%
-\gmlend{table}%
-\gmlstart{p}{}%
-Highlighting, alignment, vertical alignment, concatenation, minimum depth.
-\gmlend{p}%
-\gmlstart{rdef}{id=more,cwidths=1i * * *,hp=0 1 2,align=l c r jus,valign=top bottom top center,concat=yes no yes,mindepth=* * 6}%
-\gmlend{rdef}%
-\gmlstart{table}{refid=more,span=column,split=no,rotate=0,anchor=gml-table-3}%
-\gmlanchor{gml-table-3}\gmlstart{row}{rdef=more,cols=4,subrows=1,cwidths=1i 1* 1* 1*,split=no}%
-\gmlstart{c}{n=1,col=1,colspan=1,subrow=1,rowspan=1,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-Level 0, left, top; concatenated.
-\gmlend{c}%
-\gmlstart{c}{n=2,col=2,colspan=1,subrow=1,rowspan=1,hp=1,align=center,valign=bottom,concat=no,rotate=0,mindepth=*,shade=0,xml:space=preserve}%
-Level\ 1,
+\gml
+<
+gdoc><
+frontm><
+tlist><
+:tlist-entries title=List of Tables><
+,tlist-entry refid=tn,num=1>{Table&160;1}{Note, caption and description}{<,pageref refid=tn>}<
+,tlist-entry refid=gml-table-5,num=2>{Table&160;2}{A table with a heading and a footing}{<,pageref refid=gml-table-5>}<
+><
+><
+><
+body><
+h1 anchor=h1,text=Tables>Tables<
+><
+p>A table with star widths, as wide as the column.
+<
+><
+rdef id=simple,cwidths=1.8i 1.8i 1*><,cell><,cell><,cell><
+><
+table refid=simple,span=column,anchor=gml-table-1><
+row rdef=simple><
+c>First cell.
+<
+><
+c>Second cell, a little longer.
+<
+><
+c>Third.
+<
+><
+><
+row rdef=simple><
+c>The second row starts here.
+<
+><
+c>All rows of this table share one definition, so their cells line up.
+<
+><
+c>The tallest cell decides the depth of the row; this one has the most words in it and wraps over several lines in the narrow third column.
+<
+><
+><
+row rdef=simple><
+c>Third row.
+<
+><
+c><
+><
+c>Cell 2 of this row is empty.
+<
+><
+><
+><
+p>A row arrangement with spans (width 24 picas).
+<
+><
+rdef id=arr,subrows=3,cwidths=3p 3p 12p 3p 3p><,cell colspan=2><,cell n=5,col=3,rowspan=3><,cell n=6,col=4><,cell n=7,col=5><,cell n=2,col=1,subrow=2><,cell n=3,col=2,subrow=2><,cell n=8,col=4,colspan=2,subrow=2,rowspan=2><,cell n=4,col=1,colspan=2,subrow=3><
+><
+table refid=arr,width=24p,span=page,anchor=gml-table-2><
+row rdef=arr><
+c>One spans two.
+<
+><
+c>Five runs from the top of the row to its bottom, the only cell to do so.
+<
+><
+c>6
+<
+><
+c>7
+<
+><
+c>2
+<
+><
+c>3
+<
+><
+c>Eight: two by two.
+<
+><
+c>Four, as wide as one.
+<
+><
+><
+><
+p>Highlighting, alignment, vertical alignment, concatenation, minimum depth.
+<
+><
+rdef id=more,cwidths=1i 1* 1* 1*><,cell><,cell hp=1,align=center,valign=bottom,concat=no><,cell hp=2,align=right,mindepth=6><,cell hp=2,align=justify,valign=center,mindepth=6><
+><
+table refid=more,span=column,anchor=gml-table-3><
+row cwidths=1i 1* 1* 1*><
+c>Level 0, left, top; concatenated.
+<
+><
+c hp=1,align=center,valign=bottom,concat=no,xml:space=preserve>Level\ 1,
 lines\ centred
 and\ kept,
 at\ the\ bottom.
-\gmlend{c}%
-\gmlstart{c}{n=3,col=3,colspan=1,subrow=1,rowspan=1,hp=2,align=right,valign=top,concat=yes,rotate=0,mindepth=6,shade=0}%
-Level 2, right aligned, top, at least six lines deep.
-\gmlend{c}%
-\gmlstart{c}{n=4,col=4,colspan=1,subrow=1,rowspan=1,hp=2,align=justify,valign=center,concat=yes,rotate=0,mindepth=*,shade=0}%
-Level 2 again (the last value repeats). Justified and centred vertically: the words are spread so that both edges are even.
-\gmlend{c}%
-\gmlend{row}%
-\gmlend{table}%
-\gmlstart{p}{}%
-Cell parts, a table note, a caption and a description.
-\gmlend{p}%
-\gmlstart{rdef}{id=geef,cwidths=3* 2* *}%
-\gmlend{rdef}%
-\gmlstart{table}{id=tn,refid=geef,num=1,anchor=tn,span=page,split=no,rotate=0}%
-\gmlanchor{tn}\gmlstart{row}{rdef=geef,cols=3,subrows=1,cwidths=3* 2* 1*,split=no}%
-\gmlstart{c}{n=1,col=1,colspan=1,subrow=1,rowspan=1,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-\gmlstart{gml:cpart}{}%
-The first part of cell one.
-\gmlend{gml:cpart}%
-\gmlstart{gml:cpart}{}%
-A second \gmlstart{hp2}{}:c 1\gmlend{hp2} adds a part below a rule.
-\gmlend{gml:cpart}%
-\gmlend{c}%
-\gmlstart{c}{n=2,col=2,colspan=1,subrow=1,rowspan=1,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-\gmlend{c}%
-\gmlstart{c}{n=3,col=3,colspan=1,subrow=1,rowspan=1,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-\gmlend{c}%
-\gmlend{row}%
-\gmlstart{tnote}{}%
-\gmlnum{Note:}A table note is a row with one cell as wide as the table.
-\gmlend{tnote}%
-\gmlstart{row}{rdef=geef,cols=3,subrows=1,cwidths=3* 2* 1*,split=no}%
-\gmlstart{c}{n=1,col=1,colspan=1,subrow=1,rowspan=1,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-\gmlend{c}%
-\gmlstart{c}{n=2,col=2,colspan=1,subrow=1,rowspan=1,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-\gmlend{c}%
-\gmlstart{c}{n=3,col=3,colspan=1,subrow=1,rowspan=1,hp=0,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-Only the third cell of this row has text.
-\gmlend{c}%
-\gmlend{row}%
-\gmlstart{tcap}{desc=yes}%
-\gmlnum{Table\gmlchar{160}1.}Note, caption and description\gmlend{tcap}%
-\gmlstart{tdesc}{}%
-The description follows the caption after a colon.
-\gmlend{tdesc}%
-\gmlend{table}%
-\gmlstart{p}{}%
-A heading and a footing.
-\gmlend{p}%
-\gmlstart{rdef}{id=hdr,cwidths=1.5i,concat=n,hp=2,arrange=1 2 3 4 4 4 / 1 2 3 5 6 7,align=center left left center left,valign=center}%
-\gmlend{rdef}%
-\gmlstart{rdef}{id=body,cwidths=1.5i * * * * *,hp=2 0,align=left center}%
-\gmlend{rdef}%
-\gmlstart{table}{refid=body,num=2,anchor=gml-table-5,span=column,split=no,rotate=0}%
-\gmlanchor{gml-table-5}\gmlstart{thd}{}%
-\gmlstart{row}{rdef=hdr,cols=6,subrows=2,cwidths=1.5i 1* 1* 1* 1* 1*,split=no}%
-\gmlstart{c}{n=1,col=1,colspan=1,subrow=1,rowspan=2,hp=2,align=center,valign=center,concat=yes,rotate=0,mindepth=*,shade=0}%
-Kind\gmlend{c}%
-\gmlstart{c}{n=2,col=2,colspan=1,subrow=1,rowspan=2,hp=2,align=left,valign=center,concat=yes,rotate=0,mindepth=*,shade=0}%
-Count\gmlend{c}%
-\gmlstart{c}{n=3,col=3,colspan=1,subrow=1,rowspan=2,hp=2,align=left,valign=center,concat=yes,rotate=0,mindepth=*,shade=0}%
-Total\gmlend{c}%
-\gmlstart{c}{n=4,col=4,colspan=3,subrow=1,rowspan=1,hp=2,align=center,valign=center,concat=yes,rotate=0,mindepth=*,shade=0}%
-Distance\gmlend{c}%
-\gmlstart{c}{n=5,col=4,colspan=1,subrow=2,rowspan=1,hp=2,align=left,valign=center,concat=yes,rotate=0,mindepth=*,shade=0}%
-Near\gmlend{c}%
-\gmlstart{c}{n=6,col=5,colspan=1,subrow=2,rowspan=1,hp=2,align=left,valign=center,concat=yes,rotate=0,mindepth=*,shade=0}%
-Far\gmlend{c}%
-\gmlstart{c}{n=7,col=6,colspan=1,subrow=2,rowspan=1,hp=2,align=left,valign=center,concat=yes,rotate=0,mindepth=*,shade=0}%
-Unknown\gmlend{c}%
-\gmlend{row}%
-\gmlend{thd}%
-\gmlstart{tft}{}%
-\gmlstart{row}{rdef=body,cols=6,subrows=1,cwidths=1.5i 1* 1* 1* 1* 1*,split=no}%
-\gmlstart{c}{n=1,col=1,colspan=1,subrow=1,rowspan=1,hp=2,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-Footing\gmlend{c}%
-\gmlstart{c}{n=2,col=2,colspan=1,subrow=1,rowspan=1,hp=0,align=center,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-\gmlend{c}%
-\gmlstart{c}{n=3,col=3,colspan=1,subrow=1,rowspan=1,hp=0,align=center,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-\gmlend{c}%
-\gmlstart{c}{n=4,col=4,colspan=1,subrow=1,rowspan=1,hp=0,align=center,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-\gmlend{c}%
-\gmlstart{c}{n=5,col=5,colspan=1,subrow=1,rowspan=1,hp=0,align=center,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-\gmlend{c}%
-\gmlstart{c}{n=6,col=6,colspan=1,subrow=1,rowspan=1,hp=0,align=center,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-\gmlend{c}%
-\gmlend{row}%
-\gmlend{tft}%
-\gmlstart{row}{rdef=body,cols=6,subrows=1,cwidths=1.5i 1* 1* 1* 1* 1*,split=no}%
-\gmlstart{c}{n=1,col=1,colspan=1,subrow=1,rowspan=1,hp=2,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-Apples
-\gmlend{c}%
-\gmlstart{c}{n=2,col=2,colspan=1,subrow=1,rowspan=1,hp=0,align=center,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-02\gmlend{c}%
-\gmlstart{c}{n=3,col=3,colspan=1,subrow=1,rowspan=1,hp=0,align=center,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-03\gmlend{c}%
-\gmlstart{c}{n=4,col=4,colspan=1,subrow=1,rowspan=1,hp=0,align=center,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-40\gmlend{c}%
-\gmlstart{c}{n=5,col=5,colspan=1,subrow=1,rowspan=1,hp=0,align=center,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-20\gmlend{c}%
-\gmlstart{c}{n=6,col=6,colspan=1,subrow=1,rowspan=1,hp=0,align=center,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-1\gmlend{c}%
-\gmlend{row}%
-\gmlstart{row}{rdef=body,cols=6,subrows=1,cwidths=1.5i 1* 1* 1* 1* 1*,split=no}%
-\gmlstart{c}{n=1,col=1,colspan=1,subrow=1,rowspan=1,hp=2,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-Pears
-\gmlend{c}%
-\gmlstart{c}{n=2,col=2,colspan=1,subrow=1,rowspan=1,hp=0,align=center,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-05\gmlend{c}%
-\gmlstart{c}{n=3,col=3,colspan=1,subrow=1,rowspan=1,hp=0,align=center,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-04\gmlend{c}%
-\gmlstart{c}{n=4,col=4,colspan=1,subrow=1,rowspan=1,hp=0,align=center,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-29\gmlend{c}%
-\gmlstart{c}{n=5,col=5,colspan=1,subrow=1,rowspan=1,hp=0,align=center,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-30\gmlend{c}%
-\gmlstart{c}{n=6,col=6,colspan=1,subrow=1,rowspan=1,hp=0,align=center,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-2\gmlend{c}%
-\gmlend{row}%
-\gmlstart{row}{rdef=body,cols=6,subrows=1,cwidths=1.5i 1* 1* 1* 1* 1*,split=no}%
-\gmlstart{c}{n=1,col=1,colspan=1,subrow=1,rowspan=1,hp=2,align=left,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-Plums and other stone fruit of several kinds
-\gmlend{c}%
-\gmlstart{c}{n=2,col=2,colspan=1,subrow=1,rowspan=1,hp=0,align=center,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-07\gmlend{c}%
-\gmlstart{c}{n=3,col=3,colspan=1,subrow=1,rowspan=1,hp=0,align=center,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-10\gmlend{c}%
-\gmlstart{c}{n=4,col=4,colspan=1,subrow=1,rowspan=1,hp=0,align=center,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-40\gmlend{c}%
-\gmlstart{c}{n=5,col=5,colspan=1,subrow=1,rowspan=1,hp=0,align=center,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-30\gmlend{c}%
-\gmlstart{c}{n=6,col=6,colspan=1,subrow=1,rowspan=1,hp=0,align=center,valign=top,concat=yes,rotate=0,mindepth=*,shade=0}%
-3\gmlend{c}%
-\gmlend{row}%
-\gmlstart{tcap}{}%
-\gmlnum{Table\gmlchar{160}2.}A table with a heading and a footing\gmlend{tcap}%
-\gmlend{table}%
-\gmlstart{p}{}%
-See \gmlstart{tref}{refid=tn,resolved=yes,target=table,num=1}Table\gmlchar{160}1\gmlpageref{tn}{auto}{on page}\gmlend{tref}.
-\gmlend{p}%
-\gmlend{body}%
-\gmlend{gdoc}%
-%
-\gmlenddocument
-\bye
+<
+><
+c hp=2,align=right,mindepth=6>Level 2, right aligned, top, at least six lines deep.
+<
+><
+c hp=2,align=justify,valign=center>Level 2 again (the last value repeats). Justified and centred vertically: the words are spread so that both edges are even.
+<
+><
+><
+><
+p>Cell parts, a table note, a caption and a description.
+<
+><
+rdef id=geef,cwidths=3* 2* 1*><,cell><,cell><,cell><
+><
+table id=tn,refid=geef,num=1,anchor=tn,span=page><
+row rdef=geef><
+c><
+:cpart>The first part of cell one.
+<
+><
+:cpart>A second <hp2>:c 1<> adds a part below a rule.
+<
+><
+><
+c><
+><
+c><
+><
+><
+tnote><=Note:>A table note is a row with one cell as wide as the table.
+<
+><
+row rdef=geef><
+c><
+><
+c><
+><
+c>Only the third cell of this row has text.
+<
+><
+><
+tcap desc><=Table&160;1.>Note, caption and description<
+><
+tdesc>The description follows the caption after a colon.
+<
+><
+><
+p>A heading and a footing.
+<
+><
+rdef id=hdr,subrows=2,cwidths=1.5i 1* 1* 1* 1* 1*><,cell rowspan=2,hp=2,align=center,valign=center,concat=no><,cell rowspan=2,hp=2,valign=center,concat=no><,cell rowspan=2,hp=2,valign=center,concat=no><,cell colspan=3,hp=2,align=center,valign=center,concat=no><,cell n=5,col=4,subrow=2,hp=2,valign=center,concat=no><,cell n=6,col=5,subrow=2,hp=2,valign=center,concat=no><,cell n=7,col=6,subrow=2,hp=2,valign=center,concat=no><
+><
+rdef id=body,cwidths=1.5i 1* 1* 1* 1* 1*><,cell hp=2><,cell align=center><,cell align=center><,cell align=center><,cell align=center><,cell align=center><
+><
+table refid=body,num=2,anchor=gml-table-5,span=column><
+thd><
+row subrows=2,cwidths=1.5i 1* 1* 1* 1* 1*><
+c rowspan=2,hp=2,align=center,valign=center>Kind<
+><
+c rowspan=2,hp=2,valign=center>Count<
+><
+c rowspan=2,hp=2,valign=center>Total<
+><
+c colspan=3,hp=2,align=center,valign=center>Distance<
+><
+c n=5,col=4,subrow=2,hp=2,valign=center>Near<
+><
+c n=6,col=5,subrow=2,hp=2,valign=center>Far<
+><
+c n=7,col=6,subrow=2,hp=2,valign=center>Unknown<
+><
+><
+><
+tft><
+row rdef=body><
+c>Footing<
+><
+c><
+><
+c><
+><
+c><
+><
+c><
+><
+c><
+><
+><
+><
+row rdef=body><
+c>Apples
+<
+><
+c>02<
+><
+c>03<
+><
+c>40<
+><
+c>20<
+><
+c>1<
+><
+><
+row rdef=body><
+c>Pears
+<
+><
+c>05<
+><
+c>04<
+><
+c>29<
+><
+c>30<
+><
+c>2<
+><
+><
+row rdef=body><
+c>Plums and other stone fruit of several kinds
+<
+><
+c>07<
+><
+c>10<
+><
+c>40<
+><
+c>30<
+><
+c>3<
+><
+><
+tcap><=Table&160;2.>A table with a heading and a footing<
+><
+><
+p>See <tref refid=tn,resolved,target=table,num=1>Table&160;1<,pageref refid=tn,when=auto,label=on page><>.
+<
+><
+><
+><
+>

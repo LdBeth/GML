@@ -1,55 +1,70 @@
 % gml.tex - plain TeX macros for the GML backend (xslt/tex.xsl).
 %
 % Works with Knuth's tex (DVI), pdftex and luatex in plain mode.  No LaTeX.
-% The document written by tex.xsl uses only these public commands:
+% The file tex.xsl writes:
 %
-%   \gmlbegindocument ... \gmlenddocument      around the whole document
-%   \gmlstart{NAME}{k=v,...} ... \gmlend{NAME}  every source element
-%       (h1, p, ol, gml:h, gml:fn ...).  \gmlstart opens a TeX group,
-%       stores the attribute list (\gmlattr{key}\macro reads it) and calls
-%       \gml@NAME@start; \gmlend calls \gml@NAME@end, closes the group and
-%       re-applies the formatting state (\gml@apply).  An element without
-%       a definition is shown as plain text (message once).
-%   \gmlhint{NAME}{k=v,...}       a DCF formatting hint (point event):
-%       break=yes calls \gml@break (\par), then \gml@hint@NAME.
-%   \gmlbeginlines{WORD}{k=v,...} ... \gmlendlines    a gml:lines scope
-%       (.ce .ri .us .up .uc .rc *); handlers
-%       \gml@lines@WORD@pre (before the group) @begin @end @post (after).
-%       .in/.ir FOR/AFTER and .il/.un are hints (see \gml@pqshape).
-%   \gmlnum{label}                gml:num, dispatched on the current
-%       element: \gml@num@NAME{label} (h1: label+quad, li: hanging label,
-%       figcap: bold hanging label, fn: dropped - the mark is a key).
-%   \gmlanchor{name}              a page-reference target
-%   \gmlpageref{anchor}{when}{label}   when = always | auto
-%   \gmlquery{id}{pn|lc}          a question of the pass model (gml:query):
-%       the answer goes to the aux file (see "Page references")
-%   \gmltocbegin{title} \gmltocentry{k=v}{num}{text}{page} \gmltocend
-%   \gmlfiglistbegin{title} \gmlfiglistentry{k=v}{label}{text}{page} \gmlfiglistend
-%   \gmltlistbegin{title} \gmltlistentry{k=v}{label}{text}{page} \gmltlistend
-%       (list of tables; tables themselves are elements: see "tables")
-%   \gmlindexbegin{title} \gmlindexgroup{letter}
-%       \gmlindexentry{level}{term}{refs} \gmlindexend
-%       refs: \gmlindexfirst \gmlindexref{anchor}{major=,range=,text=}
-%             \gmlindexsep \gmlindexrangesep \gmlsee{kind}{label}{text}
-%   \gmlchar{codepoint}           any non-ASCII or TeX-special character
-%   \gmltabline{seg\gmltab seg...}  one input line holding tab characters
-%   \gmlusword \gmlupword \gmlucword {word}   words inside .us/.up/.uc
+%   [\def\gmlfonts{..}\def\gmltagset{..}\def\gmlmode{hints}
+%    \def\gmlpassno{K}\def\gmlpasses{N}]   settings
+%   \input gml
+%   [preamble]
+%   \gml                 the body starts: < and & become active
+%   ...body...<
+%   >                    the root's end: the document ends (\bye)
+%
+% The body is markup in <...> (one tag: from < to the next > at brace
+% level 0; a line end in it is a blank, one right after < is skipped)
+% and characters as &N; (decimal code point: every TeX special, $ & # %
+% too, and everything outside printable ASCII).  The first character
+% of a tag chooses its kind; NAME and k=v,... attributes are separated
+% by one blank (a bare key is key=yes; a value with markup is braced):
+%   <NAME ATTRS>  <:NAME ATTRS>   start of element NAME, gml:NAME
+%   <>                            end of the innermost open element
+%   <.NAME ATTRS>  <,NAME ATTRS>  hint gml:NAME, breaking or not
+%   <:lines word=W,ATTRS> .. <>   a line scope (.ce .ri .us .up .uc .rc *)
+%   <?pn ID>  <?lc ID>            a question of the pass model (gml:query)
+%   <=LABEL>                      gml:num
+%   <@NAME>                       an anchor (anchor= of an element sets its own)
+%   <!TEXT>  <_WORD>  <*WORD>     upper case, underscored, both (.up .us .uc)
+% A hint may take brace arguments after the tag:
+%   <,rundyn>{X}  <,symref name=N>{V}  <,symval name=N,value=V>  <,pageno>
+%   <,islabel>  <,tabline>{seg&9;seg...}  <,pageref refid=A,when=auto,label=L>
+%   <:toc-entries title=T> <,toc-entry level=N>{num}{text}{page} ... <>
+%       (figlist, tlist: the same, without level=)
+%   <:index-entries title=T> <,index-group letter=L>
+%       <,index-entry level=N>{term}{refs} ... <>;  refs: <,ixfirst> <,ixsep>
+%       <,ixrangesep> <,ixref refid=A,major,range=,text=> <,see kind=K,label=L>{text}
+%
+% Elements and hints are the macros below: an element is a group,
+% \gml@estart{NAME}{ATTRS} ... \gml@eend{NAME}: \gml@NAME@start /
+% \gml@NAME@end, the attributes in \gml@attrs (\gmlattr{key}\macro); a
+% hint is \gml@hint{NAME}{ATTRS}: break (=yes) calls \gml@break (\par),
+% then \gml@hint@NAME, last (it may take brace arguments; attributes:
+% \gmlhintattr{key}\macro); a line scope \gml@beginlines{WORD}{ATTRS}
+% ... \gml@endlines: \gml@lines@WORD@pre (before the group) @begin @end
+% @post (after); gml:num \gml@num{label}: \gml@num@NAME on the current
+% element (h1: label+quad, li: hanging label, figcap: bold hanging
+% label, fn: dropped - the mark is a key).  &N; is \gml@charref{N},
+% which is \gml@char{N}: \gml@char@N (\gmldefchar).
 %
 % Overriding: every internal macro is \gml@...; load your own file after
 % this one (a file gmllocal.tex on TEXINPUTS is \input automatically at
 % the end of this file), and use the helpers that need no @ catcode:
 %   \gmldefstart{h1}{...}  \gmldefend{h1}{...}  \gmldefhint{sp}{...}
+%   \gmldefhint{see}#1{...}   (a hint with a brace argument)
 %   \gmldeflines{ce}{begin}{...}  \gmldefnum{li}#1{...}
 %   \gmldefchar{8364}{EUR}  \gmldeffont{hi1}{\sl}
 %   \gmldefhstart{fig}{...}  \gmldefhend{fig}{...}   (hint mode, below)
 % or \catcode`\@=11 and redefine \gml@... directly.  A tag set's file
 % (\def\gmltagset{file} before \input gml; gmlfmt -app writes it) is
 % \input at the end too, before gmllocal.tex, so the most local wins.
+% Both are read before \gml, with the usual catcodes; a file read in
+% the body sets its own (\gml@input, the aux file reader).
 %
 % Hint mode: \def\gmlmode{hints} before \input gml (tex.xsl writes it
 % for a document formatted by a real DCF profile, e.g. IBM's DSMPROF3):
-% elements are only groups (except gml:h gml:fn gml:rh gml:rf and the fig
-% float), \gmlnum prints nothing, and the hints do all the layout.
+% elements are only groups (except gml:h gml:fn gml:rh gml:rf, the fig
+% float, the tables and the generated lists), gml:num prints nothing,
+% and the hints do all the layout.
 % DCF definitions: .df (fonts), .dr (named rules, used by .bx and .hr)
 % and .dh (head levels) are implemented; see their hints below.
 %
@@ -73,51 +88,48 @@
 % source (the next formatting pass imbeds it, lib/aux.ml), one line each:
 %   .* gml aux              the first line (constant: gmlpass compares
 %                           two passes' files byte for byte)
-%   .se pa@ENC = 'FOLIO'    \gmlanchor{name}: the page (as printed) the
-%                           anchor is put out on, written at shipout
+%   .se pa@ENC = 'FOLIO'    an anchor: the page (as printed) it is put
+%                           out on, written at shipout
 %   .se pr@N = 'FOLIO'      the page of the N-th when=auto reference
-%   .se pq@ENC = VALUE      \gmlquery{id}{pn|lc}: the answer (a number)
+%   .se pq@ENC = VALUE      <?pn|lc ID>: the answer (a number)
 %   .se px@NAME = VALUE     a tag set's own (its TeX file writes it to
 %                           \gml@refout, its profile reads it; like
 %                           the others, never carried to JOB.sym)
 % ENC is the name as tex.xsl escaped it (A-Z a-z 0-9 . - and
 % +code+) with "." written "@", "-" "#2D" and "+" "#2B" (\gml@enc), so
 % that it is a SCRIPT symbol name; a question id loses its leading "q"
-% (q1.12.3: pq@1@12@3).  The file is read by \gmlbegindocument
-% (\gml@readrefs, under a catcode regime, \gml@auxfile; pa@ENC defines
-% \gml@pg@ENC, pr@N \gml@rpg@N, pq@ and px@ lines are skipped), so
-% references are right on the second run ("??" on the first).  A when=auto
-% reference prints " label page" only if the target is on another page
-% (on the first run it always prints).  \gmlenddocument re-reads the
-% new file and says when TeX must be run again.
+% (q1.12.3: pq@1@12@3).  The file is read by \gml (\gml@readrefs, under
+% a catcode regime, \gml@auxfile; pa@ENC defines \gml@pg@ENC, pr@N
+% \gml@rpg@N, pq@ and px@ lines are skipped), so references are right
+% on the second run ("??" on the first).  A when=auto reference prints
+% " label page" only if the target is on another page (on the first run
+% it always prints).  The end of the document re-reads the new file and
+% says when TeX must be run again.
 %
 % Passes (gml -aux, the driver gmlpass): the next formatting pass of
-% gml asks questions about the page state: \gmlquery{id}{pn} writes the
-% pq@ line at shipout, the value the page number (\pageno, absolute:
-% plain TeX counts roman pages negative) of the page the question's
-% place is put out on: &$PN where a heading or figure is, exactly what
-% a cross-reference wants.  \gmlquery{id}{lc} writes it at once, the
-% value the lines left on the page (&$LC): (\pagegoal-\pagetotal)/
-% \baselineskip rounded down, \vsize/\baselineskip on an empty page; in
-% outer vertical mode the page builder runs first (\par, unless a
-% \parshape, \hangindent, \looseness or \hangafter is set for the
-% next paragraph); in a paragraph the lines of the paragraph in
-% progress are not counted (&$LC excludes partial lines, LR p.445
-% Table 20 note 3).  \gmlpass (run by \gmlbegindocument) reads
-% \gmlpassno/\gmlpasses (\def'd before \input gml by tex.xsl,
-% from gml -pass/-passes): on a pass before the last the output is a
-% draft: \pdfdraftmode=1 with pdftex, \dpxoutput=0 with ApTeX (DVI only,
-% no PDF), nothing with Knuth's tex.  DCF puts out only the last pass
-% (SH20-9186-06 p.126).
+% gml asks questions about the page state: <?pn ID> writes the pq@
+% line at shipout, the value the page number (\pageno, absolute: plain
+% TeX counts roman pages negative) of the page the question's place is
+% put out on: &$PN where a heading or figure is, exactly what a
+% cross-reference wants.  <?lc ID> writes it at once, the value the
+% lines left on the page (&$LC): (\pagegoal-\pagetotal)/\baselineskip
+% rounded down, \vsize/\baselineskip on an empty page; in outer
+% vertical mode the page builder runs first (\par, unless a \parshape,
+% \hangindent, \looseness or \hangafter is set for the next paragraph);
+% in a paragraph the lines of the paragraph in progress are not counted
+% (&$LC excludes partial lines, LR p.445 Table 20 note 3).  \gmlpass (run
+% by \gml) reads \gmlpassno/\gmlpasses (\def'd before \input gml by
+% tex.xsl, from gml -pass/-passes): on a pass before the last the output
+% is a draft: \pdfdraftmode=1 with pdftex, \dpxoutput=0 with ApTeX (DVI
+% only, no PDF), nothing with Knuth's tex.  DCF puts out only the last
+% pass (SH20-9186-06 p.126).
 %
-% Non-ASCII: tex.xsl writes pure ASCII; every character outside
-% printable ASCII and every TeX special except $ & # % (which become \$
-% \& \# \%) is \gmlchar{decimal code point}.  The table below covers
-% Latin-1, Latin Extended-A letters with plain accents, typographic
-% punctuation, a few symbols; anything else prints "?" with a message.
-% In a typewriter font (\fam=\ttfam) the ASCII specials print as
-% themselves.
-\ifx\gmlbegindocument\undefined\else\endinput\fi
+% Characters: tex.xsl writes pure ASCII.  The table below covers ASCII
+% specials, Latin-1, Latin Extended-A letters with plain accents,
+% typographic punctuation, a few symbols; anything else prints "?"
+% with a message.  In a typewriter font (\fam=\ttfam) the ASCII
+% specials print as themselves.
+\ifx\gml\undefined\else\endinput\fi
 \chardef\gmlatcode=\catcode`\@
 \catcode`\@=11
 
@@ -228,9 +240,13 @@
       \openin\gml@in=gmlfont-\gml@fscheme.tex\relax
       \ifeof\gml@in\closein\gml@in
         \errmessage{gml.tex: no font scheme gmlfont-\gml@fscheme.tex}%
-      \else\closein\gml@in\input gmlfont-\gml@fscheme.tex \fi
-    \else\closein\gml@in\input gmlfont-\gml@fscheme-\gmlengine.tex \fi
+      \else\closein\gml@in\gml@input{gmlfont-\gml@fscheme.tex}\fi
+    \else\closein\gml@in\gml@input{gmlfont-\gml@fscheme-\gmlengine.tex}\fi
   \fi\gml@loadfonts}
+% \gml@input{file}: \input under the catcodes of < and & outside the
+% body (a font scheme may be loaded from the body: \gmlusefonts)
+\def\gml@input#1{\edef\gml@tmpa{\catcode60=12 \catcode38=4 \noexpand\input#1\relax
+  \catcode60=\the\catcode60 \catcode38=\the\catcode38 \relax}\gml@tmpa}
 \def\gml@fclear#1{\expandafter\let\csname gml@fspec@#1\endcsname\relax}
 % \gml@fload\cs{slot}{fallback slot}{factor of the body size}
 \def\gml@fload#1#2#3#4{\gml@dima=\gml@fsize\relax\gml@dima=#4\gml@dima
@@ -349,10 +365,14 @@
 \def\gml@ibmmsg#1{\immediate\write16{+++#1 (page \gml@ibmpage)}%
   \immediate\write\gml@msgfile{+++#1 (page \gml@ibmpage)}}
 \def\gml@ibmsevere#1{\gml@ibmmsg{#1}\errmessage{GML: severe error (above), processing stops}}
-% \gml@get\list{key}\macro: \macro := the value of key in list, or empty
+% \gml@get\list{key}\macro: \macro := the value of key in list, yes for
+% a bare key (",key,"), else empty
 \def\gml@get#1#2#3{\def\gml@get@a##1,#2=##2,##3\gml@nil{\def#3{##2}}%
   \expandafter\gml@get@a\expandafter,#1,#2=\gml@nokey,\gml@nil
-  \ifx#3\gml@nokeymark\let#3\empty\fi}
+  \ifx#3\gml@nokeymark
+    \def\gml@get@a##1,#2,##2\gml@nil{\def#3{##2}}%
+    \expandafter\gml@get@a\expandafter,#1,#2,\gml@nokey\gml@nil
+    \ifx#3\gml@nokeymark\let#3\empty\else\let#3\gml@yes\fi\fi}
 \def\gml@aget{\gml@get\gml@attrs}
 \def\gml@hget{\gml@get\gml@hattrs}
 \def\gml@lget{\gml@get\gml@thislattrs}
@@ -497,7 +517,7 @@
 % DCF .of and revision codes act on every paragraph start.  The hanging
 % indention of a paragraph of the body is kept in \gml@pqhi/\gml@pqha
 % too: a line scope that began before the paragraph may end its group
-% inside it (\gmlendlines), and \par then puts it back
+% inside it (\gml@endlines), and \par then puts it back
 \def\gml@everypar{\ifcase\gml@ofstate\or
     \hangindent\gml@ofdim\hangafter\@ne\global\gml@ofstate\tw@
   \or\hangindent\gml@ofdim\hangafter\z@\fi
@@ -533,19 +553,28 @@
   \else\gml@vskip{#1}\fi}
 
 % ---- dispatch --------------------------------------------------------------------
+% An element (\gml@estart{NAME}{ATTRS}, ended by \gml@eend{NAME}) is a
+% group: the attributes are \gml@attrs (\gmlattr{key}\macro), the start
+% calls \gml@NAME@start (\gmldefstart), the end \gml@NAME@end
+% (\gmldefend), closes the group and re-applies the formatting state
+% (\gml@apply).  An element without a definition is shown as plain text
+% (message once).  anchor= puts out the anchor after the start.
 % Hint mode (\def\gmlmode{hints} before \input gml; tex.xsl writes it for
 % a document formatted by a real DCF profile): the profile's control
 % words (hints) do the layout, so an element calls \gml@h@NAME@start /
 % \gml@h@NAME@end if defined (\gmldefhstart, \gmldefhend) and is
-% otherwise only a group; \gmlnum prints nothing (the profile writes its
+% otherwise only a group; gml:num prints nothing (the profile writes its
 % own numbers).  Defined: gml:h gml:fn gml:rh gml:rf (as in element
-% mode) and fig (the float and its frame, without margins).
-\def\gmlstart#1#2{\begingroup\def\gml@cur{#1}\def\gml@attrs{#2}%
+% mode), fig (the float and its frame, without margins), the tables and
+% the generated lists.
+\def\gml@estart#1#2{\begingroup\def\gml@cur{#1}\def\gml@attrs{#2}%
+  \def\gml@closer{\gml@eend{#1}}%
   \ifgml@hintmode\gml@hcall{#1}{start}%
   \else\expandafter\ifx\csname gml@#1@start\endcsname\relax
     \gml@warnonce{elt#1}{no TeX style for element #1 (shown as plain text)}%
-  \else\csname gml@#1@start\endcsname\fi\fi}
-\def\gmlend#1{\ifgml@hintmode\gml@hcall{#1}{end}%
+  \else\csname gml@#1@start\endcsname\fi\fi
+  \gml@aget{anchor}\gml@tmpb\ifx\gml@tmpb\empty\else\gml@anchor\gml@tmpb\fi}
+\def\gml@eend#1{\ifgml@hintmode\gml@hcall{#1}{end}%
   \else\expandafter\ifx\csname gml@#1@end\endcsname\relax
   \else\csname gml@#1@end\endcsname\fi\fi\endgroup\gml@apply}
 \def\gml@hcall#1#2{\expandafter\ifx\csname gml@h@#1@#2\endcsname\relax
@@ -562,41 +591,108 @@
 \def\gml@letelement#1#2{%
   \expandafter\let\csname gml@#1@start\expandafter\endcsname\csname gml@#2@start\endcsname
   \expandafter\let\csname gml@#1@end\expandafter\endcsname\csname gml@#2@end\endcsname}
-\def\gmldefhint#1{\expandafter\def\csname gml@hint@#1\endcsname}
+\def\gmldefhint#1{\expandafter\long\expandafter\def\csname gml@hint@#1\endcsname}
 \def\gmldeflines#1#2{\expandafter\def\csname gml@lines@#1@#2\endcsname}
 \def\gmldefnum#1{\expandafter\def\csname gml@num@#1\endcsname}
 \def\gmldefchar#1{\expandafter\def\csname gml@char@#1\endcsname}
 
+% a hint (\gml@hint{NAME}{ATTRS}, a point event): the attributes are
+% \gml@hattrs (\gmlhintattr{key}\macro); break (=yes) calls \gml@break
+% (\par), then \gml@hint@NAME (\gmldefhint), last, so that it may take
+% brace arguments after the tag
 \def\gml@break{\par}
-\def\gmlhint#1#2{\def\gml@hattrs{#2}\gml@hget{break}\gml@tmpb
+\long\def\gml@hint#1#2{\def\gml@hattrs{#2}\gml@hget{break}\gml@tmpb
   \ifx\gml@tmpb\gml@yes\gml@break\fi
   \expandafter\ifx\csname gml@hint@#1\endcsname\relax\gml@notimpl{#1}%
-  \else\csname gml@hint@#1\endcsname\fi}
+  \else\csname gml@hint@#1\expandafter\endcsname\fi}
 
-\def\gmlbeginlines#1#2{\def\gml@lattrs{#2}\gml@get\gml@lattrs{break}\gml@tmpb
+% a line scope (\gml@beginlines{WORD}{ATTRS} ... \gml@endlines): .ce
+% .ri .us .up .uc .rc *; handlers \gml@lines@WORD@pre (before the
+% group) @begin @end @post (after).  .in/.ir FOR/AFTER and .il/.un are
+% hints (see \gml@pqshape).
+\def\gml@beginlines#1#2{\def\gml@lattrs{#2}\gml@get\gml@lattrs{break}\gml@tmpb
   \ifx\gml@tmpb\gml@yes\gml@break\fi
   \expandafter\ifx\csname gml@lines@#1@begin\endcsname\relax
     \gml@warnonce{lines#1}{line scope .#1 is not implemented in TeX (ignored)}\fi
   \gml@lcall{#1}{pre}\begingroup\def\gml@lword{#1}\let\gml@thislattrs\gml@lattrs
-  \gml@lcall{#1}{begin}}
+  \let\gml@closer\gml@endlines\gml@lcall{#1}{begin}}
 \def\gml@lcall#1#2{\expandafter\ifx\csname gml@lines@#1@#2\endcsname\relax
   \else\csname gml@lines@#1@#2\endcsname\fi}
-\def\gmlendlines{\gml@lcall\gml@lword{end}%
+\def\gml@endlines{\gml@lcall\gml@lword{end}%
   \expandafter\gml@endlines@a\expandafter{\gml@lword}}
 \def\gml@endlines@a#1{\endgroup\gml@apply\gml@lcall{#1}{post}}
 \def\gml@lmore{\gml@lget{more}\gml@tmpb\ifx\gml@tmpb\gml@yes\else\ifhmode\par\fi\fi}
 
-\def\gmlnum#1{\ifgml@hintmode
+% gml:num, dispatched on the current element: \gml@num@NAME{label}
+% (h1: label+quad, li: hanging label, figcap: bold hanging label, fn:
+% dropped - the mark is a key); in hint mode \gml@hnum@NAME or nothing
+\def\gml@num#1{\ifgml@hintmode
     \expandafter\ifx\csname gml@hnum@\gml@cur\endcsname\relax
     \else\csname gml@hnum@\gml@cur\endcsname{#1}\fi
   \else\expandafter\ifx\csname gml@num@\gml@cur\endcsname\relax
   #1\enspace\else\csname gml@num@\gml@cur\endcsname{#1}\fi\fi}
 
+% ---- the reader ----------------------------------------------------------------------
+% In the body (after \gml) < and & are active.  < reads a tag up to the
+% next > at brace level 0, with line ends as blanks ("<" newline "REST>"
+% is "<REST>"; in format-off mode, where a line end is active, in a
+% group with \catcode13=10 while it is read); the first token chooses
+% the kind (\gml@k@C, by \string; a blank first is skipped, an active
+% line end too - a tag tokenized in a brace argument in format-off
+% mode), anything else is an element.  NAME and ATTRS are split at the
+% first blank (\gml@split\handler NAME ATTRS \gml@nil:
+% \handler{NAME}{ATTRS}).  The handler comes last, so a hint may take
+% brace arguments.  Outside format-off mode everything from < to the
+% handler expands without an assignment, so a kern or ligature between
+% the character before a tag and the first one its handler puts out is
+% kept (the period and the closing quote of "nation.<>" ending a q).
+\long\def\gml@firstoftwo#1#2{#1}
+\long\def\gml@secondoftwo#1#2{#2}
+\long\def\gml@tag#1>{\gml@kind#1>\gml@nil}
+\long\def\gml@gtag#1>{\endgroup\gml@kind#1>\gml@nil}
+\long\def\gml@kind#1#2\gml@nil{\expandafter\ifx\csname gml@k@\string#1\endcsname\relax
+    \expandafter\gml@firstoftwo\else\expandafter\gml@secondoftwo\fi
+  {\gml@k@elt#1#2}{\csname gml@k@\string#1\endcsname#2}}
+\long\def\gml@split#1#2 #3\gml@nil{\def\gml@tmpa{#3}%
+  \ifx\gml@tmpa\empty\expandafter\gml@firstoftwo\else\expandafter\gml@secondoftwo\fi
+  {#1{#2}{}}{\gml@split@a#1{#2}#3\gml@nil}}
+\long\def\gml@split@a#1#2#3 \gml@nil{#1{#2}{#3}}
+\def\gml@kdef#1{\expandafter\long\expandafter\def\csname gml@k@\string#1\endcsname}
+\gml@kdef>{\gml@closer}                                   % <>
+\gml@kdef:#1>{\gml@split\gml@elt gml:#1 \gml@nil}         % <:NAME ATTRS>
+\def\gml@k@elt#1>{\gml@split\gml@elt#1 \gml@nil}          % <NAME ATTRS>
+\gml@kdef.#1>{\gml@split\gml@bhint#1 \gml@nil}            % <.NAME ATTRS>
+\gml@kdef,#1>{\gml@split\gml@hint#1 \gml@nil}             % <,NAME ATTRS>
+\gml@kdef?#1 #2>{\gml@query{#2}{#1}}                      % <?WHAT ID>
+\gml@kdef=#1>{\gml@num{#1}}                               % <=LABEL>
+\gml@kdef @#1>{\gml@anchor{#1}}                           % <@NAME>
+\gml@kdef!#1>{\gml@upword{#1}}                            % <!TEXT>
+\gml@kdef_#1>{\underbar{#1}}                              % <_WORD>
+\gml@kdef*#1>{\underbar{\gml@upword{#1}}}                 % <*WORD>
+\begingroup\lccode`\~=13 \lowercase{\endgroup\gml@kdef~}#1>{\gml@kind#1>\gml@nil}% active ^^M
+\def\gml@bhint#1#2{\gml@hint{#1}{#2,break}}
+\def\gml@linesname{gml:lines}
+\def\gml@elt#1{\def\gml@tmpa{#1}%
+  \ifx\gml@tmpa\gml@linesname\expandafter\gml@elt@lines\else\expandafter\gml@estart\fi{#1}}
+\def\gml@elt@lines#1#2{\def\gml@lattrs{#2}\gml@get\gml@lattrs{word}\gml@tmpb
+  \expandafter\gml@beginlines\expandafter{\gml@tmpb}{#2}}
+% &N; is \gml@charref{N}: \gml@char{N} (see "characters"); a context
+% that reads characters otherwise \lets it (upper case, names)
+\def\gml@charref{\gml@char}
+\begingroup\catcode`\<=\active \catcode`\&=\active
+\gdef<{\ifnum\catcode13=13 \begingroup\catcode13=10 \expandafter\gml@gtag
+  \else\expandafter\gml@tag\fi}
+\gdef&#1;{\gml@charref{#1}}
+\endgroup
+
 % ---- characters ---------------------------------------------------------------------
+% &N; (\gml@charref) renders the character with decimal code point N:
+% \gml@char{N} is \gml@char@N (\gmldefchar{N}{...}), or "?" with a
+% message.  Expandable (but for the message).  A tag set may redefine
+% \gml@char (\gml@charref calls it by name).
 \def\gml@char#1{\expandafter\ifx\csname gml@char@#1\endcsname\relax
   \gml@warnonce{char#1}{no rendering for character #1 (decimal code point), printed as ?}?%
   \else\csname gml@char@#1\endcsname\fi}
-\let\gmlchar\gml@char
 \def\gml@ttor#1#2{\ifnum\fam=\ttfam\char#1\relax\else#2\fi}
 \gmldefchar{34}{\gml@ttor{34}{''}}
 \gmldefchar{60}{\gml@ttor{60}{$<$}}
@@ -609,6 +705,10 @@
 \gmldefchar{125}{\gml@ttor{125}{$\}$}}
 \gmldefchar{126}{\gml@ttor{126}{\~{}}}
 \gmldefchar{44}{,} \gmldefchar{61}{=}
+% plain's \# \$ \% \& (\char: the same glyph in roman and typewriter)
+\gmldefchar{35}{\#} \gmldefchar{36}{\$} \gmldefchar{37}{\%} \gmldefchar{38}{\&}
+% a tab outside a tab line (see "tabs"): a blank
+\gmldefchar{9}{\gml@warnonce{tab}{tab outside a tab line (a blank)}\ }
 % Latin-1
 \gmldefchar{160}{\nobreak\ }        \gmldefchar{161}{!`}
 \gmldefchar{162}{\rlap/c}            \gmldefchar{163}{{\it\$}}
@@ -685,12 +785,11 @@
   \else\ifnum\gml@cnta>312 \ifnum\gml@cnta<329 \advance\gml@cnta\m@ne\fi
     \else\ifnum\gml@cnta>377 \advance\gml@cnta\m@ne\fi\fi\fi\fi\fi
   \expandafter\gml@char\expandafter{\the\gml@cnta}}
-\def\gmlupword#1{{\let\gmlchar\gml@ucchar\uppercase{#1}}}
-\def\gmlusword#1{\underbar{#1}}
-\def\gmlucword#1{\underbar{\gmlupword{#1}}}
+% <!TEXT> (and <*WORD>, underscored too)
+\def\gml@upword#1{{\let\gml@charref\gml@ucchar\uppercase{#1}}}
 
 % ---- tabs (.tp/.tb) -----------------------------------------------------------------
-% A line with tab characters is \gmltabline{seg\gmltab seg...}.  The
+% A line with tab characters is <,tabline>{seg&9;seg...}.  The
 % segments are boxed and measured from the start of the line; the k-th
 % tab goes to the first stop after the previous one that lies beyond
 % the current position (DCF order: the stops are used as listed).
@@ -720,13 +819,15 @@
     \else\hbox to\gml@dimb{\xleaders\hbox{\gml@tabfill}\hfil}\fi
     \advance\gml@tabpos\gml@dimb
   \else\ \fi}
-\def\gmltab{\gml@warnonce{tab}{tab outside \string\gmltabline}\ }
-\def\gmltabline#1{\leavevmode\begingroup\gml@tabpos\z@\gml@tabidx\z@\gml@tabfirsttrue
-  \gml@tabloop#1\gmltab\gml@nil\endgroup}
-\def\gml@tabloop#1\gmltab#2\gml@nil{\setbox\gml@box\hbox{#1}%
+\begingroup\catcode`\&=\active
+\gdef\gml@tabline#1{\leavevmode\begingroup\gml@tabpos\z@\gml@tabidx\z@\gml@tabfirsttrue
+  \gml@tabloop#1&9;\gml@nil\endgroup}
+\long\gdef\gml@tabloop#1&9;#2\gml@nil{\setbox\gml@box\hbox{#1}%
   \ifgml@tabfirst\gml@tabfirstfalse\else\gml@tabadvance\fi
   \advance\gml@tabpos\wd\gml@box\box\gml@box
   \def\gml@tmpd{#2}\ifx\gml@tmpd\empty\else\gml@tabloop#2\gml@nil\fi}
+\endgroup
+\gmldefhint{tabline}{\gml@tabline}
 
 % ---- parshape for temporary indents ---------------------------------------------------
 % \gml@shape{a}{n}{dl}{dr}: a lines unchanged, n lines moved by dl/dr
@@ -776,7 +877,7 @@
 % value of its own (p.451 Table 25 note 3): a .in leaves it pending
 % (DCF-VERIFY).
 % Each vertical list has a queue of its own.  \gml@pqenter, run by
-% \everyvbox (which \gmlbegindocument sets after the tag set), by
+% \everyvbox (which \gml sets after the tag set), by
 % \output and by the footnote \insert, starts an empty queue and puts
 % the one outside back when the box ends (\aftergroup\gml@pqleave, a
 % saved copy per level \gml@pqdepth).  So a figure, a table cell or a
@@ -786,7 +887,7 @@
 % basic indention currently in effect", LR p.228 .KP r1: a temporary
 % indention of the text outside does not go in, DCF-VERIFY.)
 % \ifgml@pqown marks such a box.  In a box without one (an \everyvbox a
-% tag set sets after \gmlbegindocument; \ifinner) or in restricted
+% tag set sets after \gml; \ifinner) or in restricted
 % horizontal mode nothing is consumed and a hint moves one paragraph
 % (\gml@shape).
 \def\gml@pqmain{\gml@pqontrue\ifinner\ifgml@pqown\else\gml@pqonfalse\fi\fi}
@@ -914,9 +1015,9 @@
     \else\expandafter\gml@pqpop\gml@pqsastack\gml@nil\fi
   \else\gml@pqname#1\expandafter\ifx\csname gml@pqsa@\gml@pqnm\endcsname\relax\gml@pqreset
     \else\csname gml@pqsa@\gml@pqnm\endcsname\fi\fi}
-% the name as characters (tex.xsl writes # $ % & as \# \$ \% \&)
-\def\gml@pqname#1{{\def\#{\string\#}\def\${\string\$}\def\%{\string\%}%
-  \def\&{\string\&}\def\gmlchar##1{+##1+}\xdef\gml@pqnm{#1}}}
+% the name as characters (&N; as +N+)
+\def\gml@pqname#1{{\let\gml@charref\gml@plusname\xdef\gml@pqnm{#1}}}
+\def\gml@plusname#1{+#1+}
 \def\gml@pqpop\gml@pqel#1#2\gml@nil{#1\gdef\gml@pqsastack{#2}}
 
 % ---- hints ------------------------------------------------------------------------
@@ -1165,7 +1266,7 @@
 % (underscore) is italic: the Starter Set's own page-printer fonts make
 % hi1 italic and hi2 bold where its line-device fonts use US and OS
 % (DSMPROF3; SH35-0050 p.24-25), and plain TeX cannot underline text by
-% a font switch.  UP is done by tex.xsl (\gmlupword).  TYPE: the family
+% a font switch.  UP is done by tex.xsl (<!TEXT>).  TYPE: the family
 % chooses the slot (mono: tt, sans: ss/ssbf, else rm it bf bi), a size
 % loads the slot at that size (\gml@sized).  FONT name alone (no other
 % operand) is that font if it is known, the 3800 font ids among them
@@ -1221,7 +1322,7 @@
   \else\ifvmode\leavevmode\gml@dimtok\gml@is@to\gml@dima\hskip\gml@dima
     \else\ifx\gml@is@min\empty\space
       \else\gml@dimtok\gml@is@min\gml@dima\unskip\hskip\gml@dima\fi\fi\fi\fi}
-% TO after a label: tex.xsl writes \gmlislabel before the text of the
+% TO after a label: tex.xsl writes <,islabel> before the text of the
 % line so far when it is only text and fonts since the last break (a
 % list identifier, a definition term), so the label is boxed and the tab
 % is exact: TO less the label width (TPG p.89, measured from the start
@@ -1229,7 +1330,7 @@
 % TO): BREAK breaks the line, ABSOLUTE backs up, otherwise (BLANK, the
 % default, LR p.219) a word space.
 \newbox\gml@islab \newif\ifgml@islab
-\def\gmlislabel{\leavevmode\setbox\gml@islab\hbox\bgroup\gml@islabtrue}
+\gmldefhint{islabel}{\leavevmode\setbox\gml@islab\hbox\bgroup\gml@islabtrue}
 \def\gml@is@label{\unskip
   \edef\gml@tmpd{\noexpand\gml@is@label@a{\gml@is@to}{\gml@is@min}{\gml@tv}}%
   \expandafter\egroup\gml@tmpd}
@@ -1323,7 +1424,7 @@
   \else\ifx\gml@tu\empty\else\gml@newpage
     \ifnum\gml@tcfirst<\z@\global\pageno\gml@tcfirst\global\advance\pageno-\gml@tu\relax
     \else\global\pageno\gml@tcfirst\global\advance\pageno\gml@tu\relax\fi\fi\fi}
-\gmldefhint{tcmark}{\gml@hget{anchor}\gml@tv\ifx\gml@tv\empty\else\gmlanchor{\gml@tv}\fi}
+\gmldefhint{tcmark}{\gml@hget{anchor}\gml@tv\ifx\gml@tv\empty\else\gml@anchor\gml@tv\fi}
 \gmldefhint{tcentry}{\par\begingroup
   \gml@hget{text}\gml@tctext\gml@hget{font}\gml@tv\gml@hget{indent}\gml@tu
   \gml@hget{dot}\gml@tcdot\gml@hget{page}\gml@tcpage\gml@hget{anchor}\gml@tcanchor
@@ -1365,7 +1466,7 @@
 % .pi: an index entry; resolve.xsl gives it an anchor (its page
 % reference target) and puts the index after the .ix, so .ix itself
 % has nothing to do here
-\gmldefhint{pi}{\gml@hget{anchor}\gml@tv\ifx\gml@tv\empty\else\gmlanchor{\gml@tv}\fi}
+\gmldefhint{pi}{\gml@hget{anchor}\gml@tv\ifx\gml@tv\empty\else\gml@anchor\gml@tv\fi}
 \gmldefhint{ix}{}
 \gmldefhint{ic}{\gml@notimpl{ic}}
 \gmldefhint{ud}{\gml@notimpl{ud}}
@@ -1378,7 +1479,7 @@
 \gmldeflines{ce}{end}{\gml@lmore}
 \gmldeflines{ri}{begin}{\gml@linesalign{right}}
 \gmldeflines{ri}{end}{\gml@lmore}
-% .us/.up/.uc: tex.xsl wraps the words (\gmlusword ...); nothing else
+% .us/.up/.uc: tex.xsl wraps the words (<_WORD> ...); nothing else
 \gmldeflines{us}{begin}{} \gmldeflines{up}{begin}{} \gmldeflines{uc}{begin}{}
 % .rc * c: a revision character in the margin of the covered line
 \gmldeflines{rc}{begin}{\gml@lget{char}\gml@tv\gml@lget{cont}\gml@tmpb
@@ -1388,7 +1489,7 @@
 % ENC (the names of the aux file, lib/aux.ml): a name as tex.xsl
 % escaped it (A-Z a-z 0-9 . - and +code+) with "." as "@", "-" as "#2D"
 % and "+" as "#2B" (a catcode-12 #); expandable (\csname, \write); a
-% macro as the name (\gmlanchor{\gml@tv}) is expanded once first
+% macro as the name (\gml@anchor\gml@tv) is expanded once first
 {\catcode`\#=12 \gdef\gml@hash{#}}
 \def\gml@enc#1{\expandafter\gml@enc@#1\gml@enc@end}
 \def\gml@enc@end{\gml@enc@end}
@@ -1408,10 +1509,11 @@
 % not break before a heading that has an anchor
 \def\gml@shipwrite#1{\edef\gml@tmpa{\write\gml@refout{#1}}%
   \ifvmode\vskip\z@\gml@tmpa\nobreak\else\gml@tmpa\fi}
-\def\gmlanchor#1{\ifgml@reffile
+% <@NAME>, anchor=: a page-reference target
+\def\gml@anchor#1{\ifgml@reffile
   \gml@shipwrite{.se pa@\gml@enc{#1} = '\noexpand\gml@folio'}\fi}
-% the questions of the pass model (an unknown kind is ignored)
-\def\gmlquery#1#2{\ifgml@reffile\csname gml@q@#2\endcsname{#1}\fi}
+% <?WHAT ID>: the questions of the pass model (an unknown kind is ignored)
+\def\gml@query#1#2{\ifgml@reffile\csname gml@q@#2\endcsname{#1}\fi}
 \def\gml@abspage{\ifnum\pageno<\z@\number-\pageno\else\number\pageno\fi}
 \def\gml@q@pn#1{\gml@shipwrite{.se pq@\gml@qenc{#1} = \noexpand\gml@abspage}}
 \def\gml@q@lc#1{\begingroup\gml@lbuild
@@ -1429,16 +1531,17 @@
 \def\gml@draftmode{\ifx\pdfdraftmode\undefined
     \ifx\dpxoutput\undefined\else\dpxoutput=\z@\fi
   \else\pdfdraftmode=\@ne\fi}
-\def\gml@reflabel#1{\def\gml@tmpe{#1}\ifx\gml@tmpe\empty\else\ #1\nobreak\ \fi}
-\def\gmlpageref#1#2#3{\def\gml@tmpd{#2}%
-  \ifx\gml@tmpd\gml@autostr\gml@pageref@auto{#1}{#3}%
-  \else\gml@reflabel{#3}\gml@pagenumber{#1}\fi}
-\def\gml@pageref@auto#1#2{\global\advance\gml@refcount\@ne
+% <,pageref refid=A,when=W,label=L>: W = always (the default) | auto
+\gmldefhint{pageref}{\gml@hget{refid}\gml@prid\gml@hget{when}\gml@tu
+  \gml@hget{label}\gml@prlab
+  \ifx\gml@tu\gml@autostr\gml@pageref@auto\else\gml@reflabel\gml@pagenumber\gml@prid\fi}
+\def\gml@reflabel{\ifx\gml@prlab\empty\else\ \gml@prlab\nobreak\ \fi}
+\def\gml@pageref@auto{\global\advance\gml@refcount\@ne
   \ifgml@reffile\gml@shipwrite{.se pr@\the\gml@refcount\space= '\noexpand\gml@folio'}\fi
   \expandafter\let\expandafter\gml@pa\csname gml@rpg@\the\gml@refcount\endcsname
-  \expandafter\let\expandafter\gml@pb\csname gml@pg@\gml@enc{#1}\endcsname
-  \ifx\gml@pa\relax\gml@reflabel{#2}\gml@pagecs\gml@pb
-  \else\ifx\gml@pa\gml@pb\else\gml@reflabel{#2}\gml@pagecs\gml@pb\fi\fi}
+  \expandafter\let\expandafter\gml@pb\csname gml@pg@\gml@enc\gml@prid\endcsname
+  \ifx\gml@pa\relax\gml@reflabel\gml@pagecs\gml@pb
+  \else\ifx\gml@pa\gml@pb\else\gml@reflabel\gml@pagecs\gml@pb\fi\fi}
 \def\gml@folio{\gml@folioprefix\folio}
 % Reading the aux file: every special character catcode 12, a line at a
 % time (\read), each ".se NAME = VALUE" line parsed by delimited macros
@@ -1450,6 +1553,7 @@
 \def\gml@auxcat{\catcode`\\=12 \catcode`\{=12 \catcode`\}=12 \catcode`\$=12
   \catcode`\&=12 \catcode`\#=12 \catcode`\^=12 \catcode`\_=12 \catcode`\%=12
   \catcode`\~=12 \catcode`\'=12 \catcode`\==12 \catcode`\@=12 \catcode`\ =10
+  \catcode`\<=12 
   \endlinechar\m@ne}
 \def\gml@auxfile#1#2{\openin\gml@in=\jobname.gmlaux
   \ifeof\gml@in\closein\gml@in#2%
@@ -1503,23 +1607,22 @@
 \def\gml@userrh{\ifodd\pageno\gml@runput{rh}{odd}\vbox\else\gml@runput{rh}{even}\vbox\fi\hss}
 \def\gml@userrf{\ifodd\pageno\gml@runput{rf}{odd}\vtop\else\gml@runput{rf}{even}\vtop\fi\hss}
 % The page number symbol (.dc PS, default &) in a running heading or
-% footing: tex.xsl writes the content as \gmlrundyn{...} (a
+% footing: tex.xsl writes the content as <,rundyn>{...} (a
 % .sx with pagesym=, or a gml:pageno), which is kept as tokens and
 % typeset when each page is shipped out.  The page number is its own
-% macro, \gmlpageno (gml:pageno, and the symbol in the fields of a .sx
-% with pagesym=), so a text ampersand (\&) stays an ampersand.  The hints
+% hint, <,pageno> (gml:pageno, and the symbol in the fields of a .sx
+% with pagesym=), so a text ampersand (&38;) stays an ampersand.  The hints
 % in it are made local there (\global is \relax) and start from a
 % neutral state (no indention, offset or keep), so the body's formatting
 % state is untouched.  Without the symbol the box made where the heading
 % or footing was defined is used.
 % gml:pageno: the engine splits the page number symbol off the text of
 % a running heading or footing (before .tr translation, so a text "&"
-% made by &amp. stays text, SH35-0069 p.234 and p.259); in \gmlrundyn
+% made by &amp. stays text, SH35-0069 p.234 and p.259); in <,rundyn>
 % it is the page being shipped out
-\def\gmlpageno{\gml@folio}
-\gmldefhint{pageno}{\gmlpageno}
+\gmldefhint{pageno}{\gml@folio}
 \newif\ifgml@rundyn
-\long\def\gmlrundyn#1{\gdef\gml@rundyntoks{#1}\global\gml@rundyntrue}
+\gmldefhint{rundyn}#1{\gdef\gml@rundyntoks{#1}\global\gml@rundyntrue}
 \def\gml@runput#1#2#3{\expandafter\ifx\csname gml@#1dyn#2\endcsname\relax
     \copy\csname gml@#1#2\endcsname
   \else{\let\global\relax
@@ -1528,9 +1631,9 @@
 % Symbols in a running heading or footing (Rel 4, LR p.312 r7, p.315
 % r7, p.316): "&section is replaced with the value of the symbol at the
 % time the page is started".  The engine writes a reference to a symbol
-% in the definition as \gmlsymref{NAME}{value}, the value where the
+% in the definition as <,symref name=NAME>{value}, the value where the
 % heading was defined, and every later change of the symbol, where it
-% happens in the flow, as \gmlsymval{NAME}{value}: an e-TeX mark of a
+% happens in the flow, as <,symval name=NAME,value=V>: an e-TeX mark of a
 % class of its own (allocated per name from 1; class 0, \mark, is the
 % tables').  The mark holds \gml@mv{value}, so a value set to empty is
 % not taken for no mark.  When the heading is set for a page (in
@@ -1559,11 +1662,11 @@
 \def\gml@mv#1{#1}
 \newcount\gml@symclasses \newif\ifgml@symnb \newif\ifgml@symtop
 \ifx\marks\undefined
-  \def\gmlsymval#1#2{}
+  \def\gml@symval#1#2{}
   \def\gml@symget#1#2{\def\gml@symv{#2}}
   \let\gml@symtop\relax
 \else
-  \def\gmlsymval#1#2{\expandafter\ifx\csname gml@mk@#1\endcsname\relax
+  \def\gml@symval#1#2{\expandafter\ifx\csname gml@mk@#1\endcsname\relax
       \global\advance\gml@symclasses\@ne
       \expandafter\xdef\csname gml@mk@#1\endcsname{\number\gml@symclasses}\fi
     \gml@symnbfalse
@@ -1584,8 +1687,12 @@
         \expandafter\def\expandafter\gml@symv\expandafter{\topmarks\gml@tmpm}\fi\fi
     \ifx\gml@symv\empty\def\gml@symv{#2}\fi}
 \fi
-% \gml@symget{NAME}{value}: \gml@symv is the value for this page
-\def\gmlsymref#1#2{\gml@symget{#1}{#2}\gml@symv}
+% \gml@symget{NAME}{value}: \gml@symv is the value for this page;
+% \gml@symref{NAME}{value} puts it out, \gml@symval{NAME}{value} sets it
+\def\gml@symref#1#2{\gml@symget{#1}{#2}\gml@symv}
+\gmldefhint{symref}#1{\gml@hget{name}\gml@tv\expandafter\gml@symref\expandafter{\gml@tv}{#1}}
+\gmldefhint{symval}{\gml@hget{name}\gml@tv\gml@hget{value}\gml@tu
+  \edef\gml@tmpa{\noexpand\gml@symval{\gml@tv}}\expandafter\gml@tmpa\expandafter{\gml@tu}}
 \output={\gml@pqenter\gml@tbl@output\gml@symtop\hsize\gml@defaulthsize\plainoutput\global\gml@plainpagefalse
   \global\gml@chappagefalse
   \gml@runsupnext{rh@odd}\gml@runsupnext{rh@even}%
@@ -1885,6 +1992,10 @@
 %   row{cols= subrows= cwidths= split=}  c{col= colspan= subrow= rowspan=
 %   hp= align= valign= concat= mindepth= rotate= shade=}  gml:cpart
 %   tcap{gml:num text}  tdesc
+% tex.xsl leaves out what is assumed here anyway: of a cell col= (its
+% place in the row), n= (col), colspan=1 subrow=1 rowspan=1 hp=0
+% align=left valign=top concat=yes mindepth=* rotate=0 shade=0; of a row
+% subrows=1 and split= (the table's); of the table split=no rotate=0.
 % Our own grid, no \halign: every width is declared (absolute DCF units
 % or k* shares of what the absolute ones leave of the table width) and a
 % row is laid out on its own.  The table is width= wide, else the line
@@ -1985,7 +2096,19 @@
 \gmldefend{table}{\gml@tbl@finish\par\gml@vskip\gml@tableskip}
 \gmldefstart{thd}{\def\gml@rowdest{thd}}
 \gmldefstart{tft}{\def\gml@rowdest{tft}}
-\gmldefstart{rdef}{}
+% a row definition, written once: <rdef id=K,cols=,subrows=,cwidths=>, a
+% <,cell ATTRS> for each of its cells in the order of a row's cells, <>.
+% They are kept in \gml@rd@K and \gml@rd@K@1.. (globally: the last
+% definition of K holds); a <row rdef=K> and its k-th <c> take them
+% after their own attributes (\gml@tbl@inherit).
+\newcount\gml@rdn \def\gml@rdcur{}
+\gmldefstart{rdef}{\gml@aget{id}\gml@tv\xdef\gml@rdcur{\gml@tv}\global\gml@rdn\z@
+  \expandafter\global\expandafter\let\csname gml@rd@\gml@rdcur\endcsname\gml@attrs}
+\gmldefhint{cell}{\global\advance\gml@rdn\@ne
+  \expandafter\global\expandafter\let\csname gml@rd@\gml@rdcur @\the\gml@rdn\endcsname\gml@hattrs}
+\def\gml@tbl@inherit#1{\expandafter\ifx\csname gml@rd@#1\endcsname\relax\else
+  \toks@\expandafter{\gml@attrs}\toks\tw@\expandafter\expandafter\expandafter{\csname gml@rd@#1\endcsname}%
+  \edef\gml@attrs{\the\toks@,\the\toks\tw@}\fi}
 % the rows so far, the footing and the end mark (at tcap, tdesc or the end)
 \def\gml@tbl@finish{\ifgml@tblopen\global\gml@tblopenfalse
   \gml@tbl@flush
@@ -2024,7 +2147,7 @@
   \else\gml@tW#2sp\fi}
 \def\gml@tbl@x#1{\csname gml@tx@#1\endcsname sp}
 % -- rows
-\gmldefstart{row}{\gml@aget{cwidths}\gml@tv\gml@aget{subrows}\gml@tsub
+\gmldefstart{row}{\gml@aget{rdef}\gml@trd\gml@tbl@inherit\gml@trd\gml@aget{cwidths}\gml@tv\gml@aget{subrows}\gml@tsub
   \gml@aget{split}\gml@trowsplit\gml@tbl@rowbegin}
 \gmldefend{row}{\gml@tbl@rowend}
 \def\gml@tbl@rowbegin{\ifx\gml@tsub\empty\def\gml@tsub{1}\fi\gml@tblS\gml@tsub\relax
@@ -2122,7 +2245,8 @@
   \else\box\gml@chunk\gml@tbl@fnout\gml@chunkfns\fi
   \prevdepth\z@\fi}
 % -- cells
-\gmldefstart{c}{\gml@aget{col}\gml@tc\gml@aget{n}\gml@tn\gml@aget{colspan}\gml@tcs
+\gmldefstart{c}{\gml@cnta\gml@tblncell\advance\gml@cnta\@ne
+  \gml@tbl@inherit{\gml@trd @\the\gml@cnta}\gml@aget{col}\gml@tc\gml@aget{n}\gml@tn\gml@aget{colspan}\gml@tcs
   \gml@aget{subrow}\gml@tsr\gml@aget{rowspan}\gml@trs\gml@aget{hp}\gml@thp
   \gml@aget{align}\gml@tal\gml@aget{valign}\gml@tva\gml@aget{concat}\gml@tcc
   \gml@aget{mindepth}\gml@tmd\gml@tbl@warn{rotate}\gml@tbl@warn{shade}%
@@ -2130,7 +2254,7 @@
 \gmldefend{c}{\gml@tbl@cellend}
 \def\gml@tbl@default#1#2{\ifx#1\empty\edef#1{#2}\fi}
 \def\gml@tbl@cellbegin{\global\advance\gml@tblncell\@ne
-  \gml@cnta\gml@tblncell\gml@tbl@default\gml@tc{\the\gml@cnta}%
+  \gml@cnta\gml@tblncell\gml@tbl@default\gml@tc{\the\gml@cnta}\gml@tbl@default\gml@tn\gml@tc%
   \gml@tbl@default\gml@tcs1\gml@tbl@default\gml@tsr1\gml@tbl@default\gml@trs1%
   \gml@tbl@default\gml@thp0\gml@tbl@default\gml@tal{left}%
   \gml@tbl@default\gml@tva{top}\gml@tbl@default\gml@tcc{yes}%
@@ -2179,7 +2303,7 @@
     \kern-\gml@cellhpad}%
   \kern\gml@cellvpad\prevdepth.3\baselineskip\global\gml@celltoptrue}
 % -- table note: a row of one full-width cell, "Note:" in hp2
-\gmldefstart{tnote}{\def\gml@tsub{1}\def\gml@tv{1*}\let\gml@trowsplit\empty
+\gmldefstart{tnote}{\def\gml@tsub{1}\let\gml@trd\empty\def\gml@tv{1*}\let\gml@trowsplit\empty
   \gml@tbl@rowbegin
   \def\gml@tc{1}\def\gml@tn{1}\def\gml@tcs{1}\def\gml@tsr{1}\def\gml@trs{1}\def\gml@thp{0}%
   \def\gml@tal{left}\def\gml@tva{top}\def\gml@tcc{yes}\let\gml@tmd\empty
@@ -2200,7 +2324,7 @@
 % caption and description styling (.sk .bf; the .ct colon of tdesc joins
 % the caption's paragraph, so tcap ends no paragraph).  tcap and tdesc
 % only end the rows; the paragraph they start ends with the table.
-\gml@hkeep{thd} \gml@hkeep{tft} \gml@hkeep{row} \gml@hkeep{c}
+\gml@hkeep{rdef} \gml@hkeep{thd} \gml@hkeep{tft} \gml@hkeep{row} \gml@hkeep{c}
 \gml@hkeep{gml:cpart} \gml@hkeep{tnote}
 \gmldefhstart{table}{\par\gml@tbl@open}
 \gmldefhend{table}{\gml@tbl@finish{\interlinepenalty\@M\par}}
@@ -2242,9 +2366,6 @@
   \else\ifx\gml@tblbot\empty\gml@tblfootfalse\else\gml@tblfoottrue\fi\fi
   \setbox\@cclv\vbox{\unvbox\gml@tblpg\ifgml@tblfoot\ifx\gml@tblftr\empty\else
     \kern-\gml@tblrule\nointerlineskip\copy\gml@tbl@box{tft}\gml@tblftr\fi\fi}}
-% lists of tables (tlist): like the list of illustrations
-\def\gmltlistbegin{\gmlfiglistbegin} \def\gmltlistentry{\gmlfiglistentry}
-\def\gmltlistend{\gmlfiglistend}
 
 % ---- footnotes -------------------------------------------------------------------------------------------
 \def\gml@vfootnote#1{\insert\footins\bgroup\gml@pqenter
@@ -2295,7 +2416,10 @@
 \def\footnoterule{\ifgml@userleader\copy\gml@fnleader\kern2pt
   \else\gml@plainfootnoterule\fi}
 
-% ---- table of contents, list of illustrations ---------------------------------------------------
+% ---- table of contents, lists of illustrations and tables ---------------------------------------
+% <:toc-entries title=T> <,toc-entry ATTRS>{num}{text}{page} ... <>, the
+% same for figlist and tlist (the entries: refid= num=; a toc entry
+% level=); in hint mode too
 \def\gml@tocind#1{\ifnum#1<2 \gml@dima\z@\else\gml@cnta#1\advance\gml@cnta\m@ne
   \multiply\gml@cnta\tw@\gml@dima\gml@cnta\gml@chwidth\fi}
 \def\gml@leaderline#1#2#3{% num text page
@@ -2304,31 +2428,41 @@
     \setbox\gml@box\hbox{#1\enspace}\hangindent\wd\gml@box\hangafter\@ne\fi
   \noindent\ifx\gml@tmpd\empty\else\box\gml@box\fi #2\nobreak
   \leaders\hbox to.75em{\hss.\hss}\hfill\nobreak\hbox to\gml@tocpage{\hss#3}\par}
-\def\gmltocbegin#1{\gml@sectionhead{#1}\begingroup\hyphenpenalty\@M}
-\def\gmltocentry#1#2#3#4{\def\gml@tattrs{#1}\gml@get\gml@tattrs{level}\gml@tv
-  \ifx\gml@tv\empty\def\gml@tv{1}\fi
+% the heading (title=) and the list's group, inside the element's
+\def\gml@listhead{\gml@aget{title}\gml@tv
+  \expandafter\gml@sectionhead\expandafter{\gml@tv}\begingroup\hyphenpenalty\@M}
+\def\gml@listfoot{\par\endgroup\gml@apply\gml@newpage}
+\def\gml@deflist#1#2#3{\gmldefstart{gml:#1-entries}{#2}\gmldefend{gml:#1-entries}{#3}%
+  \gmldefhstart{gml:#1-entries}{#2}\gmldefhend{gml:#1-entries}{#3}}
+\gml@deflist{toc}\gml@listhead\gml@listfoot
+\gml@deflist{figlist}\gml@listhead\gml@listfoot
+\gml@deflist{tlist}\gml@listhead\gml@listfoot
+\gmldefhint{toc-entry}#1#2#3{\gml@hget{level}\gml@tv\ifx\gml@tv\empty\def\gml@tv{1}\fi
   \par\ifnum\gml@tv<2 \gml@vskip\baselineskip\fi
   \begingroup\gml@tocind\gml@tv\advance\gml@dima\gml@elemleft
-  \ifnum\gml@tv<2 \bf\fi\gml@tocnum{#2}{#3}{#4}\endgroup}
+  \ifnum\gml@tv<2 \bf\fi\gml@tocnum{#1}{#2}{#3}\endgroup}
 % hint mode: the profile numbers its headings and figures in their text,
-% so the entries print no number of their own (as \gmlnum)
+% so the entries print no number of their own (as gml:num)
 \def\gml@tocnum#1{\ifgml@hintmode\def\gml@tmpn{}\else\def\gml@tmpn{#1}\fi
   \expandafter\gml@leaderline\expandafter{\gml@tmpn}}
-\def\gmltocend{\par\endgroup\gml@apply\gml@newpage}
-\let\gmlfiglistbegin\gmltocbegin
-\def\gmlfiglistentry#1#2#3#4{\par\gml@vskip{.5\baselineskip}%
-  \begingroup\gml@dima\gml@elemleft\gml@tocnum{#2}{#3}{#4}\endgroup}
-\let\gmlfiglistend\gmltocend
+\gmldefhint{figlist-entry}#1#2#3{\par\gml@vskip{.5\baselineskip}%
+  \begingroup\gml@dima\gml@elemleft\gml@tocnum{#1}{#2}{#3}\endgroup}
+\expandafter\let\csname gml@hint@tlist-entry\expandafter\endcsname
+  \csname gml@hint@figlist-entry\endcsname
 
 % ---- index -----------------------------------------------------------------------------------------------
-% \gmlindexcolumns = 1 or 2 (default 2, as DSMINDEX); two columns are
-% balanced with \vsplit.
-\def\gmlindexbegin#1{\gml@sectionhead{#1}\begingroup\hyphenpenalty\@M
+% <:index-entries title=T> <,index-group letter=L>
+% <,index-entry level=N>{term}{refs} ... <>; refs: <,ixfirst>
+% <,ixref refid=A,major,range=,text=> <,ixsep> <,ixrangesep>
+% <,see kind=K,label=L>{text}.  \gmlindexcolumns = 1 or 2 (default 2,
+% as DSMINDEX); two columns are balanced with \vsplit.
+\def\gml@ixhead{\gml@listhead
   \ifnum\gmlindexcolumns>\@ne
     \gml@dima\hsize\advance\gml@dima-\gml@colsep\divide\gml@dima\tw@
     \setbox\gml@ixbox\vbox\bgroup\hsize\gml@dima\gml@elemhsize\gml@dima\gml@apply
   \fi}
-\def\gmlindexend{\par\ifnum\gmlindexcolumns>\@ne\egroup\gml@ixsplit\fi\endgroup\gml@apply}
+\def\gml@ixfoot{\par\ifnum\gmlindexcolumns>\@ne\egroup\gml@ixsplit\fi\endgroup\gml@apply}
+\gml@deflist{index}\gml@ixhead\gml@ixfoot
 \def\gml@ixsplit{\begingroup\splittopskip\baselineskip\splitmaxdepth\maxdepth
   \vbadness\@M\gml@cntb\z@
   \loop\ifdim\ht\gml@ixbox>\z@\advance\gml@cntb\@ne
@@ -2344,28 +2478,44 @@
     \hbox to\hsize{\vbox to\gml@dimb{\unvbox\z@\vss}\hfil\vbox to\gml@dimb{\unvbox\tw@\vss}}%
     \ifnum\gml@cntb>500 \setbox\gml@ixbox\box\voidb@x\fi
   \repeat\endgroup}
-\def\gmlindexgroup#1{\par\gml@vskip\baselineskip\def\gml@tmpd{#1}%
-  \ifx\gml@tmpd\empty\else\noindent{\bf#1}\par\nobreak\fi}
-\def\gmlindexentry#1#2#3{\par\begingroup\gml@cnta#1\relax\advance\gml@cnta\m@ne
+\gmldefhint{index-group}{\par\gml@vskip\baselineskip\gml@hget{letter}\gml@tmpd
+  \ifx\gml@tmpd\empty\else\noindent{\bf\gml@tmpd}\par\nobreak\fi}
+\gmldefhint{index-entry}#1#2{\par\begingroup\gml@ixtags\gml@hget{level}\gml@tv
+  \gml@cnta\gml@tv\relax\advance\gml@cnta\m@ne
   \gml@dima\gml@cnta\gml@chwidth\multiply\gml@dima\tw@\advance\leftskip\gml@dima
   \rightskip\z@ plus3em\hangindent4\gml@chwidth\hangafter\@ne
-  \noindent#2#3\par\endgroup}
-\def\gmlindexfirst{,\ }
-\def\gmlindexsep{,\ }
-\def\gmlindexrangesep{--}
-\def\gmlindexref#1#2{\def\gml@xattrs{#2}\gml@get\gml@xattrs{text}\gml@tv
-  \gml@get\gml@xattrs{major}\gml@tu
-  \ifx\gml@tv\empty\ifx\gml@tu\gml@yes{\bf\gml@pagenumber{#1}}\else\gml@pagenumber{#1}\fi
+  \noindent#1#2\par\endgroup}
+\gmldefhint{ixfirst}{,\ }
+\gmldefhint{ixsep}{,\ }
+\gmldefhint{ixrangesep}{--}
+\gmldefhint{ixref}{\gml@hget{text}\gml@tv\gml@hget{major}\gml@tu
+  \ifx\gml@tv\empty\gml@hget{refid}\gml@tw
+    \ifx\gml@tu\gml@yes{\bf\gml@pagenumber\gml@tw}\else\gml@pagenumber\gml@tw\fi
   \else\gml@tv\fi}
-\def\gmlsee#1#2#3{\unskip.\ {\it#2}\ #3}
+% In an entry < is expandable for the references that are only text
+% (\gml@ixt@,NAME: <,ixfirst> <,ixsep> <,ixrangesep>): their punctuation
+% joins the text before it (the term, a page number) as text would, with
+% the font's kern ("order,"); any other tag is read as usual.
+\begingroup\catcode`\<=\active
+\gdef\gml@ixtags{\let<\gml@ixtag}
+\endgroup
+\long\def\gml@ixtag#1>{\gml@ixtag@a#1 \gml@nil{#1}}
+\long\def\gml@ixtag@a#1 #2\gml@nil#3{\expandafter\ifx\csname gml@ixt@#1\endcsname\relax
+    \expandafter\gml@firstoftwo\else\expandafter\gml@secondoftwo\fi
+  {\gml@kind#3>\gml@nil}{\csname gml@ixt@#1\endcsname}}
+\def\gml@ixtext#1{\expandafter\edef\csname gml@ixt@,#1\endcsname
+  {\expandafter\noexpand\csname gml@hint@#1\endcsname}}
+\gml@ixtext{ixfirst} \gml@ixtext{ixsep} \gml@ixtext{ixrangesep}
+\gmldefhint{see}#1{\gml@hget{label}\gml@tv\unskip.\ {\it\gml@tv}\ #1}
 
 % ---- the document --------------------------------------------------------------------------------------
+% \gml starts the body: the aux file is read, < and & become active;
 % \everyvbox: a queue of distances per box (\gml@pqenter), before what a
-% tag set put there
-\def\gmlbegindocument{\gmlpass\gml@readrefs\gml@tabdefault
+% tag set put there.  The root's <> ends the document (\gml@enddocument).
+\def\gml{\gmlpass\gml@readrefs\gml@tabdefault
   \everypar{\gml@everypar}\everyvbox\expandafter{\expandafter\gml@pqenter\the\everyvbox}%
-  \rm\gml@apply}
-\def\gmlenddocument{\par\vfill\supereject\gml@checkrefs}
+  \rm\gml@apply\let\gml@closer\gml@enddocument\catcode`\<=\active\catcode`\&=\active}
+\def\gml@enddocument{\par\vfill\supereject\gml@checkrefs\csname bye\endcsname} % (\bye is \outer)
 
 % ---- tag set and local overrides -----------------------------------------------------------------------
 \ifx\gmltagset\undefined\else\input\gmltagset\relax\fi

@@ -1,14 +1,13 @@
 \def\gmlmode{hints}
 \input gml
-\gmlbegindocument%
-\gmlhint{df}{name=hi1,spec=type(italic),break=no,italic=yes}\gmlhint{df}{name=hi2,spec=type(bold),break=no,bold=yes}\gmlstart{gdoc}{}%
-\gmlstart{body}{}%
-\gmlstart{p}{}%
-\gmlhint{bf}{font=hi2,break=no}All\gmlhint{pf}{break=no} \gmlhint{bf}{font=hi1,break=no}of this\gmlhint{pf}{break=no} sentence.
-\gmlhint{sk}{n=1,unit=line,break=yes}%
-\gmlhint{bf}{font=hi2,break=no}After a skip\gmlhint{pf}{break=no}\gmlend{p}%
-\gmlend{body}%
-\gmlend{gdoc}%
-%
-\gmlenddocument
-\bye
+\gml
+<,df name=hi1,spec=type(italic),italic><,df name=hi2,spec=type(bold),bold><
+gdoc><
+body><
+p><,bf font=hi2>All<,pf> <,bf font=hi1>of this<,pf> sentence.
+<
+.sk n=1,unit=line><,bf font=hi2>After a skip<,pf><
+><
+><
+><
+>

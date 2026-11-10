@@ -1,7 +1,6 @@
 \def\gmlpassno{1}\def\gmlpasses{2}
 \input gml
-\gmlbegindocument%
-\gmlquery{q1.2.1}{pn}\gmlquery{q1.3.1}{lc}\gmlquery{q1.4.1}{pn}1 60 1
-%
-\gmlenddocument
-\bye
+\gml
+<?pn q1.2.1><?lc q1.3.1><?pn q1.4.1>1 60 1
+<
+>

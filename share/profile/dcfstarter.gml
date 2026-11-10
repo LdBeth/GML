@@ -1411,7 +1411,7 @@
 .* the target's page is not the reference's.  The pages are &$PN:
 .* with passes (gmlpass) each reference to it is a question that TeX
 .* answers with the page the place of the question is put out on
-.* (gml.tex \gmlquery, at shipout), so the &$PN that a target's APF
+.* (gml.tex <?pn ID>, at shipout), so the &$PN that a target's APF
 .* records (fp@ID fq@ID fu@ID) is the page of the target as an anchor
 .* would give it.  The answer comes one pass later; a forward
 .* reference gets it with the symbol (the page provenance: the symbol

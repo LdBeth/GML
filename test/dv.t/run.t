@@ -6,8 +6,8 @@ baseline shift.  Where it is used it is the hint gml:dv (text=, font=,
 baseline= normalised: "p3" is 3 points); in a running footing it is
 text, not the page number symbol.  A .sx in a running heading or
 footing marks the page number symbol (pagesym=, the fields split
-around it), which tex.xsl writes as \gmlpageno, and every other
-character, a translated &amp. too, as text (\&): the TeX of this
+around it), which tex.xsl writes as <,pageno>, and every other
+character, a translated &amp. too, as text (&38;): the TeX of this
 input is the XSLT fixture xslt/test/tex/dv.  A running heading or
 footing is translated with the initial table as changed inside it
 (LR p.404 r4), so each definition has its own .tr 02 50; &amp., a
