@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gml:dr spec="thick weight 1mm" break="no"/><gml:rf><gml:sx left="R &amp; D" fill="" right="Page " pagesym="" break="yes"/></gml:rf><gml:rh><gml:lines word="ce" n="1" break="yes">Heading &amp; more, page <gml:pageno break="no"/></gml:lines>
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gml:dr spec="thick weight 1mm" break="no"/><gml:rf break="yes"><gml:sx left="R &amp; D" fill="" right="Page " pagesym="" break="yes"/></gml:rf><gml:rh break="yes"><gml:lines word="ce" n="1" break="yes">Heading &amp; more, page <gml:pageno break="no"/></gml:lines>
 </gml:rh>Body text with &amp; here and a raised callout<gml:dv name="sup" font="hi1" baseline="3pt" text="1" break="no"/> in text.
-<gml:hr spec="thick" break="yes"/>After the rule.
+<gml:hr spec="thick left right" break="yes"/>After the rule.
 <gml:pa break="yes"/>Second page.
 </gml:doc>

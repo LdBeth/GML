@@ -11,6 +11,9 @@ macro (.dm name off) since the manual gives them as alternatives.
 - p.276: the &*&*i token loop; p.277: .me, .me .se *rc = 4 setting the
 - p.278-279: .sk redefined with .ec, .ec .sk / .'sk run the control word,
 - p.279-280: FIGNUM/FIGREF (.se x = & is the page number, 1 here) and the
+The FIGLIST line .dm figlist() /.sx .../: the subscripted form drops one
+final delimiter (LR p.142), here the closing one of the .sx operand
+(optional in .sx too).
 
   $ gml in.gml
   x=2 y=1
@@ -63,8 +66,8 @@ macro (.dm name off) since the manual gives them as alternatives.
   il 5
   Imbedding pg$sym ...
   (pg$sym imbedded)
-  sx /Figure 1/ /1/
-  sx /Figure 2/ /1/
+  sx /Figure 1/ /1
+  sx /Figure 2/ /1
   <?xml version="1.0" encoding="UTF-8"?>
   <gml:doc xmlns:gml="urn:x-gml:canonical"><gml:sk n="4" unit="line" break="yes"/><gml:sk n="4" unit="line" break="yes"/>Figure 1
   Example of Aardvark's Table Manners

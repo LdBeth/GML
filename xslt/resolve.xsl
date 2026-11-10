@@ -127,17 +127,34 @@
          mindepth shade [xml:space="preserve" for concat=no]>
     The row definition is the row's refid, else the previous row's (the
     table's for the first); thd/tft likewise among themselves.  ARRANGE
-    lines are split at "/"; a cell number's squares must make a
-    rectangle (else it takes its first square only, with a message);
-    without ARRANGE there is one cell per CWIDTHS value (or one).
-    cwidths has one value per grid column ("*" -> "1*", missing ->
-    "1*").  The k-th value of HP ALIGN VALIGN CONCAT ROTATE MINDEPTH SHADE
-    goes to the k-th cell number in ascending order, the last value
-    repeating; values are expanded from abbreviations (ALIGN=c ->
-    center; DCF-VERIFY: the order).  A :c without a valid number takes
-    the next higher cell number; past the last one a new row
-    (auto="yes") starts at the lowest; a number used again in a row
-    repeats the cell: its occurrences become gml:cpart children.
+    lines are split at "/"; lines of different lengths, or a value that
+    is not a positive integer, give one cell (DSMGML021W, SH35-0048-09
+    p.8); a cell number's squares must make a rectangle (else an error,
+    LR .TD remark 2 p.382, SCRIPT/VS 447 E; here the cell takes its
+    first square only); without ARRANGE there is one cell per CWIDTHS
+    value (or one).  cwidths has one value per grid column ("*" ->
+    "1*", missing -> "1*"; extra values are ignored with a warning: LR
+    .TD remark 3 p.382, SCRIPT/VS 448 W).  A proportional width that
+    comes out zero or less is a severe error (LR .TD remark 4 p.383,
+    SCRIPT/VS 445 S): found here for a factor of 0 and for a table
+    WIDTH= in physical units no wider than the absolute widths; other
+    cases only the layout engine sees.  The k-th value of HP ALIGN
+    VALIGN CONCAT ROTATE MINDEPTH SHADE goes to the k-th cell number in
+    ascending order, the last value repeating, extra values ignored
+    (SH20-9187-06 3.31.1); values are expanded from minimum
+    abbreviations, except ROTATE and MINDEPTH (ALIGN=c -> center; same
+    place).  A cell rotated 90, 270, -90 or -270 needs a MINDEPTH, else
+    it is not rotated (DSMGML022W).  A :c without a valid number takes
+    the next higher cell number (DSMGML010E, ours); past the last one a
+    new row (auto="yes") starts at the lowest, except in a thd or tft,
+    where the :c is ignored and its text goes on in the cell before
+    (DSMGML023W); a number used again in a row repeats the cell: its
+    occurrences become gml:cpart children.
+    Diagnostics are xsl:messages "resolve: <where>: <label> <text>",
+    with IBM's label and text where IBM has a message: "+++DSMGMLnnnx"
+    for the GML Starter Set's (SH35-0048-09 p.5-11, without the page,
+    which only the layout knows), "SVSnnnx" for the SCRIPT/VS ones of
+    .TD (the DSMmmm module of their label is not documented).
     tnote gets gml:num ($lit-tnote).  tref resolves like figref ("Table
     n" + gml:pageref; the target needs a tcap); tlist gets
     gml:tlist-entries (@title $lit-tlist; gml:tlist-entry like
@@ -597,21 +614,40 @@
          </m>
        k = the position of n among the cell numbers in ascending order: the
        k-th value of an attribute list applies to it (the last value
-       repeats, extra values are ignored; DCF-VERIFY: "the first value
-       applies to the first cell" read as the lowest cell number).  The
-       diagnostics are given once, by the rdef template (r:rdef-problems). -->
+       repeats, extra values are ignored: SH20-9187-06 3.31.1, "the first
+       value applies to the first cell"; DCF-VERIFY: with cell numbers
+       that leave gaps, the k-th lowest is taken for the k-th cell, not in
+       Rel 4 manuals).  The diagnostics are given once, by the rdef
+       template (r:rdef-problems). -->
+  <!-- the lines of ARRANGE as written -->
+  <xsl:function name="r:arrange-lines" as="element(line)*">
+    <xsl:param name="rd" as="element()?"/>
+    <xsl:for-each select="tokenize(string($rd/@arrange), '/')[normalize-space() ne '']">
+      <line>
+        <xsl:for-each select="tokenize(normalize-space(.), ' ')">
+          <t v="{.}"/>
+        </xsl:for-each>
+      </line>
+    </xsl:for-each>
+  </xsl:function>
+
+  <!-- an ARRANGE is valid: lines of the same length, positive integers -->
+  <xsl:function name="r:arrange-ok" as="xs:boolean">
+    <xsl:param name="rd" as="element()?"/>
+    <xsl:variable name="lines" select="r:arrange-lines($rd)"/>
+    <xsl:sequence select="count(distinct-values($lines ! count(t))) le 1
+        and (every $v in $lines/t/@v satisfies ($v castable as xs:integer and xs:integer($v) gt 0))"/>
+  </xsl:function>
+
   <xsl:function name="r:rdef-lines" as="element(line)*">
     <xsl:param name="rd" as="element()?"/>
     <xsl:param name="n" as="xs:integer"/>
     <xsl:choose>
+      <xsl:when test="normalize-space($rd/@arrange) ne '' and r:arrange-ok($rd)">
+        <xsl:sequence select="r:arrange-lines($rd)"/>
+      </xsl:when>
       <xsl:when test="normalize-space($rd/@arrange) ne ''">
-        <xsl:for-each select="tokenize($rd/@arrange, '/')[normalize-space() ne '']">
-          <line>
-            <xsl:for-each select="tokenize(normalize-space(.), ' ')">
-              <t v="{.}"/>
-            </xsl:for-each>
-          </line>
-        </xsl:for-each>
+        <line><t v="1"/></line>
       </xsl:when>
       <xsl:otherwise>
         <xsl:variable name="cw" select="count(r:tokens($rd/@cwidths))"/>
@@ -703,8 +739,13 @@
                 col="{if ($rect) then $c1 else $s[1]/@c}" colspan="{if ($rect) then $cs else 1}"
                 subrow="{if ($rect) then $r1 else $s[1]/@r}" rowspan="{if ($rect) then $rs else 1}">
             <xsl:if test="not($rect)"><xsl:attribute name="bad" select="'yes'"/></xsl:if>
+            <!-- a quarter turn needs a MINDEPTH, else rotation 0 (DSMGML022W) -->
+            <xsl:variable name="norot" select="r:attr-at($rd, 'rotate', $k) = ('90', '270', '-90', '-270')
+                                               and r:attr-at($rd, 'mindepth', $k) = '*'"/>
+            <xsl:if test="$norot"><xsl:attribute name="nodepth" select="'yes'"/></xsl:if>
             <xsl:for-each select="$r:cell-attr-names">
-              <xsl:attribute name="{.}" select="r:attr-at($rd, ., $k)"/>
+              <xsl:attribute name="{.}" select="if (. = 'rotate' and $norot) then '0'
+                                                else r:attr-at($rd, ., $k)"/>
             </xsl:for-each>
           </cell>
         </xsl:for-each>
@@ -718,32 +759,94 @@
 
   <xsl:function name="r:rdef-problems" as="xs:string*">
     <xsl:param name="rd" as="element()"/>
-    <xsl:variable name="lines" select="r:rdef-lines($rd, 1)"/>
     <xsl:variable name="m" select="r:rdef-model($rd, 1)"/>
     <xsl:variable name="cw" select="r:tokens($rd/@cwidths)"/>
-    <xsl:if test="normalize-space($rd/@id) = ''">without id</xsl:if>
-    <xsl:for-each select="distinct-values($lines/t/@v[not(. castable as xs:integer and xs:integer(.) gt 0)])">
-      <xsl:sequence select="concat('arrange: ', ., ' is not a cell number')"/>
-    </xsl:for-each>
-    <xsl:if test="count(distinct-values($lines ! count(t))) gt 1">
-      <xsl:sequence select="'arrange: the lines are not of the same length'"/>
+    <xsl:if test="normalize-space($rd/@id) = ''">
+      <xsl:sequence select="'+++DSMGML019W REQUIRED ATTRIBUTE ID MISSING FROM :RDEF TAG.'"/>
+    </xsl:if>
+    <xsl:if test="normalize-space($rd/@arrange) ne '' and not(r:arrange-ok($rd))">
+      <xsl:sequence select="'+++DSMGML021W INVALID ARRANGE SPECIFICATION, DEFAULT OF 1 USED.'"/>
     </xsl:if>
     <xsl:for-each select="$m/cell[@bad]">
-      <xsl:sequence select="concat('arrange: cell ', @n, ' is not a rectangle')"/>
+      <xsl:sequence select="concat('SVS447E INVALID SPECIFICATION ON ARRANGE PARAMETER. (cell ', @n,
+                                   ' is not a rectangle: its first square is used)')"/>
     </xsl:for-each>
-    <xsl:if test="normalize-space($rd/@arrange) ne '' and exists($cw) and count($cw) ne xs:integer($m/@cols)">
-      <xsl:sequence select="concat('cwidths has ', count($cw), ' values for ', $m/@cols, ' grid columns')"/>
+    <xsl:if test="normalize-space($rd/@arrange) ne '' and count($cw) gt xs:integer($m/@cols)">
+      <xsl:sequence select="concat('SVS448W TOO MANY CWIDTHS VALUES, EXTRA VALUES IGNORED. (',
+                                   count($cw), ' values for ', $m/@cols, ' grid columns)')"/>
     </xsl:if>
     <xsl:for-each select="$cw[not(matches(., '^([0-9]+([.,][0-9]+)?)?\*$')
                                   or matches(., '^[0-9.,a-zA-Z]*[0-9][0-9.,a-zA-Z]*$'))]">
-      <xsl:sequence select="concat('cwidths: ', ., ' is not a width')"/>
+      <xsl:sequence select="concat('+++DSMGML015W ', ., ' NOT A VALID VALUE FOR CWIDTHS ATTRIBUTE OF :RDEF TAG.')"/>
     </xsl:for-each>
+    <xsl:if test="some $w in tokenize($m/@cwidths, ' ') satisfies r:zero-star($w)">
+      <xsl:sequence select="'SVS445S RESULTANT CELL WIDTH IN ROW TOO SMALL. (a proportional width with a factor of 0)'"/>
+    </xsl:if>
     <xsl:for-each select="$r:cell-attr-names">
       <xsl:variable name="name" select="."/>
       <xsl:for-each select="r:tokens($rd/@*[local-name() = $name])[empty(r:attr-value($name, .))]">
-        <xsl:sequence select="concat($name, ': ', ., ' is not a valid value')"/>
+        <xsl:sequence select="concat('+++DSMGML015W ', ., ' NOT A VALID VALUE FOR ', upper-case($name),
+                                     ' ATTRIBUTE OF :RDEF TAG.')"/>
       </xsl:for-each>
     </xsl:for-each>
+    <xsl:for-each select="$m/cell[@nodepth]">
+      <xsl:sequence select="concat('+++DSMGML022W MINDEPTH REQUIRED, BUT MISSING FOR CELL NUMBER ', @n, '.')"/>
+    </xsl:for-each>
+  </xsl:function>
+
+  <!-- a proportional width whose factor is zero: "0*", "0.0*" -->
+  <xsl:function name="r:zero-star" as="xs:boolean">
+    <xsl:param name="w" as="xs:string"/>
+    <xsl:sequence select="matches($w, '^0*([.,]0*)?\*$') and $w ne '*'"/>
+  </xsl:function>
+
+  <!-- a horizontal space unit in points, () if it depends on the font
+       (characters, ems) or is not one: Ni (inches), Ncm, Nmm, Np[M]
+       (picas and points), pM (points), Nc[M] (ciceros and Didot points),
+       cM (Didot points), Ndh (device units: not known) -->
+  <xsl:function name="r:points" as="xs:double?">
+    <xsl:param name="w" as="xs:string?"/>
+    <xsl:variable name="v" select="lower-case(normalize-space($w))"/>
+    <xsl:variable name="num" select="'([0-9]*(\.[0-9]+)?)'"/>
+    <xsl:analyze-string select="$v" regex="^{$num}(i|cm|mm)$">
+      <xsl:matching-substring>
+        <xsl:variable name="n" select="if (regex-group(1) = '') then 0 else number(regex-group(1))"/>
+        <xsl:sequence select="$n * (if (regex-group(3) = 'i') then 72
+                                    else if (regex-group(3) = 'cm') then 72 div 2.54 else 72 div 25.4)"/>
+      </xsl:matching-substring>
+      <xsl:non-matching-substring>
+        <xsl:analyze-string select="$v" regex="^{$num}(p|c){$num}$">
+          <xsl:matching-substring>
+            <xsl:variable name="a" select="if (regex-group(1) = '') then 0 else number(regex-group(1))"/>
+            <xsl:variable name="b" select="if (regex-group(4) = '') then 0 else number(regex-group(4))"/>
+            <xsl:sequence select="if (regex-group(3) = 'p') then ($a * 12 + $b)
+                                  else ($a * 12 + $b) * 1238 div 1157"/>
+          </xsl:matching-substring>
+        </xsl:analyze-string>
+      </xsl:non-matching-substring>
+    </xsl:analyze-string>
+  </xsl:function>
+
+  <!-- SCRIPT/VS 445 S for a table with WIDTH= in physical units: its row
+       definitions with proportional widths whose absolute widths (all in
+       physical units) leave no room (LR .TD remark 4 p.383) -->
+  <xsl:function name="r:check-width">
+    <xsl:param name="t" as="element()"/>
+    <xsl:param name="rows" as="element()*"/>
+    <xsl:variable name="tw" select="r:points($t/@width)"/>
+    <xsl:if test="exists($tw)">
+      <xsl:for-each select="distinct-values($rows/@cwidths)">
+        <xsl:variable name="ws" select="tokenize(., ' ')"/>
+        <xsl:variable name="abs" select="$ws[not(contains(., '*'))]"/>
+        <xsl:variable name="pts" select="$abs ! r:points(.)"/>
+        <xsl:if test="some $w in $ws satisfies contains($w, '*') and not(some $w in $ws satisfies r:zero-star($w))
+                      and count($pts) = count($abs) and sum($pts) ge $tw">
+          <xsl:message select="concat('resolve: table width=&quot;', $t/@width,
+                                      '&quot;: SVS445S RESULTANT CELL WIDTH IN ROW TOO SMALL. (cwidths=&quot;', .,
+                                      '&quot;: no room for the * widths)')"/>
+        </xsl:if>
+      </xsl:for-each>
+    </xsl:if>
   </xsl:function>
 
   <xsl:template match="rdef">
@@ -799,6 +902,7 @@
     <xsl:if test="exists($lead[. instance of text() or not(self::gml:*)])">
       <xsl:message select="concat('resolve: ', local-name($src), ': text outside a cell')"/>
     </xsl:if>
+    <xsl:variable name="hf" select="exists($src/ancestor-or-self::*[self::thd or self::tft])"/>
     <xsl:variable name="acc" as="element(a)*">
       <xsl:iterate select="$cells">
         <xsl:param name="cur" as="xs:integer" select="0"/>
@@ -806,13 +910,21 @@
         <xsl:variable name="g" select="normalize-space(@n)"/>
         <xsl:variable name="valid" select="$g castable as xs:integer and xs:integer($g) = $nums"/>
         <xsl:if test="$g ne '' and not($valid)">
-          <xsl:message select="concat('resolve: c n=&quot;', $g, '&quot;: no such cell in row definition &quot;',
-                                      ($rd/@id, $id)[1], '&quot;')"/>
+          <xsl:message select="concat('resolve: c n=&quot;', $g, '&quot;: +++DSMGML010E CELL ''', $g,
+                                      ''' DOES NOT EXIST IN ROW ''', ($rd/@id, $id)[1], '''.')"/>
         </xsl:if>
         <xsl:variable name="next" select="if ($valid) then xs:integer($g) else $nums[. gt $cur][1]"/>
-        <xsl:variable name="n" select="($next, $nums[1])[1]"/>
-        <xsl:variable name="r" select="if (empty($next)) then $ri + 1 else $ri"/>
-        <a ri="{$r}" n="{$n}" pos="{position()}"/>
+        <!-- no new row in a header or footer: the :c is ignored -->
+        <xsl:variable name="merge" select="empty($next) and $cur ne 0 and $hf"/>
+        <xsl:if test="$merge">
+          <xsl:message select="concat('resolve: ', local-name(($src/ancestor-or-self::*[self::thd or self::tft])[last()]),
+                                      ': +++DSMGML023W CANNOT START A NEW ROW IN A HEADER OR FOOTER, C TAG IGNORED.')"/>
+        </xsl:if>
+        <xsl:variable name="n" select="if ($merge) then $cur else ($next, $nums[1])[1]"/>
+        <xsl:variable name="r" select="if (empty($next) and not($merge)) then $ri + 1 else $ri"/>
+        <a ri="{$r}" n="{$n}" pos="{position()}">
+          <xsl:if test="$merge"><xsl:attribute name="merge" select="'yes'"/></xsl:if>
+        </a>
         <xsl:next-iteration>
           <xsl:with-param name="cur" select="$n"/>
           <xsl:with-param name="ri" select="$r"/>
@@ -831,23 +943,29 @@
         <xsl:if test="$ri gt 1 or $src/@auto = 'yes'"><xsl:attribute name="auto" select="'yes'"/></xsl:if>
         <xsl:for-each select="$m/cell">
           <xsl:variable name="mc" select="."/>
-          <xsl:variable name="occ" select="for $a in $acc[xs:integer(@ri) = $ri and xs:integer(@n) = xs:integer($mc/@n)]
-                                           return $cells[xs:integer($a/@pos)]"/>
+          <xsl:variable name="occa" select="$acc[xs:integer(@ri) = $ri and xs:integer(@n) = xs:integer($mc/@n)]"/>
+          <xsl:variable name="occ" select="for $a in $occa[not(@merge)] return $cells[xs:integer($a/@pos)]"/>
+          <!-- the occurrences, each with the ignored :c that follow it -->
+          <xsl:variable name="parts" as="element(p)*">
+            <xsl:for-each-group select="$occa" group-starting-with="a[not(@merge)]">
+              <p pos="{current-group()/@pos}"/>
+            </xsl:for-each-group>
+          </xsl:variable>
           <c>
             <xsl:apply-templates select="$occ[1]/@*[not(local-name() = ($r:cell-gen, 'space'))]"/>
             <xsl:copy-of select="@n | @col | @colspan | @subrow | @rowspan | @*[local-name() = $r:cell-attr-names]"/>
             <xsl:if test="@concat = 'no'"><xsl:attribute name="xml:space" select="'preserve'"/></xsl:if>
             <xsl:choose>
-              <xsl:when test="count($occ) gt 1">
-                <xsl:for-each select="$occ">
-                  <gml:cpart><xsl:apply-templates select="r:cell-nodes(.)"/></gml:cpart>
+              <xsl:when test="count($parts) gt 1">
+                <xsl:for-each select="$parts">
+                  <gml:cpart><xsl:apply-templates select="for $q in tokenize(@pos, ' ') return r:cell-nodes($cells[xs:integer($q)])"/></gml:cpart>
                 </xsl:for-each>
               </xsl:when>
               <xsl:otherwise>
-                <xsl:if test="$ri = 1 and $occ is $cells[1]">
+                <xsl:if test="$ri = 1 and $occ[1] is $cells[1]">
                   <xsl:apply-templates select="$lead"/>
                 </xsl:if>
-                <xsl:apply-templates select="$occ ! r:cell-nodes(.)"/>
+                <xsl:apply-templates select="for $q in tokenize($parts/@pos, ' ') return r:cell-nodes($cells[xs:integer($q)])"/>
               </xsl:otherwise>
             </xsl:choose>
           </c>
@@ -869,7 +987,7 @@
     <xsl:param name="e" as="element()"/>
     <xsl:if test="empty(r:rdef-for($e, string($e/@refid)))">
       <xsl:message select="concat('resolve: ', local-name($e), ' refid=&quot;', $e/@refid,
-                                  '&quot;: no such row definition')"/>
+                                  '&quot;: +++DSMGML017W ROW DEFINITION ', $e/@refid, ' DOES NOT EXIST.')"/>
     </xsl:if>
   </xsl:function>
 
@@ -878,7 +996,7 @@
     <xsl:variable name="num" select="r:table-num(.)"/>
     <xsl:variable name="split" select="(r:yes-no(@split), 'no')[1]"/>
     <xsl:if test="normalize-space(@refid) = ''">
-      <xsl:message select="'resolve: table without refid'"/>
+      <xsl:message select="'resolve: table: +++DSMGML019W REQUIRED ATTRIBUTE REFID MISSING FROM :TABLE TAG.'"/>
     </xsl:if>
     <xsl:if test="normalize-space(@refid) ne ''"><xsl:sequence select="r:check-refid(.)"/></xsl:if>
     <!-- the parts in document order, each row-like one with the row
@@ -929,6 +1047,7 @@
         </xsl:choose>
       </xsl:iterate>
     </xsl:variable>
+    <xsl:sequence select="r:check-width(., $parts/descendant-or-self::row)"/>
     <xsl:copy>
       <xsl:apply-templates select="@*[not(local-name() = ('column', 'page', 'span', 'split', 'rotate'))]"/>
       <xsl:if test="$num ne ''"><xsl:attribute name="num" select="$num"/></xsl:if>

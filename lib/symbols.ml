@@ -45,7 +45,7 @@ type t = {
           the layout engine ([Ctx.query]); the identity for the others *)
 }
 
-(** DCF limit on symbol name length (p.229). *)
+(** DCF limit on symbol name length (SH35-0069 p.229; LR p.337). *)
 let max_name_len = 10
 
 let new_scope () : scope = Hashtbl.create 8
@@ -154,25 +154,37 @@ let counter_of s =
   | None -> Some 0
   | Some v ->
       (* a null value counts as 0: the Starter Set's DSMTTLEP nulls @title
-       with .gs vars and then appends with .se @title() (DCF-VERIFY) *)
+       with .gs vars and then appends with .se @title() (DCF-VERIFY, not in LR Rel 4) *)
       let v = String.trim v in
       if v = "" then Some 0 else int_of_string_opt v
+
+(** "There can be up to 32767 elements in a symbol array. Attempting to set any
+    higher numbered array elements causes an error" (LR p.342 r18). *)
+let max_elements = 32767
+
+let in_range name sub =
+  if sub <= max_elements then Ok ()
+  else
+    Error
+      (Printf.sprintf "&%s(%d): an array has at most %d elements" (norm name)
+         sub max_elements)
 
 (** Set [name] ([sub] = 0 or absent: the plain value). Setting element n >= 1
     makes n the index counter (p.257: "it will be incremented from the index
     value of the element last set"), unless element 0 holds a value that is not
     a number. DCF-VERIFY: a non-numeric element 0 is left alone (p.257 warns
-    about it rather than saying it is replaced). *)
+    about it rather than saying it is replaced; not in LR Rel 4). *)
 let set ?(sub = 0) t name v =
-  Result.map
-    (fun () ->
-      let s = sym_of t name in
-      if sub = 0 then s.value <- Some v
-      else begin
-        Hashtbl.replace s.elems sub v;
-        if counter_of s <> None then s.value <- Some (string_of_int sub)
-      end)
-    (read_only t name)
+  Result.bind (read_only t name) (fun () ->
+      Result.map
+        (fun () ->
+          let s = sym_of t name in
+          if sub = 0 then s.value <- Some v
+          else begin
+            Hashtbl.replace s.elems sub v;
+            if counter_of s <> None then s.value <- Some (string_of_int sub)
+          end)
+        (in_range name sub))
 
 (** [.se x() = v]: set the element after the index counter (p.256-257). *)
 let append t name v =
@@ -182,9 +194,11 @@ let append t name v =
       | None ->
           Error (Printf.sprintf "index counter &%s is not a number" (norm name))
       | Some c ->
-          Hashtbl.replace s.elems (c + 1) v;
-          s.value <- Some (string_of_int (c + 1));
-          Ok ())
+          Result.map
+            (fun () ->
+              Hashtbl.replace s.elems (c + 1) v;
+              s.value <- Some (string_of_int (c + 1)))
+            (in_range name (c + 1)))
 
 (** [.se x off] removes the whole symbol, the whole array if it is one;
     [.se x(n) off] removes one element (p.235). *)
@@ -216,13 +230,13 @@ let unset ?(sub = 0) t name =
 
    The value is always quoted, a quote in it doubled (Expr.close_quote).
    SCRIPT has no escape for a line end: one in a value is written as a
-   blank (DCF-VERIFY: what DCF's own carry-over does with it).  Every
+   blank (DCF-VERIFY: what DCF's own carry-over does with it, not in LR Rel 4).  Every
    global symbol that is defined at the end of the pass, except the date
    and time symbols ([date_names], set again by every pass: they would
    make two passes differ), the symbols of the aux file ([aux_prefixes]:
    pa@ pq@ pr@ px@, read again from it by every pass) and gml@toc (lib/toc.ml writes the
    entries itself).  Sorted by name and subscript, so that two passes
-   that end in the same state write the same file.  DCF-VERIFY: the set
+   that end in the same state write the same file.  DCF-VERIFY (not in LR Rel 4): the set
    of symbols DCF keeps from one pass to the next (TPG p.233: symbols
    unresolved on the first pass are resolved on the second) is not
    documented in our manuals.
@@ -257,22 +271,6 @@ let se_line ?(sub = 0) name v =
 
 (* ---- date and time ------------------------------------------------------ *)
 
-let months =
-  [|
-    "January";
-    "February";
-    "March";
-    "April";
-    "May";
-    "June";
-    "July";
-    "August";
-    "September";
-    "October";
-    "November";
-    "December";
-  |]
-
 (* SOURCE_DATE_EPOCH (reproducible builds) overrides the clock; it is
    interpreted as UTC. *)
 let now () =
@@ -282,21 +280,14 @@ let now () =
   | Some e -> Unix.gmtime e
   | None -> Unix.localtime (Unix.time ())
 
-(** DCF-VERIFY: format of [&$DATE] (we use "Month d, yyyy"; it is not in
-    SH35-0069). *)
-let date_string () =
-  let tm = now () in
-  Printf.sprintf "%s %d, %d" months.(tm.Unix.tm_mon) tm.Unix.tm_mday
-    (tm.Unix.tm_year + 1900)
+(** [&$YEAR], the current year in 4 digits (LR p.443, Table 17): a read-only
+    system symbol (Ctx.system_value). There is no [&$DATE] or [&$TIME] in DCF
+    (Table 17 lists the date and time symbols). *)
+let year_string () = Printf.sprintf "%04d" ((now ()).Unix.tm_year + 1900)
 
-(** DCF-VERIFY: format of [&$TIME] (we use "hh:mm:ss", 24-hour; it is not in
-    SH35-0069). *)
-let time_string () =
-  let tm = now () in
-  Printf.sprintf "%02d:%02d:%02d" tm.Unix.tm_hour tm.Unix.tm_min tm.Unix.tm_sec
-
-(** The date and time symbols of SH35-0069 p.241: set once, ordinary (settable)
-    global symbols, upper-case names, zero-padded values. *)
+(** The date and time symbols of LR p.443 (Table 17): set once, ordinary
+    (settable) global symbols, upper-case names, zero-padded values ("these
+    symbols can contain leading zeros"); [&SYSDAYOFW] is 1-7, 1 is Sunday. *)
 let date_symbols () =
   let tm = now () in
   [

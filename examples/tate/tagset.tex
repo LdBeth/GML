@@ -178,11 +178,13 @@
 
 % a running heading or footing is a yoko box of that width, wherever it
 % is made (a static one in the body, a dynamic one in \output); other
-% boxes made with \gml@runsetup keep the direction they are made in
+% boxes made with \gml@runsetup keep the direction they are made in;
+% .rh/.rf break (break=yes, LR p.314, p.310), as in gml.tex
 \def\gml@runsetup{\ifydir\hsize\gml@yokowidth\gml@defaulthsize\hsize
   \else\hsize\gml@defaulthsize\fi\gml@elemhsize\hsize
   \gml@elemleft\z@\gml@elemright\z@\def\gml@efont{\rm}\gml@apply}
-\def\gml@runstart#1#2{\gml@aget{page}\gml@runpage\gml@aget{action}\gml@runact
+\def\gml@runstart#1#2{\gml@aget{break}\gml@tmpb\ifx\gml@tmpb\gml@yes\gml@break\fi
+  \gml@aget{page}\gml@runpage\gml@aget{action}\gml@runact
   \ifx\gml@runact\empty\else\let\gml@hattrs\gml@attrs\gml@runaction{#1}\fi
   \setbox\gml@box#2\bgroup\yoko\gml@runsetup}
 

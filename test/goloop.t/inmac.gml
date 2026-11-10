@@ -1,6 +1,6 @@
 .dm spin on
 ...l
-.do begin
+.if 1 eq 1
 .go l
 .dm off
 .ms on;.spin

@@ -1,7 +1,7 @@
 .go nowhere
-.do end
-.do sideways
-.th no if yet
+.an 1 eq 1 wrong: .an without .if
+.el wrong: .el without a comparison
+.th target of .th without a comparison (processed)
 .if 1 frob 2 x
 .if
 .se x = 1 +
@@ -13,6 +13,3 @@ Runaway: &a
 .se q '&p'
 .su on
 Cycle: &p
-.do begin
-.if 1 eq 2 .do begin
-never closed

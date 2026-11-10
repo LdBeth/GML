@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- table diagnostics: a cell that is not a rectangle, arrangement lines
-     of different lengths, a non-number in ARRANGE, too few CWIDTHS,
-     invalid and abbreviated values, an unknown refid on the table and on
-     a row, a :c number that does not exist, a table without refid, text
-     outside a cell and outside a row; row definitions are found by id
-     regardless of case, the last one before the table wins -->
+     of different lengths (021: one cell, so its two CWIDTHS are too
+     many), a non-number in ARRANGE, invalid and abbreviated values, an
+     unknown refid on the table and on a row, a :c number that does not
+     exist, a table without refid, text outside a cell and outside a row;
+     row definitions are found by id regardless of case, the last one
+     before the table wins; a quarter turn without MINDEPTH (022 for the
+     one with a MINDEPTH of *), a zero proportional width, absolute widths
+     that fill a WIDTH= in picas, too few CWIDTHS (no message), a :c past
+     the last cell of a header (023: its text joins the cell before) -->
 <gml:doc xmlns:gml="urn:x-gml:canonical"><body>
 <rdef id="hole" arrange="1 1 2 / 3 1 1" cwidths="* * *"/>
 <rdef id="ragged" arrange="1 2 3 / 4 x" cwidths="1i *"/>
@@ -18,4 +22,11 @@
 <row refid="twice">stray<c>r</c></row>text
 <row refid="missing"><c n="0">s</c></row></table>
 <table><row><c>t</c></row></table>
+<rdef id="rot" cwidths="1i 1i" rotate="90 270" mindepth="* 2i"/>
+<rdef id="zero" cwidths="0* 1i"/>
+<rdef id="wide" cwidths="6i 4p6 *"/>
+<rdef id="few" arrange="1 2 3" cwidths="1i"/>
+<table refid="rot"><thd><c>h1</c><c>h2</c><c>h3</c></thd><row><c>u</c></row></table>
+<table refid="wide" width="40p"><row><c>v</c></row></table>
+<table refid="few"><row><c>f</c></row></table>
 </body></gml:doc>

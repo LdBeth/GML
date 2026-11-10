@@ -1,10 +1,10 @@
 .se i = 0
 ...loop
 .se i = &i + 1
-.if &i lt 4 .do begin
+.if &i ge 4 .go done
 iteration &i
 .go loop
-.do end
+...done
 done after &i
 .go forward
 wrong: jumped over
@@ -20,5 +20,11 @@ forward label (case-insensitive)
 .go ...back
 ...back
 dotted operand
+.go to there
+wrong: .go to
+...there text after the label (&k)
+.goto here
+wrong: .goto
+...here   .ty label then a control word, k=&k
 .im part
 .go top

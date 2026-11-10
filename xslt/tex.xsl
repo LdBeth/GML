@@ -473,8 +473,13 @@
   </xsl:function>
 
   <!-- .df: US UP UC STOP, OS RPT n | OS CHAR c, BOX c, FONT id, TYPE(desc),
-       CODEPAGE cp (SX26-3723 .DF).  DCF-VERIFY: the family is guessed from
-       the typeface name; a size in TYPE is points, signed = relative. -->
+       CODEPAGE cp (LR p.130-132).  A size in TYPE is points, signed =
+       relative, 0 = unchanged (no size= then; p.131).  bold=yes for the
+       weights from SEMIBOLD up; an omitted weight is MEDIUM and an
+       omitted width NORMAL, not inherited (p.132), so no key means not
+       bold.  DCF-VERIFY (not in LR Rel 4): the family is guessed from
+       the typeface name.  OLDWEIGHT and OLDATTR (inherit) are not
+       modelled. -->
   <xsl:function name="t:df-keys" as="xs:string*">
     <xsl:param name="spec" as="xs:string"/>
     <xsl:variable name="w" select="t:words($spec)"/>
@@ -500,8 +505,10 @@
         (if (exists($fonti) and not(t:unresolved($outer[$fonti + 1])))
          then 'font=' || $outer[$fonti + 1] else ()),
         (if ($face != '') then ('face=' || $face, 'family=' || t:family($face)) else ()),
-        (for $d in $desc[matches(., '^[+-]?[0-9]*\.?[0-9]+$')][1] return 'size=' || $d),
-        (if ($desc = ('bold', 'semibold', 'demibold', 'heavy', 'black', 'extrabold'))
+        (for $d in $desc[matches(., '^[+-]?[0-9]*\.?[0-9]+$')][1]
+         return if (matches($d, '^0*\.?0*$')) then () else 'size=' || $d),
+        (if ($desc = ('bold', 'semibold', 'demibold', 'heavy', 'black', 'extrabold',
+                      'ultrabold'))
          then 'bold=yes' else ()),
         (if ($desc = ('italic', 'oblique')) then 'italic=yes' else ())"/>
   </xsl:function>
@@ -528,8 +535,14 @@
         else string($v)"/>
   </xsl:function>
 
-  <!-- .dh n options (SH35-0069 p.152-154; Language Reference not at hand:
-       DCF-VERIFY the option list) -->
+  <!-- .dh n options (LR p.136-138): BR NBR PA NPA TC NTC TO NTO TS NTS UP
+       NUP US NUS DOT NODOT NUM NONUM SECT NOSECT AUTOHY NOHY CENTER LEFT
+       INSIDE OUTSIDE RIGHT OJ NOJ (Rel 2 names of OUTSIDE and LEFT, r8)
+       NOHANG; with one operand: FONT f (none when it is the last word),
+       TFONT f, SKBF v, SPAF v, SPBF v, TCIN h, HANG n|AUTO.  Keys for
+       gml.tex: font tfont spbf skbf spaf pa align runin up us hy; the
+       others are parsed (their operand skipped) and not used.  Any other
+       word is not an option (the engine warns) and is skipped. -->
   <xsl:function name="t:dh-keys" as="xs:string*">
     <xsl:param name="spec" as="xs:string"/>
     <xsl:variable name="w" select="t:words($spec)[not(. = ('(', ')'))]"/>
@@ -551,18 +564,19 @@
           <xsl:sequence select="(if (empty($val)) then () else $t || '=' || t:vdim($val)),
                                 t:dh-keys-from($w, $i + 2)"/>
         </xsl:when>
-        <xsl:when test="$t = ('tind', 'tskip', 'tsk')">
+        <xsl:when test="$t = ('tcin', 'hang')">
           <xsl:sequence select="t:dh-keys-from($w, $i + 2)"/>
         </xsl:when>
         <xsl:otherwise>
           <xsl:sequence select="
               (if ($t = 'pa') then 'pa=yes' else if ($t = 'npa') then 'pa=no'
-               else if ($t = ('left', 'right', 'center', 'centre', 'inside', 'outside'))
-               then 'align=' || replace($t, 'centre', 'center')
+               else if ($t = ('left', 'right', 'center', 'inside', 'outside'))
+               then 'align=' || $t
+               else if ($t = 'oj') then 'align=outside' else if ($t = 'noj') then 'align=left'
                else if ($t = 'nbr') then 'runin=yes' else if ($t = 'br') then 'runin=no'
                else if ($t = 'up') then 'up=yes' else if ($t = 'nup') then 'up=no'
                else if ($t = 'us') then 'us=yes' else if ($t = 'nus') then 'us=no'
-               else if ($t = 'hy') then 'hy=yes' else if ($t = 'nohy') then 'hy=no'
+               else if ($t = 'autohy') then 'hy=yes' else if ($t = 'nohy') then 'hy=no'
                else ()),
               t:dh-keys-from($w, $i + 1)"/>
         </xsl:otherwise>

@@ -44,19 +44,10 @@ type tag_scan = Tags_off | Tags_on | Tags_onno
 (** What happens to a tag without an APF ([-undef-tags]). *)
 type undef_tags = Undef_text | Undef_element | Undef_error
 
-type do_entry = {
-  saved_cond : bool option;  (** the frame's comparison when the group began *)
-  owner : int;  (** [Input.current_frame_id] at [.do begin] *)
-  opened : Loc.t;
-}
-
 type capture = {
   cname : string;
   mutable cbody : string list;  (** captured raw lines, last first *)
   cfrom : Loc.t;  (** the [.dm name on] line *)
-  discard : bool;
-      (** the [.dm] is inside a skipped [.do] group: its body is only skipped
-          over (so [.do] lines in it do not count), nothing is defined *)
 }
 (** A [.dm name on] definition in progress. *)
 
@@ -93,6 +84,10 @@ type saved = {
   env : string;  (** the [.sa] name, upper case; "" without one *)
   sfmt : fmt;
   str : (int, string) Hashtbl.t;  (** the translate table ([.tr]) *)
+  schars : Chars.t;  (** the [.dc] characters (a copy) *)
+  slines : (string * int option) list;
+      (** the line scopes in force ([.ce .ri .us .up .uc]) and the lines they
+          had left (None: ON) *)
 }
 (** A saved formatting environment ([.sa], SH20-9161-3 p.110). *)
 
@@ -122,13 +117,6 @@ type t = {
       (** the line being dispatched was substituted (with [.su off] [.se] and
           [.if] substitute their operands themselves) *)
   mutable ret : int;  (** [&$RET] *)
-  mutable do_stack : do_entry list;  (** executed [.do begin]s *)
-  mutable skip : int;
-      (** > 0: skipping a [.do] group; nesting depth of the skipped groups *)
-  mutable skip_from : Loc.t;  (** where the skipped group began *)
-  mutable skip_owner : int;
-      (** [Input.current_frame_id] where the skipped group began: a skip that
-          reaches the end of its macro ends there *)
   cs_modes : (int, bool) Hashtbl.t;  (** [.cs n ignore] (true) / include *)
   mutable cs_open : cs_entry list;  (** open conditional sections *)
   mutable cs_frames : int list;
@@ -149,7 +137,9 @@ type t = {
   mutable tag_scan : tag_scan;  (** [.gs tag on|onno|off] *)
   mutable tag_rules : rules;  (** [.gs rules (tags) ...] *)
   mutable end_rules : rules;  (** [.gs rules ... (end tags)] *)
-  mutable prefix : char option;  (** [.gs prefix c] (class mapping) *)
+  mutable gs_prefix : string option * string option;
+      (** [.gs prefix p e] (class mapping, LR p.187): the start-tag and end-tag
+          prefixes of the APF names, None for OFF *)
   assocs : (string, assoc) Hashtbl.t;  (** [.aa], by lowercase tag name *)
   mutable undef_tags : undef_tags;
   mutable gml_attrs : (string * string) list;
@@ -180,8 +170,8 @@ type t = {
   mutable pass : int;  (** [&$PASS]: this formatting pass (gml -pass) *)
   mutable passes : int;
       (** the number of formatting passes (gml -passes; SCRIPT's FPASSES(n),
-          TWOPASS = 2, SH20-9186-06 p.126, p.129): [&$TWO] is 1 when it is more
-          than 1, [&$PASSES] is it *)
+          TWOPASS = FPASSES(2), LR p.35): [&$PSNO] is it, [&$TWO] is 1 when it
+          is 2 (LR p.444) *)
   query_files : (string, int) Hashtbl.t;
       (** the files questions were asked in, numbered in order of the first
           question ([query]) *)
@@ -223,30 +213,41 @@ and word = { run : t -> string -> unit  (** receives the operands *) }
 let char_value = function Some c -> String.make 1 c | None -> ""
 
 (* The fonts of the CHARS option of the SCRIPT command, [&$CHAR(n)]
-   (SH35-0069 p.178-179, p.242): -set '$CHAR=f1 f2 ...' gives the list.
-   DCF-VERIFY: without it, two neutral names (font names have 1-4
-   characters, p.242): the text font and the bold font, as on a 3800
-   Model 1 with "two complete upper- and lowercase fonts" (p.178);
-   IBM's DSMPROF3 selects its 3800f2 font set with these. *)
+   (LR p.444 Table 19 n3, .BF r5 p.75): -set '$CHAR=f1 f2 ...' gives
+   the list; a font id has 1-8 characters (LR p.444).  Without the
+   option DCF gives the default font of the logical device (.BF r5).
+   EXT: we have no device, so the default is two neutral names, the
+   text font and the bold font, as on a 3800 Model 1 with "two complete
+   upper- and lowercase fonts" (SH35-0069 p.178); IBM's DSMPROF3
+   selects its 3800f2 font set with these. *)
 let fonts ctx =
   match List.assoc_opt "$CHAR" ctx.sys_sets with
   | Some v -> List.filter (( <> ) "") (String.split_on_char ' ' v)
   | None -> [ "TEXT"; "BOLD" ]
 
 (* The current input file name (&$FNAM): the file name without
-   directory and extension, in upper case, like a CMS file name.
-   DCF-VERIFY: no truncation to eight characters. *)
+   directory and extension, in upper case, like a CMS file name, of at
+   most 8 characters (LR p.446, Table 21). *)
 let file_name ctx =
-  String.uppercase_ascii
-    (Filename.remove_extension (Filename.basename ctx.loc.Loc.file))
+  let f =
+    String.uppercase_ascii
+      (Filename.remove_extension (Filename.basename ctx.loc.Loc.file))
+  in
+  if String.length f > 8 then String.sub f 0 8 else f
 
 let spaces sum = string_of_int (Units.figure_spaces sum)
 
-(* The system symbols (SH35-0069 Figure 15, p.242-244; SX26-3723).
-   There is no output device: the device, command option and page
-   symbols have neutral values, chosen so that IBM's Starter Set runs as
-   on a 3800 printer in one pass under CMS with indexing.  DCF-VERIFY:
-   every one of those values; -set '$NAME=value' overrides any of them. *)
+(* The system symbols (LR p.443-451, Tables 17-25; SH35-0069 Figure
+   15, p.242-244; SX26-3723).  There is no output device: the device,
+   command option and page symbols have neutral values, chosen so that
+   IBM's Starter Set runs as on a 3800 printer under CMS with indexing
+   (EXT: the values are our choice; -set '$NAME=value' overrides any of
+   them).  The logical device 3800N6 is a 3800 Model 1, 8.5 by 10
+   inches at 6 lines per inch (LR p.26), so its page length would be 60
+   lines, not our 66, and the Model 1 has 180 pels per inch (glossary
+   p.493); our device units (lib/units.ml) follow a 240-pel 3800 Model 3
+   or 3820 instead.  The profiles test &$PDEV and &$LDEV, so the values
+   stay. *)
 let system_value ctx name sub =
   let st = ctx.fmt in
   let ll = match st.ll with Some l -> spaces l | None -> "65" in
@@ -269,8 +270,7 @@ let system_value ctx name sub =
       | "$FILE" -> Some ctx.loc.Loc.file
       | "$FNAM" -> Some (file_name ctx)
       | "$RET" -> Some (string_of_int ctx.ret)
-      | "$DATE" -> Some (Symbols.date_string ())
-      | "$TIME" -> Some (Symbols.time_string ())
+      | "$YEAR" -> Some (Symbols.year_string ())
       | "$CW" -> Some (char_value ctx.chars.Chars.cw_sep)
       | "$CONT" -> Some (char_value ctx.chars.Chars.cont)
       | "$GML" -> Some (char_value ctx.chars.Chars.gml_delim)
@@ -287,30 +287,33 @@ let system_value ctx name sub =
       | "$PN" -> Some "1"
       | "$KP" | "$VR" -> Some "OFF"
       | "$LST" -> Some "0"
-      (* the last GML tag found, as written, and its delimiter (p.251).
-         DCF-VERIFY: the case of the name. *)
+      (* the last GML tag found, as written, and its delimiter (LR p.446).
+         DCF-VERIFY: the case of the name (not in LR Rel 4). *)
       | "$TAG" -> Some ctx.last_tag
       | "$TAGD" -> Some ctx.last_tagd
-      (* output device (p.242): a 3800 printer, written to a file *)
+      (* output device (LR p.443, Table 18): a 3800 printer, written to a
+         file *)
       | "$PDEV" -> Some "3800"
       | "$LDEV" -> Some "3800N6"
       | "$OUT" -> Some "FILE"
-      (* SCRIPT command options (p.242): release 3.0 under CMS, one pass,
-         the INDEX option (so .pi is honoured), no bind *)
-      | "$DCF" -> Some "3.0"
+      (* SCRIPT command options (LR p.444, Table 19): release 3.0.0 (the
+         release format n.n.n; the neutral values follow Release 3) under
+         CMS, the INDEX option (so .pi is honoured), no bind *)
+      | "$DCF" -> Some "3.0.0"
       | "$SYS" -> Some "CMS"
+      (* the passes (FPASSES(n), TWOPASS = FPASSES(2), LR p.35, p.444):
+         &$PASS this pass, &$PSNO the number requested, &$TWO 1 only for
+         two passes *)
       | "$PASS" -> Some (string_of_int ctx.pass)
-      | "$TWO" -> Some (if ctx.passes > 1 then "1" else "0")
-      (* not a DCF symbol: the n of FPASSES(n), so that a profile can tell
-         its last pass when there are more than two (TPG p.247 tests
-         &$PASS eq 2 for TWOPASS) *)
-      | "$PASSES" -> Some (string_of_int ctx.passes)
+      | "$PSNO" -> Some (string_of_int ctx.passes)
+      | "$TWO" -> Some (if ctx.passes = 2 then "1" else "0")
       | "$UNF" | "$DDUT" | "$BE" | "$BO" -> Some "0"
       | "$INDX" -> Some "1"
       | "$LIB" -> Some (if ctx.libs = [] then "0" else "1")
       | "$PRT" -> Some "ON"
       | "$PARM" -> Some "DEVICE 3800N6 INDEX"
-      (* page characteristics (p.243): figure spaces and lines *)
+      (* page characteristics (LR p.445, Table 20): figure spaces and
+         lines *)
       | "$IN" -> Some (spaces st.left)
       | "$IR" -> Some (spaces st.right)
       | "$OF" -> Some (spaces st.offset)
@@ -404,10 +407,6 @@ let create ?(include_path = []) () =
       su_lines = 0;
       line_substituted = true;
       ret = 0;
-      do_stack = [];
-      skip = 0;
-      skip_from = Loc.none;
-      skip_owner = 0;
       cs_modes = Hashtbl.create 9;
       cs_open = [];
       cs_frames = [];
@@ -423,13 +422,15 @@ let create ?(include_path = []) () =
       warned = Hashtbl.create 4;
       tag_scan = Tags_off;
       (* SH35-0069 p.287: enabled by .gs tag on *)
-      (* DCF-VERIFY: the initial rules; we start from the Starter Set's
-         .gs rules (att novat stop nomsg) (noatt) (p.291) *)
+      (* the default rules (att novat stop nomsg) (noatt) (LR p.62,
+         p.185; SH35-0069 p.291) *)
       tag_rules =
         { att = true; vat = false; stop = true; msg = false; elem = true };
       end_rules =
         { att = false; vat = false; stop = true; msg = false; elem = true };
-      prefix = None;
+      (* EXT: the initial class mapping, not in LR Rel 4, is the direct
+         one: start tag x to APF x, end tag x to APF ex *)
+      gs_prefix = (Some "", Some "e");
       assocs = Hashtbl.create 16;
       undef_tags = Undef_text;
       gml_attrs = [];
@@ -498,8 +499,6 @@ let sync_mute ctx =
 
 (** Stop processing: the input stack is emptied. *)
 let stop ctx =
-  ctx.do_stack <- [];
-  ctx.skip <- 0;
   ctx.capture <- None;
   ctx.cs_open <- [];
   sync_mute ctx;

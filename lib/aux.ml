@@ -1,7 +1,7 @@
 (* The coupling files of the pass model, imbedded by the next pass.
 
    SCRIPT/VS formats a document in up to four passes and puts out only
-   the last (FPASSES(n), TWOPASS: SH20-9186-06 p.126, p.129); what a
+   the last (FPASSES(n), TWOPASS: LR p.35; SH20-9186-06 p.126, p.129); what a
    pass learns about the pages it keeps for the next one (the TOC
    entries, TPG p.156; the index, p.213).  Here a pass is gml + TeX: TeX
    lays the pages out and writes what the engine asked for, the next
@@ -30,8 +30,11 @@
    encode and look up.  The last line for a name wins (.se): a question
    inside content that TeX typesets twice (a measured table cell, a
    running heading on every page) is answered more than once.
-   DCF-VERIFY: lc in a paragraph does not count the lines of the
-   paragraph in progress. *)
+   lc in a paragraph does not count the lines of the paragraph in
+   progress: DCF's &$LC excludes "unplaced keeps, floats, footnotes,
+   tables, widow zones, and partial lines" (LR p.445, Table 20 n3).
+   &$LC is in line spaces of the default font; in page mode DCF says to
+   use &DV'&$LC for device units (ibid.). *)
 
 (* t:name of xslt/tex.xsl: A-Z a-z 0-9 . - as they are, any other
    character (a code point; invalid UTF-8 is U+FFFD) as +code+ *)

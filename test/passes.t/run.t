@@ -5,7 +5,7 @@ hand.  Each pass is gml -pass k -passes n -aux JOB.gmlaux
 -symbols-in/-symbols-out.
 
 Pass 1 of 2: the forward references are not known yet; the profile
-prints a stand-in (the ID) and no message (DCFS020W waits for the last
+prints a stand-in (the ID) and no message (DSMGML013W waits for the last
 pass, ss@last); the .tc of :toc (&$TWO = 1) is empty; every &$PN is
 a question (gml:query, \gmlquery in the TeX), answered with the neutral
 1 (no aux file yet).  A reference asks for its own page (q1.6.1-3)
@@ -66,14 +66,14 @@ references, with the pages TeX gave their targets in pass 1 (fp@LATER
 and fq@PIC are the answers to q1.7.1 and q1.10.1: 2, not pass 1's
 neutral 1); the .tc prints the entries of pass 1 with the pages of
 their anchors; the reference to an ID that does not exist gives
-DCFS020W and the Starter Set's text, now.  The references ask the
+DSMGML013W and the Starter Set's text, now.  The references ask the
 questions of pass 1, no other, and the symbol file is that of pass 1
 (with these answers TeX would write the same aux file: gmlpass would
 stop after two passes).  The duplicate-ID check does not mistake the
 carried symbols for a second definition.
 
   $ gml -profile dcfstarter -pass 2 -passes 2 -aux in.gmlaux -symbols-in p1.sym -symbols-out p2.sym -o p2.xml in.gml 2>&1 | sed 's/ (in macro[^)]*)//'
-  in.gml:6: +++DCFS020W Reference to nosuch is undefined.
+  in.gml:6: +++DSMGML013W ID 'nosuch' NOT DEFINED, REFERENCE NOT RESOLVED. (page 1)
   $ grep -o '<gml:tcentry [^>]*>\|See.*\|Back.*' p2.xml
   <gml:tcentry level="1" text="Introduction" dot="yes" page="1" break="yes"/>
   <gml:tcentry level="1" text="Later" dot="yes" page="2" break="yes"/>
@@ -82,13 +82,13 @@ carried symbols for a second definition.
   $ cmp p1.sym p2.sym && echo same
   same
 
-In one pass (no -pass/-passes) nothing changes: DCFS020W for every
+In one pass (no -pass/-passes) nothing changes: DSMGML013W for every
 forward reference, with the one-pass text, and :toc leaves the list to
 resolve.xsl (an empty toc element).
 
   $ gml -profile dcfstarter in.gml 2>&1 >/dev/null | sed 's/ (in macro[^)]*)//'
-  in.gml:6: +++DCFS020W Reference to later is undefined or forward (one pass).
-  in.gml:6: +++DCFS020W Reference to pic is undefined or forward (one pass).
-  in.gml:6: +++DCFS020W Reference to nosuch is undefined or forward (one pass).
+  in.gml:6: +++DSMGML013W ID 'later' NOT DEFINED OR A FORWARD REFERENCE IN ONE PASS. (page 1)
+  in.gml:6: +++DSMGML013W ID 'pic' NOT DEFINED OR A FORWARD REFERENCE IN ONE PASS. (page 1)
+  in.gml:6: +++DSMGML013W ID 'nosuch' NOT DEFINED OR A FORWARD REFERENCE IN ONE PASS. (page 1)
   $ gml -profile dcfstarter in.gml 2>/dev/null | grep -o '<toc/>'
   <toc/>

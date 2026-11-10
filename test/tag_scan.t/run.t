@@ -22,3 +22,19 @@ ending the markup; .dc gml / .dc mcs.
   :p.off again
   </p></gml:doc>
   [8]
+
+An unquoted value that is not a single word of name characters is
+taken all the same, with a warning: LR p.186 wants it quoted.
+
+  $ cat > lax.gml <<'X'
+  > .gs tag on
+  > .dm fig /.gs attval width id/[&WIDTH &ID.]
+  > :fig width=1-2 id=ok depth=3i.
+  > X
+  $ gml lax.gml
+  lax.gml:3: warning: tag :fig: value of width=1-2 should be quoted (LR p.186)
+  lax.gml:3: warning: element fig not closed at end of input
+  <?xml version="1.0" encoding="UTF-8"?>
+  <gml:doc xmlns:gml="urn:x-gml:canonical"><fig width="1-2" id="ok" depth="3i">[1-2 ok]
+  </fig></gml:doc>
+  [4]

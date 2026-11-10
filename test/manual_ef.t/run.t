@@ -11,12 +11,12 @@ still open when .ef ends the file.
   $ gml table
   table:17: warning: .cs 1 on without .cs 1 off (opened at table:13)
   <?xml version="1.0" encoding="UTF-8"?>
-  <gml:doc xmlns:gml="urn:x-gml:canonical"><gml:tp action="set" stops="3ch 21ch" break="no"/><gml:sp n="2" unit="line" break="yes"/><gml:fo fill="no" align="left" overdraw="extend" break="yes"/><gml:bx action="on" spec="1ch 19ch 36ch" break="yes"/>	STATE	CAPITAL
-  <gml:bx action="line" break="yes"/><gml:tp action="set" stops="3ch 21ch" break="no"/>	Alabama	Montgomery
-  <gml:bx action="line" break="yes"/><gml:tp action="set" stops="3ch 21ch" break="no"/>	Alaska	Juneau
-  <gml:bx action="line" break="yes"/><gml:tp action="set" stops="3ch 21ch" break="no"/>	Arizona	Phoenix
-  <gml:bx action="line" break="yes"/><gml:tp action="set" stops="3ch 21ch" break="no"/>	Arkansas	Little Rock
-  <gml:bx action="line" break="yes"/><gml:tp action="set" stops="3ch 21ch" break="no"/>	California	Sacramento
+  <gml:doc xmlns:gml="urn:x-gml:canonical"><gml:tp action="set" stops="3ch 21ch" break="yes"/><gml:sp n="2" unit="line" break="yes"/><gml:fo fill="no" align="left" overdraw="extend" break="yes"/><gml:bx action="on" spec="1ch 19ch 36ch" break="yes"/>	STATE	CAPITAL
+  <gml:bx action="line" break="yes"/><gml:tp action="set" stops="3ch 21ch" break="yes"/>	Alabama	Montgomery
+  <gml:bx action="line" break="yes"/><gml:tp action="set" stops="3ch 21ch" break="yes"/>	Alaska	Juneau
+  <gml:bx action="line" break="yes"/><gml:tp action="set" stops="3ch 21ch" break="yes"/>	Arizona	Phoenix
+  <gml:bx action="line" break="yes"/><gml:tp action="set" stops="3ch 21ch" break="yes"/>	Arkansas	Little Rock
+  <gml:bx action="line" break="yes"/><gml:tp action="set" stops="3ch 21ch" break="yes"/>	California	Sacramento
   <gml:bx action="off" break="yes"/><gml:fo fill="yes" align="justify" overdraw="extend" break="yes"/><gml:sp n="2" unit="line" break="yes"/></gml:doc>
   [4]
 

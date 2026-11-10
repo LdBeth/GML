@@ -6,12 +6,18 @@
    required blank.  They are translated to Unicode here with code page
    037 (CECP USA/Canada, the code page of the US DCF installations; IBM's
    DSMPROF3 also names the pi font code page AFTC0363, which only affects
-   characters printed in that font).
-   DCF-VERIFY: code page 500 (international) differs in 7 positions
-   (4A 4F 5A 5F B0 BA BB); the text fonts of the 1403 and the 3800
-   Model 1 have superscript digits at B0-B9 (SH35-0050, DSM#SUPR: "a 1
-   becomes a hex b1"), so B0-B9 are taken as the superscript digits, not
-   as the code page 037 characters. *)
+   characters printed in that font).  Rel 4 names code page 500
+   (international) in its newer text: the code points of .HY r7 (LR
+   p.198: BA logical not, BB vertical line) and the external object
+   names of .DO (p.150) are CP500; but its .RC example (p.304-305) has
+   the | at 4F, as in CP037.  CP500 differs in 7 positions (4A 4F 5A 5F
+   B0 BA BB); we keep CP037.  EXT: the text fonts of the 1403 and the
+   3800 Model 1 have superscript digits at B0-B9 (SH35-0050, DSM#SUPR: "a
+   1 becomes a hex b1"), so B0-B9 are taken as the superscript digits,
+   not as the code page 037 characters; in Rel 4 superscripts are a
+   matter of the font (the .TR example, LR p.405, translates the digits
+   to B0-B9 for the superscripts "if they are available in the current
+   font"). *)
 
 let cp037 =
   [|

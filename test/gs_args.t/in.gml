@@ -8,7 +8,7 @@
 .gs args '.rc adjust' '' '"' ''''
 .gs vars rc1 rc2 oqq oq extra
 <&rc1.> <&rc2.> <&oqq.> <&oq.> <&extra.>
-.* .gs args alone undefines &*1 ... (outside a macro: left as written)
+.* .gs args alone: &*0 is 0, &* and the old &*1 ... null (LR p.187)
 .gs args
 (&*0) (&*1)
 .* in a macro: replaces the arguments; &* appends
@@ -26,3 +26,5 @@
 .gs args &st(1)
 .gs vars ltype item# in
 &ltype &item# &in
+.* no array symbols
+.gs vars x(1)

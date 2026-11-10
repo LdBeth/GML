@@ -36,9 +36,14 @@
 ::tagx.
 :tagy.text after tagy
 ::tagy.
-.* .ly sym: symbols, not macros
+.* .ly sym adds symbols to .ly mac (LR p.243): both
 .ly sym
 &SYMONLY / &NOSUCH / &NOSUCH
+.dm other off
+.other x
+.* .ly off, then .ly sym: symbols, not macros
+.ly off
+.ly sym
 .dm other off
 .other
 .* .ly on: both; .ly off: neither

@@ -156,7 +156,7 @@ Lines that start with one of them are never filled.  Tags given
     ("dh" fmt "n options" "define heading level")
     ("dl" dev "" "device word (not supported)")
     ("dm" ctl "name on|off | name /line/... | name(n) /line" "define macro")
-    ("do" ctl "begin|end" "group lines for .if/.th/.el")
+    ("do" dev "" "define object (not supported)")
     ("dr" fmt "name spec" "define rule")
     ("dv" fmt "name [text|font f] /string" "define variable (not supported)")
     ("ec" ctl ".xx [operands]" "execute the native control word")

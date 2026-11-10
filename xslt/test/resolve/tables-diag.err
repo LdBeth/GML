@@ -1,14 +1,18 @@
-resolve: rdef id="hole": arrange: cell 1 is not a rectangle
-resolve: rdef id="ragged": arrange: x is not a cell number
-resolve: rdef id="ragged": arrange: the lines are not of the same length
-resolve: rdef id="ragged": cwidths has 2 values for 3 grid columns
-resolve: rdef id="vals": hp: 7 is not a valid value
-resolve: rdef id="vals": align: x is not a valid value
-resolve: rdef id="vals": rotate: 45 is not a valid value
-resolve: rdef id="vals": shade: x is not a valid value
-resolve: table refid="nosuch": no such row definition
+resolve: rdef id="hole": SVS447E INVALID SPECIFICATION ON ARRANGE PARAMETER. (cell 1 is not a rectangle: its first square is used)
+resolve: rdef id="ragged": +++DSMGML021W INVALID ARRANGE SPECIFICATION, DEFAULT OF 1 USED.
+resolve: rdef id="ragged": SVS448W TOO MANY CWIDTHS VALUES, EXTRA VALUES IGNORED. (2 values for 1 grid columns)
+resolve: rdef id="vals": +++DSMGML015W 7 NOT A VALID VALUE FOR HP ATTRIBUTE OF :RDEF TAG.
+resolve: rdef id="vals": +++DSMGML015W x NOT A VALID VALUE FOR ALIGN ATTRIBUTE OF :RDEF TAG.
+resolve: rdef id="vals": +++DSMGML015W 45 NOT A VALID VALUE FOR ROTATE ATTRIBUTE OF :RDEF TAG.
+resolve: rdef id="vals": +++DSMGML015W x NOT A VALID VALUE FOR SHADE ATTRIBUTE OF :RDEF TAG.
+resolve: c n="4": +++DSMGML010E CELL '4' DOES NOT EXIST IN ROW 'ragged'.
+resolve: table refid="nosuch": +++DSMGML017W ROW DEFINITION nosuch DOES NOT EXIST.
 resolve: row: text outside a cell
 resolve: table: text outside a row
-resolve: row refid="missing": no such row definition
-resolve: c n="0": no such cell in row definition "missing"
-resolve: table without refid
+resolve: row refid="missing": +++DSMGML017W ROW DEFINITION missing DOES NOT EXIST.
+resolve: c n="0": +++DSMGML010E CELL '0' DOES NOT EXIST IN ROW 'missing'.
+resolve: table: +++DSMGML019W REQUIRED ATTRIBUTE REFID MISSING FROM :TABLE TAG.
+resolve: rdef id="rot": +++DSMGML022W MINDEPTH REQUIRED, BUT MISSING FOR CELL NUMBER 1.
+resolve: rdef id="zero": SVS445S RESULTANT CELL WIDTH IN ROW TOO SMALL. (a proportional width with a factor of 0)
+resolve: thd: +++DSMGML023W CANNOT START A NEW ROW IN A HEADER OR FOOTER, C TAG IGNORED.
+resolve: table width="40p": SVS445S RESULTANT CELL WIDTH IN ROW TOO SMALL. (cwidths="6i 4p6 1*": no room for the * widths)

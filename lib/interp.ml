@@ -6,25 +6,23 @@
 
    1. Macro definition capture.  While a [.dm name on] definition is in
       progress, the raw line is appended to the body: no substitution, no
-      tag scanning, nothing executed (SH35-0069 p.272).  The definition
-      ends at a [.dm off] line, which must start in column 1 without the
-      modifier (p.272).  An inline [.dm x on] line also ends it (p.280:
-      "an inline form of .DM within an inline form will cause the initial
-      macro definition to end"), and then starts its own definition.
-      Single-line and subscripted [.dm] lines are just body lines.  A
-      [.dm name on] seen while skipping (step 2) starts a capture that
-      discards its body, so that the [.do] lines in it do not count.
-   2. Skipping.  Inside a skipped [.do] group (a false [.if]/[.th]/[.el]
-      whose object was [.do begin]) the raw line is only split at the
-      separator and examined for [.do begin] / [.do end] (also as the
-      object of a conditional word) to track nesting.  Nothing is
-      substituted or executed.  Lines of an ignored conditional section
-      ([.cs], p.267-269) are not skipped here: their macros and GML tags
-      are still resolved (step 6).
+      tag scanning, nothing executed (LR p.143).  The definition ends at
+      a [.dm off] line, which must start in column 1 without the
+      modifier (p.143).  An inline [.dm x on] line also ends it
+      (SH35-0069 p.280: "an inline form of .DM within an inline form
+      will cause the initial macro definition to end"), and then starts
+      its own definition.  Single-line and subscripted [.dm] lines are
+      just body lines.
+   2. Ignored conditional sections ([.cs n ignore]).  Their lines are
+      not skipped here: their macros and GML tags are still resolved
+      (SH35-0069 p.268; Starter Set :psc/:epsc, SSR B.2.16), in step 6,
+      where native control words other than [.cs] and the text are
+      dropped ([Control.cs_ignoring]).  Residual text is dropped.
    3. Comments and labels, on the raw line: a [.*] line is ignored as a
       whole, separators included, and never substituted (p.44); a label
-      line [...name] is not substituted either.
-      DCF-VERIFY: text after a label on the same line is ignored.
+      line [...name] is not substituted either.  The text after the
+      label, from its first non-blank character, is a new input line
+      (LR p.60).
    4. Symbol substitution of the whole line, if [.su] is on (p.229-230,
       chapter 21), right to left, with the extended symbol rule: a value
       that begins with the separator splits the line there, the rest
@@ -45,26 +43,26 @@
       then (with [.ly on|mac], when it is not a control word name) as a
       member of the macro library, which defines it ([Library], p.282);
       otherwise the first two characters are the control word (p.40,
-      p.271).  A text line: the continuation character
-      ([.dc cont], p.47) is removed from its end; a null line, a blank
-      line, a leading blank and a leading tab are the implicit control
-      words [.nl], [.bl], [.lb] and [.lt] (p.281): a macro of that name
-      (with [.ms on]) is invoked with the line as [&*]; for [.lb]/[.lt]
-      the line is processed as text after the macro (the macro replaces
-      the break, p.281: [.dm lb /.*] makes the blank an ordinary one).
-      Natively [.lb]/[.lt] give a break hint (none in no-fill mode)
-      and then the line; in fill mode [.bl] is [.sp 1] and [.nl] only
-      cancels a continuation, in no-fill mode both are text lines
-      ([Hints.implicit]).  Text then goes to [Gmlproc.text], which
-      scans it for GML tags once [.gs tag on].
-   Literal mode ([.li], p.89).  While [.li on] or [.li n] is in effect,
-      steps 3-6 are replaced: only a [.li off] line is a control word;
-      every other line is substituted (if [.su] is on) and is text, with
-      no separator split, no tag scan and no implicit words.
-      In an ignored conditional section only [.cs] lines, macro calls
-      and the GML tags of text lines are processed; the text is dropped.
+      p.271); the long forms .AND .ELSE .THEN .GOTO are their
+      two-character words ([Control.word_of]).  A text line: the
+      continuation character ([.dc cont], p.47) is removed from its end;
+      a null line, a blank line, a leading blank and a leading tab are
+      the implicit control words [.nl], [.bl], [.lb] and [.lt] (p.281):
+      a macro of that name (with [.ms on]) is invoked with the line as
+      [&*]; for [.lb]/[.lt] the line is processed as text after the
+      macro (the macro replaces the break, p.281: [.dm lb /.*] makes the
+      blank an ordinary one).  Natively [.lb]/[.lt] give a break hint
+      (none in no-fill mode) and then the line; in fill mode [.bl] is
+      [.sp 1] and [.nl] only cancels a continuation, in no-fill mode
+      both are text lines ([Hints.implicit]).  Text then goes to
+      [Gmlproc.text], which scans it for GML tags once [.gs tag on].
+   Literal mode ([.li], LR p.230-231).  While [.li on] or [.li n] is in
+      effect, steps 3-6 are replaced: only a [.li off] line is a control
+      word; every other line is substituted (if [.su] is on) and is
+      text, scanned for GML tags, with no separator split and no
+      implicit words.
 
-   The rest of a split line ([Ctx.Split]) and the object of [.if],
+   The rest of a split line ([Ctx.Split]) and the target of [.if],
    [.th], [.el] start at step 3 but skip step 4: they are never
    substituted again.  They are not physical lines, so step 1 (the end of
    a definition) and the implicit words of step 6 do not apply to them.
@@ -73,8 +71,7 @@
    The text after a GML tag (residual text and the rest of the line)
    comes back as [Ctx.Residual] lines: substituted with the whole line
    before the tag's APF ran, never a control word, only scanned for tags
-   (SH35-0069 p.294).  While skipping they are dropped; while capturing a
-   [.dm] body they are captured. *)
+   (SH35-0069 p.294).  While capturing a [.dm] body they are captured. *)
 
 let is_cw ctx = Ctx.is_cw_name ctx
 
@@ -85,7 +82,7 @@ let dm_operands ctx s =
   | Line.Control c when c.name = "dm" -> Some (Line.operands c)
   | _ -> None
 
-(* [.dm off], in column 1 and without the modifier (p.272). *)
+(* [.dm off], in column 1 and without the modifier (LR p.143). *)
 let ends_definition ctx s =
   match Line.classify ctx.Ctx.chars s with
   | Line.Control c ->
@@ -98,22 +95,6 @@ let starts_definition ctx s =
   | Some (Macro.Begin _) -> true
   | _ -> false
 
-(* ---- step 2: skipping ------------------------------------------------------ *)
-
-let skip_line ctx s =
-  let ch = ctx.Ctx.chars in
-  match Option.map Macro.parse_dm (dm_operands ctx s) with
-  | Some (Macro.Begin name) ->
-      ctx.capture <-
-        Some { Ctx.cname = name; cbody = []; cfrom = ctx.loc; discard = true }
-  | _ ->
-      let s, rest = Line.split ch ~is_cw:(is_cw ctx) s in
-      Option.iter
-        (fun r -> Input.push_back ctx.input ~kind:(Input.Split false) r ctx.loc)
-        rest;
-      if Control.opens_group ch s then ctx.skip <- ctx.skip + 1
-      else if Control.closes_group ch s then ctx.skip <- ctx.skip - 1
-
 (* ---- step 6: dispatch -------------------------------------------------------- *)
 
 (* An unresolved macro from the library ([.ly on|mac], p.282): with
@@ -121,7 +102,7 @@ let skip_line ctx s =
    name is not itself a control word name (so [.sp] never searches the
    library).  The library is searched before the two-character native
    word: [.dsmgdoc] is the macro DSMGDOC, not [.ds mgdoc].
-   DCF-VERIFY: this order. *)
+   DCF-VERIFY (not in LR Rel 4): this order. *)
 let library_macro ctx (c : Line.control) =
   if ctx.Ctx.ms_on && ctx.ly_mac && not c.Line.quoted then
     match c.Line.long with
@@ -142,9 +123,10 @@ let control ctx (c : Line.control) =
   | Some (name, m, ops) -> Control.invoke ctx name m ops
   | None when ignoring && c.name <> "cs" -> ()
   | None -> (
-      match Hashtbl.find_opt ctx.Ctx.words c.name with
-      | Some w -> w.run ctx (Line.operands c)
-      | None -> Ctx.warn ctx "unsupported control word .%s" c.name)
+      let name, ops = Control.word_of c in
+      match Hashtbl.find_opt ctx.Ctx.words name with
+      | Some w -> w.run ctx ops
+      | None -> Ctx.warn ctx "unsupported control word .%s" name)
 
 let plain_text ctx ~eol t =
   Gmlproc.text ctx ~plain:true { Input.had_text = false; eol } t
@@ -182,13 +164,12 @@ let text ctx ~physical ~continued t =
                    { Input.had_text = true; eol });
             Control.invoke ctx w m t
         | None -> (
-            (* natively (p.90-91): .lb/.lt are a break, then the line;
-           .bl is a .sp; .nl only cancels a continuation.  In no-fill
-           mode ([.fo off], [.nf on]: every input line is an output
-           line) the break is implied, and a blank or null line is kept
-           as an empty text line (modern edge for .nl: files written
-           by modern editors have null lines where CMS had blank ones;
-           DCF-VERIFY). *)
+            (* natively (p.90-91): .lb/.lt are a break, then the line; .bl
+             is a .sp; .nl only cancels a continuation.  In no-fill mode
+             ([.fo off], [.nf on]: every input line is an output line) the
+             break is implied, and a blank or null line is kept as an
+             empty text line (EXT for .nl: files written by modern
+             editors have null lines where CMS had blank ones). *)
             let nofill = not ctx.fmt.Ctx.fill in
             match w with
             | "lb" | "lt" ->
@@ -198,11 +179,11 @@ let text ctx ~physical ~continued t =
                 if nofill then plain_text ctx ~eol t else Hints.implicit ctx w t
             ))
 
-(* [.li] (SH35-0069 p.42): literal lines are text even when they begin
+(* [.li] (LR p.230-231): literal lines are text even when they begin
    with the control word indicator, a blank or a tab: no control word,
    no implicit word ([.lb .lt .bl .nl], p.281), no separator split.  They
    are substituted and scanned for GML tags like other text lines
-   (DCF-VERIFY).  In literal mode only [.li off] is a control word. *)
+   (p.231 r2).  In literal mode only [.li off] is a control word. *)
 let literal_line ctx s =
   let s = if ctx.Ctx.subst_on then Subst.string ctx s else s in
   text ctx ~physical:false ~continued:false s
@@ -242,10 +223,20 @@ let dispatch ctx ~physical ~substituted s =
       | Line.Control c -> control ctx c
       | Line.Text t -> text ctx ~physical ~continued:(rest <> None) t)
 
+(* Step 3 for a label line: the text after the label, from its first
+   non-blank character, is the next input line (LR p.60). *)
+let after_label ctx rest =
+  let i = Expr.skip_blanks rest 0 in
+  if i < String.length rest then
+    Input.push_back ctx.Ctx.input ~kind:Input.Source
+      (String.sub rest i (String.length rest - i))
+      ctx.loc
+
 (* Step 4, then the rest. *)
 let substitute_and_dispatch ctx mode s =
   match Line.classify ctx.Ctx.chars s with
-  | Line.Comment _ | Line.Label _ -> () (* step 3: never substituted *)
+  | Line.Comment _ -> () (* step 3: never substituted *)
+  | Line.Label (_, rest) -> after_label ctx rest
   | Line.Control _ | Line.Text _ -> (
       (* a new input line: no questions yet (Ctx.line_queries; with .su
          off a .se asks while it substitutes its own operands) *)
@@ -275,23 +266,20 @@ let process ctx mode s =
         Control.end_capture ctx cap;
         ctx.process ctx mode s
       end
-      else if not cap.discard then cap.cbody <- s :: cap.cbody
+      else cap.cbody <- s :: cap.cbody
   | None -> (
-      if ctx.Ctx.skip > 0 then
-        match mode with Ctx.Residual _ -> () | _ -> skip_line ctx s
-      else
-        match mode with
-        | Ctx.Residual p ->
-            if not (Control.cs_ignoring ctx) then
-              Gmlproc.text ctx ~plain:false p s
-        | Ctx.Split b -> dispatch ctx ~physical:false ~substituted:b s
-        | (Ctx.Raw | Ctx.Force_subst) when ctx.literal <> 0 ->
-            if literal_off ctx s then ctx.literal <- 0
-            else begin
-              if ctx.literal > 0 then ctx.literal <- ctx.literal - 1;
-              literal_line ctx s
-            end
-        | Ctx.Raw | Ctx.Force_subst -> substitute_and_dispatch ctx mode s)
+      match mode with
+      | Ctx.Residual p ->
+          if not (Control.cs_ignoring ctx) then
+            Gmlproc.text ctx ~plain:false p s
+      | Ctx.Split b -> dispatch ctx ~physical:false ~substituted:b s
+      | (Ctx.Raw | Ctx.Force_subst) when ctx.literal <> 0 ->
+          if literal_off ctx s then ctx.literal <- 0
+          else begin
+            if ctx.literal > 0 then ctx.literal <- ctx.literal - 1;
+            literal_line ctx s
+          end
+      | Ctx.Raw | Ctx.Force_subst -> substitute_and_dispatch ctx mode s)
 
 (* -set sym=val: global symbols, set before the first line; for a
    system symbol, the value it has throughout (-set '$PDEV=4250'). *)
@@ -312,12 +300,6 @@ let install_sets ctx =
     ctx.Ctx.sets
 
 let check_balance ctx =
-  List.iter
-    (fun e -> Ctx.error_at ctx e.Ctx.opened ".do begin without .do end")
-    (List.rev ctx.Ctx.do_stack);
-  if ctx.skip > 0 then
-    Ctx.error_at ctx ctx.skip_from
-      ".do begin without .do end (skipped to end of input)";
   Option.iter
     (fun cap ->
       Ctx.error_at ctx cap.Ctx.cfrom
@@ -330,8 +312,6 @@ let check_balance ctx =
         (Loc.to_string e.Ctx.cs_from))
     (List.rev ctx.cs_open);
   ctx.capture <- None;
-  ctx.skip <- 0;
-  ctx.do_stack <- [];
   ctx.cs_open <- [];
   Ctx.sync_mute ctx
 

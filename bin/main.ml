@@ -22,8 +22,8 @@
    The pass model (SCRIPT's FPASSES(n)/TWOPASS, SH20-9186-06 p.126,
    p.129; the driver is the rc script gmlpass, README "Passes"): one run
    of gml is one formatting pass, the TeX run after it measures.
-   -pass K -passes N: &$PASS is K, &$TWO is 1 when N > 1 (and &$PASSES
-   is N); the root element gets pass=K passes=N, which tex.xsl
+   -pass K -passes N: &$PASS is K, &$PSNO is N, &$TWO is 1 when N = 2
+   (FPASSES(2) = TWOPASS, LR p.35, p.444); the root element gets pass=K passes=N, which tex.xsl
    turns into \def\gmlpassno{K}\def\gmlpasses{N} before \input gml (gml.tex
    \gmlpass: draft output on a pass before the last).  -aux FILE (Aux:
    JOB.gmlaux, written by TeX in the previous pass; a missing file is
@@ -119,7 +119,7 @@ let () =
        "file  write XML to file (default stdout)");
       ("-pass", Arg.Int (fun n -> pass := Some n), "k  this formatting pass (&$PASS)");
       ("-passes", Arg.Int (fun n -> passes := Some n),
-       "n  the number of formatting passes (&$TWO is 1 when n > 1)");
+       "n  the number of formatting passes (&$PSNO; &$TWO is 1 when n = 2)");
       ("-aux", Arg.String (fun f -> aux := Some f),
        "file  the aux file of the previous pass: &$PN and &$LC are asked of TeX");
       ("-symbols-in", Arg.String (fun f -> sym_in := Some f),

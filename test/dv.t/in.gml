@@ -9,7 +9,7 @@
 .ce Heading &amp. more, page &
 .rh off
 Body text with &amp. here and a raised callout&sup. in text.
-.hr thick
+.hr thick left right
 After the rule.
 .pa
 Second page.

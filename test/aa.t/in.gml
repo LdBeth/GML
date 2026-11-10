@@ -14,8 +14,15 @@
 .gs prefix x
 :note.Text
 ::note.
+.* OFF disables the mapping; alone .gs prefix restores the initial
+.* direct mapping (EXT); start and end prefixes (LR p.187)
 .gs prefix off
 :note.Text again
+.dm yenote /[end class APF]
+.gs prefix = 'ye'
+:note.no start APF
+::note.
+.gs prefix
 .* direct mapping to a native control word; .aa with rules only
 .aa ty (vat noelem)
 :ty hello World.

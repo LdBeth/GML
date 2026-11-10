@@ -16,7 +16,12 @@ let parse_int s =
         (int_of_string_opt digits)
     else None
 
-let is_blank c = c = ' ' || c = '\t'
+(* The blank that delimits .se/.if operands, macro and imbed parameters is
+   X'40' only (LR p.118: "Ordinary blanks (hexadecimal X'40')"; .DC RB,
+   p.112-113, keeps X'05' apart from it).  A tab is X'05', a character of its own
+   that .TB/.TP resolve when the text is formatted (LR p.374, p.400 r1-r2):
+   in a value it is text, so .se x = a&$TAB.b is one word, not "blanks". *)
+let is_blank c = c = ' '
 
 (** The index of the first non-blank character at or after [i] (or [i] when [i]
     is past the end). *)
@@ -85,8 +90,16 @@ let unquote_all s =
 
 (* ---- arithmetic --------------------------------------------------------- *)
 
-type tok = Num of int | Op of string | Lp | Rp | Word
+(* [Num d]: an unsigned integer as written (digits only); [Op c]: one of
+   + - * / (LR p.339); [Word]: anything else, a quoted string included. *)
+type tok = Num of string | Op of char | Word
 
+let is_op c = c = '+' || c = '-' || c = '*' || c = '/'
+
+let is_digits w =
+  w <> "" && String.for_all (function '0' .. '9' -> true | _ -> false) w
+
+(* The operators need no blanks around them ([&.3+1], LR p.340 r10). *)
 let tokenize s =
   let n = String.length s in
   let rec go i acc =
@@ -94,93 +107,66 @@ let tokenize s =
     else
       match s.[i] with
       | c when is_blank c -> go (i + 1) acc
-      | '(' -> go (i + 1) (Lp :: acc)
-      | ')' -> go (i + 1) (Rp :: acc)
-      | '/' when i + 1 < n && s.[i + 1] = '/' -> go (i + 2) (Op "//" :: acc)
-      | ('+' | '-' | '*' | '/') as c -> go (i + 1) (Op (String.make 1 c) :: acc)
+      | c when is_op c -> go (i + 1) (Op c :: acc)
       | c when is_quote c -> go (close_quote s i + 1) (Word :: acc)
       | _ ->
           let j = ref i in
           while
-            !j < n && not (is_blank s.[!j] || String.contains "()+-*/'" s.[!j])
+            !j < n && not (is_blank s.[!j] || is_op s.[!j] || is_quote s.[!j])
           do
             incr j
           done;
           let w = String.sub s i (!j - i) in
-          go !j
-            ((match parse_int w with Some v -> Num v | None -> Word) :: acc)
+          go !j ((if is_digits w then Num w else Word) :: acc)
   in
   go 0 []
 
 exception Bad of string
 
-(* expr := term {(+|-) term}; term := unary {( * | / | // ) unary};
-   unary := (-|+) unary | primary; primary := number | ( expr ).
-   DCF-VERIFY: SCRIPT/VS may evaluate strictly left to right without
-   operator precedence or parentheses; we use the usual precedence. *)
-let eval_tokens toks =
-  let toks = ref toks in
-  let peek () = match !toks with t :: _ -> Some t | [] -> None in
-  let advance () = match !toks with _ :: r -> toks := r | [] -> () in
-  let rec expr () =
-    let rec more v =
-      match peek () with
-      | Some (Op "+") ->
-          advance ();
-          more (v + term ())
-      | Some (Op "-") ->
-          advance ();
-          more (v - term ())
-      | _ -> v
-    in
-    more (term ())
-  and term () =
-    let rec more v =
-      match peek () with
-      | Some (Op "*") ->
-          advance ();
-          more (v * unary ())
-      | Some (Op (("/" | "//") as o)) ->
-          advance ();
-          let d = unary () in
-          if d = 0 then raise (Bad "division by zero");
-          (* integer division truncates toward zero; // is the remainder
-           (DCF-VERIFY: // remainder operator) *)
-          more (if o = "/" then v / d else v mod d)
-      | _ -> v
-    in
-    more (unary ())
-  and unary () =
-    match peek () with
-    | Some (Op "-") ->
-        advance ();
-        -unary ()
-    | Some (Op "+") ->
-        advance ();
-        unary ()
-    | _ -> primary ()
-  and primary () =
-    match peek () with
-    | Some (Num v) ->
-        advance ();
-        v
-    | Some Lp -> (
-        advance ();
-        let v = expr () in
-        match peek () with
-        | Some Rp ->
-            advance ();
-            v
-        | _ -> raise (Bad "missing )"))
-    | Some Rp -> raise (Bad "unexpected )")
-    | Some (Op o) -> raise (Bad ("operand expected before " ^ o))
-    | Some Word | None -> raise (Bad "operand expected")
+(* [[op1] n [op2 n op2 n ...]] (LR p.339): op1 an optional sign before the
+   first number only ([5+-3] is invalid, p.341 r12), op2 one of + - * /,
+   evaluated strictly from left to right, no operator taking precedence
+   ([1 + 2 * 4 + 6] is 18, p.340 r8); there are no parentheses.  Division
+   truncates toward zero (DCF-VERIFY: the rounding of / is not in LR
+   Rel 4).  [warn]: a number of 9 digits or more, which "can produce
+   unpredictable results" (p.339). *)
+let eval_tokens ?(warn = ignore) toks =
+  let operand = function
+    | Num d :: r -> (
+        if String.length d >= 9 then
+          warn
+            (Printf.sprintf
+               "%s: an integer in an expression must have fewer than 9 digits" d);
+        match int_of_string_opt d with
+        | Some v -> (v, r)
+        | None -> raise (Bad (d ^ " is too large")))
+    | Op ('+' | '-') :: _ ->
+        raise (Bad "a sign is allowed only before the first number")
+    | Op c :: _ -> raise (Bad (Printf.sprintf "operand expected before %c" c))
+    | Word :: _ | [] -> raise (Bad "operand expected")
   in
-  let v = expr () in
-  match peek () with
-  | None -> v
-  | Some Rp -> raise (Bad "unbalanced )")
-  | Some _ -> raise (Bad "operator expected")
+  let first, rest =
+    match toks with
+    | Op (('+' | '-') as s) :: r ->
+        let v, r = operand r in
+        ((if s = '-' then -v else v), r)
+    | r -> operand r
+  in
+  let apply c v d =
+    match c with
+    | '+' -> v + d
+    | '-' -> v - d
+    | '*' -> v * d
+    | _ -> if d = 0 then raise (Bad "division by zero") else v / d
+  in
+  let rec go v = function
+    | [] -> v
+    | Op c :: r ->
+        let d, r = operand r in
+        go (apply c v d) r
+    | _ -> raise (Bad "operator expected")
+  in
+  go first rest
 
 (* The tokens of a [.se] right-hand side: quoted strings (the closing
    quote is optional, p.230) and blank-delimited words, with their
@@ -214,28 +200,88 @@ let se_tokens s =
   go 0 []
 
 let is_expression toks =
-  List.exists (function Op _ | Lp | Rp -> true | _ -> false) toks
+  List.exists (function Op _ -> true | _ -> false) toks
   && not (List.mem Word toks)
 
-(** Value of the right-hand side of [.se name = rhs] (SH35-0069 p.230-231,
-    p.241):
-    - empty: the null string;
-    - ['string] (the closing quote is optional): the string;
-    - [substr STR n [len]]: [len] characters (default: the rest) of STR from the
-      n-th; [index STR SUB]: the position of SUB in STR, 0 if it is not there
-      (STR, SUB quoted or a word);
-    - an arithmetic expression (numbers with [+ - * / //] or parentheses, e.g.
-      [&a + 1], [-&n]): its integer value, so leading zeros go (p.241);
+(* An unquoted string longer than 16 characters is an error (LR p.341
+   r14).  A word that starts with & is a symbol that [sub] substitutes
+   (.su off: "the error does not happen if substitution is off"). *)
+let max_unquoted = 16
+
+let long_word = function
+  | W w when w <> "" && w.[0] <> '&' && String.length w > max_unquoted ->
+      Some
+        (Printf.sprintf
+           "%s: an unquoted string has at most %d characters (put it in quotes)"
+           w max_unquoted)
+  | _ -> None
+
+(* Diagnostics for a character value (not an arithmetic expression): a
+   value with blanks or special characters "must be enclosed in single
+   quotation marks" (LR p.338); we warn about blanks and keep the text as
+   written.  A single word with special characters is taken silently:
+   IBM's own Starter Set macros, which ran under DCF, have such values
+   (DSM#XLST ".se @ = ;", DSMELIST ".se @sk@l = .75"). *)
+let check_char_value ~warn toks =
+  match toks with
+  | [ ((W w as t), _, _) ] when w <> "" && w.[0] <> '&' -> (
+      match long_word t with Some m -> Error m | None -> Ok ())
+  | _ :: _ :: _ ->
+      warn "a value with blanks must be in quotes";
+      Ok ()
+  | _ -> Ok ()
+
+(** The value of [.se name 'qstring] (LR p.337): the string after the quote. A
+    single quote in it need not be doubled ([.se title 'Mrs. O'Grady's Cat'],
+    p.338-339), but a doubled quote is still one quote, read left to right:
+    DSMPROF3's [@oquote] (a double quote and a doubled single quote, seven
+    times, unclosed) must give alternating double and single quotes for
+    DSMQUOTE's [substr &@oquote &@nest@q 1]. DCF-VERIFY: the manual shows only
+    the undoubled case. A quote left alone at the end of the line is the closing
+    quote and is removed (it is needed only to keep trailing blanks, which are
+    removed otherwise). [s] starts with the quote. *)
+let qstring s =
+  let n = String.length s in
+  let b = if n > 0 && is_quote s.[0] then String.sub s 1 (n - 1) else s in
+  let n = String.length b in
+  let rec stop i = if i > 0 && is_blank b.[i - 1] then stop (i - 1) else i in
+  let e = stop n in
+  let buf = Buffer.create e in
+  let rec go i =
+    if i < e then
+      if is_quote b.[i] && i + 1 < e && is_quote b.[i + 1] then (
+        Buffer.add_char buf b.[i];
+        go (i + 2))
+      else if is_quote b.[i] && i = e - 1 then ()
+      else (
+        Buffer.add_char buf b.[i];
+        go (i + 1))
+  in
+  go 0;
+  Buffer.contents buf
+
+(** Value of the right-hand side of [.se name = rhs] (LR p.337-342):
+    - empty: the null string (p.340 r5);
+    - ['string] (the closing quote is optional): the string, a doubled quote in
+      it one quote (p.338);
+    - [substr STR [n [len]]]: [len] characters (default: the rest) of STR from
+      the n-th (default: all of STR); [index STR [SUB]]: the position of SUB in
+      STR, 0 if it is not there or SUB is omitted or null (STR, SUB quoted or a
+      word; the rest of the line is ignored, p.339);
+    - an arithmetic expression ([[op1] n [op2 n ...]], [eval_tokens], e.g.
+      [&a + 1], [-&n], [&.3+1]): its integer value, so leading zeros go;
     - anything else, including a single number ([.se 3z = 00] must keep both
-      zeros, p.269): the text as written, with the delimiters of quoted strings
-      removed. [sub] substitutes one unquoted word: with [.su off] the symbols
-      of a [.se] line outside quotes are still substituted (p.230), word by
-      word, so that [substr &corp 1 6] works when the value of [&corp] contains
-      blanks (p.231). With [.su on] the line is already substituted and [sub] is
-      the identity. DCF-VERIFY: how SCRIPT/VS combines several character
-      operands (we keep the text as written) and whether operators need
-      surrounding blanks (we accept [1-2] as an arithmetic expression). *)
-let se_value ?(sub = Fun.id) rhs =
+      zeros, SH35-0069 p.269): the text as written, with the delimiters of
+      quoted strings removed. Blanks or special characters in it are diagnosed
+      with [warn] (they need quotes, p.338); an unquoted word of more than 16
+      characters, here or as the string of substr or index, is an error (p.341
+      r14). [sub] substitutes one unquoted word: with [.su off] the symbols of a
+      [.se] line outside quotes are still substituted (p.341 r13), word by word,
+      so that [substr &corp 1 6] works when the value of [&corp] contains blanks
+      (p.339). With [.su on] the line is already substituted and [sub] is the
+      identity. EXT: several character operands are kept as written (DCF does
+      not say what it does with them). *)
+let se_value ?(sub = Fun.id) ?(warn = ignore) rhs =
   let rhs = String.trim rhs in
   let toks = se_tokens rhs in
   let arg = function Q s -> s | W w -> sub w in
@@ -245,15 +291,19 @@ let se_value ?(sub = Fun.id) rhs =
     | None -> Error (Printf.sprintf "%s: %s is not a number" what (arg t))
   in
   let ( let* ) = Result.bind in
+  let short t = match long_word t with Some m -> Error m | None -> Ok () in
   match toks with
   | [] -> Ok ""
   | [ (Q s, _, _) ] -> Ok s
   | (W op, _, _) :: args
-    when String.lowercase_ascii op = "substr" && List.length args >= 2 -> (
+    when String.lowercase_ascii op = "substr" && List.length args >= 1 -> (
       match List.map (fun (t, _, _) -> t) args with
-      | ([ str; n ] | [ str; n; _ ]) as l ->
+      | ([ str ] | [ str; _ ] | [ str; _; _ ]) as l ->
+          let* () = short str in
           let s = arg str in
-          let* start = number "substr" n in
+          let* start =
+            match l with _ :: n :: _ -> number "substr" n | _ -> Ok 1
+          in
           let* len =
             match l with
             | [ _; _; len ] -> number "substr" len
@@ -266,10 +316,12 @@ let se_value ?(sub = Fun.id) rhs =
             Ok (String.sub s a (max 0 (min len (l - a))))
       | _ -> Error "substr: string, start and length expected")
   | (W op, _, _) :: args
-    when String.lowercase_ascii op = "index" && List.length args >= 2 -> (
+    when String.lowercase_ascii op = "index" && List.length args >= 1 -> (
       match List.map (fun (t, _, _) -> t) args with
-      | [ str; needle ] ->
-          let h = arg str and nd = arg needle in
+      | str :: rest ->
+          let* () = short str in
+          let h = arg str in
+          let nd = match rest with nd :: _ -> arg nd | [] -> "" in
           let lh = String.length h and ln = String.length nd in
           let rec find i =
             if i + ln > lh then 0
@@ -277,7 +329,7 @@ let se_value ?(sub = Fun.id) rhs =
             else find (i + 1)
           in
           Ok (string_of_int (if ln = 0 then 0 else find 0))
-      | _ -> Error "index: string and search string expected")
+      | [] -> Error "index: string and search string expected")
   | _ ->
       (* substitute the words in place, keeping the spacing *)
       let b = Buffer.create (String.length rhs) in
@@ -294,11 +346,13 @@ let se_value ?(sub = Fun.id) rhs =
       let r = Buffer.contents b in
       let atoks = tokenize r in
       if is_expression atoks then
-        match eval_tokens atoks with
+        match eval_tokens ~warn atoks with
         | v -> Ok (string_of_int v)
         | exception Bad m ->
             Error (Printf.sprintf "bad expression '%s': %s" r m)
-      else Ok (unquote_all r)
+      else
+        let* () = check_char_value ~warn toks in
+        Ok (unquote_all r)
 
 (* ---- conditions ------------------------------------------------------- *)
 
@@ -314,7 +368,7 @@ let op_of_string s =
   | "ge" | ">=" | "\xc2\xac<" | "^<" -> Some Ge
   | _ -> None
 
-(* The shorter comparand is padded with blanks (SH35-0069 p.264). *)
+(* The shorter comparand is padded with blanks (LR p.204 r4). *)
 let compare_strings a b =
   let la = String.length a and lb = String.length b in
   let n = max la lb in
@@ -344,12 +398,13 @@ let rest_from s i =
 (** Parse and evaluate [term1 op term2 [remainder]]. Returns the truth value and
     the remainder (leading blanks removed). Numeric comparison when both
     operands are unquoted numbers, else character comparison, the shorter
-    operand padded with blanks (SH35-0069 p.264). The first token is always the
+    operand padded with blanks (LR p.204 r4). The first token is always the
     first comparand: [.if = ON .go next] (from a null [&a]) is an error, "ON is
     not a valid comparison" (p.266). [sub] substitutes an unquoted comparand:
     with [.su off] each comparand is substituted on its own (p.267); with
     [.su on] the line is already substituted and [sub] is the identity.
-    DCF-VERIFY: a quoted number compares as characters. *)
+    DCF-VERIFY: a quoted number compares as characters (not in LR Rel 4, which
+    does not say when a comparison is numeric). *)
 let condition ?(sub = Fun.id) s =
   let subst t = if t.quoted then t else { t with text = sub t.text } in
   match read_term s 0 with

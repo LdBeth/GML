@@ -5,12 +5,13 @@ code is EBCDIC (code page 037), written as UTF-8: c1 is "A", 40 a blank
 and 42 is "â".
 
   $ gml in.gml
+  in.gml:7: error: .tr: no output character for a
   in.gml:11: error: .tr: invalid character xyz
   <?xml version="1.0" encoding="UTF-8"?>
   <gml:doc xmlns:gml="urn:x-gml:canonical">ABc And BoB
   *gAin: ABc
   x yâz
-   Bc
+  ABc
   abc~#
   still abc
   </gml:doc>

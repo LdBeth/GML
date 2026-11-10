@@ -5,8 +5,8 @@
    is a file in it named after the member, the name in upper case,
    optionally with the extension [.scr]: [NAME], then [NAME.scr].
    Member names are up to eight characters (p.282); a longer macro or
-   symbol name is never searched for (DCF-VERIFY: DCF may cut it to
-   eight).
+   symbol name is never searched for (DCF-VERIFY, not in LR Rel 4: DCF
+   may cut it to eight).
 
    A macro member is the whole macro body, every line of it (there is no
    [.dm] line in it, p.283); a symbol member is one line, its value
@@ -74,8 +74,9 @@ let load_macro ctx name =
 (** An unresolved macro: from the library if [.ly on|mac]. *)
 let find_macro ctx name = if ctx.Ctx.ly_mac then load_macro ctx name else None
 
-(* The value of a symbol member: its first line.  DCF-VERIFY: trailing
-   blanks (the padding of fixed-length records) are removed. *)
+(* The value of a symbol member: its first line.  DCF-VERIFY (not in LR
+   Rel 4): trailing blanks (the padding of fixed-length records) are
+   removed. *)
 let symbol_value lines =
   if Array.length lines = 0 then ""
   else

@@ -9,11 +9,11 @@ DSM#RSET reports a quotation and a footnote still open at a heading.
 
   $ gml -profile starter in.gml
   in.gml:7: warning: end tag :eq: element q is not open
-  in.gml:7 (in macro ss@msg line 9, in macro dsmequot line 2): +++DSMGML004W Tag :eq found but no quotation is open.
+  in.gml:7 (in macro ss@msg line 56, in macro dsmequot line 2): +++DSMGML011W :EQ END-TAG FOUND OUTSIDE Q AND IGNORED. (page 1)
   in.gml:8: warning: end tag :efn: element fn is not open
-  in.gml:8 (in macro ss@msg line 9, in macro dsmeftnt line 1): +++DSMGML004W Tag :efn found but no footnote is open.
-  in.gml:11 (in macro ss@msg line 6, in macro dsm#rset line 2, in macro dsmhead1 line 1): +++DSMGML003W Tag :q was not ended before tag :h1.
-  in.gml:11 (in macro ss@msg line 6, in macro dsm#rset line 4, in macro dsmhead1 line 1): +++DSMGML003W Tag :fn was not ended before tag :h1.
+  in.gml:8 (in macro ss@msg line 56, in macro dsmeftnt line 1): +++DSMGML011W :EFN END-TAG FOUND OUTSIDE FN AND IGNORED. (page 1)
+  in.gml:11 (in macro ss@msg line 25, in macro dsm#rset line 2, in macro dsmhead1 line 1): +++DSMGML003W Q PREMATURELY ENDED BY :H1 TAG. (page 1)
+  in.gml:11 (in macro ss@msg line 25, in macro dsm#rset line 4, in macro dsmhead1 line 1): +++DSMGML003W FN PREMATURELY ENDED BY :H1 TAG. (page 1)
   <?xml version="1.0" encoding="UTF-8"?>
   <gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><body><p>He said <q>she said <q>no</q> there</q> and left.
   </p><fig>A figure<fn>a footnote in a figure</fn> with more text.

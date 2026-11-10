@@ -10,7 +10,9 @@
      attr    ::= aname blanks? '=' blanks? value       (named; p.288-289)
                | word                                   (value attribute)
      value   ::= "'" { char | "''" } "'"  |  bare
-     bare    ::= characters up to a blank or M
+     bare    ::= characters up to a blank or M (LR p.186 allows only a
+                 word of name characters; others are taken, with a
+                 warning: EXT)
      word    ::= tag name characters, ending at a blank, M, the end of
                  the line or the start of another tag
 
@@ -22,7 +24,7 @@
 
 type delims = {
   tag : char;
-  etag : string;  (** one or two characters *)
+  etag : string;  (** one or two characters; "": no end tags *)
   mcs : char;
 }
 
@@ -52,7 +54,8 @@ let tag_name s i =
   if i < String.length s && Chars.is_tag_char s.[i] && not (is_digit s.[i]) then
     let j = name_end s i in
     if j - i <= max_name then Some j else None
-    (* DCF-VERIFY: a longer name is not a tag (it is text) *)
+    (* DCF-VERIFY (not in LR Rel 4): a longer name is not a tag (it is
+       text); LR p.62 gives the limit *)
   else None
 
 type found = {
@@ -78,7 +81,9 @@ let tag_at d s i =
         (tag_name s k)
     else None
   in
-  match try_delim true d.etag with
+  (* a null end-tag delimiter ([.dc gml c] alone): end tags are not
+     recognized (LR p.113) *)
+  match if d.etag = "" then None else try_delim true d.etag with
   | Some _ as r -> r
   | None -> try_delim false (String.make 1 d.tag)
 
@@ -87,7 +92,7 @@ let find_tag d s i =
   let n = String.length s in
   let rec go k =
     if k >= n then None
-    else if s.[k] = d.tag || s.[k] = d.etag.[0] then
+    else if s.[k] = d.tag || (d.etag <> "" && s.[k] = d.etag.[0]) then
       match tag_at d s k with Some _ as r -> r | None -> go (k + 1)
     else go (k + 1)
   in
@@ -109,6 +114,9 @@ type result = {
   attrs : attr list;
   stop : stop;
   invalid : string list;  (** invalid attributes met (for [msg]) *)
+  lax : string list;
+      (** unquoted values that are not a word of name characters, as written (LR
+          p.186; taken anyway) *)
 }
 
 let skip_blanks s i =
@@ -139,8 +147,8 @@ let quoted s i =
   in
   go (i + 1)
 
-(* An unquoted value ends at a blank or the MCS.  DCF-VERIFY: whether the
-   tag delimiter also ends it. *)
+(* An unquoted value ends at a blank or the MCS.  DCF-VERIFY (not in LR
+   Rel 4): whether the tag delimiter also ends it. *)
 let bare ~mcs s i =
   let n = String.length s in
   let j = ref i in
@@ -150,7 +158,7 @@ let bare ~mcs s i =
   !j
 
 type token =
-  | T_named of string * string * int
+  | T_named of string * string * int * bool  (** [true]: a lax bare value *)
   | T_vat of string * int
   | T_bad of int  (** end of the invalid token *)
 
@@ -166,11 +174,14 @@ let token d s i =
       let v = skip_blanks s (k + 1) in
       if v < n && s.[v] = '\'' then
         match quoted s v with
-        | Some (value, e) -> T_named (name, value, e)
+        | Some (value, e) -> T_named (name, value, e, false)
         | None -> T_bad n
       else
         let e = bare ~mcs:d.mcs s v in
-        if e = v then bad () else T_named (name, String.sub s v (e - v), e)
+        if e = v then bad ()
+        else
+          let value = String.sub s v (e - v) in
+          T_named (name, value, e, not (String.for_all Chars.is_tag_char value))
     end
     else if j >= n || is_blank s.[j] || s.[j] = d.mcs || tag_at d s j <> None
     then T_vat (String.sub s i (j - i), j)
@@ -181,9 +192,17 @@ let token d s i =
 *)
 let attributes d ~att ~vat ~stop s i =
   let n = String.length s in
+  let lax = ref [] in
   let rec go i acc bad =
     let i = skip_blanks s i in
-    let fin st = { attrs = List.rev acc; stop = st; invalid = List.rev bad } in
+    let fin st =
+      {
+        attrs = List.rev acc;
+        stop = st;
+        invalid = List.rev bad;
+        lax = List.rev !lax;
+      }
+    in
     if i >= n then fin Eol
     else if s.[i] = d.mcs then fin (Mcs (i + 1))
     else if tag_at d s i <> None then fin (Next_tag i)
@@ -194,8 +213,12 @@ let attributes d ~att ~vat ~stop s i =
         else go e acc (tok :: bad)
       in
       match token d s i with
-      | T_named (nm, v, e) ->
-          if att then go e (Named (nm, v) :: acc) bad else invalid e
+      | T_named (nm, v, e, l) ->
+          if att then begin
+            if l then lax := String.sub s i (e - i) :: !lax;
+            go e (Named (nm, v) :: acc) bad
+          end
+          else invalid e
       | T_vat (w, e) -> if vat then go e (Vat w :: acc) bad else invalid e
       | T_bad e -> invalid e
   in

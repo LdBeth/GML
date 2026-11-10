@@ -7,7 +7,7 @@ Separator now [&U'&$CW.]
 Separator off [&U'&$CW.]
 .dc cw ;
 Split here [&$CW.] by the extended symbol rule (p.257)
-Date &$DATE time &$TIME
+Year &$YEAR., not &$DATE or &$TIME
 .se $line = 1
 .se $mine = ok
 User dollar symbol: &$mine

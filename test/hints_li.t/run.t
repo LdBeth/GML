@@ -1,6 +1,8 @@
-.li (SH35-0069 p.89): .li on treats every input line as text until .li
-off: control words, tags and implicit words (leading blank, null line)
-are not recognised, symbols are still substituted.  .li text makes the
+.li (SH35-0069 p.89; LR p.231): .li on treats every input line as text until .li
+off: control words and implicit words (leading blank, null line) are not
+recognised, symbols are still substituted; GML tags are (LR p.231 r2),
+but the control words their APFs produce are text (no APF here, so :p.
+stays text).  .li text makes the
 rest of the line text; .li n the next n lines.
 
   $ gml in.gml

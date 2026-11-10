@@ -1,4 +1,4 @@
-.* break flags (p.43, p.78, p.81, p.191, p.198, p.205)
+.* break flags (LR Table 13 p.441 and the entries)
 Some text
 .br
 .sp
@@ -18,7 +18,17 @@ Some text
 .hy on minword 7
 .hw un-cer-e-mo-ni-ous-ly
 .tp 8m 18m 30m
+.tb clr 5
 .bx 1 30
 .bx off
 .fo left
 .pf
+.vr thin 5
+.ls by 2
+.ls by 1 nobreak
+.wz 3
+.pm 1i
+.rh odd sup
+.ws by 2
+.tp
+.tb

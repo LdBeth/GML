@@ -1,5 +1,7 @@
-.gs scan / .gs copy / .gs insert on the residual text; symbols in the
-residual text are substituted before the APF runs (SH35-0050 p.10).
+.gs scan / .gs copy / .gs insert on the residual text (LR p.184,
+p.187); with no residual text .gs insert still inserts; .gs scan with
+a string scans it; symbols in the residual text are substituted before
+the APF runs (SH35-0050 p.10).
 
   $ gml in.gml
   <?xml version="1.0" encoding="UTF-8"?>
@@ -9,6 +11,8 @@ residual text are substituted before the APF runs (SH35-0050 p.10).
   of the Title
   [no residual]
   See Figure 7 for details.
+  [inserted]
+  [the rest / abc / a b]
   [the count is 0]
   now the count is 1
   </gml:doc>

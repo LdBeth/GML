@@ -10,12 +10,11 @@
    set of locals, [Symbols.base] (SH35-0069 p.276).  Each File and Macro
    frame also holds the result of its most recent comparison, for
    [.th]/[.el]: it is preserved across macro calls and imbeds (p.265).
-   Every removal of a frame goes through [pop], which calls the [on_pop]
-   hook: the interpreter uses it to discard state tied to the frame
-   (open .do groups of a macro). *)
+   Frames leave the stack only through [pop]. *)
 
-(* Every File and Macro frame gets a unique id, so that state tied to a
-   frame (open .do groups) can refer to it. *)
+(* Every File and Macro frame gets a unique id (the profile and the
+   macro that [.me] ends are found by it, and the frames of an ignored
+   conditional section, [Ctx.cs_frames]). *)
 let next_id = ref 0
 
 let fresh_id () =
@@ -40,8 +39,9 @@ type file_frame = {
    takes effect in this same call.  SH35-0050 p.181 (DSM#DUPL) relies on
    it: line 40 removes line 60 ("NOT DUPLEX - REMOVE THE EJECT LINE")
    before line 60 is reached.
-   DCF-VERIFY: a running macro that is deleted ([.dm name off]) ends
-   there; one that is redefined goes on in the new definition. *)
+   DCF-VERIFY (not in LR Rel 4): a running macro that is deleted
+   ([.dm name off]) ends there; one that is redefined goes on in the new
+   definition. *)
 type macro_frame = {
   mid : int;
   name : string;
@@ -88,8 +88,6 @@ type t = {
   resume : (string, int) Hashtbl.t;
       (** files left by [.ef]: where the next imbed resumes (p.51) *)
   mutable cond0 : bool option;  (** comparison result outside any frame *)
-  mutable on_pop : frame -> unit;
-      (** called after a frame has been removed from the stack *)
 }
 
 let create ?(max_depth = 64) search_path =
@@ -100,16 +98,10 @@ let create ?(max_depth = 64) search_path =
     max_depth;
     resume = Hashtbl.create 4;
     cond0 = None;
-    on_pop = ignore;
   }
 
 (* The one place where frames leave the stack. *)
-let pop t =
-  match t.frames with
-  | [] -> ()
-  | f :: rest ->
-      t.frames <- rest;
-      t.on_pop f
+let pop t = match t.frames with [] -> () | _ :: rest -> t.frames <- rest
 
 let macro_depth t =
   List.fold_left
@@ -376,7 +368,7 @@ let peek_in_frame t =
 
 (* ---- the current frame ------------------------------------------------ *)
 
-(* The frame a [.go] (or a .do group, or a comparison) belongs to: the
+(* The frame a [.go] or a comparison belongs to: the
    topmost File or Macro frame.  Lines frames are transparent: they hold
    the rest of lines of the frame below. *)
 let current_frame t =
@@ -490,7 +482,7 @@ let pick_target idxs ~from =
     In a file the search goes forward from the line after the current one, then
     from the top; in a macro it always begins at the top of the macro (SH35-0069
     p.266). Frames above it and pushed-back remainders are discarded. On error
-    nothing changes. Returns the id of the frame jumped in. *)
+    nothing changes. *)
 let goto t ~label_of name =
   let key = String.lowercase_ascii name in
   match current_frame t with
@@ -506,7 +498,7 @@ let goto t ~label_of name =
           ff.idx <- i;
           drop_lines_above t;
           t.pending <- [];
-          Ok ff.id)
+          Ok ())
   | Some (Macro m) -> (
       match
         pick_target
@@ -519,4 +511,4 @@ let goto t ~label_of name =
           m.last <- sub - 1;
           drop_lines_above t;
           t.pending <- [];
-          Ok m.mid)
+          Ok ())

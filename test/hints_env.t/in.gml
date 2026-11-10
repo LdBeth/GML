@@ -15,11 +15,18 @@ Saved x.
 Restored x.
 .sa outer
 .of 4
-.sa inner
+.sa
 .ir 1
+.sa inner
+.ir 2
 .re outer
 After outer.
+.re inner
+After inner.
 .re
+After unnamed.
+.re
+Initial values.
 .re nosuch
 .in 6
 .of 1
@@ -29,3 +36,12 @@ Footnote.
 .fn off
 .in +1
 .fv justify
+.dc ps #
+.ce on
+.sa
+.dc ps %
+.ce off
+Page symbol &$PS. not centred.
+.re
+Page symbol &$PS. centred again.
+.ce off

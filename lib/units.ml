@@ -1,4 +1,4 @@
-(* Space units (SH35-0069 p.44-46, Figure 3).
+(* Space units (SH35-0069 p.44-46, Figure 3; LR p.58, Table 6).
 
    A dimension operand is parsed into a value in hundredths of a unit
    and a normalised unit name.  Nothing is converted to device units:
@@ -21,7 +21,8 @@
    points ([p]) may have one decimal.  A leading [+] or [-] makes the
    value relative; a lone sign followed by the number in the next token
    ([.in + 1i]) is joined by the caller.
-   DCF-VERIFY: [m] on a vertical operand is taken as [mv]. *)
+   [m] is [mh] on either axis: "Em space (Horizontal) aMH or aM" (LR
+   p.58, Table 6). *)
 
 type axis = Horizontal | Vertical
 
@@ -93,10 +94,7 @@ let magnitude axis s =
   else if ends s "mv" then mk "mv" (number (chop s 2))
   else if ends s "dh" then mk "dh" (integer (chop s 2))
   else if ends s "dv" then mk "dv" (integer (chop s 2))
-  else if ends s "m" then
-    mk
-      (match axis with Horizontal -> "mh" | Vertical -> "mv")
-      (number (chop s 1))
+  else if ends s "m" then mk "mh" (number (chop s 1))
   else if ends s "i" then mk "i" (number (chop s 1))
   else if String.contains s 'p' then mk "pt" (compound 'p' s)
   else if String.contains s 'c' then mk "dd" (compound 'c' s)
@@ -186,9 +184,9 @@ let lines o =
 
 (** A sum in whole figure spaces, as the system symbols [&$IN], [&$LL] ... give
     it (SH35-0069 p.243: "represented in character spaces, regardless of the
-    space units used in setting them"). DCF-VERIFY: there is no device, so a
-    figure space is taken as 1/10 inch (the 10-pitch font of the 3800) and an em
-    as one figure space; device units count 0. *)
+    space units used in setting them"). EXT: there is no device, so a figure
+    space is taken as 1/10 inch (the 10-pitch font of the 3800) and an em as one
+    figure space; device units count 0. *)
 let figure_spaces (s : sum) =
   let per_inch_100 = function
     | "i" -> Some 100
@@ -211,10 +209,10 @@ let figure_spaces (s : sum) =
   in
   hundredths / 100
 
-(** [&DH'] / [&DV'] (SH35-0069 p.237-238): a dimension in device units.
-    DCF-VERIFY: there is no device; the units are those of a 240-pel page
-    printer (3800 Model 3, 3820): 240 per inch, a figure space or an em 1/10
-    inch (24), a line 1/6 inch (40). *)
+(** [&DH'] / [&DV'] (SH35-0069 p.237-238): a dimension in device units. EXT:
+    there is no device; the units are those of a 240-pel page printer (3800
+    Model 3, 3820): 240 per inch, a figure space or an em 1/10 inch (24), a line
+    1/6 inch (40). *)
 let device_units axis s =
   match parse axis s with
   | Error _ -> None

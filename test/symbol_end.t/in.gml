@@ -14,7 +14,7 @@ after
 .dm tg on
 .se d = start
 .if &$TAGD eq &$EGML .se d = end
-.if &L'&$TAGD eq 2 .se d = &d (2 characters)
+.if &L'&$TAGD eq 2 .se d = '&d (2 characters)'
 [&$TAG &d ]
 .dm off
 .aa fig tg tg

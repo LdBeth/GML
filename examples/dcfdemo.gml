@@ -12,7 +12,7 @@
 .*       examples/dcfdemo.gml > dcfdemo.tex
 .*   TEXINPUTS=.:share/tex: pdftex dcfdemo.tex
 .*
-.* (forward references then give DCFS020W and "ID unknown").
+.* (forward references then give DSMGML013W and "ID unknown").
 :gdoc sec='IBM Internal Use Only'.
 :frontm.
 :titlep.

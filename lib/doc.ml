@@ -106,9 +106,11 @@ type t = {
           line-scope counting. *)
   tr : (int, string) Hashtbl.t;
       (** the output translate table ([.tr], SH35-0069 p.207), by Unicode code
-          point: applied to text as it enters the tree. DCF-VERIFY: DCF
-          translates when the line is put out, so a [.tr] change in the middle
-          of an output line would also affect the text before it there. *)
+          point: applied to text as it enters the tree. Rel 4: DCF translates
+          the output line just before its widths are measured (LR p.404 r8), so
+          a [.tr] change in the middle of an output line would also affect the
+          text before it there, and running headings and footings use the
+          initial table as changed inside them (r4); not yet modelled. *)
   mutable page_symbol : unit -> char option;
       (** the page number symbol ([.dc ps]; [Ctx] installs it): in the text of a
           running heading or footing ([gml:rh], [gml:rf]) it stands for the page

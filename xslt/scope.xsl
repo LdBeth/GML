@@ -12,8 +12,10 @@
 
     hint                         scope attribute   reset/initial value
     gml:in  (not temporary)      in   = left+unit      0
-                                 (offset="0": also of = 0, a .in ends
-                                 the offset, SH35-0069 p.80)
+                                 (offset="0": also of = 0, any .in
+                                 clears all offsets, LR p.260; a
+                                 temporary gml:in or a gml:lines
+                                 word="in" with offset="0" too)
     gml:ir  (not temporary)      ir   = right+unit     0
     gml:of                       of   = offset+unit    0
     gml:ll                       ll   = length+unit    default
@@ -155,6 +157,9 @@
     <xsl:accumulator-rule match="gml:in[not(@temporary = 'yes')]"
         select="map:put(if (@offset) then map:put($value, 'of', '0') else $value,
                         'in', s:dim(@left, @unit))"/>
+    <xsl:accumulator-rule match="gml:in[@temporary = 'yes'][@offset]
+                                 | gml:lines[@word = 'in'][@offset]"
+        select="map:put($value, 'of', '0')"/>
     <xsl:accumulator-rule match="gml:ir[not(@temporary = 'yes')]"
         select="map:put($value, 'ir', s:dim(@right, @unit))"/>
     <xsl:accumulator-rule match="gml:of" select="map:put($value, 'of', s:dim(@offset, @unit))"/>

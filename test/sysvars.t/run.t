@@ -1,9 +1,11 @@
 System symbols (SH35-0069 p.240-251): the &$ ones are computed and
 read-only, in either case; &$GML &$EGML &$CW &$CONT come from .dc, &$ENV
 is BODY (no keeps or footnotes), &$LNUM the line number.  The date and
-time symbols &SYSYEAR ... &SYSSECOND (p.241) are ordinary global symbols,
-upper case, zero-padded, set once; .se SYSDAYOFM = &SYSDAYOFM + 0 drops
-the zero; the compound date of p.247.  SOURCE_DATE_EPOCH fixes the clock
+time symbols (LR p.443, Table 17): &$YEAR, the year in 4 digits, is a
+system symbol; &SYSYEAR ... &SYSSECOND are ordinary global symbols,
+upper case, zero-padded, set once (&SYSDAYOFW 1 is Sunday); .se
+SYSDAYOFM = &SYSDAYOFM + 0 drops the zero; the compound date of
+SH35-0069 p.247.  There is no &$DATE or &$TIME in DCF.  SOURCE_DATE_EPOCH fixes the clock
 (UTC): 1700000000 is Tuesday, 14 November 2023, 22:13:20.
 
   $ SOURCE_DATE_EPOCH=1700000000 gml in.gml
@@ -16,7 +18,7 @@ the zero; the compound date of p.247.  SOURCE_DATE_EPOCH fixes the clock
   Separator off []
   Split here [
   ] by the extended symbol rule (p.257)
-  Date November 14, 2023 time 22:13:20
+  Year 2023, not &amp;$DATE or &amp;$TIME
   User dollar symbol: ok
   GML [:] [::] env BODY su ON lnum 14
   Continuation [+]

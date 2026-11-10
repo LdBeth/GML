@@ -7,9 +7,11 @@ type t = {
   mutable cw_sep : char option;  (** control word separator, ';' *)
   mutable gml_delim : char option;  (** GML tag delimiter, ':' *)
   mutable gml_end : string;
-      (** GML end-tag delimiter, "::" (SH35-0069 p.288); one or two characters,
-          if two the first is [gml_delim] (p.289) *)
-  mutable mcs : char;  (** markup/content separator, '.' *)
+      (** GML end-tag delimiter, "::"; one or two characters, or null: end tags
+          are not recognized ([.dc gml c], LR p.113) *)
+  mutable mcs : char;
+      (** markup/content separator, '.'; a blank when it is off (the blank is
+          always one, LR p.114) *)
   mutable symbol : char;  (** symbol substitution char, '&' *)
   mutable cont : char option;
       (** continuation character ([.dc cont c]); initially none (SH35-0069 p.47)
@@ -44,9 +46,13 @@ let is_tag_char = function
   | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '@' | '#' | '$' -> true
   | _ -> false
 
-(** May [c] be a GML delimiter or the MCS: not a tag name character and not the
-    ampersand (p.289). *)
+(** May [c] be the MCS: not a tag name character and not the ampersand
+    (SH35-0069 p.289). *)
 let valid_gml_char c = (not (is_tag_char c)) && c <> '&'
+
+(** May [c] be the GML tag or end-tag delimiter: not a blank, a period, an
+    ampersand or a tag name character (LR p.113). *)
+let valid_gml_delim c = valid_gml_char c && c <> '.' && c <> ' '
 
 (* ---- the marks of a text variable (.dv) -------------------------------- *)
 

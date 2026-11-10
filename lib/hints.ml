@@ -10,9 +10,9 @@
      absolute value, and the operand as written, normalised).  The state
      is kept in [Ctx.fmt].
    - Every hint has [break="yes|no"]: whether the word causes a break.
-     SH35-0069 p.77 refers to the Language Reference for the complete
-     list; the column below follows the guide where it says so (p.43,
-     p.78, p.81, p.198, p.205) and is marked DCF-VERIFY otherwise.
+     The column below follows the Language Reference (SH35-0070-07,
+     "LR"): Table 13 "Control Words That Cause a Break" (LR p.441) and
+     the Notes of each entry.
    - Dimensions are normalised by [Units] into [n="2.5" unit="i"] (lists
      of positions into tokens such as ["1ch 45ch"]); nothing is
      converted to device units.
@@ -22,16 +22,19 @@
      they cover is wrapped in a [<gml:lines word="ce" n="2" ...>] scope
      ([Doc.scope]) carrying the state that applies inside it.  The
      operand forms are a number of lines, ON ... OFF (n="on"), or text
-     on the control word line itself (one covered line).  DCF counts
-     the FOR/AFTER amounts of [.in]/[.ir] in output lines (p.79-81); a
-     scope counts input lines, so an amount in lines is scoped and any
-     other amount is left on the hint ([for]/[after] attributes).
-     DCF-VERIFY.
+     on the control word line itself (one covered line).  Rel 4: the
+     FOR/AFTER amounts of [.in]/[.ir] are vertical distances of output,
+     counted from the first nonblank text line (LR p.210-211); not yet
+     modelled: a scope counts input lines, so an amount in lines is
+     scoped and any other amount is left on the hint ([for]/[after]
+     attributes).
    - [.h0]-[.h6] give an element [<gml:h level="n">text</gml:h>].
      [.fn on/off] and [.rh]/[.rf] definitions give elements too
      ([gml:fn], [gml:rh], [gml:rf]): they hold text of another flow.
-     DCF-VERIFY: a running heading is processed (substituted, tags
-     resolved) where it is defined, not when each page starts (p.127).
+     Rel 4: symbols in a running heading or footing are replaced when it
+     is placed on the page, substitution being off while it is defined
+     (LR p.312 r7, p.315); not yet modelled: it is processed where it is
+     defined.
    - [.tr] (p.207) is not a hint: it sets the translate table that
      [Doc] applies to text entering the tree.  [.dv] (p.258) sets a
      symbol to a text variable, the hint [gml:dv] where it is used.  [.li] (literal mode) is input processing ([Interp]).
@@ -50,44 +53,51 @@
    | .sp .sk     | yes   | [v] [a] [c]                      | sp/sk n unit [absolute] [conditional]     |
    | .ce .ri     | yes   | [n|on|off|text]                  | gml:lines word n                          |
    | .us .up .uc | no    | [n|on|off|text]                  | gml:lines word n                          |
-   | .in .ir     | yes*  | [h] [after v] [for v] [nobreak]  | in left/ir right unit [delta] [offset="0"] [after for] |
+   | .in .ir     | yes*  | [h] [[for] v1] [[after] v2] [nobreak] | in left/ir right unit [delta] [offset="0"] [after for] |
    | .il .un     | yes   | h                                | gml:lines word n="1" left unit            |
    | .of         | yes   | [h]                              | of offset unit [delta]                    |
    | .ll         | yes   | [h]                              | ll length unit [delta] | length="default" |
    | .fo         | yes   | [on|off|left|right|center|inside|outside] [extend|fold|trunc] | fo fill align overdraw |
    | .nf         | yes   | [on|off|left|...] [extend|...]   | nf fill align overdraw                    |
    | .ju         | yes   | [on|off]                         | ju fill align overdraw                    |
-   | .pa         | yes*  | [n|odd|even|nostart|nobreak] [on|off] | pa [page] [side] [nostart] [mode]    |
+   | .pa         | yes   | [n|+n|-n|nostart] | odd|even [on|off] | pa [page] [side] [nostart] [mode]   |
    | .cp .cc     | yes   | [v]                              | cp/cc [n unit]                            |
    | .cb         | yes   |                                  | cb                                        |
    | .bx         | yes   | [off|can|new|set|...] positions  | bx [action] [spec]                        |
-   | .hr         | yes   | rule spec                        | hr spec                                   |
+   | .hr         | yes   | [rule] h1|left [[to] h2|for l|right] ... | hr spec | repeat="yes"            |
+   | .vr         | yes   | rule spec                        | vr spec                                   |
    | .kp         | yes*  | on|off|float|delay|inline|v[+v]  | kp mode [n unit]                          |
    | .fn         | no    | on|off|leader                    | element gml:fn [kind]                     |
-   | .rh .rf     | no    | [odd|even] on|off, cancel|sup|res|execute | element gml:rh/rf [page] / hint action |
+   | .rh .rf     | yes   | [odd|even] on|off|cancel|sup|res|execute | element gml:rh/rf [page] / hint action [page] |
    | .dh         | no    | n options                        | dh level spec (NUM and TC options kept)   |
    | .tc         | yes   | [n] [title|/]                    | tc action=begin|end [reserve]; gml:h title; tcentry per entry |
    | .pt         | -     | text | .xx line                  | tcmark anchor (a .pt text line)           |
    | .h0-.h6     | yes   | text                             | gml:h element; tcmark anchor (TC levels)  |
    | .sx         | yes   | [f] [c] /left/fill/right/        | sx left fill right [fold] [center]        |
-   | .tp .tb     | no    | [add|del|set] stops              | tp/tb [action] stops                      |
-   | .bf         | no    | font... [=]                      | bf font [restart]                         |
+   | .tp .tb     | yes   | [add|del|clr|delete|set] stops   | tp/tb [action] stops                      |
+   | .bf         | no    | [font...] [=]                    | bf font [restart]                         |
    | .pf         | no    |                                  | pf font | initial="yes"                   |
    | .df         | no    | name spec                        | df name spec                              |
    | .hy         | no    | [on|off] [options]               | hy [mode] [options]                       |
    | .hw         | no    | word                             | hw word                                   |
    | .rc         | no    | n [on|off|c], adjust h, * c      | rc code [mode] [char] / gml:lines word="rc"|
    | .bc         | no    | on|off                           | bc mode                                   |
-   | .ls .sb .ws .es .wz .is .ic .ud .pn .pl .pw .pm .tm .bm | no | as written | NAME spec |
+   | .ls         | yes*  | as written [nobreak]             | ls spec                                   |
+   | .wz .pm     | yes   | as written                       | NAME spec                                 |
+   | .sb .ws .es .is .ic .ud .pn .pl .pw .tm .bm | no | as written | NAME spec                    |
    | .cl .cd .sc .mc | yes | as written                     | NAME spec                                 |
    | .bc .fl     | no    | as written                       | NAME spec                                 |
+   | .sa         | no    | [envname]                        | sa [name]                                 |
+   | .re         | yes*  | [envname]                        | re [name], then the restoring hints       |
    | .tr         | -     | pairs of c|hh                    | (translate table)                         |
    | .dv         | -     | name [font f] [baseline b] /string | (symbol) dv name font baseline text (where used) |
 
-   yes* : depends on the operands (NOBREAK; .pa NOBREAK; inline keeps).
-   DCF-VERIFY for every row not cited above: the break column of .ju,
-   .pa, .cp, .cc, .cb, .bx, .tc, .sx, .cl, .cd, .sc, .mc and the page
-   layout words.  [spec] is the operand list with each space-unit
+   yes* : depends on the operands (NOBREAK, LR p.441; inline keeps,
+   LR p.228; .re: whether the format mode or centring changes, p.309).
+   The break column is LR Table 13 (p.441) and the Notes of the entries:
+   .pa (p.276), .vr (p.423), .rh/.rf (p.314, p.310), .ls (p.237), .wz
+   (p.434), .pm (p.284), .tb/.tp (p.374, p.401), .re (p.309).  [spec]
+   is the operand list with each space-unit
    operand normalised to a token ("2" -> "2line" for .sp, "5ch" for
    .cl); the other numbers stay as written ([read_spec]): the factors of
    .ls/.ws/.es BY (".ls by 2"), the .wz/.pn/.fl/.bc operands, the
@@ -163,10 +173,10 @@ let push_text ctx text =
 
 (* ---- line scopes ------------------------------------------------------------ *)
 
-let scope ?(next = []) ~word ~n ~brk attrs remaining =
+let scope ?(next = []) ?(once = []) ~word ~n ~brk attrs remaining =
   {
     Doc.word;
-    first = (("n", n) :: attrs) @ [ ("break", yn brk) ];
+    first = (("n", n) :: attrs) @ once @ [ ("break", yn brk) ];
     rest = ("cont", "yes") :: attrs;
     remaining;
     started = false;
@@ -227,40 +237,65 @@ let delta (o : Units.operand) sum =
         );
       ]
 
-(* .in [h] [after v] [for v] [nobreak] (p.78-82): absolute or relative;
-   with FOR the change is temporary: the margin is the permanent one
-   plus the operand; with AFTER it begins after that amount.
-   A permanent .in also ends the offset: "the offset remains in effect
-   until changed by another offset or indent control word" (Figure 6,
-   p.80); the hint then carries offset="0".  DCF-VERIFY: a temporary
-   .in (FOR) keeps the offset; .ir does not end it. *)
+(* .in [h] [[FOR] v1] [[AFTER] v2] [NOBREAK] (LR p.210-212): absolute
+   or relative to the permanent indention.  Without FOR the number after
+   h is v1, without AFTER the number after v1 is v2 (r6, r7: ".in .7i
+   1" is FOR 1).  v1 omitted or * is a permanent change; 0 a temporary
+   one that lasts until another .in (the hint says the margin, the
+   permanent indention a relative .in starts from is unchanged); any
+   other v1 a temporary change for that distance: the margin is the
+   permanent one plus the operand (r1).  v2 (0 or omitted: at once) is
+   the distance before the change.
+   Any .in, temporary ones too, clears all offsets ("any .IN request
+   clears all offsets", LR p.260; ".in" alone cancels .in and .of,
+   p.211): the hint (or the first scope) carries offset="0".  .ir does
+   not (p.260 speaks of .IN only). *)
+type duration = Permanent | Until_changed | For of Units.operand
+
 let indent side ctx ops =
   let cw = side.word in
-  let rec parse v a f nb = function
-    | [] -> Ok (v, a, f, nb)
-    | w :: x :: rest when lc w = "after" -> parse v (Some x) f nb rest
-    | w :: x :: rest when lc w = "for" -> parse v a (Some x) nb rest
-    | w :: rest when lc w = "nobreak" -> parse v a f true rest
-    | w :: rest when v = None -> parse (Some w) a f nb rest
+  let kw w = List.mem (lc w) [ "for"; "after"; "nobreak" ] in
+  let rec parse h v1 v2 nb = function
+    | [] -> Ok (h, v1, v2, nb)
+    | w :: rest when lc w = "nobreak" -> parse h v1 v2 true rest
+    | w :: x :: rest when lc w = "for" && not (kw x) ->
+        parse h (Some x) v2 nb rest
+    | w :: x :: rest when lc w = "after" && not (kw x) ->
+        parse h v1 (Some x) nb rest
+    (* FOR or AFTER without its value: the defaults, permanent and at once *)
+    | w :: rest when lc w = "for" -> parse h (Some "*") v2 nb rest
+    | w :: rest when lc w = "after" -> parse h v1 (Some "0") nb rest
+    | w :: rest when h = None && v1 = None && v2 = None ->
+        parse (Some w) v1 v2 nb rest
+    | w :: rest when v1 = None -> parse h (Some w) v2 nb rest
+    | w :: rest when v2 = None -> parse h v1 (Some w) nb rest
     | w :: _ -> Error w
   in
   match parse None None None false (tokens ops) with
   | Error w -> Ctx.error ctx ".%s: unexpected operand %s" cw w
-  | Ok (v, a, f, nb) ->
+  | Ok (h, v1, v2, nb) ->
       let brk = not nb in
-      let opt s k =
-        match s with
-        | None -> k None
-        | Some s -> dim ctx cw Units.Vertical s (fun o -> k (Some o))
+      let duration k =
+        match v1 with
+        | None | Some "*" -> k Permanent
+        | Some s ->
+            dim ctx cw Units.Vertical s (fun o ->
+                k (if o.value.h = 0 then Until_changed else For o))
       in
-      dim ctx cw Units.Horizontal (Option.value v ~default:"0") (fun o ->
-          opt a (fun after ->
-              opt f (fun for_ ->
+      let after k =
+        match v2 with
+        | None -> k None
+        | Some s ->
+            dim ctx cw Units.Vertical s (fun o ->
+                k (if o.value.h = 0 then None else Some o))
+      in
+      dim ctx cw Units.Horizontal (Option.value h ~default:"0") (fun o ->
+          duration (fun dur ->
+              after (fun after ->
                   let st = fmt ctx in
                   let perm = side.get st in
                   let vattrs sum = Units.attrs ~default:"ch" side.attr sum in
-                  let after_n = Option.bind after Units.lines
-                  and for_n = Option.bind for_ Units.lines in
+                  let after_n = Option.bind after Units.lines in
                   let uncounted name = function
                     | Some o when Units.lines o = None ->
                         [
@@ -269,48 +304,53 @@ let indent side ctx ops =
                         ]
                     | _ -> []
                   in
-                  match for_ with
-                  | None ->
+                  let of_end =
+                    if cw = "in" && st.offset <> Units.zero then begin
+                      st.offset <- Units.zero;
+                      [ ("offset", "0") ]
+                    end
+                    else []
+                  in
+                  let temp = Units.add perm o.value.unit (Units.signed o) in
+                  let margin now =
+                    emit ctx cw ~brk
+                      (vattrs now @ delta o now @ of_end
+                     @ uncounted "after" after);
+                    Option.iter
+                      (fun n ->
+                        Doc.open_scope (doc ctx)
+                          (scope ~word:cw ~n:(string_of_int n) ~brk:false
+                             (("after", "yes") :: vattrs perm)
+                             (Some n)))
+                      after_n
+                  in
+                  match dur with
+                  | Permanent ->
                       let now = Units.apply perm o in
                       side.set st now;
-                      let of_end =
-                        if cw = "in" && st.offset <> Units.zero then begin
-                          st.offset <- Units.zero;
-                          [ ("offset", "0") ]
-                        end
-                        else []
-                      in
-                      emit ctx cw ~brk
-                        (vattrs now @ delta o now @ of_end
-                       @ uncounted "after" after);
-                      Option.iter
-                        (fun n ->
-                          Doc.open_scope (doc ctx)
-                            (scope ~word:cw ~n:(string_of_int n) ~brk:false
-                               (("after", "yes") :: vattrs perm)
-                               (Some n)))
-                        after_n
-                  | Some _ -> (
-                      let temp = Units.add perm o.value.unit (Units.signed o) in
+                      margin now
+                  | Until_changed -> margin temp
+                  | For f -> (
                       let tattrs = vattrs temp @ delta o temp in
-                      match for_n with
+                      match Units.lines f with
                       | Some n -> (
-                          let s_for =
-                            scope ~word:cw ~n:(string_of_int n)
+                          let s_for once =
+                            scope ~once ~word:cw ~n:(string_of_int n)
                               ~brk:(brk && after_n = None)
                               tattrs (Some n)
                           in
                           match after_n with
                           | Some a ->
                               Doc.open_scope (doc ctx)
-                                (scope ~next:[ s_for ] ~word:cw
-                                   ~n:(string_of_int a) ~brk
+                                (scope ~once:of_end
+                                   ~next:[ s_for [] ]
+                                   ~word:cw ~n:(string_of_int a) ~brk
                                    (("after", "yes") :: vattrs perm)
                                    (Some a))
-                          | None -> Doc.open_scope (doc ctx) s_for)
+                          | None -> Doc.open_scope (doc ctx) (s_for of_end))
                       | None ->
                           emit ctx cw ~brk
-                            (tattrs @ uncounted "for" for_
+                            (tattrs @ of_end @ uncounted "for" (Some f)
                            @ uncounted "after" after
                             @ [ ("temporary", "yes") ])))))
 
@@ -440,21 +480,23 @@ let conditional_eject word ctx ops =
           emit ctx word ~brk:true (amount_attrs o))
   | _ -> Ctx.error ctx ".%s: one amount expected" word
 
+(* .pa [n|+n|-n|NOSTART] | .pa ODD|EVEN [ON|OFF] (LR p.276): always a
+   break ("causes a break and a section break"); it has no NOBREAK
+   operand. *)
 let page ctx ops =
   let ws = tokens ops in
-  let brk = not (List.exists (fun w -> lc w = "nobreak") ws) in
-  let attrs =
-    List.map
-      (fun w ->
-        match lc w with
-        | "odd" | "even" -> ("side", lc w)
-        | "nostart" -> ("nostart", "yes")
-        | "nobreak" -> ("nobreak", "yes")
-        | "on" | "off" -> ("mode", lc w)
-        | _ -> ("page", w))
-      ws
-  in
-  emit ctx "pa" ~brk attrs
+  if List.exists (fun w -> lc w = "nobreak") ws then
+    Ctx.error ctx ".pa: NOBREAK is not an operand of .pa; ignored"
+  else
+    emit ctx "pa" ~brk:true
+      (List.map
+         (fun w ->
+           match lc w with
+           | "odd" | "even" -> ("side", lc w)
+           | "nostart" -> ("nostart", "yes")
+           | "on" | "off" -> ("mode", lc w)
+           | _ -> ("page", w))
+         ws)
 
 let keep ctx ops =
   match List.map lc (tokens ops) with
@@ -477,11 +519,30 @@ let vertical = spec Units.Vertical
 let plain = read_spec Plain
 
 let factors =
-  [ ("by", Plain); ("skip", Plain); ("space", Plain); ("text", Plain) ]
+  [
+    ("by", Plain);
+    ("skip", Plain);
+    ("space", Plain);
+    ("text", Plain);
+    ("all", Plain);
+  ]
 
+(* .ls (LR p.235-237): NORMAL v, INCREMENT v and EXTRA v are vertical
+   amounts, BY f and the SKIP/SPACE/TEXT/ALL ranges factors *)
 let line_spacing =
   read_spec (Dim Units.Vertical)
-    ~after:(("normal", Dim Units.Vertical) :: factors)
+    ~after:
+      ([
+         ("normal", Dim Units.Vertical);
+         ("increment", Dim Units.Vertical);
+         ("extra", Dim Units.Vertical);
+       ]
+      @ factors)
+
+(* .ls breaks unless NOBREAK is given (LR p.237) *)
+let line_spacing_word ctx ops =
+  let nb = List.exists (fun w -> lc w = "nobreak") (tokens ops) in
+  generic ~read:line_spacing "ls" ~brk:(not nb) ctx ops
 
 let word_spacing =
   read_spec (Dim Units.Horizontal)
@@ -503,41 +564,79 @@ let box ctx ops =
       emit ctx "bx" ~brk:true
         [ ("action", "on"); ("spec", spec Units.Horizontal ops) ]
 
+(* .tb [SET|ADD|CLR|DEL] stops (LR p.374), .tp [SET|ADD|DELETE] stops
+   (p.401): both break; CLR and DELETE are action="del". *)
 let tabs word ctx ops =
+  let action w =
+    match lc w with
+    | ("add" | "set" | "del") as a -> Some a
+    | "clr" when word = "tb" -> Some "del"
+    | "delete" when word = "tp" -> Some "del"
+    | _ -> None
+  in
   match tokens ops with
-  | [] -> emit ctx word ~brk:false [ ("action", "reset") ]
-  | w :: rest when List.mem (lc w) [ "add"; "del"; "set" ] ->
-      emit ctx word ~brk:false
+  | [] when word = "tp" ->
+      (* .tp alone clears the tab table (LR p.400: "Default: Clears the
+         tab table") *)
+      emit ctx word ~brk:true [ ("action", "set"); ("stops", "") ]
+  | [] -> emit ctx word ~brk:true [ ("action", "reset") ]
+  | w :: rest when action w <> None ->
+      emit ctx word ~brk:true
         [
-          ("action", lc w);
+          ("action", Option.get (action w));
           ("stops", spec Units.Horizontal (String.concat " " rest));
         ]
   | _ ->
-      emit ctx word ~brk:false
+      emit ctx word ~brk:true
         [ ("action", "set"); ("stops", spec Units.Horizontal ops) ]
+
+(* .hr [rulename] LEFT|h1 [[TO] h2 | FOR length | RIGHT] ... (LR
+   p.192-193): a word that is a valid space unit is a displacement (r7),
+   any other word but the keywords a rule name; a rule name needs at
+   least one displacement; no operands repeat the previous rule (r6:
+   repeat="yes", the backend knows the rule it drew). *)
+let hrule ctx ops =
+  let ws = tokens ops in
+  let is_unit w =
+    String.exists (fun c -> c >= '0' && c <= '9') w
+    && Result.is_ok (Units.parse Units.Horizontal w)
+  in
+  let position w = is_unit w || List.mem (lc w) [ "left"; "right" ] in
+  let rule w = not (position w || List.mem (lc w) [ "to"; "for" ]) in
+  if ws = [] then emit ctx "hr" ~brk:true [ ("repeat", "yes") ]
+  else if List.exists rule ws && not (List.exists position ws) then
+    Ctx.error ctx ".hr %s: a rule name needs a horizontal displacement"
+      (String.concat " " ws)
+  else emit ctx "hr" ~brk:true [ ("spec", spec Units.Horizontal ops) ]
 
 (* ---- fonts -------------------------------------------------------------------- *)
 
+(* .bf [font...] [=] (LR p.75-77): the first usable font of the list;
+   "=" restarts the current font when none is usable, without a message
+   (restart="yes": the backend keeps the font quietly).  No font (".bf",
+   or ".bf &$CHAR(2)" with a null value) restarts the current font: it
+   is saved for a .pf and goes on. *)
 let begin_font ctx ops =
   let st = fmt ctx in
   let ws = tokens ops in
-  let restart = List.mem "=" ws in
   let fonts = List.filter (( <> ) "=") ws in
-  if fonts = [] then Ctx.error ctx ".bf: font name expected"
-  else begin
-    let font = String.concat " " fonts in
-    st.fonts <- font :: st.fonts;
-    emit ctx "bf" ~brk:false
-      (("font", font) :: (if restart then [ ("restart", "yes") ] else []))
-  end
+  let restart = List.mem "=" ws || fonts = [] in
+  let font =
+    if fonts <> [] then String.concat " " fonts
+    else match st.fonts with f :: _ -> f | [] -> ""
+  in
+  st.fonts <- font :: st.fonts;
+  emit ctx "bf" ~brk:false
+    ((("font", font) :: (if font = "" then [ ("initial", "yes") ] else []))
+    @ if restart then [ ("restart", "yes") ] else [])
 
 let previous_font ctx _ =
   let st = fmt ctx in
   (match st.fonts with _ :: rest -> st.fonts <- rest | [] -> ());
   emit ctx "pf" ~brk:false
     (match st.fonts with
-    | f :: _ -> [ ("font", f) ]
-    | [] -> [ ("initial", "yes") ])
+    | f :: _ when f <> "" -> [ ("font", f) ]
+    | _ -> [ ("initial", "yes") ])
 
 let first_word s =
   let s = String.trim s in
@@ -600,11 +699,52 @@ let heading n ctx ops =
     if text = "" then ignore (Doc.end_element d "gml:h") else push_text ctx ops
   end
 
-(* .dh n options: kept as a hint; NUM / NONUM (the last one given) are
-   also recorded for the numbering of .hn, and the table of contents
-   options (TC NTC TO NTO TS NTS DOT NODOT TCIN h TFONT f, SH20-9161-3
-   p.247) for its entries ([Toc]); .dh n alone restores the level's
-   initial definition. *)
+(* .dh n options (LR p.136-138): kept as a hint (the backends read the
+   layout options from it); NUM / NONUM (the last one given) are also
+   recorded for the numbering of .hn, and the table of contents options
+   (TC NTC TO NTO TS NTS DOT NODOT TCIN h TFONT f) for its entries
+   ([Toc]); .dh n alone restores the level's initial definition.  The
+   Rel 4 options: BR NBR PA NPA TC NTC TO NTO TS NTS UP NUP US NUS DOT
+   NODOT NUM NONUM SECT NOSECT AUTOHY NOHY CENTER LEFT INSIDE OUTSIDE
+   RIGHT, OJ NOJ (Rel 2: OUTSIDE, LEFT, r8), NOHANG, HANG n | HANG AUTO,
+   FONT f (f may be missing when FONT is last), SKBF v, SPAF v, SPBF v,
+   TCIN h, TFONT f; any other word is warned about and skipped. *)
+let dh_flags =
+  [
+    "br";
+    "nbr";
+    "pa";
+    "npa";
+    "tc";
+    "ntc";
+    "to";
+    "nto";
+    "ts";
+    "nts";
+    "up";
+    "nup";
+    "us";
+    "nus";
+    "dot";
+    "nodot";
+    "num";
+    "nonum";
+    "sect";
+    "nosect";
+    "autohy";
+    "nohy";
+    "center";
+    "left";
+    "inside";
+    "outside";
+    "right";
+    "oj";
+    "noj";
+    "nohang";
+  ]
+
+let dh_valued = [ "font"; "tfont"; "skbf"; "spaf"; "spbf"; "tcin"; "hang" ]
+
 let define_head ctx ops =
   match first_word ops with
   | "", _ -> Ctx.error ctx ".dh: head level expected"
@@ -626,20 +766,32 @@ let define_head ctx ops =
                 | "nonum" ->
                     Hashtbl.remove ctx.dh_num l;
                     go rest
-                | _ -> (
+                | k when List.mem k dh_flags ->
+                    ignore (Toc.option ctx.toc l w ~value:None);
+                    go rest
+                | k when List.mem k dh_valued -> (
                     let value =
                       match rest with v :: _ -> Some v | [] -> None
                     in
                     let value =
-                      if lc w = "tcin" then
+                      if k = "tcin" then
                         Option.map (norm Units.Horizontal) value
                       else value
                     in
-                    match Toc.option ctx.toc l w ~value with
-                    | `Took -> go (List.tl rest)
-                    | `Missing ->
+                    match k with
+                    | "tcin" | "tfont" -> (
+                        match Toc.option ctx.toc l w ~value with
+                        | `Took -> go (List.tl rest)
+                        | `Missing ->
+                            Ctx.error ctx ".dh %d: %s: a value expected" l w
+                        | `Done | `Other -> go rest)
+                    | "font" when value = None -> ()
+                    | _ when value = None ->
                         Ctx.error ctx ".dh %d: %s: a value expected" l w
-                    | `Done | `Other -> go rest))
+                    | _ -> go (List.tl rest))
+                | _ ->
+                    Ctx.warn ctx ".dh %d: unknown option %s (ignored)" l w;
+                    go rest)
           in
           go ws
       | Some l -> Ctx.error ctx ".dh: head level 0 to 6 expected, not %d" l
@@ -792,30 +944,90 @@ let close_flow ctx name =
 
 (* ---- saved environments ------------------------------------------------------ *)
 
-(* The formatting environment that [Ctx.fmt] tracks, with the translate
-   table, is saved by .sa and restored by .re (SH20-9161-3 p.110: "the
-   active environment, the page control area, the .TI and .TR translate
-   tables"; the font stack is in it, SH35-0069 p.179).  The page control
-   area is not tracked.  A footnote saves the environment when it starts
-   and restores it when it ends (SH20-9161-3 p.110). *)
+(* .sa/.re save and restore "the active and page environments along
+   with the .TI and .TR translate tables" (LR p.451, Table 25).  Of
+   them the engine tracks: the indention, offset and right indention,
+   the formatting mode (.fo/.nf), the current font and font save stack,
+   hyphenation and the line length ([Ctx.fmt]); the .tr table; the .dc
+   characters of the active environment, CONT CW GML MCS PS (LR p.451;
+   [Ctx.chars]); and the .ce .ri .us .up .uc line counts (the lines
+   remaining, or ON; Table 25 note 2).  Not tracked: .ti (not
+   implemented), tabs, line spacing, baseline, revision codes and the
+   page layout words, which are hints only.  A footnote saves the active
+   environment when it starts and restores it when it ends (LR p.451). *)
 
 let fn_env = " fn" (* a name no .sa operand can give *)
+let line_words = [ "ce"; "ri"; "us"; "up"; "uc" ]
 
+let line_state d =
+  List.fold_right
+    (fun (sc : Doc.scope) acc ->
+      if List.mem sc.word line_words && not (List.mem_assoc sc.word acc) then
+        (sc.word, sc.remaining) :: acc
+      else acc)
+    (Doc.active_scopes d) []
+
+let copy_chars (c : Chars.t) = { c with Chars.cw_ind = c.Chars.cw_ind }
+
+let snapshot ?(initial = false) ctx env =
+  if initial then
+    {
+      env;
+      sfmt = initial_fmt ();
+      str = Hashtbl.create 1;
+      schars = Chars.create ();
+      slines = [];
+    }
+  else
+    {
+      env;
+      sfmt = copy_fmt (fmt ctx);
+      str = Hashtbl.copy (doc ctx).Doc.tr;
+      schars = copy_chars ctx.chars;
+      slines = line_state (doc ctx);
+    }
+
+(* .sa name replaces an environment saved with that name; the unnamed
+   ones are a stack (LR p.323) *)
 let save ctx env =
-  ctx.saved <-
-    { env; sfmt = copy_fmt (fmt ctx); str = Hashtbl.copy (doc ctx).Doc.tr }
-    :: ctx.saved
+  let sv = snapshot ctx env in
+  if env = "" || env = fn_env then ctx.saved <- sv :: ctx.saved
+  else begin
+    ctx.saved <- sv :: List.filter (fun s -> s.env <> env) ctx.saved
+  end
+
+(* Does restoring [sv] change the formatting mode (.fo/.nf) or the
+   centring (.ce/.ri)?  Then .re breaks (LR p.309 r3, r4).  The column
+   definition, which also makes it break, is not tracked. *)
+let re_breaks ctx sv =
+  let st = fmt ctx and old = sv.sfmt in
+  st.fill <> old.fill || st.align <> old.align
+  || st.overdraw <> old.overdraw
+  ||
+  let cur = line_state (doc ctx) in
+  List.exists
+    (fun w -> List.assoc_opt w cur <> List.assoc_opt w sv.slines)
+    [ "ce"; "ri" ]
 
 (* Restore [sv]; with [hints], emit for each part that changes the hint
-   that establishes it again (restore="yes"), so a backend that does not
-   know gml:re still follows: .in/.of, .ir, .ll, the format mode, .hy and
-   the fonts (.pf while the saved font stack is a tail of the current
-   one, else .bf of the saved font).  DCF-VERIFY: none of them breaks. *)
+   that establishes it again (restore="yes", break="no": the break, if
+   any, is the gml:re's), so a backend that does not know gml:re still
+   follows: .in/.of, .ir, .ll, the format mode, .hy and the fonts (.pf
+   while the saved font stack is a tail of the current one, else .bf of
+   the saved font); and the line scopes .ce .ri .us .up .uc in force
+   when it was saved begin again with the lines they had left. *)
 let restore ?(hints = true) ctx sv =
   let st = fmt ctx and old = sv.sfmt in
   let tbl = (doc ctx).Doc.tr in
   Hashtbl.reset tbl;
   Hashtbl.iter (Hashtbl.replace tbl) sv.str;
+  (let c = ctx.chars and s = sv.schars in
+   c.Chars.cont <- s.Chars.cont;
+   c.Chars.cw_sep <- s.Chars.cw_sep;
+   c.Chars.gml_delim <- s.Chars.gml_delim;
+   c.Chars.gml_end <- s.Chars.gml_end;
+   c.Chars.mcs <- s.Chars.mcs;
+   c.Chars.ps <- s.Chars.ps);
   let re name changed attrs =
     if hints && changed then
       emit ctx name ~brk:false (attrs @ [ ("restore", "yes") ])
@@ -850,41 +1062,61 @@ let restore ?(hints = true) ctx sv =
       for i = 1 to n do
         re "pf" true
           (match drop i cur.fonts with
-          | f :: _ -> [ ("font", f) ]
-          | [] -> [ ("initial", "yes") ])
+          | f :: _ when f <> "" -> [ ("font", f) ]
+          | _ -> [ ("initial", "yes") ])
       done
     else
       re "bf" true
         (match old.fonts with
-        | f :: _ -> [ ("font", f) ]
-        | [] -> [ ("font", ""); ("initial", "yes") ])
+        | f :: _ when f <> "" -> [ ("font", f) ]
+        | _ -> [ ("font", ""); ("initial", "yes") ])
+  end;
+  if hints then begin
+    let d = doc ctx in
+    let cur = line_state d in
+    List.iter
+      (fun w ->
+        let now = List.assoc_opt w cur and was = List.assoc_opt w sv.slines in
+        if now <> was then begin
+          if now <> None then ignore (Doc.close_scope d w);
+          match was with
+          | Some r ->
+              let n = match r with Some n -> string_of_int n | None -> "on" in
+              Doc.open_scope d (scope ~word:w ~n ~brk:false [] r)
+          | None -> ()
+        end)
+      line_words
   end
 
-(* .sa [envname] (SX26-3723: Save Environment) *)
+(* .sa [envname] (LR p.323) *)
 let save_env ctx ops =
   let env = String.uppercase_ascii (String.trim ops) in
   save ctx env;
   emit ctx "sa" ~brk:false (if env = "" then [] else [ ("name", env) ])
 
-(* .re [envname]: the last environment saved, or the one saved with that
-   name (the ones saved after it are dropped, DCF-VERIFY); a footnote's
-   environment is not restored by .re. *)
+(* .re [envname] (LR p.309): without a name the most recently saved
+   unnamed environment, taken off the stack; with one the environment
+   saved with that name, which stays (the others are not dropped).  With
+   no unnamed environment saved, .re restores the initial values (r2).
+   A footnote's environment is not restored by .re.  The gml:re breaks
+   when the formatting mode or centring changes ([re_breaks]). *)
 let restore_env ctx ops =
   let env = String.uppercase_ascii (String.trim ops) in
-  let rec find = function
-    | sv :: _ when sv.env = fn_env -> None
-    | sv :: rest ->
-        if env = "" || sv.env = env then Some (sv, rest) else find rest
-    | [] -> None
+  let found =
+    if env = "" then List.find_opt (fun sv -> sv.env = "") ctx.saved
+    else List.find_opt (fun sv -> sv.env = env) ctx.saved
   in
-  match find ctx.saved with
-  | None ->
-      if env = "" then Ctx.warn ctx ".re: no environment saved"
-      else Ctx.warn ctx ".re %s: no environment saved with this name" env
-  | Some (sv, rest) ->
-      ctx.saved <- rest;
-      emit ctx "re" ~brk:false (if env = "" then [] else [ ("name", env) ]);
-      restore ctx sv
+  let apply sv =
+    emit ctx "re" ~brk:(re_breaks ctx sv)
+      (if env = "" then [] else [ ("name", env) ]);
+    restore ctx sv
+  in
+  match found with
+  | None when env = "" -> apply (snapshot ~initial:true ctx "")
+  | None -> Ctx.warn ctx ".re %s: no environment saved with this name" env
+  | Some sv ->
+      if env = "" then ctx.saved <- List.filter (fun s -> s != sv) ctx.saved;
+      apply sv
 
 (* .fn on saves the environment and clears the offset (SH20-9161-3
    p.110); .fn off restores it, without hints: the footnote is a flow of
@@ -900,25 +1132,31 @@ let footnote ctx ops =
   | [ "leader" ] -> start [ ("kind", "leader") ]
   | [ "off" ] ->
       close_flow ctx "gml:fn";
-      let rec pop = function
-        | sv :: rest when sv.env = fn_env ->
-            ctx.saved <- rest;
-            restore ~hints:false ctx sv
-        | _ :: rest -> pop rest
-        | [] -> ()
-      in
-      pop ctx.saved
+      Option.iter
+        (fun sv ->
+          ctx.saved <- List.filter (fun s -> s != sv) ctx.saved;
+          restore ~hints:false ctx sv)
+        (List.find_opt (fun sv -> sv.env = fn_env) ctx.saved)
   | _ -> Ctx.error ctx ".fn: ON, OFF or LEADER expected"
 
+(* .rh/.rf [ODD|EVEN] [ON|OFF|CANCEL|SUP|RES|EXECUTE] (LR p.310-314):
+   a break (p.310, p.314); ODD or EVEN limits the definition, or the
+   CANCEL, SUP and RES action, to those pages (page=); the element
+   gml:rh/gml:rf carries break="yes" as gml:h does. *)
 let running word ctx ops =
   let name = "gml:" ^ word in
-  match List.map lc (tokens ops) with
-  | [ "off" ] -> close_flow ctx name
-  | [ (("cancel" | "sup" | "res" | "execute") as a) ] ->
-      emit ctx word ~brk:false [ ("action", a) ]
-  | [] | [ "on" ] -> Doc.start_element (doc ctx) name []
-  | [ (("odd" | "even") as p) ] | [ (("odd" | "even") as p); "on" ] ->
-      Doc.start_element (doc ctx) name [ ("page", p) ]
+  let page p = match p with Some p -> [ ("page", p) ] | None -> [] in
+  let parity, rest =
+    match List.map lc (tokens ops) with
+    | (("odd" | "even") as p) :: rest -> (Some p, rest)
+    | l -> (None, l)
+  in
+  match (parity, rest) with
+  | None, [ "off" ] -> close_flow ctx name
+  | _, [ (("cancel" | "sup" | "res" | "execute") as a) ] ->
+      emit ctx word ~brk:true (("action", a) :: page parity)
+  | _, ([] | [ "on" ]) ->
+      Doc.start_element (doc ctx) name (page parity @ [ ("break", "yes") ])
   | _ ->
       Ctx.error ctx
         ".%s: [ODD|EVEN] ON, OFF, CANCEL, SUP, RES or EXECUTE expected" word
@@ -956,25 +1194,23 @@ let utf8 c =
   Buffer.add_utf_8_uchar b (Uchar.of_int c);
   Buffer.contents b
 
-(* .tr [c1 c2 ...]: no operands resets the table; an odd last character
-   translates to a blank (DCF-VERIFY). *)
+(* .tr [s t ...] (LR p.404): pairs of a source and its output
+   character; no operands restores the initial table.  A source without
+   its output character is an error (the pairs before it are taken). *)
 let translate ctx ops =
   let tbl = (doc ctx).Doc.tr in
   let rec go = function
     | [] -> ()
-    | a :: rest -> (
-        let b, rest =
-          match rest with b :: r -> (Some b, r) | [] -> (None, [])
-        in
-        let dst = match b with None -> Some 0x20 | Some b -> char_operand b in
-        match (char_operand a, dst) with
+    | [ a ] when char_operand a = None ->
+        Ctx.error ctx ".tr: invalid character %s" a
+    | [ a ] -> Ctx.error ctx ".tr: no output character for %s" a
+    | a :: b :: rest -> (
+        match (char_operand a, char_operand b) with
         | Some src, Some dst ->
             if dst = src then Hashtbl.remove tbl src
             else Hashtbl.replace tbl src (utf8 dst);
             go rest
-        | _ ->
-            Ctx.error ctx ".tr: invalid character %s"
-              (String.concat " " (a :: Option.to_list b)))
+        | _ -> Ctx.error ctx ".tr: invalid character %s %s" a b)
   in
   match Control.words ops with [] -> Hashtbl.reset tbl | ws -> go ws
 
@@ -989,22 +1225,33 @@ let translate ctx ops =
    defines its list labels so, under .su off, and one as a control word
    line, ".dv @id@l@o9 /.dsm#supr &@item#.").  The string is the rest of
    the line after its delimiter (the first character after the keywords),
-   without a closing delimiter.  DCF-VERIFY: with no string the variable
-   is the null string; BASELINE without FONT is allowed. *)
+   without a closing delimiter.  The name is at most 10 characters and
+   not an array (LR p.157); FONT and BASELINE each exclude TEXT, the
+   last one given counting (p.159 r12); BASELINE without FONT is allowed
+   (the syntax, p.157).  DCF-VERIFY (not in LR Rel 4): with no string
+   the variable is the null string. *)
 let define_variable ctx ops =
   let name, rest = first_word ops in
   if name = "" then Ctx.error ctx ".dv: symbol name expected"
+  else if String.contains name '(' then
+    Ctx.error ctx ".dv %s: an array symbol is not allowed" name
+  else if String.length name > 10 then
+    Ctx.error ctx ".dv %s: a name of at most 10 characters expected" name
   else
     let rec keys acc rest =
       let w, r = first_word rest in
       match lc w with
-      | "text" -> keys (("", "text") :: acc) r
+      | "text" ->
+          keys
+            (("", "text")
+            :: List.remove_assoc "font" (List.remove_assoc "baseline" acc))
+            r
       | ("font" | "baseline") as k ->
           let v, r = first_word r in
           if v = "" then Error (Printf.sprintf "%s: value expected" k)
           else
             let v = if k = "baseline" then norm Units.Vertical v else v in
-            keys ((k, v) :: List.remove_assoc k acc) r
+            keys ((k, v) :: List.remove_assoc k (List.remove_assoc "" acc)) r
       | _ -> Ok (List.rev acc, rest)
     in
     match keys [] rest with
@@ -1173,8 +1420,8 @@ let table =
     row "us" No "[n|on|off|text]" (counted ~brk:false "us");
     row "up" No "[n|on|off|text]" (counted ~brk:false "up");
     row "uc" No "[n|on|off|text]" (counted ~brk:false "uc");
-    row "in" Varies "[h] [after v] [for v] [nobreak]" (indent left_side);
-    row "ir" Varies "[h] [after v] [for v] [nobreak]" (indent right_side);
+    row "in" Varies "[h] [[for] v1] [[after] v2] [nobreak]" (indent left_side);
+    row "ir" Varies "[h] [[for] v1] [[after] v2] [nobreak]" (indent right_side);
     row "il" Yes "h" (one_line "il" 1);
     row "un" Yes "h" (one_line "un" (-1));
     row "of" Yes "[h]" offset;
@@ -1184,17 +1431,17 @@ let table =
     row "nf" Yes "[on|off|left|right|center|inside|outside] [extend|fold|trunc]"
       (format true);
     row "ju" Yes "[on|off]" justify;
-    row "pa" Varies "[n|odd|even|nostart|nobreak] [on|off]" page;
+    row "pa" Yes "[n|+n|-n|nostart] | odd|even [on|off]" page;
     row "cp" Yes "[v]" (conditional_eject "cp");
     row "cc" Yes "[v]" (conditional_eject "cc");
     row "cb" Yes "" (generic "cb" ~brk:true);
     row "bx" Yes "[off|can|new|set|add|char] positions" box;
-    row "hr" Yes "rule spec" (generic "hr" ~brk:true);
-    row "vr" No "rule spec" (generic "vr" ~brk:false);
+    row "hr" Yes "[rule] h1|left [[to] h2|for l|right] ..." hrule;
+    row "vr" Yes "rule spec" (generic "vr" ~brk:true);
     row "kp" Varies "on|off|float|delay|inline|v[+v]" keep;
     row "fn" No "on|off|leader" footnote;
-    row "rh" No "[odd|even] on|off|cancel|sup|res|execute" (running "rh");
-    row "rf" No "[odd|even] on|off|cancel|sup|res|execute" (running "rf");
+    row "rh" Yes "[odd|even] on|off|cancel|sup|res|execute" (running "rh");
+    row "rf" Yes "[odd|even] on|off|cancel|sup|res|execute" (running "rf");
     row "h0" Yes "text" (heading 0);
     row "h1" Yes "text" (heading 1);
     row "h2" Yes "text" (heading 2);
@@ -1206,9 +1453,9 @@ let table =
     row "tc" Yes "[n] [title|/]" toc;
     row "pt" No "text | .xx line" put_toc;
     row "sx" Yes "[f] [c] /left/fill/right/" split_text;
-    row "tp" No "[add|del|set] stops" (tabs "tp");
-    row "tb" No "[add|del|set] stops" (tabs "tb");
-    row "bf" No "font... [=]" begin_font;
+    row "tp" Yes "[add|delete|set] stops" (tabs "tp");
+    row "tb" Yes "[add|clr|del|set] stops" (tabs "tb");
+    row "bf" No "[font...] [=]" begin_font;
     row "pf" No "" previous_font;
     row "df" No "name spec" define_font;
     row "hy" No "[on|off] [options]" hyphenate;
@@ -1217,12 +1464,13 @@ let table =
     row "rc" No "n [on|off|c] | adjust h | * c" revision;
     row "bc" No "on|off" (generic ~read:plain "bc" ~brk:false);
     row "fl" No "on|off|dump ..." (generic ~read:plain "fl" ~brk:false);
-    row "ls" No "[v] | normal v | by f | skip|space|text f [f]"
-      (generic ~read:line_spacing "ls" ~brk:false);
+    row "ls" Varies
+      "normal v | by f | skip|space|text|all f [f] | ... [nobreak]"
+      line_spacing_word;
     row "sb" No "[v]" (generic ~read:vertical "sb" ~brk:false);
     row "ws" No "normal h | by f" (generic ~read:word_spacing "ws" ~brk:false);
     row "es" No "normal h | by f" (generic ~read:word_spacing "es" ~brk:false);
-    row "wz" No "on|off" (generic ~read:plain "wz" ~brk:false);
+    row "wz" Yes "on|off" (generic ~read:plain "wz" ~brk:true);
     row "is" No "[to] h [blank|break|absolute]" (generic "is" ~brk:false);
     row "ic" No "..." (generic "ic" ~brk:false);
     row "ud" No "on|off|rule v" (generic ~read:vertical "ud" ~brk:false);
@@ -1231,7 +1479,7 @@ let table =
       (generic ~read:plain "pn" ~brk:false);
     row "pl" No "[v]" (generic ~read:vertical "pl" ~brk:false);
     row "pw" No "[h]" (generic "pw" ~brk:false);
-    row "pm" No "[nobind] h [h]" (generic "pm" ~brk:false);
+    row "pm" Yes "[nobind] h [h]" (generic "pm" ~brk:true);
     row "tm" No "[v]" (generic ~read:vertical "tm" ~brk:false);
     row "bm" No "[v]" (generic ~read:vertical "bm" ~brk:false);
     row "cl" Yes "[h]" (generic "cl" ~brk:true);
@@ -1242,7 +1490,7 @@ let table =
     row "dv" Not_a_hint "name [font f] [baseline b] [text] /string"
       define_variable;
     row "sa" No "[envname]" save_env;
-    row "re" No "[envname]" restore_env;
+    row "re" Varies "[envname]" restore_env;
     row "fv" No "top|bottom|center|justify"
       (generic ~read:plain "fv" ~brk:false);
     row "pi" No "[start|end|order|ref] [key /k1/k2/k3/] /t1[/t2[/t3[/page]]]"

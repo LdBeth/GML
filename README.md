@@ -112,7 +112,7 @@ gml [-I dir]... [-share dir] [-profile file|name] [-set sym=val]...
   and symbols.
 - `-o file` writes the XML there; without it, to standard output.
 - `-pass k -passes n -aux file -symbols-in file -symbols-out file`: one
-  pass of a multi-pass run (`&$PASS`, `&$TWO`; page questions answered
+  pass of a multi-pass run (`&$PASS`, `&$PSNO`, `&$TWO`; page questions answered
   from TeX's aux file; the symbols carried between passes).  See
   "Passes (`gmlpass`)", which runs them.
 - The return code follows DCF: 0, or 4 after warnings, 8 after errors.
@@ -395,7 +395,7 @@ issue control words (`.sk .in .ir .of .is .bf .pf .df .dh .dr .hr .kp
 `.gs` services.  It was written from the manuals' description of the
 Starter Set's behaviour (Implementation Guide SH35-0050, the GML
 Starter Set reference), not from IBM's macro code; its macros are
-named `f@...` and its messages are `DCFSnnnW`.  TeX is only the layout
+named `f@...` and its messages are IBM's `DSMGMLnnnx`.  TeX is only the layout
 engine: the `.df`/`.dh` at the start put `gml.tex` in hint mode, and
 `.xs`/`.xe` keep just the elements that the later stages need (the
 document sections, headings for the TOC, `fig`/`figcap` for the
@@ -403,22 +403,24 @@ figure list, the table elements for resolve.xsl's grid and the list of
 tables).
 
 Both profiles imbed `share/profile/starterset.gml` (see `-profile
-starter` above) and so share one message catalogue (`ss@msg`): the same
-condition gives the same number, `DSMGMLnnnW` under starter and
-`DCFSnnnW` here (002 out of context, 003 not ended before a tag, 004
-an end tag with no such structure open, 005 an end tag that does not
-match the open list, 010/011 a term without a description and the
-reverse, 012 a required attribute missing, 013 an ID defined twice, 014
-a structure that cannot be nested, 015-019 the table checks, 020 an
-undefined reference, on the last pass only).  The tags out of context
-(`ss@cntx`) are dropped with DSMPROF3's attribute rules, so `:li id=x.`
-loses its attribute as well.  DCF-VERIFY: the numbers and wording are
-ours.
+starter` above) and so share one message catalogue (`ss@msg`): the
+Starter Set messages with IBM's numbers and wording (SH35-0048-09),
+`+++DSMGMLnnnx TEXT (page n)` under either profile (002 out of context,
+003 an element ended by a heading, 004 a tag that cannot be nested, 005
+and 006 a term without a description and the reverse, 008 an ID
+truncated to seven characters, 009 an ID defined twice, 011 an end tag
+outside its element, 015-024 the attribute and table checks; 010, 012,
+013 and 018 are ours: a cell the row definition lacks, a row
+definition redefined in a table, an undefined reference on the last
+pass only, a term left without a description).  A list end tag ends
+the innermost list, whatever its type (SSR B.2.9).  The tags out of
+context (`ss@cntx`) are dropped with DSMPROF3's attribute rules, so
+`:li id=x.` loses its attribute as well.
 
 ```
 cd examples && ../gmlpass -set SYSVARH=yes -o out dcfdemo.gml   # out/dcfdemo.pdf
 
-# the simple alternative: one pass (forward references give DCFS020W)
+# the simple alternative: one pass (forward references give DSMGML013W)
 gmlfmt -to tex -profile dcfstarter -set SYSVARH=yes \
     examples/dcfdemo.gml > dcfdemo.tex
 TEXINPUTS=.:share/tex: tex dcfdemo.tex
@@ -444,13 +446,13 @@ and footer and footnotes in cells are gml.tex's), `:fn`, `:hp0`-`:hp3`,
 :liref :tref` (with `page=`), and the index tags `:i1`-`:i3 :ih1`-`:ih3 :iref`
 (`pg`, `see`, `seeid`, `print`) through `.pi`.  Footnote callouts are
 raised and small (a `.dv` text variable with FONT and BASELINE).  `:toc`
-issues `.tc` only when the run has two passes (`&$TWO` = 1): with one
+issues `.tc` only when the run has passes (`&$PSNO` > 1): with one
 pass the table would be empty, so in the pipeline the TOC comes from
 the resolve stage instead (`.xs toc`).  Tags out of context are
 reported and dropped.  A reference to a target that comes later in
 the document needs passes ([gmlpass](#passes-gmlpass)): in one pass it
-gives `DCFS020W` and the Starter Set's "ID unknown" text; with passes
-it is resolved on pass 2, with its page, and `DCFS020W` comes
+gives `DSMGML013W` and the Starter Set's "ID unknown" text; with passes
+it is resolved on pass 2, with its page, and `DSMGML013W` comes
 only on the last pass, for an ID that does not exist.
 `test/dcfstarter.t` checks its hints.
 
@@ -591,9 +593,9 @@ in them may be longer than ten characters.
   pass (in DCF `&$PN` is the page on pass 1 already), and the file
   stays the same between two passes that ask the same questions.
 
-`&$PASS` is k and `&$TWO` is 1 when N > 1; `&$PASSES` (not a DCF
-symbol) is N.  The dcfstarter profile knows its last pass
-(`ss@last` of starterset.gml, the TPG p.247 idiom generalised), gives `DCFS020W` and
+`&$PASS` is k, `&$PSNO` is N (LR p.444) and `&$TWO` is 1 with
+TWOPASS (N = 2, LR p.35).  The dcfstarter profile knows its last pass
+(`ss@last` of starterset.gml: `&$PASS` = `&$PSNO`), gives `DSMGML013W` and
 the "ID unknown" texts only there, checks duplicate IDs per pass, and
 issues `.tc` for `:toc` (`-set f@tcres=n` reserves n page numbers,
 `.tc n`, TPG p.157).

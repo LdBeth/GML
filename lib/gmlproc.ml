@@ -12,15 +12,14 @@
    2. attributes and value attributes are scanned as the rules allow
       ([Tagscan]); the scan goes on over the following lines of the same
       file or macro until the MCS, another tag, or text (p.289,
-      SH35-0050 p.7); with neither att nor vat there is no scan;
+      SH35-0050 p.7); under NOATT there is no scan (LR p.186);
    3. the residual text is identified: from the end of the markup up to
       the next tag or the end of the line, or the whole next line when
       the markup ended a line (SH35-0050 p.7);
    4. the APF is invoked (lookup, p.295: the explicit [.aa] mapping,
-      then the class mapping [.gs prefix c] (APF c+name), then a macro
-      or native control word named after the tag; for an end tag the
-      [.aa] end APF, then c+"e"+name, then "e"+name — DCF-VERIFY: the
-      direct APF name of an end tag).  Value attributes are its
+      else the class mapping [.gs prefix c e] (LR p.187): APF c+name
+      for a start tag, e+name for an end tag, a macro or a native
+      control word).  Value attributes are its
       [&*1...], as written, with the count in [&*0] (p.293, SH35-0050
       p.9); named attributes stay on the attribute stack for
       [.gs exatt] / [.gs attval];
@@ -46,7 +45,10 @@
    (p.294); the residual text then ends the line.  An empty residual
    ends the line only if text came before the tag on that line. *)
 
-type apf = Apf_macro of string * Macro.def | Apf_word of string * Ctx.word
+type apf =
+  | Apf_macro of string * Macro.def
+  | Apf_word of string * Ctx.word
+  | Apf_null  (** [.aa tag NULL]: no processing (LR p.62) *)
 
 (* ---- rules -------------------------------------------------------------- *)
 
@@ -60,7 +62,7 @@ let apply_rules (r : Ctx.rules) kws =
           | "vat" -> Ok { r with vat = true }
           | "novat" -> Ok { r with vat = false }
           | "stop" -> Ok { r with stop = true }
-          | "step" -> Ok { r with stop = false }
+          | "nostop" -> Ok { r with stop = false }
           | "msg" -> Ok { r with msg = true }
           | "nomsg" -> Ok { r with msg = false }
           | "elem" -> Ok { r with elem = true }
@@ -70,6 +72,35 @@ let apply_rules (r : Ctx.rules) kws =
 
 let rules_or_base base kws = Result.value (apply_rules base kws) ~default:base
 
+(* The default rules (ATT NOVAT STOP NOMSG) (NOATT), LR p.186, with our
+   [elem]. *)
+let default_tag_rules =
+  { Ctx.att = true; vat = false; stop = true; msg = false; elem = true }
+
+let default_end_rules = { default_tag_rules with Ctx.att = false }
+
+(* The four rules of LR p.186 as keywords: they fix a rule set whatever
+   rules they are applied over (our [elem] aside). *)
+let dcf_keywords (r : Ctx.rules) =
+  [
+    (if r.att then "att" else "noatt");
+    (if r.vat then "vat" else "novat");
+    (if r.stop then "stop" else "nostop");
+    (if r.msg then "msg" else "nomsg");
+  ]
+
+let is_elem_kw k =
+  match String.lowercase_ascii k with "elem" | "noelem" -> true | _ -> false
+
+(* ---- class mapping: .gs prefix ------------------------------------------- *)
+
+(* The start-tag and end-tag prefixes of [.gs prefix] (LR p.187), None
+   for OFF ([Ctx.gs_prefix]).  EXT: the initial setting, not in LR
+   Rel 4, is the direct mapping: start tag x to APF x, end tag x to APF
+   ex. *)
+let prefixes ctx = ctx.Ctx.gs_prefix
+let set_prefixes ctx v = ctx.Ctx.gs_prefix <- v
+
 (* ---- APF lookup ---------------------------------------------------------- *)
 
 (* A macro or native control word named [name].  Macros are found
@@ -77,7 +108,7 @@ let rules_or_base base kws = Result.value (apply_rules base kws) ~default:base
    control word lines (SH35-0069 p.271), while APFs are invoked by tag
    processing.  (The Starter Set profile turns .ms on anyway, SH35-0050
    p.21, so DCF documents cannot tell.)
-   DCF-VERIFY: an APF macro under .ms off. *)
+   DCF-VERIFY (not in LR Rel 4): an APF macro under .ms off. *)
 let find_named ctx name =
   match Macro.find ctx.Ctx.macros name with
   | Some m -> Some (Apf_macro (String.lowercase_ascii name, m))
@@ -90,27 +121,30 @@ let find_named ctx name =
          ([Library]); an [.aa] APF of the Starter Set comes from there *)
           Option.map (fun m -> Apf_macro (k, m)) (Library.find_macro ctx name))
 
+(* The [.aa] association of one side of tag [name]: the explicit APF
+   (None: class mapping; "." NULL) and its rule keywords ([]: the
+   current [.gs rules]). *)
+let assoc_side ctx ~is_end name =
+  match Hashtbl.find_opt ctx.Ctx.assocs name with
+  | Some a -> if is_end then (a.Ctx.endapf, a.endrules) else (a.apf, a.arules)
+  | None -> (None, [])
+
 (** APF and rules for tag [name] (lowercase). *)
 let lookup ctx ~is_end name =
   let base = if is_end then ctx.Ctx.end_rules else ctx.Ctx.tag_rules in
-  let explicit, kws =
-    match Hashtbl.find_opt ctx.Ctx.assocs name with
-    | Some a -> if is_end then (a.Ctx.endapf, a.endrules) else (a.apf, a.arules)
-    | None -> (None, [])
-  in
+  let explicit, kws = assoc_side ctx ~is_end name in
   let rules = rules_or_base base kws in
   let apf =
     match explicit with
+    | Some "." -> Some Apf_null
     | Some a -> find_named ctx a
-    (* DCF-VERIFY: an explicit APF that does not exist is not replaced
-       by the class or direct mapping *)
-    | None -> (
-        let dname = if is_end then "e" ^ name else name in
-        let cls =
-          Option.bind ctx.Ctx.prefix (fun c ->
-              find_named ctx (String.make 1 c ^ dname))
-        in
-        match cls with Some _ -> cls | None -> find_named ctx dname)
+    (* DCF-VERIFY (not in LR Rel 4): an explicit APF that does not exist
+       is not replaced by the class mapping *)
+    | None ->
+        let st, en = prefixes ctx in
+        Option.bind
+          (if is_end then en else st)
+          (fun c -> find_named ctx (c ^ name))
   in
   (apf, rules)
 
@@ -118,8 +152,9 @@ let lookup ctx ~is_end name =
 
 let is_blank_string s = String.for_all Tagscan.is_blank s
 
-(* DCF-VERIFY: a line taken as markup continuation or residual text is
-   substituted on its own, without the extended symbol rule. *)
+(* DCF-VERIFY (not in LR Rel 4): a line taken as markup continuation or
+   residual text is substituted on its own, without the extended symbol
+   rule. *)
 let substitute ctx s = if ctx.Ctx.subst_on then Subst.string ctx s else s
 let warn_on ctx = ctx.Ctx.tag_scan = Ctx.Tags_on
 
@@ -138,7 +173,8 @@ let next_text_line ctx d =
       | Line.Control _ | Line.Comment _ | Line.Label _ -> None
       | Line.Text _ ->
           if is_blank_string raw then
-            None (* DCF-VERIFY: a blank line ends the markup *)
+            None
+            (* DCF-VERIFY (not in LR Rel 4): a blank line ends the markup *)
           else if Tagscan.tag_at d raw (Tagscan.skip_blanks raw 0) <> None then
             None
           else begin
@@ -176,7 +212,7 @@ let xml_attrs ctx tag named vats =
    all (our extension, as before), it holds what came between; if it is
    closed otherwise (by an enclosing end tag, at the end of the input),
    it is left empty, a marker, and the APF's output and the text follow
-   it.  DCF-VERIFY: the automatic element is our extension. *)
+   it.  EXT: the automatic element. *)
 let no_end ctx name =
   match Hashtbl.find_opt ctx.Ctx.assocs name with
   | Some { Ctx.endapf = None; _ } ->
@@ -234,18 +270,19 @@ let vat_scope vats =
   Macro.bind_args_list scope (String.concat " " vats) vats;
   scope
 
-(* DCF-VERIFY: a native control word as APF receives the value
-   attributes as its operands. *)
+(* A native control word as APF receives the value attributes as its
+   operands (LR p.62: an APF is a macro or control word; p.186). *)
 let invoke_apf ctx apf args =
   match apf with
   | Apf_macro (name, m) -> Control.invoke_in ctx name m (vat_scope args)
   | Apf_word (_, w) -> w.Ctx.run ctx (String.concat " " args)
+  | Apf_null -> ()
 
 (* Schedule [apf] with [args] to run before the next input line (for
    .gs exatt, where several calls are queued; pushed in reverse). *)
 let schedule_apf ctx apf args =
   match apf with
-  | Apf_macro _ -> invoke_apf ctx apf args
+  | Apf_macro _ | Apf_null -> invoke_apf ctx apf args
   | Apf_word (name, _) ->
       let ch = ctx.Ctx.chars in
       let line =
@@ -254,6 +291,20 @@ let schedule_apf ctx apf args =
       Input.push_lines ~kind:(Input.Split true) ctx.input [ (line, ctx.loc) ]
 
 (* ---- text lines ------------------------------------------------------------ *)
+
+(* The messages of an attribute scan: invalid attributes under MSG, and
+   unquoted values that are not a word of name characters (taken all
+   the same: EXT). *)
+let scan_messages ctx what (rules : Ctx.rules) (r : Tagscan.result) =
+  if rules.msg then
+    List.iter
+      (fun a ->
+        Ctx.warn ctx "%s: invalid attribute %s%s" what a
+          (if rules.stop then " (treated as text)" else " (ignored)"))
+      r.invalid;
+  List.iter
+    (fun a -> Ctx.warn ctx "%s: value of %s should be quoted (LR p.186)" what a)
+    r.lax
 
 type decision = As_text | Tag of Tagscan.found * apf option * Ctx.rules
 
@@ -321,9 +372,9 @@ and scan ctx d ~plain p s start pos =
 and markup ctx d (f : Tagscan.found) (rules : Ctx.rules) s =
   let src = written s f in
   let rest s k = String.sub s k (String.length s - k) in
-  if not (rules.att || rules.vat) then begin
-    (* no attributes: no scan, all after the name (and its MCS) is
-       residual text (SH35-0050 p.6) *)
+  if not rules.att then begin
+    (* NOATT: no scan, the other rules are immaterial; all after the
+       name (and its MCS) is residual text (LR p.186, SH35-0050 p.6) *)
     let k = f.after in
     let k = if k < String.length s && s.[k] = d.Tagscan.mcs then k + 1 else k in
     ([], rest s k, k = String.length s)
@@ -333,12 +384,7 @@ and markup ctx d (f : Tagscan.found) (rules : Ctx.rules) s =
       let r =
         Tagscan.attributes d ~att:rules.att ~vat:rules.vat ~stop:rules.stop s i
       in
-      if rules.msg then
-        List.iter
-          (fun a ->
-            Ctx.warn ctx "tag %s: invalid attribute %s%s" src a
-              (if rules.stop then " (treated as text)" else " (ignored)"))
-          r.invalid;
+      scan_messages ctx ("tag " ^ src) rules r;
       let acc = acc @ r.attrs in
       match r.stop with
       | Tagscan.Eol -> (
@@ -450,8 +496,52 @@ let valid_tag_name t =
   | Some j -> j = String.length t
   | None -> false
 
-(* .aa tag [apf] [(rules)] [endapf] [(rules)]   (p.291, p.295)
-   .aa tag alone removes the association (DCF-VERIFY). *)
+(* The APF operand of one side of [.aa] (LR p.62). *)
+type apf_op = Omitted | Off | Null | Keep | Name of string
+
+let take_apf = function
+  | W a :: r ->
+      ( (match String.lowercase_ascii a with
+        | "off" -> Off
+        | "null" | "." -> Null
+        | "=" -> Keep
+        | _ -> Name a),
+        r )
+  | r -> (Omitted, r)
+
+let take_rules = function G g :: r -> (Some g, r) | r -> (None, r)
+
+(* One side of an association from the old one [(apf, kws)], the APF
+   operand and the rules list [g] (None: not given).  The rules are
+   frozen as keywords: an association keeps them when [.gs rules]
+   changes (LR p.63 r2).  A list is applied over the current rules [cur],
+   () is the current rules (r4); without a list a new APF keeps the old
+   rules (r3), or takes the current ones the first time (r4).  OFF
+   deletes the association: the class mapping applies (p.62).
+   EXT: [elem] is frozen only when written, and a new APF without rules
+   drops it (the profiles' [.aa li ss@cntx (noelem)], [.aa li dsmlitem]).
+   EXT: rules with no APF apply to the class mapping ([.aa ol (vat)]).
+   DCF-VERIFY (not in LR Rel 4): an omitted side is deleted. *)
+let aa_side cur (old_apf, old_kws) op g =
+  let freeze g =
+    dcf_keywords (rules_or_base cur g) @ List.filter is_elem_kw g
+  in
+  let rules () =
+    match g with
+    | Some g -> freeze g
+    | None when old_kws = [] -> freeze []
+    | None -> List.filter (fun k -> not (is_elem_kw k)) old_kws
+  in
+  match op with
+  | Off -> (None, [])
+  | Omitted -> (None, Option.fold ~none:[] ~some:freeze g)
+  | Keep -> (old_apf, Option.fold ~none:old_kws ~some:freeze g)
+  | Null -> (Some ".", rules ())
+  | Name a -> (Some a, rules ())
+
+(* .aa tag [apf (rules)] [endapf (rules)], each APF a name, OFF, NULL,
+   '.' or '=' (LR p.62-63).
+   DCF-VERIFY (not in LR Rel 4): .aa tag alone removes the association. *)
 let aa ctx ops =
   match items ops with
   | Error e -> Ctx.error ctx ".aa: %s" e
@@ -460,51 +550,65 @@ let aa ctx ops =
       if not (valid_tag_name t) then Ctx.error ctx ".aa: invalid tag name %s" t
       else begin
         let key = String.lowercase_ascii t in
-        let take_w = function W a :: r -> (Some a, r) | r -> (None, r) in
-        let take_g = function G g :: r -> (g, r) | r -> ([], r) in
-        let apf, r = take_w rest in
-        let arules, r = take_g r in
-        let endapf, r = take_w r in
-        let endrules, r = take_g r in
+        let op, r = take_apf rest in
+        let g, r = take_rules r in
+        let eop, r = take_apf r in
+        let eg, r = take_rules r in
+        let opt = Option.value ~default:[] in
         if r <> [] then Ctx.error ctx ".aa %s: too many operands" t
         else if rest = [] then Hashtbl.remove ctx.Ctx.assocs key
         else
-          check_rules ctx "aa" arules (fun () ->
-              check_rules ctx "aa" endrules (fun () ->
-                  Hashtbl.replace ctx.Ctx.assocs key
-                    { Ctx.apf; arules; endapf; endrules }))
+          check_rules ctx "aa" (opt g) (fun () ->
+              check_rules ctx "aa" (opt eg) (fun () ->
+                  let side is_end = assoc_side ctx ~is_end key in
+                  let apf, arules = aa_side ctx.tag_rules (side false) op g in
+                  let endapf, endrules =
+                    aa_side ctx.end_rules (side true) eop eg
+                  in
+                  if apf = None && arules = [] && endapf = None && endrules = []
+                  then Hashtbl.remove ctx.assocs key
+                  else
+                    Hashtbl.replace ctx.assocs key
+                      { Ctx.apf; arules; endapf; endrules }))
       end
 
-(* .gs rules (tag rules) (end-tag rules) (p.291).  The keywords change
-   the current rules one by one (DCF-VERIFY: unnamed rules keep their
-   setting). *)
+(* .gs rules [(tag rules) | =] [(end-tag rules) | =] (LR p.185-186): =
+   leaves a set unchanged, () restores its default.  DCF-VERIFY (not in
+   LR Rel 4): the keywords change the current rules one by one, unnamed
+   rules keep their setting. *)
 let gs_rules ctx ops =
   match items ops with
   | Error e -> Ctx.error ctx ".gs rules: %s" e
-  | Ok its ->
-      let groups =
-        List.filter_map (function G g -> Some g | W _ -> None) its
-      in
+  | Ok its -> (
       if
-        List.exists (function W _ -> true | G _ -> false) its
-        || groups = []
-        || List.length groups > 2
+        List.length its > 2
+        || List.exists (function W w -> w <> "=" | G _ -> false) its
       then Ctx.error ctx ".gs rules: (tag rules) [(end-tag rules)] expected"
-      else begin
-        let set rules put g =
-          match apply_rules rules g with
-          | Ok r -> put r
-          | Error kw -> Ctx.error ctx ".gs rules: unknown rule %s" kw
+      else
+        let bad =
+          List.find_map
+            (function
+              | G g -> (
+                  match apply_rules ctx.Ctx.tag_rules g with
+                  | Error kw -> Some kw
+                  | Ok _ -> None)
+              | W _ -> None)
+            its
         in
-        match groups with
-        | g :: e ->
-            set ctx.Ctx.tag_rules (fun r -> ctx.Ctx.tag_rules <- r) g;
-            (* e: the end-tag rules, if given *)
-            List.iter
-              (set ctx.Ctx.end_rules (fun r -> ctx.Ctx.end_rules <- r))
-              e
-        | [] -> ()
-      end
+        match bad with
+        | Some kw -> Ctx.error ctx ".gs rules: unknown rule %s" kw
+        | None ->
+            let set cur def = function
+              | W _ -> cur
+              | G [] -> def
+              | G g -> rules_or_base cur g
+            in
+            List.iteri
+              (fun i it ->
+                if i = 0 then
+                  ctx.Ctx.tag_rules <- set ctx.tag_rules default_tag_rules it
+                else ctx.end_rules <- set ctx.end_rules default_end_rules it)
+              its)
 
 (* "name [as x] name [as x] ..." *)
 let rec name_as = function
@@ -513,32 +617,51 @@ let rec name_as = function
       (n, Some x) :: name_as rest
   | n :: rest -> (n, None) :: name_as rest
 
-(* .gs exatt [name [as apf]] ...: process stacked attributes by their
-   APFs, the value as &*1 (p.292-293).  Processed attributes leave the
-   stack (DCF-VERIFY).  An attribute given more than once is processed
-   once per occurrence, in the order written, each with its own value
-   (the Starter Set's repeated ARRANGE= of :rdef, SH20-9186-06 p.54;
-   DCF-VERIFY). *)
-let exatt ctx args =
+(* The stacked attributes named by "[NOT] name [AS x] ..." (LR p.184):
+   (name, AS, value), in the order of the list (each occurrence in the
+   order written; [absent]: a name not on the stack once, with the null
+   string), else in the order of the stack.  No names: all of them. *)
+let selected ?(absent = false) ctx args =
   let stack = ctx.Ctx.gml_attrs in
-  let selected =
-    match name_as args with
-    | [] -> List.map (fun (k, v) -> (k, None, v)) stack
-    | l ->
-        let l = List.map (fun (k, a) -> (String.uppercase_ascii k, a)) l in
-        let l =
-          List.filteri
-            (fun i (k, _) -> not (List.mem_assoc k (List.take i l)))
-            l
-        in
-        (* not specified: skipped (p.293) *)
-        List.concat_map
-          (fun (k, a) ->
-            List.filter_map
-              (fun (k', v) -> if k' = k then Some (k, a, v) else None)
-              stack)
-          l
+  let all p =
+    List.filter_map
+      (fun (k, v) -> if p k then Some (k, None, v) else None)
+      stack
   in
+  match args with
+  | [] -> all (fun _ -> true)
+  | n :: rest when String.lowercase_ascii n = "not" ->
+      let l = List.map String.uppercase_ascii rest in
+      all (fun k -> not (List.mem k l))
+  | l ->
+      let l =
+        List.map (fun (k, a) -> (String.uppercase_ascii k, a)) (name_as l)
+      in
+      let l =
+        List.filteri (fun i (k, _) -> not (List.mem_assoc k (List.take i l))) l
+      in
+      List.concat_map
+        (fun (k, a) ->
+          match List.filter (fun (k', _) -> k' = k) stack with
+          | [] when absent -> [ (k, a, "") ]
+          | occ -> List.map (fun (_, v) -> (k, a, v)) occ)
+        l
+
+(* Processed attributes are deleted from the stack (LR p.184). *)
+let drop ctx keys =
+  ctx.Ctx.gml_attrs <-
+    List.filter (fun (k, _) -> not (List.mem k keys)) ctx.Ctx.gml_attrs
+
+let keys l = List.map (fun (k, _, _) -> k) l
+
+(* .gs exatt [[NOT] name [as apf] ...]: process stacked attributes by
+   their APFs (LR p.184, p.188).  An attribute given more than once is
+   processed once per occurrence, in the order written, each with its
+   own value (LR p.188: DIET twice).  The value is passed as the
+   macro's parameters (LR p.188), tokenized as the operands of a macro
+   call ([Macro.bind_args]): &* is the value, &*1 &*2 ... its tokens; a
+   control word gets it as its operands. *)
+let exatt ctx args =
   let calls =
     List.filter_map
       (fun (k, a, v) ->
@@ -550,32 +673,68 @@ let exatt ctx args =
             (* a message (SH35-0050 p.9) *)
             Ctx.warn ctx ".gs exatt: no APF %s for attribute %s" name lk;
             None)
-      selected
+      (selected ctx args)
   in
-  ctx.gml_attrs <-
-    List.filter
-      (fun (k, _) -> not (List.exists (fun (k', _, _) -> k' = k) calls))
-      stack;
-  List.iter (fun (_, apf, v) -> schedule_apf ctx apf [ v ]) (List.rev calls)
+  drop ctx (keys calls);
+  List.iter
+    (fun (_, apf, v) ->
+      match apf with
+      | Apf_macro (name, m) ->
+          let scope = Symbols.new_scope () in
+          Macro.bind_args scope v;
+          Control.invoke_in ctx name m scope
+      | Apf_word _ | Apf_null -> schedule_apf ctx apf [ v ])
+    (List.rev calls)
 
-(* .gs attval name [as sym] ...: the symbol &NAME, the attribute name in
-   upper case, gets the value; a symbol given with AS is used exactly as
-   written, not folded (p.293; symbol names are case-sensitive, p.239).
-   DCF-VERIFY: an attribute that was not specified sets the null
+(* .gs attval [[NOT] name [as sym] ...] (LR p.184, p.188): the symbol
+   &NAME, the attribute name in upper case, gets the value; a symbol
+   given with AS is used exactly as written (the normative text of
+   p.188; its example's "&*xyz" for [as xyz] contradicts it).
+   DCF-VERIFY (not in LR Rel 4): a name not on the stack sets the null
    string. *)
 let attval ctx args =
+  let l = selected ~absent:true ctx args in
   List.iter
-    (fun (k, a) ->
-      let v =
-        Option.value
-          (List.assoc_opt (String.uppercase_ascii k) ctx.Ctx.gml_attrs)
-          ~default:""
-      in
-      let sym = Option.value a ~default:(String.uppercase_ascii k) in
+    (fun (k, a, v) ->
+      let sym = Option.value a ~default:k in
       match Symbols.set ctx.Ctx.syms sym v with
       | Ok () -> ()
       | Error e -> Ctx.error ctx ".gs attval: %s" e)
-    (name_as args)
+    l;
+  drop ctx (keys l)
+
+(* .gs purge / purgemsg [[NOT] name ...] (LR p.185): delete stacked
+   attributes; PURGEMSG names them. *)
+let purge ctx ~msg args =
+  let l = selected ctx args in
+  if msg && l <> [] then
+    Ctx.warn ctx ".gs purgemsg: attributes purged: %s"
+      (String.concat " "
+         (List.map (fun (k, _, v) -> Printf.sprintf "%s='%s'" k v) l));
+  drop ctx (keys l)
+
+(* .gs snap [tag ...] (LR p.186): the current rules, and the [.aa]
+   association and rules of each tag given. *)
+let snap ctx tags =
+  let show (r : Ctx.rules) =
+    String.concat " " (dcf_keywords r @ if r.elem then [] else [ "noelem" ])
+  in
+  Ctx.info ctx ".gs snap: rules (%s) (%s)" (show ctx.Ctx.tag_rules)
+    (show ctx.end_rules);
+  List.iter
+    (fun t ->
+      let k = String.lowercase_ascii t in
+      let one is_end =
+        let apf =
+          match assoc_side ctx ~is_end k with
+          | Some ".", _ -> "NULL"
+          | Some a, _ -> a
+          | None, _ -> "(class mapping)"
+        in
+        Printf.sprintf "%s (%s)" apf (show (snd (lookup ctx ~is_end k)))
+      in
+      Ctx.info ctx ".gs snap: %s: %s, end tag: %s" k (one false) (one true))
+    tags
 
 (* The residual text of the current tag, if not yet processed. *)
 let residual ctx =
@@ -588,28 +747,6 @@ let set_sym ctx cw sym v =
   | Ok () -> ()
   | Error e -> Ctx.error ctx ".gs %s: %s" cw e
 
-(* .gs scan sym / .gs copy sym (p.294).  DCF-VERIFY: with no residual
-   text the symbol gets the null string. *)
-let scan_copy ctx cw ~remove args =
-  match args with
-  | [ sym ] -> (
-      match residual ctx with
-      | Some l ->
-          let t, loc, k = l.Input.src.(0) in
-          set_sym ctx cw sym t;
-          if remove then l.src.(0) <- ("", loc, k)
-      | None -> set_sym ctx cw sym "")
-  | _ -> Ctx.error ctx ".gs %s: one symbol name expected" cw
-
-(* .gs insert text: before the residual text, with continuation (no
-   blank is added) (p.295).  DCF-VERIFY. *)
-let insert ctx text =
-  match residual ctx with
-  | Some l ->
-      let t, loc, k = l.Input.src.(0) in
-      l.src.(0) <- (text ^ t, loc, k)
-  | None -> Ctx.warn ctx ".gs insert: no residual text to insert before"
-
 (* The operand string after the first word. *)
 let after_word s =
   let i = Tagscan.skip_blanks s 0 in
@@ -621,20 +758,75 @@ let after_word s =
   let k = if !j < n then !j + 1 else !j in
   String.sub s k (n - k)
 
-(* .gs args v1 v2 ... (SH35-0050 p.17, p.28-29): the operands become
-   the local argument symbols of the current macro (or of the file, when
-   no macro is the source): [&*1], [&*2] ... the values, [&*0] their
-   number, [&*] the operand string; the previous [&*n] are destroyed
-   ("using the .GS ARGS control word destroys the &* array", p.17), so
-   [.gs args] alone undefines them (p.29, item 34).  The values are
-   separated by blanks; a value in single quotation marks may contain
-   blanks, [''] alone is the null string and a doubled quote inside
-   stands for one (DSMPROF3 sets its quotation marks with a quoted
-   double quote and a quoted doubled single quote).  The
-   operands were substituted with the line, so [.gs args &* x y]
-   appends to the current list (DSM#SETS).
-   DCF-VERIFY: the tokenization (blanks only, unlike macro operands,
-   p.276, so [-1] and [a-b] stay one value); the value of [&*]. *)
+(* Scan [s] for attributes under the start-tag rules: they go on the
+   attribute stack, the residual text is returned (LR p.184).
+   DCF-VERIFY (not in LR Rel 4): value attributes are dropped. *)
+let scan_string ctx s =
+  let r = ctx.Ctx.tag_rules in
+  if not r.att then s
+  else begin
+    let d =
+      match Tagscan.delims_of ctx.chars with
+      | Some d -> d
+      | None ->
+          { Tagscan.tag = '\000'; etag = "\000"; mcs = ctx.chars.Chars.mcs }
+    in
+    let res = Tagscan.attributes d ~att:r.att ~vat:r.vat ~stop:r.stop s 0 in
+    scan_messages ctx ".gs scan" r res;
+    ctx.gml_attrs <-
+      ctx.gml_attrs
+      @ List.filter_map
+          (function
+            | Tagscan.Named (k, v) -> Some (k, v) | Tagscan.Vat _ -> None)
+          res.attrs;
+    match res.stop with
+    | Tagscan.Eol -> ""
+    | Mcs k | Next_tag k | Invalid k -> String.sub s k (String.length s - k)
+  end
+
+(* .gs scan sym [string] / .gs copy sym [string] (LR p.184): with a
+   string, scan it; else the residual text, which SCAN removes.
+   DCF-VERIFY (not in LR Rel 4): with no residual text the symbol gets
+   the null string. *)
+let scan_copy ctx cw ~remove ops =
+  match words ops with
+  | [] -> Ctx.error ctx ".gs %s: symbol name expected" cw
+  | [ sym ] -> (
+      match residual ctx with
+      | Some l ->
+          let t, loc, k = l.Input.src.(0) in
+          set_sym ctx cw sym t;
+          if remove then l.src.(0) <- ("", loc, k)
+      | None -> set_sym ctx cw sym "")
+  | sym :: _ -> set_sym ctx cw sym (scan_string ctx (after_word ops))
+
+(* .gs insert text: before the residual text, with continuation (no
+   blank is added); with no residual text, as text now (LR p.187). *)
+let insert ctx text =
+  match residual ctx with
+  | Some l ->
+      let t, loc, k = l.Input.src.(0) in
+      l.src.(0) <- (text ^ t, loc, k)
+  | None ->
+      if text <> "" then
+        Input.push_back ctx.Ctx.input
+          ~kind:(Input.Residual { Input.had_text = false; eol = true })
+          text ctx.loc
+
+(* .gs args v1 v2 ... (LR p.187, SH35-0050 p.17, p.28-29): the operands
+   become the local argument symbols of the current macro (or of the
+   file, when no macro is the source): [&*1], [&*2] ... the values,
+   [&*0] their number, [&*] the operand string; the previous [&*n] are
+   destroyed ("using the .GS ARGS control word destroys the &* array",
+   SH35-0050 p.17).  [.gs args] alone sets [&*0] to 0, and [&*] and the
+   [&*n] there were to null (LR p.187).  The values are separated by
+   blanks; a value in single quotation marks may contain blanks, ['']
+   alone is the null string and a doubled quote inside stands for one
+   (DSMPROF3 sets its quotation marks with a quoted double quote and a
+   quoted doubled single quote).  The operands were substituted with the
+   line, so [.gs args &* x y] appends to the current list (DSM#SETS).
+   DCF-VERIFY (not in LR Rel 4): the tokenization (blanks only, unlike
+   macro operands, p.276, so [-1] and [a-b] stay one value). *)
 let args_tokens s =
   let n = String.length s in
   let rec go i acc =
@@ -662,19 +854,27 @@ let is_arg_key k =
 
 let gs_args ctx ops =
   let scope = ctx.Ctx.syms.Symbols.local () in
-  Hashtbl.filter_map_inplace
-    (fun k v -> if is_arg_key k then None else Some v)
-    scope;
+  let old =
+    Hashtbl.fold
+      (fun k _ acc -> if is_arg_key k then k :: acc else acc)
+      scope []
+  in
   let ops = String.trim ops in
-  let toks = args_tokens ops in
-  if toks <> [] then Macro.bind_args_list scope ops toks
-  else Hashtbl.remove scope "*"
+  match args_tokens ops with
+  | [] ->
+      List.iter (fun k -> Symbols.set_in scope k "") ("*" :: old);
+      Symbols.set_in scope "*0" "0"
+  | toks ->
+      List.iter (Hashtbl.remove scope) old;
+      Macro.bind_args_list scope ops toks
 
-(* .gs vars n1 n2 ... (SH35-0050 p.17): symbol n1 gets the value of
-   [&*1], n2 of [&*2] ... (the [.gs args] values): [.gs args 1 2] then
-   [.gs vars a b] is [.se a '1] [.se b '2].  The names are as written
-   (case-sensitive) and may be local ([*t4]).
-   DCF-VERIFY: a name beyond the last value gets the null string. *)
+(* .gs vars n1 n2 ... (LR p.187, SH35-0050 p.17): symbol n1 gets the
+   value of [&*1], n2 of [&*2] ... (the [.gs args] values): [.gs args 1 2]
+   then [.gs vars a b] is [.se a '1] [.se b '2].  The names are as
+   written (case-sensitive) and may be local ([*t4]); array symbols are
+   not allowed (LR p.187).
+   DCF-VERIFY (not in LR Rel 4): a name beyond the last value gets the
+   null string. *)
 let gs_vars ctx names =
   List.iteri
     (fun i name ->
@@ -682,17 +882,20 @@ let gs_vars ctx names =
         Option.value ~default:""
           (Symbols.get ctx.Ctx.syms ("*" ^ string_of_int (i + 1)))
       in
-      Control.check_name ctx ".gs vars" name (fun () ->
-          match Symbols.set ctx.Ctx.syms name v with
-          | Ok () -> ()
-          | Error e -> Ctx.error ctx ".gs vars: %s" e))
+      if String.contains name '(' then
+        Ctx.error ctx ".gs vars: array symbol %s not allowed" name
+      else
+        Control.check_name ctx ".gs vars" name (fun () ->
+            match Symbols.set ctx.Ctx.syms name v with
+            | Ok () -> ()
+            | Error e -> Ctx.error ctx ".gs vars: %s" e))
     names
 
-(* .gs qatt sym name ... (SH20-9161-3 p.266): the attributes in the list
-   that are not in the attribute stack become the elements of [sym].
-   DSMFTNT's ".gs qatt *q id" then tests &E'&*q: so when every attribute
-   is present [sym] is left undefined.  DCF-VERIFY: that, and the names
-   are stored as written. *)
+(* .gs qatt sym name ... (LR p.185, SH20-9161-3 p.266): the attributes
+   in the list that are not in the attribute stack become the elements
+   of [sym].  DSMFTNT's ".gs qatt *q id" then tests &E'&*q: so when
+   every attribute is present [sym] is left undefined.  DCF-VERIFY (not
+   in LR Rel 4): that, and the names are stored as written. *)
 let qatt ctx = function
   | [] -> Ctx.error ctx ".gs qatt: symbol name expected"
   | sym :: names ->
@@ -708,19 +911,23 @@ let qatt ctx = function
                 | Error e -> Ctx.error ctx ".gs qatt: %s" e)
             names)
 
-(* .gs hctr [n | n1.n2...] (SH20-9161-3 p.266-268, [Headctr]): a single
-   number steps that level, a dotted value sets the counter, nothing
-   reinitialises it.  The symbol &xref gets the counter up to that level
-   ("1.3.2"), its elements &xref(1) ... the positions (DSMHEAD1 prefixes
-   an appendix heading with &xref(1)); with no operand it is null.
-   DCF-VERIFY: the elements. *)
+(* .gs hctr [n | n1.n2...] (LR p.185, p.188, [Headctr]): a single
+   number steps that level, a dotted value sets the counter, nothing or
+   0 reinitialises it.  The symbol &@xref (LR p.185) gets the counter up
+   to that level ("1.3.2"), null when reinitialised; &xref the same, as
+   SH20-9161-3 names it.  Their elements (1) ... are the positions
+   (IBM's DSMHEAD1 prefixes an appendix heading with &xref(1)).
+   DCF-VERIFY (not in LR Rel 4): the elements; &@xref after 0. *)
 let hctr ctx args =
   let c = ctx.Ctx.hctr and syms = ctx.Ctx.syms in
   let xref n =
     let ps = Headctr.parts c n in
-    ignore (Symbols.unset syms "xref");
-    List.iteri (fun i p -> ignore (Symbols.set ~sub:(i + 1) syms "xref" p)) ps;
-    ignore (Symbols.set syms "xref" (String.concat "." ps))
+    List.iter
+      (fun s ->
+        ignore (Symbols.unset syms s);
+        List.iteri (fun i p -> ignore (Symbols.set ~sub:(i + 1) syms s p)) ps;
+        ignore (Symbols.set syms s (String.concat "." ps)))
+      [ "xref"; "@xref" ]
   in
   match args with
   | [] ->
@@ -729,6 +936,9 @@ let hctr ctx args =
   | [ v ] -> (
       let ps = List.map Headctr.position (String.split_on_char '.' v) in
       match int_of_string_opt v with
+      | Some 0 ->
+          Headctr.reset c;
+          xref 0
       | Some n when n >= 1 && n <= Headctr.levels ->
           Headctr.step c n;
           xref n
@@ -737,6 +947,41 @@ let hctr ctx args =
           xref (List.length ps)
       | _ -> Ctx.error ctx ".gs hctr: invalid value %s" v)
   | _ -> Ctx.error ctx ".gs hctr: one value expected"
+
+(* .gs prefix [p [e]] (LR p.187): the class mapping prefixes of start
+   and end tags, each OFF, = (unchanged) or one or two characters
+   (quoted or not).  DCF-VERIFY (not in LR Rel 4): an omitted end
+   prefix is unchanged; no operand restores the initial setting. *)
+let gs_prefix ctx args =
+  let one old a =
+    match String.lowercase_ascii a with
+    | "off" -> Ok None
+    | "=" -> Ok old
+    | _ ->
+        let n = String.length a in
+        let a =
+          if n >= 3 && a.[0] = '\'' && a.[n - 1] = '\'' then
+            String.sub a 1 (n - 2)
+          else a
+        in
+        if a <> "" && String.length a <= 2 && not (String.contains a '\'') then
+          Ok (Some a)
+        else Error a
+  in
+  let st, en = prefixes ctx in
+  let res =
+    match args with
+    | [] -> Ok (Some "", Some "e")
+    | [ p ] -> Result.map (fun p -> (p, en)) (one st p)
+    | [ p; e ] ->
+        Result.bind (one st p) (fun p ->
+            Result.map (fun e -> (p, e)) (one en e))
+    | _ -> Error (String.concat " " args)
+  in
+  match res with
+  | Ok v -> set_prefixes ctx v
+  | Error a ->
+      Ctx.error ctx ".gs prefix: OFF, = or one or two characters expected: %s" a
 
 let gs ctx ops =
   match words ops with
@@ -750,16 +995,14 @@ let gs ctx ops =
       | "tag", [ "off" ] -> ctx.tag_scan <- Ctx.Tags_off
       | "tag", _ -> Ctx.error ctx ".gs tag: ON, ONNO or OFF expected"
       | "rules", _ -> gs_rules ctx (after_word ops)
-      | "prefix", ([] | [ "off" ]) -> ctx.prefix <- None
-      (* DCF-VERIFY: .gs prefix without operand / OFF ends class mapping *)
-      | "prefix", [ c ] when String.length c = 1 -> ctx.prefix <- Some c.[0]
-      | "prefix", _ -> Ctx.error ctx ".gs prefix: one character expected"
+      | "prefix", _ -> gs_prefix ctx args
       | "exatt", _ -> exatt ctx args
-      | "attval", _ ->
-          if args = [] then Ctx.error ctx ".gs attval: attribute name expected"
-          else attval ctx args
-      | "scan", _ -> scan_copy ctx "scan" ~remove:true args
-      | "copy", _ -> scan_copy ctx "copy" ~remove:false args
+      | "attval", _ -> attval ctx args
+      | "purge", _ -> purge ctx ~msg:false args
+      | "purgemsg", _ -> purge ctx ~msg:true args
+      | "snap", _ -> snap ctx args
+      | "scan", _ -> scan_copy ctx "scan" ~remove:true (after_word ops)
+      | "copy", _ -> scan_copy ctx "copy" ~remove:false (after_word ops)
       | "insert", _ -> insert ctx (after_word ops)
       | "args", _ -> gs_args ctx (after_word ops)
       | "vars", _ -> gs_vars ctx args

@@ -85,17 +85,38 @@ let scan_name s i =
   done;
   !j
 
-(** Parse the operands of [.dm].
+(* The delimited part of a .dm line ([rest] starts at its first non-blank
+   character): the delimiter and what follows, without one final
+   delimiter (LR p.142: "The final delimiter may be omitted").  A single
+   alphanumeric character is the [.dm name x] form (the definition into
+   symbol &x, p.143), which we do not support; two or more characters
+   are a delimiter and a line, whatever the first one is (p.143). *)
+let delimited name rest =
+  let e = String.length rest in
+  let alnum = function
+    | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' -> true
+    | _ -> false
+  in
+  if e = 1 && alnum rest.[0] then
+    Error
+      (Printf.sprintf
+         ".dm %s %s: assigning a macro to a symbol is not supported" name rest)
+  else
+    let d = rest.[0] in
+    let e = if e > 1 && rest.[e - 1] = d then e - 1 else e in
+    Ok (d, String.sub rest 1 (e - 1))
+
+(** Parse the operands of [.dm] (LR p.141-145).
 
     [.dm name /a/b/]: the first non-blank character after the name is the
     delimiter; each delimited piece is one body line, and the final delimiter is
-    optional (p.272). An empty piece is an empty line. [.dm name on] starts a
-    definition ended by [.dm off] (p.272); [.dm name off] deletes the macro
-    (SH35-0050 p.15), as does our synonym [.dm name delete]. [.dm name lib]
-    defines it from the macro library ([Library], p.282). [.dm name(n) /line]
-    and [.dm name() /line] set one line, [.dm name(n) off] removes it (p.273,
-    SH35-0050 p.16). DCF-VERIFY: in the subscripted form everything after the
-    delimiter is the line (a second delimiter is part of it). *)
+    optional. An empty piece is an empty line; [.dm name] alone defines a null
+    macro. [.dm name on] starts a definition ended by [.dm off]; [.dm name off]
+    deletes the macro, as does our synonym [.dm name delete] (EXT).
+    [.dm name lib] defines it from the macro library ([Library]).
+    [.dm name(n) /line/] and [.dm name() /line/] set one line (all after the
+    delimiter, less one final delimiter, is that line; none: a null line), n
+    from 0; [.dm name(n) off] removes it. *)
 let parse_dm ops =
   let n = String.length ops in
   let i = Expr.skip_blanks ops 0 in
@@ -118,7 +139,7 @@ let parse_dm ops =
             if t = "" then Ok None
             else
               match int_of_string_opt t with
-              | Some k when k > 0 -> Ok (Some k)
+              | Some k when k >= 0 -> Ok (Some k)
               | _ -> Error t
           in
           let k = Expr.skip_blanks ops (e + 1) in
@@ -126,7 +147,7 @@ let parse_dm ops =
           match sub with
           | Error t ->
               Bad (Printf.sprintf ".dm %s: invalid line number %s" name t)
-          | Ok sub ->
+          | Ok sub -> (
               if String.lowercase_ascii (String.trim rest) = "off" then
                 match sub with
                 | Some s -> Delete_line (name, s)
@@ -134,11 +155,11 @@ let parse_dm ops =
                     Bad
                       (Printf.sprintf ".dm %s(): line number required with OFF"
                          name)
-              else if rest = "" then
-                Bad (Printf.sprintf ".dm %s(%s): line expected" name t)
+              else if rest = "" then Set_line (name, sub, "")
               else
-                Set_line (name, sub, String.sub rest 1 (String.length rest - 1))
-          )
+                match delimited name rest with
+                | Ok (_, line) -> Set_line (name, sub, line)
+                | Error m -> Bad m))
     else begin
       let k = Expr.skip_blanks ops j in
       let rest = String.sub ops k (n - k) in
@@ -149,18 +170,11 @@ let parse_dm ops =
       | "lib" when k > j -> Lib name
       | "" ->
           if String.lowercase_ascii name = "off" then End None
-          else Bad (Printf.sprintf ".dm %s: definition expected" name)
-      | _ ->
-          let d = rest.[0] in
-          if Line.is_name_char d then
-            Bad
-              (Printf.sprintf
-                 ".dm %s: ON, OFF or a delimited definition expected" name)
-          else
-            (* the final delimiter is optional *)
-            let e = String.length rest in
-            let e = if e > 1 && rest.[e - 1] = d then e - 1 else e in
-            Lines (name, String.split_on_char d (String.sub rest 1 (e - 1)))
+          else Lines (name, [])
+      | _ -> (
+          match delimited name rest with
+          | Ok (d, body) -> Lines (name, String.split_on_char d body)
+          | Error m -> Bad m)
     end
   end
 

@@ -102,8 +102,8 @@
 % outer vertical mode the page builder runs first (\par, unless a
 % \parshape, \hangindent, \looseness or \hangafter is set for the
 % next paragraph); in a paragraph the lines of the paragraph in
-% progress are not counted (DCF-VERIFY: DCF counts the output lines
-% formatted so far).  \gmlpass (run by \gmlbegindocument) reads
+% progress are not counted (&$LC excludes partial lines, LR p.445
+% Table 20 note 3).  \gmlpass (run by \gmlbegindocument) reads
 % \gmlpassno/\gmlpasses (\def'd before \input gml by tex.xsl,
 % from gml -pass/-passes): on a pass before the last the output is a
 % draft: \pdfdraftmode=1 with pdftex, \dpxoutput=0 with ApTeX (DVI only,
@@ -144,8 +144,14 @@
 \newbox\gml@fnleader \newbox\gml@ixbox
 \newwrite\gml@refout \newread\gml@in
 \newif\ifgml@plainpage \newif\ifgml@keep \newif\ifgml@aftertitle
-\newif\ifgml@userrh \newif\ifgml@userrf \newif\ifgml@rhsup \newif\ifgml@rfsup
-\newif\ifgml@rhsuppage \newif\ifgml@rfsuppage
+\newif\ifgml@userrh \newif\ifgml@userrf
+% .rh/.rf SUP per page parity: \gml@sup@rh@odd ... is \gml@yes while
+% suppressed; \gml@supp@rh@odd ... (the page being built) is set by SUP
+% and kept until shipout even if RES follows
+\let\gml@sup@rh@odd\empty \let\gml@sup@rh@even\empty
+\let\gml@sup@rf@odd\empty \let\gml@sup@rf@even\empty
+\let\gml@supp@rh@odd\empty \let\gml@supp@rh@even\empty
+\let\gml@supp@rf@odd\empty \let\gml@supp@rf@even\empty
 \newif\ifgml@nofolio \newif\ifgml@refschanged \newif\ifgml@reffile
 \newif\ifgml@chappage  % the current page begins with an h0/h1 or section heading
 \newif\ifgml@tabfound \newif\ifgml@tabfirst \newif\ifgml@rcon
@@ -700,13 +706,13 @@
 \gmldefhint{sp}{\gml@hdim{n}{unit}\gml@dima\gml@vspace\gml@dima}
 \gmldefhint{sk}{\gml@hdim{n}{unit}\gml@dima\gml@vskip\gml@dima}
 % .in/.ir: permanent margins; temporary (FOR/AFTER not in lines): parshape
-% a permanent .in that ends the offset carries offset=0 (SH35-0069 p.80)
-\def\gml@indent#1#2{\gml@hget{temporary}\gml@tmpb
+% a .in that ends the offset carries offset=0: any .in, a temporary one
+% too, clears all offsets (LR p.260)
+\def\gml@indent#1#2{\gml@hget{offset}\gml@tmpb
+  \ifx\gml@tmpb\empty\else\global\gml@ofdim\z@\global\gml@ofstate\z@\fi
+  \gml@hget{temporary}\gml@tmpb
   \ifx\gml@tmpb\gml@yes\gml@tempindent{#1}{#2}%
-  \else\gml@hdim{#1}{unit}\gml@dima\global#2\gml@dima
-    \gml@hget{offset}\gml@tmpb
-    \ifx\gml@tmpb\empty\else\global\gml@ofdim\z@\global\gml@ofstate\z@\fi
-    \gml@apply\fi}
+  \else\gml@hdim{#1}{unit}\gml@dima\global#2\gml@dima\gml@apply\fi}
 \gmldefhint{in}{\gml@indent{left}\gml@hintleft}
 \gmldefhint{ir}{\gml@indent{right}\gml@hintright}
 % .il h / .un h: the next output line moved right / left (tex.xsl sends
@@ -748,10 +754,7 @@
 \gmldefhint{pa}{\gml@hget{mode}\gml@tv
   \ifx\gml@tv\gml@offstr\global\gml@paofftrue
   \else\ifx\gml@tv\gml@onstr\global\gml@paofffalse
-  \else\ifgml@paoff\else
-    \gml@hget{nobreak}\gml@tmpb
-    \ifx\gml@tmpb\gml@yes\ifhmode\vadjust{\vfill\penalty-\@M}\else\gml@newpage\fi
-    \else\gml@newpage\fi
+  \else\ifgml@paoff\else\gml@newpage
     \gml@hget{side}\gml@tv
     \ifx\gml@tv\gml@oddstr\ifodd\pageno\else\gml@blankpage\fi\fi
     \ifx\gml@tv\gml@evenstr\ifodd\pageno\gml@blankpage\fi\fi
@@ -764,8 +767,9 @@
 % ---- named rules (.dr) ----------------------------------------------------
 % \gml@rule@NAME holds the weight.  boxrule, the default of .bx and .hr,
 % is .3mm on page printers (SH35-0069 p.159).  .dr NAME WEIGHT h defines
-% one (tex.xsl passes rule= and weight=); DCF-VERIFY: a .dr without a
-% weight (DSMPROF3's ".dr @figrule") is taken to have boxrule's weight.
+% one (tex.xsl passes rule= and weight=); a .dr without a weight
+% (DSMPROF3's ".dr @figrule") has the default rule's weight, boxrule's
+% (LR p.151-152).
 % The FONT operand is for line devices and ignored.
 \expandafter\def\csname gml@rule@boxrule\endcsname{.3mm}
 \gmldefhint{dr}{\gml@hget{rule}\gml@tv\gml@lower\gml@tv\gml@hget{weight}\gml@tu
@@ -829,11 +833,13 @@
     \else\ifx\gml@tv\gml@setstr\else\gml@bxrule\fi
       \global\gml@bxstate\@ne\fi
   \fi\fi\fi\fi}
-% .hr [rulename] h [FOR w | TO h] ... [LEFT] [RIGHT]: rule segments on
-% one line, each in the weight of the last rule name (boxrule).  No
-% position (no operands, or only a rule name, SX26-3723 .HR: every
-% operand is optional): across the line.  DCF-VERIFY: a start position without FOR,
-% TO or RIGHT runs to the right edge of the column.
+% .hr [rulename] LEFT|h1 [[TO] h2 | FOR length | RIGHT] ... (LR
+% p.192-193): rule segments on one line, each in the weight of the last
+% rule name (boxrule); a bare number after a start position is the end
+% of the segment (TO is optional).  repeat=yes (.hr with no operands)
+% draws the previous .hr again (r6); with none before, across the line.
+% DCF-VERIFY (not in LR Rel 4): a start position without an end runs
+% to the right edge of the column.
 \def\gml@hr@flush{\gml@dimc\gml@dima\advance\gml@dimc-\gml@hrstart
   \ifdim\gml@dimc>\z@
     \gml@dimd\gml@hrstart\advance\gml@dimd-\gml@hrpos
@@ -846,7 +852,7 @@
 \def\gml@hr@tok#1{\gml@isnumtok{#1}%
   \ifgml@found\gml@hrpostrue\gml@dimtok{#1}\gml@dimb
     \ifcase\gml@hrmode \gml@hrstart\gml@dimb\gml@hrmode\@ne
-    \or \gml@hr@right\gml@hr@flush\gml@hrstart\gml@dimb\gml@hrmode\@ne
+    \or \gml@dima\gml@dimb\gml@hr@flush
     \or \gml@dima\gml@hrstart\advance\gml@dima\gml@dimb\gml@hr@flush
     \or \gml@dima\gml@dimb\gml@hr@flush\fi
   \else\def\gml@tmpd{#1}%
@@ -861,7 +867,10 @@
     \else\ifnum\gml@hrmode=\@ne\gml@hr@right\gml@hr@flush\fi
       \gml@ruleweight{#1}%
     \fi\fi\fi\fi\fi}
-\gmldefhint{hr}{\par\gml@hget{spec}\gml@tv
+\let\gml@hrlast\empty
+\gmldefhint{hr}{\par\gml@hget{repeat}\gml@tmpb
+  \ifx\gml@tmpb\gml@yes\let\gml@tv\gml@hrlast
+  \else\gml@hget{spec}\gml@tv\global\let\gml@hrlast\gml@tv\fi
   \gml@rulewd=\csname gml@rule@boxrule\endcsname\relax
   \gml@hrpos\z@\gml@hrmode\z@\setbox\gml@box\hbox{}%
   \ifx\gml@tv\empty\gml@hrstart-\leftskip\gml@hr@right\gml@hr@flush
@@ -880,15 +889,21 @@
       \gml@needspace\gml@dima\fi\fi
   \else\ifx\gml@tv\gml@offstr\global\gml@keepfalse\else\global\gml@keeptrue\fi\fi
   \gml@apply}
-\def\gml@runaction#1{\gml@hget{action}\gml@tv
-  \ifx\gml@tv\gml@cancelstr\global\csname gml@user#1true\endcsname
-    \global\setbox\csname gml@#1odd\endcsname\box\voidb@x
-    \global\setbox\csname gml@#1even\endcsname\box\voidb@x
-    \expandafter\global\expandafter\let\csname gml@#1dynodd\endcsname\relax
-    \expandafter\global\expandafter\let\csname gml@#1dyneven\endcsname\relax
-  \else\ifx\gml@tv\gml@supstr\global\csname gml@#1suptrue\endcsname
-    \global\csname gml@#1suppagetrue\endcsname
-  \else\ifx\gml@tv\gml@resstr\global\csname gml@#1supfalse\endcsname\fi\fi\fi}
+% .rh/.rf [ODD|EVEN] CANCEL|SUP|RES (LR p.310-314): page=odd|even
+% limits the action to those pages, else both
+\def\gml@runaction#1{\gml@hget{action}\gml@tv\gml@hget{page}\gml@tu
+  \ifx\gml@tu\empty\def\gml@tu{odd even}\fi
+  \def\gml@runw{#1}\gml@forwords\gml@tu\gml@runact@one}
+\def\gml@runact@one#1{\edef\gml@tmpd{\gml@runw @#1}%
+  \ifx\gml@tv\gml@cancelstr\global\csname gml@user\gml@runw true\endcsname
+    \global\setbox\csname gml@\gml@runw#1\endcsname\box\voidb@x
+    \expandafter\global\expandafter\let\csname gml@\gml@runw dyn#1\endcsname\relax
+  \else\ifx\gml@tv\gml@supstr
+    \expandafter\global\expandafter\let\csname gml@sup@\gml@tmpd\endcsname\gml@yes
+    \expandafter\global\expandafter\let\csname gml@supp@\gml@tmpd\endcsname\gml@yes
+  \else\ifx\gml@tv\gml@resstr
+    \expandafter\global\expandafter\let\csname gml@sup@\gml@tmpd\endcsname\empty
+  \fi\fi\fi}
 \gmldefhint{rh}{\gml@runaction{rh}}
 \gmldefhint{rf}{\gml@runaction{rf}}
 \gmldefhint{sx}{\gml@hget{left}\gml@sxl\gml@hget{fill}\gml@sxf\gml@hget{right}\gml@sxr
@@ -928,8 +943,11 @@
 % a font switch.  UP is done by tex.xsl (\gmlupword).  TYPE: the family
 % chooses the slot (mono: tt, sans: ss/ssbf, else rm it bf bi), a size
 % loads the slot at that size (\gml@sized).  FONT name alone (no other
-% operand) is that font if it is known; DCF-VERIFY: 3800/4250 font ids
-% (FONT GT10, &$CHAR(n)) are not interpreted (the body face).  The
+% operand) is that font if it is known.  Rel 4: the 3800 font ids
+% (FONT GT10, &$CHAR(n); LR Tables 29-32 p.455-457) name faces; not yet
+% modelled (the body face).  An omitted TYPE weight is MEDIUM and an
+% omitted width NORMAL, not inherited (LR p.132), so the slot is chosen
+% from this definition alone.  The
 % definition is global; \gmldeffont{NAME}{...} after it overrides it.
 \gmldefhint{df}{\gml@hget{name}\gml@tv\gml@lower\gml@tv\let\gml@dfname\gml@tmpl
   \gml@hget{os}\gml@dfos\gml@hget{us}\gml@dfus
@@ -956,16 +974,19 @@
 \def\gml@slotcmd@bf{\noexpand\bf} \def\gml@slotcmd@bi{\noexpand\gml@bi}
 \def\gml@slotcmd@tt{\noexpand\tt} \def\gml@slotcmd@ss{\noexpand\gml@ss}
 \def\gml@slotcmd@ssbf{\noexpand\gml@ssbf}
-% .is [TO] h [MIN m] [BLANK|BREAK|ABSOLUTE] (SH35-0069 p.89-90): h of
+% .is [TO] h [MINIMUM m] [BLANK|BREAK|ABSOLUTE] (LR p.219): h of
 % space; TO h, an immediate tab to h, is exact only at the start of a
 % line (TeX does not know the position inside a paragraph): elsewhere it
-% is the minimum (MIN m, default one word space), as a missed tab.
+% is the minimum (MINIMUM or MIN m, default one word space), as a missed
+% tab.
+\def\gml@minimumstr{minimum}
 \def\gml@is@tok#1{\def\gml@tmpd{#1}%
   \ifx\gml@tmpd\gml@tostr\def\gml@isnext{to}%
   \else\ifx\gml@tmpd\gml@minstr\def\gml@isnext{min}%
+  \else\ifx\gml@tmpd\gml@minimumstr\def\gml@isnext{min}%
   \else\gml@isnumtok{#1}\ifgml@found
     \expandafter\let\csname gml@is@\gml@isnext\endcsname\gml@tmpd
-    \def\gml@isnext{amount}\fi\fi\fi}
+    \def\gml@isnext{amount}\fi\fi\fi\fi}
 \gmldefhint{is}{\gml@hget{spec}\gml@tv\def\gml@isnext{amount}%
   \let\gml@is@to\empty\let\gml@is@min\empty\let\gml@is@amount\empty
   \gml@forwords\gml@tv\gml@is@tok
@@ -981,8 +1002,8 @@
 % list identifier, a definition term), so the label is boxed and the tab
 % is exact: TO less the label width (TPG p.89, measured from the start
 % of the output line).  A missed tab (the label plus MIN is wider than
-% TO): BREAK breaks the line, ABSOLUTE backs up, otherwise (BLANK, and
-% DCF-VERIFY without it) a word space.
+% TO): BREAK breaks the line, ABSOLUTE backs up, otherwise (BLANK, the
+% default, LR p.219) a word space.
 \newbox\gml@islab \newif\ifgml@islab
 \def\gmlislabel{\leavevmode\setbox\gml@islab\hbox\bgroup\gml@islabtrue}
 \def\gml@is@label{\unskip
@@ -1146,7 +1167,9 @@
       \def\gml@tmpb{left}\def\gml@tmpc{#3}%
       \ifx\gml@tmpb\gml@tmpc\gml@shape0\gml@sn\gml@tdelta\z@
       \else\gml@shape0\gml@sn\z@\gml@tdelta\fi\fi\fi}
-\gmldeflines{in}{pre}{\gml@lines@margin{left}\gml@hintleft{left}}
+\gmldeflines{in}{pre}{\gml@get\gml@lattrs{offset}\gml@tmpb
+  \ifx\gml@tmpb\empty\else\global\gml@ofdim\z@\global\gml@ofstate\z@\fi
+  \gml@lines@margin{left}\gml@hintleft{left}}
 \gmldeflines{in}{begin}{\ifx\gml@curfill\gml@no
   \advance\leftskip\gml@tdelta\relax\fi}
 \gmldeflines{in}{end}{\ifx\gml@curfill\gml@no\gml@lmore\fi}
@@ -1265,10 +1288,16 @@
 % .rh/.rf sup suppresses the page it is issued on even if res follows
 % before the page is complete (the Starter Set's title page: sup, the
 % title page text, res, then the page eject)
-\def\gml@headline{\rm\ifgml@plainpage\hfil\else\ifgml@rhsuppage\hfil
+\def\gml@headline{\rm\ifgml@plainpage\hfil\else\gml@runsupp{rh}\ifgml@found\hfil
   \else\ifgml@userrh\gml@userrh\else\gml@defaultrh\fi\fi\fi}
-\def\gml@footline{\rm\ifgml@plainpage\hfil\else\ifgml@rfsuppage\hfil
+\def\gml@footline{\rm\ifgml@plainpage\hfil\else\gml@runsupp{rf}\ifgml@found\hfil
   \else\ifgml@userrf\gml@userrf\else\gml@defaultrf\fi\fi\fi}
+% \gml@runsupp{rh|rf}: \ifgml@found if suppressed on this page's parity
+\def\gml@runsupp#1{\gml@foundfalse
+  \ifodd\pageno\expandafter\ifx\csname gml@supp@#1@odd\endcsname\gml@yes\gml@foundtrue\fi
+  \else\expandafter\ifx\csname gml@supp@#1@even\endcsname\gml@yes\gml@foundtrue\fi\fi}
+\def\gml@runsupnext#1{\expandafter\global\expandafter\let
+  \csname gml@supp@#1\expandafter\endcsname\csname gml@sup@#1\endcsname}
 % Starter Set: the security classification centred at the top; the short
 % heading on the left and the page number on the right at the foot
 \def\gml@defaultrh{\hfil{\gml@hi{2}\gml@sec}\hfil}
@@ -1300,23 +1329,27 @@
     \setbox\gml@box#3{\gml@runsetup\csname gml@#1dyn#2\endcsname\par}\box\gml@box}\fi}
 \output={\gml@tbl@output\hsize\gml@defaulthsize\plainoutput\global\gml@plainpagefalse
   \global\gml@chappagefalse
-  \ifgml@rhsup\global\gml@rhsuppagetrue\else\global\gml@rhsuppagefalse\fi
-  \ifgml@rfsup\global\gml@rfsuppagetrue\else\global\gml@rfsuppagefalse\fi}
+  \gml@runsupnext{rh@odd}\gml@runsupnext{rh@even}%
+  \gml@runsupnext{rf@odd}\gml@runsupnext{rf@even}}
 \def\gml@runsetup{\hsize\gml@defaulthsize\gml@elemhsize\hsize
   \gml@elemleft\z@\gml@elemright\z@\def\gml@efont{\rm}\gml@apply}
 % a gml:rh/gml:rf with action= (.rh sup|res|cancel as an element) only
-% acts; it has no text
-\def\gml@runstart#1#2{\gml@aget{page}\gml@runpage\gml@aget{action}\gml@runact
+% acts; it has no text.  .rh/.rf break (break=yes, LR p.314, p.310).
+\def\gml@runstart#1#2{\gml@aget{break}\gml@tmpb\ifx\gml@tmpb\gml@yes\gml@break\fi
+  \gml@aget{page}\gml@runpage\gml@aget{action}\gml@runact
   \ifx\gml@runact\empty\else\let\gml@hattrs\gml@attrs\gml@runaction{#1}\fi
   \setbox\gml@box#2\bgroup\gml@runsetup}
 \def\gml@runend#1{\par\egroup\ifx\gml@runact\empty\gml@runstore{#1}\fi}
+% a new definition is not suppressed by an earlier SUP (LR p.310, p.314)
 \def\gml@runstore#1{\global\csname gml@user#1true\endcsname
   \ifgml@rundyn\let\gml@tmpd\gml@rundyntoks\else\let\gml@tmpd\relax\fi
   \global\gml@rundynfalse
   \ifx\gml@runpage\gml@evenstr\else
+    \expandafter\global\expandafter\let\csname gml@sup@#1@odd\endcsname\empty
     \global\setbox\csname gml@#1odd\endcsname\copy\gml@box
     \expandafter\global\expandafter\let\csname gml@#1dynodd\endcsname\gml@tmpd\fi
   \ifx\gml@runpage\gml@oddstr\else
+    \expandafter\global\expandafter\let\csname gml@sup@#1@even\endcsname\empty
     \global\setbox\csname gml@#1even\endcsname\copy\gml@box
     \expandafter\global\expandafter\let\csname gml@#1dyneven\endcsname\gml@tmpd\fi}
 \gmldefstart{gml:rh}{\gml@runstart{rh}\vbox}
@@ -1350,16 +1383,19 @@
 \expandafter\def\csname gml@head@bs@4\endcsname{14.5pt}
 \expandafter\def\csname gml@head@bs@5\endcsname{12pt}
 \expandafter\def\csname gml@head@bs@6\endcsname{12pt}
-% .dh n options (tex.xsl parses them): \gml@dh@N@KEY overrides the
-% defaults above, for headings of level N (:hN and .hN alike) until a
-% bare .dh n.  font (a .df/known font; its baseline is at least the body
-% one), pa=yes|no, spbf (a space, kept at a page top), skbf (a skip),
-% spaf (after; a skip), align, runin=yes (NBR: the text runs on), hy.
-% UP is done by tex.xsl; US, NUM, HANG, SECT and the table of contents
-% options are not used (DCF-VERIFY: US might be meant as italic).
+% .dh n options (LR p.136-138; tex.xsl parses them): \gml@dh@N@KEY
+% overrides the defaults above, for headings of level N (:hN and .hN
+% alike) until a bare .dh n.  font (a .df/known font; its baseline is
+% at least the body one; off: the current font), pa=yes|no, spbf (a
+% space, kept at a page top), skbf (a skip), spaf (after; a skip),
+% align, runin=yes (NBR: the text runs on), hy, us=yes (US, "underscore
+% the head level", p.138: italic, as a .df US font is).  UP is done by
+% tex.xsl; NUM, HANG, SECT and the table of contents options are not
+% used here.
+\def\gml@dhkeys{font pa spbf skbf spaf align runin hy us}
 \gmldefhint{dh}{\gml@hget{level}\gml@dhl\gml@hget{reset}\gml@tv
-  \ifx\gml@tv\gml@yes\gml@forwords{font pa spbf skbf spaf align runin hy}\gml@dh@clear\fi
-  \gml@forwords{font pa spbf skbf spaf align runin hy}\gml@dh@set}
+  \ifx\gml@tv\gml@yes\gml@forwords\gml@dhkeys\gml@dh@clear\fi
+  \gml@forwords\gml@dhkeys\gml@dh@set}
 \def\gml@dh@set#1{\gml@hget{#1}\gml@tv\ifx\gml@tv\empty\else
   \expandafter\global\expandafter\let\csname gml@dh@\gml@dhl @#1\endcsname\gml@tv\fi}
 \def\gml@dh@clear#1{\expandafter\global\expandafter\let
@@ -1375,13 +1411,16 @@
   \else\gml@dimtok\gml@dhspbf\gml@dima\gml@vspace\gml@dima\fi
   \ifx\gml@dhskbf\empty\else\gml@dimtok\gml@dhskbf\gml@dima\gml@vskip\gml@dima\fi
   \gml@dhget{#1}{font}\let\gml@fontcmd\relax
-  \ifx\gml@dhv\empty\else\gml@fontlookup\gml@dhv\fi
+  \ifx\gml@dhv\gml@offstr\let\gml@fontcmd\empty
+  \else\ifx\gml@dhv\empty\else\gml@fontlookup\gml@dhv\fi\fi
   \ifx\gml@fontcmd\relax
     \gml@setfont{\csname gml@font@hd#1\endcsname}%
     \baselineskip\csname gml@head@bs@#1\endcsname\relax
-  \else\expandafter\gml@setfont\expandafter{\gml@fontcmd}%
+  \else\ifx\gml@fontcmd\empty\else
+    \expandafter\gml@setfont\expandafter{\gml@fontcmd}%
     \gml@dima=1.2\fontdimen6\font
-    \ifdim\gml@dima<\gml@basebs\gml@dima\gml@basebs\fi\baselineskip\gml@dima\fi
+    \ifdim\gml@dima<\gml@basebs\gml@dima\gml@basebs\fi\baselineskip\gml@dima\fi\fi
+  \gml@dhget{#1}{us}\ifx\gml@dhv\gml@yes\expandafter\gml@setfont\expandafter{\gml@efont\it}\fi
   \gml@dhget{#1}{hy}\ifx\gml@dhv\gml@yes\hyphenpenalty50 \else\hyphenpenalty\@M\fi
   \gml@dhget{#1}{align}\ifx\gml@dhv\empty\def\gml@dhv{left}\fi
   \gml@setfill{yes}\gml@dhv\gml@apply\gml@inheadtrue\noindent}

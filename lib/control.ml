@@ -36,39 +36,59 @@ let file_and_args s =
   if j = i then None else Some (String.sub s i (j - i), String.sub s j (n - j))
 
 (* The parameters of an imbedded or appended file are the global symbols
-   &0 (their number) and &1 ... &14 (p.252-253), tokenized like macro
-   parameters.
-   DCF-VERIFY: they are set only when parameters are given; the unused
-   ones up to &14 are dropped; tokens are not cut to eight characters. *)
+   &0 and &1 ... &14 (LR p.68, p.208-209), tokenized like macro
+   parameters.  Every .im/.ap resets &1 ... &14 and sets &0 to the number
+   of non-null tokens; a [%] token leaves its symbol unset.  A token is
+   up to eight characters.  The line holds at most 16 tokens: the
+   control word, the file-id and 14 parameters, two fewer for a file name
+   in parentheses and one fewer for each further word of it. *)
 let max_file_params = 14
+let max_token = 8
 
-let set_file_params ctx cw args =
-  match Macro.tokens args with
-  | [] -> ()
-  | toks ->
-      let toks =
-        if List.length toks > max_file_params then begin
-          Ctx.warn ctx ".%s: more than %d parameters; the rest are ignored" cw
-            max_file_params;
-          List.take max_file_params toks
+let set_file_params ctx cw name args =
+  let toks = Macro.tokens args in
+  let room =
+    if name <> "" && name.[0] = '(' then
+      max_file_params - 1 - List.length (words name)
+    else max_file_params
+  in
+  let toks =
+    if List.length toks > room then begin
+      Ctx.warn ctx ".%s: more than 16 tokens on the line; the rest are ignored"
+        cw;
+      List.take (max 0 room) toks
+    end
+    else toks
+  in
+  let toks =
+    List.map
+      (fun t ->
+        if String.length t > max_token then begin
+          Ctx.warn ctx ".%s: token %s longer than %d characters; truncated" cw t
+            max_token;
+          String.sub t 0 max_token
         end
-        else toks
-      in
-      let syms = ctx.Ctx.syms in
-      ignore (Symbols.set syms "0" (string_of_int (List.length toks)));
-      List.iteri
-        (fun i v -> ignore (Symbols.set syms (string_of_int (i + 1)) v))
-        toks;
-      for i = List.length toks + 1 to max_file_params do
-        ignore (Symbols.unset syms (string_of_int i))
-      done
+        else t)
+      toks
+  in
+  let syms = ctx.Ctx.syms in
+  ignore
+    (Symbols.set syms "0"
+       (string_of_int (List.length (List.filter (( <> ) "") toks))));
+  for i = 1 to max_file_params do
+    ignore (Symbols.unset syms (string_of_int i))
+  done;
+  List.iteri
+    (fun i v ->
+      if v <> "" then ignore (Symbols.set syms (string_of_int (i + 1)) v))
+    toks
 
 let im ctx ops =
   match file_and_args ops with
   | None -> Ctx.error ctx ".im: file name required"
   | Some (name, args) -> (
       match Input.imbed ctx.Ctx.input name with
-      | Ok _ -> set_file_params ctx "im" args
+      | Ok _ -> set_file_params ctx "im" name args
       | Error e -> Ctx.error ctx ".im: %s" e)
 
 let ap ctx ops =
@@ -76,7 +96,7 @@ let ap ctx ops =
   | None -> Ctx.error ctx ".ap: file name required"
   | Some (name, args) -> (
       match Input.append ctx.Ctx.input name with
-      | Ok () -> set_file_params ctx "ap" args
+      | Ok () -> set_file_params ctx "ap" name args
       | Error e -> Ctx.error ctx ".ap: %s" e)
 
 (* .cm: a comment.  It is an ordinary control word: the line is split at
@@ -110,17 +130,19 @@ let qu ctx _ = Ctx.stop ctx
    text ([Doc.dvar_text]: DSMPROF3's &amp. &gml. &semi. are & : ;). *)
 let ty ctx ops = prerr_endline (Doc.dvar_text ctx.Ctx.doc ops)
 
-(* .mg /id/text/ or .mg /text/ (SH35-0069 p.62): a message, written
-   "+++ID text" after the location.  The last character of the id is the
-   severity: I (and R) informational, W warning (return code 4), E error
-   (8), S severe (12) and T terminating (16), which stop processing.
-   The first non-blank character is the delimiter; the closing one is
-   optional.  No data: ignored.  The fields are split first, a delimiter
-   in a text variable's string being text ([Line.split_on]); then each
-   field's text variables are written as their text ([Doc.dvar_text]),
-   so .mg /ASSERTE/&amp.util/ writes "+++ASSERTE &util".
-   DCF-VERIFY: we always show the id (as with MESSAGE(ID)); E does not
-   stop processing (as with CONTINUE). *)
+(* .mg /code/message/ (LR p.246): a message, written "+++code message"
+   after the location.  The first non-blank character is the delimiter;
+   the closing one is optional; a single field is the code.  The last
+   character of the code is the severity: R and I informational, W
+   warning (return code 4), E error (8), S severe (12) and T terminating
+   (16); S and T stop processing.  A null code is informational.  No data
+   at all: ignored; a null code and message: the prefix alone.
+   The fields are split first, a delimiter in a text variable's string
+   being text ([Line.split_on]); then each field's text variables are
+   written as their text ([Doc.dvar_text]), so .mg /ASSERTE/&amp.util/
+   writes "+++ASSERTE &util".
+   We emulate the MESSAGE(ID) option (the code is shown) and CONTINUE (an
+   E message does not stop processing, as with our other errors). *)
 let mg ctx ops =
   let ops = String.trim ops in
   if ops <> "" then begin
@@ -131,69 +153,69 @@ let mg ctx ops =
         (Line.split_on d (String.sub ops 1 (String.length ops - 1)))
     in
     let fields =
-      match List.rev fields with "" :: r -> List.rev r | _ -> fields
+      match List.rev fields with
+      | "" :: (_ :: _ as r) -> List.rev r
+      | _ -> fields
     in
-    let id, text =
+    let code, text =
       match fields with
-      | [ t ] -> ("", t)
-      | id :: rest -> (id, String.concat (String.make 1 d) rest)
+      | [ c ] -> (c, "")
+      | c :: rest -> (c, String.concat (String.make 1 d) rest)
       | [] -> ("", "")
     in
-    if id <> "" || text <> "" then begin
-      let sev =
-        if id = "" then 'I' else Char.uppercase_ascii id.[String.length id - 1]
-      in
-      let rc =
-        match sev with 'W' -> 4 | 'E' -> 8 | 'S' -> 12 | 'T' -> 16 | _ -> 0
-      in
-      let d = ctx.Ctx.diag in
-      if rc = 4 then d.Loc.warnings <- d.warnings + 1
-      else if rc >= 8 then d.errors <- d.errors + 1;
-      d.worst <- max d.worst rc;
-      Printf.fprintf d.out "%s: +++%s%s%s\n%!" (Loc.to_string ctx.loc) id
-        (if id <> "" && text <> "" then " " else "")
-        text;
-      if rc >= 12 then Ctx.stop ctx
-    end
+    let sev =
+      if code = "" then 'I'
+      else Char.uppercase_ascii code.[String.length code - 1]
+    in
+    let rc =
+      match sev with 'W' -> 4 | 'E' -> 8 | 'S' -> 12 | 'T' -> 16 | _ -> 0
+    in
+    let d = ctx.Ctx.diag in
+    if rc = 4 then d.Loc.warnings <- d.warnings + 1
+    else if rc >= 8 then d.errors <- d.errors + 1;
+    d.worst <- max d.worst rc;
+    Printf.fprintf d.out "%s: +++%s%s\n%!" (Loc.to_string ctx.loc) code
+      (if text <> "" then " " ^ text else "");
+    if rc >= 12 then Ctx.stop ctx
   end
 
-(* .dc option value [option value ...]
-   .dc gml c [e]: the GML tag delimiter and, optionally, the end-tag
-   delimiter: one character, or two of which the first is the tag
-   delimiter (SH35-0069 p.289).  None of them may be a tag name character
-   or the ampersand.  .dc mcs c: the markup/content separator (p.290).
-   .dc cont c|off: the continuation character (p.47).
-   .dc asep c...: the array separator, up to four characters, each
-   written as itself or as two hexadecimal digits (p.254); it takes the
-   rest of the operands.  Hexadecimal codes are EBCDIC ([Ebcdic]): the
-   Starter Set's ".dc asep , 40" is a comma and a blank.
-   .dc rb c: the required blank (EBCDIC 41, U+00A0); .dc ps c: the page
-   number symbol ("&") (SX26-3723, .DC; &$RB, &$PS).
-   The two-character end-tag delimiter may also be written as two
-   blank-separated operands, the tag delimiter and the second character:
-   the Starter Set's ".dc gml : : e" sets ':' and ':e' (p.289; SH35-0050 p.6
-   "the GML end-tag delimiter will be colon-e").
-   DCF-VERIFY: without [e], the end-tag delimiter becomes the tag
-   delimiter doubled (the default pair is ':' and '::').
-   DCF-VERIFY: an option given last with no value restores its DCF
-   default (the Starter Set's DSM#XLST and DSM#WRIT issue a bare ".dc cw"
-   and ".dc asep" to undo an earlier setting; the .DC reference is in the
-   Language Reference, which we lack). *)
+(* .dc option value (LR p.111-116).  A value is one character, written
+   as itself or as two hexadecimal digits: an EBCDIC code ([Ebcdic]) that
+   must be an ASCII character here (DSMPROF3: .dc cont 03).  An option
+   given without a value restores its initial value (LR p.114 "Default";
+   the Starter Set's DSM#XLST issues a bare ".dc cw").
+   .dc gml c [e1 [e2]]: the tag delimiter c alone: end tags are not
+   recognized (the end-tag delimiter is null); c e1: e1 is the end-tag
+   delimiter; c e1 e2: e1 e2 is (LR p.113; initially ": : :", p.115).
+   The delimiters may not be a blank, a period, an ampersand or a tag
+   name character; of e1 e2 only e1 is checked (the Starter Set's
+   ".dc gml : : e" sets ':e', SH35-0050 p.6).  The two characters of the
+   end-tag delimiter may also be one operand that begins with c
+   (DSMPROF3's ".dc gml : :e").
+   .dc cw|gml|mcs X'00' or X'40': OFF (LR p.113 note 6).  .dc mcs off
+   leaves the blank, always a markup/content separator (p.115 r4).
+   .dc cont c|off (p.112); .dc rb c (&$RB); .dc ps c (p.114).
+   .dc asep c...: up to four characters (Starter Set: ".dc asep , 40",
+   a comma and a blank); it takes the rest of the operands (p.112).
+   EXT: several options on one line ([.dc gml : : e mcs >]; the syntax
+   has one per .dc).  IXB IXI PUNC STOP WORD are not supported. *)
 let dc ctx ops =
   let ch = ctx.Ctx.chars in
+  let init = Chars.create () in
+  let one v =
+    if String.length v = 1 then Some v.[0]
+    else Option.bind (Ebcdic.of_hex v) Ebcdic.ascii
+  in
+  let off_code v =
+    String.lowercase_ascii v = "off"
+    || match Ebcdic.of_hex v with Some (0x00 | 0x40) -> true | _ -> false
+  in
   let char_value opt v k =
     if String.lowercase_ascii v = "off" then k None
-    else if String.length v = 1 then k (Some v.[0])
     else
-      (* two hexadecimal digits (DSMPROF3: .dc cont 03), an EBCDIC code
-         that must be an ASCII character here *)
-      match Option.bind (Ebcdic.of_hex v) Ebcdic.ascii with
+      match one v with
       | Some c -> k (Some c)
       | None -> Ctx.error ctx ".dc %s: invalid value %s" opt v
-  in
-  let gml_char opt v k =
-    if String.length v = 1 && Chars.valid_gml_char v.[0] then k v.[0]
-    else Ctx.error ctx ".dc %s: invalid delimiter %s" opt v
   in
   let asep_char v =
     if String.length v = 1 then Some v
@@ -201,65 +223,79 @@ let dc ctx ops =
   in
   let asep vs =
     let cs = List.map asep_char vs in
-    if vs = [] then ch.Chars.asep <- (Chars.create ()).asep
+    if vs = [] then ch.Chars.asep <- init.asep
     else if List.length vs > 4 then
       Ctx.error ctx ".dc asep: at most four characters"
     else if List.mem None cs then
       Ctx.error ctx ".dc asep: invalid character in %s" (String.concat " " vs)
     else ch.Chars.asep <- String.concat "" (List.filter_map Fun.id cs)
   in
+  let restore opt =
+    match String.lowercase_ascii opt with
+    | "cw" -> ch.Chars.cw_sep <- init.cw_sep
+    | "cont" -> ch.Chars.cont <- init.cont
+    | "gml" ->
+        ch.Chars.gml_delim <- init.gml_delim;
+        ch.Chars.gml_end <- init.gml_end
+    | "mcs" -> ch.Chars.mcs <- init.mcs
+    | "rb" -> ch.Chars.rb <- init.rb
+    | "ps" -> ch.Chars.ps <- init.ps
+    | _ -> Ctx.warn ctx "unsupported .dc option %s" opt
+  in
+  (* the end-tag delimiter after tag delimiter [c]: the operands it takes
+     and the rest *)
+  let end_delim c = function
+    | e :: rest when String.length e = 2 && e.[0] = c -> Ok (e, rest)
+    | e1 :: rest -> (
+        match one e1 with
+        | None -> Ok ("", e1 :: rest)
+        | Some a when not (Chars.valid_gml_delim a) ->
+            Error (Printf.sprintf "invalid end-tag delimiter %s" e1)
+        | Some a -> (
+            match rest with
+            | e2 :: rest' when one e2 <> None ->
+                Ok (Printf.sprintf "%c%c" a (Option.get (one e2)), rest')
+            | _ when a = c ->
+                Error
+                  (Printf.sprintf "end-tag delimiter %c is the tag delimiter" c)
+            | _ -> Ok (String.make 1 a, rest)))
+    | [] -> Ok ("", [])
+  in
   let rec go = function
     | [] -> ()
     | opt :: rest when String.lowercase_ascii opt = "asep" -> asep rest
-    | [ opt ] -> (
-        let d = Chars.create () in
-        match String.lowercase_ascii opt with
-        | "cw" -> ch.Chars.cw_sep <- d.cw_sep
-        | "cont" -> ch.Chars.cont <- d.cont
-        | "gml" ->
-            ch.Chars.gml_delim <- d.gml_delim;
-            ch.Chars.gml_end <- d.gml_end
-        | "mcs" -> ch.Chars.mcs <- d.mcs
-        | "rb" -> ch.Chars.rb <- d.rb
-        | "ps" -> ch.Chars.ps <- d.ps
-        | _ -> Ctx.warn ctx "unsupported .dc option %s" opt)
+    | [ opt ] -> restore opt
     | opt :: v :: rest -> (
         match String.lowercase_ascii opt with
         | "cw" ->
-            char_value opt v (fun c -> ch.Chars.cw_sep <- c);
+            if off_code v then ch.Chars.cw_sep <- None
+            else char_value opt v (fun c -> ch.Chars.cw_sep <- c);
             go rest
         | "cont" ->
             char_value opt v (fun c -> ch.Chars.cont <- c);
             go rest
-        | "gml" when String.lowercase_ascii v = "off" ->
+        | "gml" when off_code v ->
             ch.Chars.gml_delim <- None;
             go rest
-        | "gml" ->
-            gml_char opt v (fun c ->
-                let end_ok e =
-                  String.length e = 1
-                  && Chars.valid_gml_char e.[0]
-                  && e.[0] <> c
-                  || (String.length e = 2 && e.[0] = c)
-                in
-                ch.Chars.gml_delim <- Some c;
-                match rest with
-                | e1 :: e2 :: rest'
-                  when e1 = String.make 1 c && String.length e2 = 1 ->
-                    ch.Chars.gml_end <- e1 ^ e2;
-                    go rest'
-                | e :: _ when e = String.make 1 c ->
-                    Ctx.error ctx
-                      ".dc gml: end-tag delimiter %s is the tag delimiter" e
-                | e :: rest' when end_ok e ->
+        | "gml" -> (
+            match one v with
+            | Some c when Chars.valid_gml_delim c -> (
+                match end_delim c rest with
+                | Ok (e, rest') ->
+                    ch.Chars.gml_delim <- Some c;
                     ch.Chars.gml_end <- e;
                     go rest'
-                | _ ->
-                    ch.Chars.gml_end <- String.make 2 c;
-                    go rest)
-        | "mcs" ->
-            gml_char opt v (fun c -> ch.Chars.mcs <- c);
+                | Error e -> Ctx.error ctx ".dc gml: %s" e)
+            | _ -> Ctx.error ctx ".dc gml: invalid delimiter %s" v)
+        | "mcs" when off_code v ->
+            ch.Chars.mcs <- ' ';
             go rest
+        | "mcs" -> (
+            match one v with
+            | Some c when Chars.valid_gml_char c ->
+                ch.Chars.mcs <- c;
+                go rest
+            | _ -> Ctx.error ctx ".dc mcs: invalid delimiter %s" v)
         | "rb" -> (
             match asep_char v with
             | Some c ->
@@ -330,11 +366,12 @@ let page_appended ctx name =
     (fun c -> Hashtbl.remove ctx.Ctx.page_syms (n, c))
     (Option.bind (Symbols.get ctx.Ctx.syms n) int_of_string_opt)
 
-(* .se name[(n)] = expression | 'string
-   .se name[(n)] 'string
+(* .se name[(n)] = expression | 'string'  (quotes doubled inside)
+   .se name[(n)] 'string                   (literal, LR p.337-338)
    .se name() = v    (the next element, p.256)
    .se name[(n)] off
-   .se name = &      (the page number, p.254) *)
+   .se name = &      (the page number, p.254)
+   .se name lib      (LR p.337) *)
 let se ctx ops =
   let n = String.length ops in
   let sub_word = operand_subst ctx in
@@ -394,7 +431,11 @@ let se ctx ops =
               if String.trim rhs = "&" then
                 set (Option.value (Symbols.get ctx.syms "$PN") ~default:"")
               else
-                match Expr.se_value ~sub:sub_word rhs with
+                match
+                  Expr.se_value ~sub:sub_word
+                    ~warn:(fun m -> Ctx.warn ctx ".se %s: %s" name m)
+                    rhs
+                with
                 | Ok v -> set v
                 | Error e -> Ctx.error ctx ".se %s: %s" name e
             in
@@ -406,10 +447,12 @@ let se ctx ops =
                   page_unset ctx name x;
                   result (Symbols.unset ~sub:x ctx.syms name)
               | `Next -> Ctx.error ctx ".se %s(): OFF needs a subscript" name
-            else if rest = "" then
-              (* DCF-VERIFY: [.se name] alone sets the null string *)
+            else if rest = "" then begin
+              (* not in the syntax (LR p.337); we set the null string *)
+              Ctx.warn ctx ".se %s: = or a quoted value expected" name;
               set ""
-            else if Expr.is_quote rest.[0] then value rest
+            end
+            else if rest.[0] = '\'' then set (Expr.qstring rest)
             else if String.lowercase_ascii (String.trim rest) = "lib" then
               (* the value is the first line of the library member
                (p.240, p.282) *)
@@ -419,10 +462,12 @@ let se ctx ops =
                     Ctx.error ctx ".se %s lib: no member %s in the libraries"
                       name (Library.member_name name)
               | _ -> Ctx.error ctx ".se %s lib: a subscript is not allowed" name
-            else
-              (* DCF-VERIFY: an undelimited value without '=' is taken as
-               written *)
-              set (sub_word rest))
+            else begin
+              (* not in the syntax (LR p.337); we take the value as
+                 written *)
+              Ctx.warn ctx ".se %s: = or a quoted value expected" name;
+              set (sub_word rest)
+            end)
   end
 
 (* .su on|off|n (p.230): with n, the next n input lines are substituted,
@@ -450,60 +495,36 @@ let ur ctx ops =
 
 (* ---- control flow ------------------------------------------------------ *)
 
-let is_cond_word = function
-  | "if" | "th" | "el" | "an" | "or" -> true
-  | _ -> false
+(* The long forms .AND .ELSE .THEN .GOTO of .AN .EL .TH .GO (LR p.66,
+   p.164, p.395, p.179). *)
+let long_forms =
+  [ ("and", "an"); ("else", "el"); ("then", "th"); ("goto", "go") ]
 
-let do_operand c =
-  match words (Line.operands c) with
-  | w :: _ -> String.lowercase_ascii w
-  | [] -> ""
+(** The control word of [c] and its operands; a long form is its two-character
+    word. *)
+let word_of (c : Line.control) =
+  match c.Line.long with
+  | Some l when List.assoc_opt l long_forms = Some c.name ->
+      (c.name, Line.drop_blank c.long_args)
+  | _ -> (c.name, Line.operands c)
 
-(** Does line [s] open a [.do] group if it is executed: [.do begin], or a
-    conditional word ([.if .th .el .an .or]) whose object ends with [.do begin].
-    Used for not-executed objects and while skipping. *)
-let opens_group ch s =
-  match Line.classify ch s with
-  | Line.Control c when c.name = "do" -> do_operand c = "begin"
-  | Line.Control c when is_cond_word c.name -> (
-      match List.rev (words s) with
-      | b :: d :: _ :: _ when String.lowercase_ascii b = "begin" -> (
-          match Line.classify ch d with
-          | Line.Control dc -> dc.name = "do" && dc.args = ""
-          | _ -> false)
-      | _ -> false)
-  | _ -> false
-
-let closes_group ch s =
-  match Line.classify ch s with
-  | Line.Control c -> c.name = "do" && do_operand c = "end"
-  | _ -> false
-
-let start_skip ctx =
-  ctx.Ctx.skip <- 1;
-  ctx.skip_from <- ctx.loc;
-  ctx.skip_owner <- Input.current_frame_id ctx.input
-
-(* The object of a condition: processed when [b] as an input line of its
-   own (p.264: "the first nonblank character after comparand2 is treated
-   as the first character of the input line"), else skipped (a
-   [.do begin] object skips its whole group). *)
 let combines ch s =
   match Line.classify ch s with
   | Line.Control c -> c.name = "an" || c.name = "or"
   | _ -> false
 
-(* An .an/.or object is processed whatever the result: p.265's
+(* The target of a condition: processed when [b], as an input line of its
+   own ("the first nonblank character after .TH treated as the first
+   position of the subject line", LR p.395, p.164, p.203).  An .an/.or
+   target is processed whatever the result: SH35-0069 p.265's
    ".if x&city eq xCleveland .or x&city eq xWarrensburg" must reach the
    .or when the .if is false. *)
 let conditional ctx b rest =
-  if rest <> "" then
-    if b || combines ctx.Ctx.chars rest then
-      ctx.Ctx.process ctx (Ctx.Split ctx.Ctx.line_substituted) rest
-    else if opens_group ctx.chars rest then start_skip ctx
+  if rest <> "" && (b || combines ctx.Ctx.chars rest) then
+    ctx.Ctx.process ctx (Ctx.Split ctx.Ctx.line_substituted) rest
 
-(* DCF-VERIFY: on a malformed condition we diagnose and take it as
-   false. *)
+(* DCF-VERIFY (not in LR Rel 4): on a malformed condition we diagnose
+   and take it as false. *)
 let eval_condition ctx cw ops =
   match Expr.condition ~sub:(operand_subst ctx) ops with
   | Ok r -> Some r
@@ -522,55 +543,41 @@ let test ctx cw f ops =
 
 let if_ ctx ops = test ctx "if" Fun.id ops
 
-let need_cond ctx cw k =
-  match Ctx.cond ctx with
-  | Some b -> k b
-  | None -> Ctx.error ctx ".%s without a preceding .if" cw
-
 (* .th/.el test the most recent comparison in the current file or macro;
-   it is preserved across macro calls and imbeds (p.265), and they do not
-   consume it (a series of .th/.el lines all apply, p.265). *)
+   it is preserved across macro calls and imbeds (SH35-0069 p.265), and
+   they do not consume it (a series of .th/.el lines all apply, LR p.164
+   r4).  With no comparison yet, .th processes its target and .el does
+   not (LR p.395 r5, p.164 r5). *)
 let th ctx ops =
-  need_cond ctx "th" (fun b -> conditional ctx b (String.trim ops))
+  conditional ctx (Option.value (Ctx.cond ctx) ~default:true) (String.trim ops)
 
 let el ctx ops =
-  need_cond ctx "el" (fun b -> conditional ctx (not b) (String.trim ops))
+  match Ctx.cond ctx with
+  | Some b -> conditional ctx (not b) (String.trim ops)
+  | None -> ()
 
-(* .an / .or (p.265) combine with the preceding comparison, and like .if
-   process their own object. *)
+(* .an / .or (LR p.65, p.273) combine with the preceding comparison, and
+   like .if process their own target.  DCF-VERIFY (not in LR Rel 4): with
+   no comparison yet, an error. *)
 let combine cw f ctx ops =
-  need_cond ctx cw (fun prev -> test ctx cw (f prev) ops)
+  match Ctx.cond ctx with
+  | Some prev -> test ctx cw (f prev) ops
+  | None -> Ctx.error ctx ".%s without a preceding .if" cw
 
 let an = combine "an" ( && )
 let or_ = combine "or" ( || )
 
-(* .do begin / .do end.  A group saves the comparison of its frame, so a
-   .el after .do end refers to the .if that opened the group.
-   DCF-VERIFY: .do is not in SH35-0069; .do with no operand is an error
-   (not an implicit BEGIN); the saving of the comparison by the group. *)
-let do_ ctx ops =
-  match List.map String.lowercase_ascii (words ops) with
-  | [ "begin" ] ->
-      ctx.Ctx.do_stack <-
-        {
-          Ctx.saved_cond = Ctx.cond ctx;
-          owner = Input.current_frame_id ctx.input;
-          opened = ctx.loc;
-        }
-        :: ctx.do_stack
-  | [ "end" ] -> (
-      match ctx.do_stack with
-      | e :: rest ->
-          ctx.do_stack <- rest;
-          Ctx.set_cond ctx e.saved_cond
-      | [] -> Ctx.error ctx ".do end without .do begin")
-  | _ -> Ctx.error ctx ".do: BEGIN or END expected"
-
-(* .go label.  Open .do groups of the frame jumped in are abandoned (a
-   loop body inside a .do group would otherwise leave one open group per
-   iteration).  DCF-VERIFY: label names compare case-insensitively. *)
+(* .go [TO] label (LR p.179): TO is ignored (.GO TO, .GOTO).  An undefined
+   label is an error (DCF then stops; we go on, as after our other
+   errors).  DCF-VERIFY (not in LR Rel 4): label names compare
+   case-insensitively. *)
 let go ctx ops =
-  match words ops with
+  let ws =
+    match words ops with
+    | t :: (_ :: _ as r) when String.lowercase_ascii t = "to" -> r
+    | ws -> ws
+  in
+  match ws with
   | [] -> Ctx.error ctx ".go: label name required"
   | w :: rest -> (
       if rest <> [] then Ctx.warn ctx ".go: extra operands ignored";
@@ -580,8 +587,7 @@ let go ctx ops =
         else w
       in
       match Input.goto ctx.Ctx.input ~label_of:(Line.label_of ctx.chars) w with
-      | Ok id ->
-          ctx.do_stack <- List.filter (fun e -> e.Ctx.owner <> id) ctx.do_stack;
+      | Ok () ->
           ctx.go_count <- ctx.go_count + 1;
           if ctx.go_count > ctx.max_go then begin
             Ctx.error ctx ".go: more than %d jumps (loop?); processing stopped"
@@ -590,18 +596,24 @@ let go ctx ops =
           end
       | Error e -> Ctx.error ctx ".go: %s" e)
 
-(* ---- conditional sections (p.267-269) ----------------------------------- *)
+(* ---- conditional sections (LR p.105-106, p.464) ------------------------ *)
 
-(** Is the current line in an ignored conditional section? Lines of the macros
-    invoked from the section (frames that were not on the stack when it began)
-    are not: "macros and GML tags are resolved" (p.269). DCF-VERIFY: the extent
-    of "resolved": we run macro calls and GML tags (with their APFs) of an
-    ignored section, and drop everything else. *)
+(** Is the current line in an ignored conditional section? The bypass "is not a
+    total one: macros and GML tags are resolved" (SH35-0069 p.268): native
+    control words and text are dropped, macro calls and GML tags run (their
+    APFs' document output is muted, [Ctx.sync_mute]). The Rel 4 Starter Set
+    relies on it: :psc/:epsc (DSMPSC/DSMEPSC) enclose the element in conditional
+    section 9, which DSM@PROC sets to ignore (SSR B.2.16); that works only if
+    the :epsc APF runs inside the ignored section. The lines of the macros
+    invoked from the section (frames that were not on the stack when it began,
+    [Ctx.cs_frames]) are not in it. LR Rel 4 p.105 and p.464 describe the bypass
+    of control words only. DCF-VERIFY: whether macro side effects happen. *)
 let cs_ignoring ctx =
   List.exists (fun e -> e.Ctx.ignored) ctx.Ctx.cs_open
   && List.mem (Input.current_frame_id ctx.input) ctx.cs_frames
 
-(* .cs n on|off|ignore|include; the blank before OFF is required (p.40). *)
+(* .cs n on|off|ignore|include; the blank before OFF is required
+   (LR p.105).  Sections are included unless set to IGNORE (p.105 r4). *)
 let cs ctx ops =
   match List.map String.lowercase_ascii (words ops) with
   | [ n; kw ] -> (
@@ -609,9 +621,9 @@ let cs ctx ops =
       | Some k when k >= 1 && k <= 9 -> (
           match kw with
           (* in an ignored section only ON/OFF are processed, to pair the
-         sections: in the TABLE example of p.55-56 the .cs 2 include
-         inside the ignored section 1 must have no effect until
-         .cs 1 include *)
+             sections: in the TABLE example of SH35-0069 p.55-56 the
+             .cs 2 include inside the ignored section 1 must have no
+             effect until .cs 1 include *)
           | ("ignore" | "include") when cs_ignoring ctx -> ()
           | "ignore" -> Hashtbl.replace ctx.Ctx.cs_modes k true
           | "include" -> Hashtbl.replace ctx.cs_modes k false
@@ -659,9 +671,10 @@ let ct ctx ops =
 
 (* ---- macros ------------------------------------------------------------- *)
 
-(* .dm name /l1/l2/... | .dm name(n) /line | .dm name() /line
-   | .dm name(n) off | .dm name on | .dm name off | .dm name delete.
-   The line is substituted like any other when .su is on (p.274); the
+(* .dm name /l1/l2/... | .dm name(n) /line/ | .dm name() /line/
+   | .dm name(n) off | .dm name on | .dm name off | .dm name lib
+   | .dm name delete (EXT) (LR p.141-145).
+   The line is substituted like any other when .su is on (p.142); the
    body of [.dm name on] is captured raw by [Interp.process]. *)
 let dm ctx ops =
   let st = ctx.Ctx.macros and at = ctx.loc in
@@ -673,8 +686,7 @@ let dm ctx ops =
       if not (Macro.delete_line st name k) then
         Ctx.warn ctx ".dm %s(%d) off: macro %s is not defined" name k name
   | Macro.Begin name ->
-      ctx.capture <-
-        Some { Ctx.cname = name; cbody = []; cfrom = ctx.loc; discard = false }
+      ctx.capture <- Some { Ctx.cname = name; cbody = []; cfrom = ctx.loc }
   | Macro.Lib name ->
       (* searched whatever the setting of .ly; the definition replaces any
        existing one (p.282) *)
@@ -683,29 +695,29 @@ let dm ctx ops =
           (Library.member_name name)
   | Macro.End None -> Ctx.error ctx ".dm off without .dm name on"
   | Macro.End (Some name) | Macro.Delete name ->
-      (* DCF-VERIFY: deleting an undefined macro is silently accepted *)
+      (* DCF-VERIFY (not in LR Rel 4): deleting an undefined macro is
+         silently accepted *)
       ignore (Macro.delete st name)
 
 (* The body captured by [.dm name on] is complete. *)
 let end_capture ctx (cap : Ctx.capture) =
   ctx.Ctx.capture <- None;
-  if not cap.discard then
-    Macro.define ctx.macros cap.cname ~at:cap.cfrom (List.rev cap.cbody)
+  Macro.define ctx.macros cap.cname ~at:cap.cfrom (List.rev cap.cbody)
 
-(* .ly on|off|mac|sym (p.240, p.282-283): which unresolved names the
-   libraries are searched for.  ON: macros and symbols; MAC: macros
-   only; SYM: symbols only; OFF: neither (the initial setting).
-   DCF-VERIFY: .ly without an operand is ON. *)
+(* .ly on|off|mac|sym (LR p.243): which unresolved names the libraries
+   are searched for.  ON: macros and symbols; MAC adds macros and SYM
+   symbols to what was asked before; OFF: neither (the initial
+   setting).  Without an operand: ON. *)
 let ly ctx ops =
-  let set m s =
-    ctx.Ctx.ly_mac <- m;
-    ctx.ly_sym <- s
-  in
   match String.lowercase_ascii (String.trim ops) with
-  | "" | "on" -> set true true
-  | "off" -> set false false
-  | "mac" -> set true false
-  | "sym" -> set false true
+  | "" | "on" ->
+      ctx.Ctx.ly_mac <- true;
+      ctx.ly_sym <- true
+  | "off" ->
+      ctx.ly_mac <- false;
+      ctx.ly_sym <- false
+  | "mac" -> ctx.ly_mac <- true
+  | "sym" -> ctx.ly_sym <- true
   | o -> Ctx.error ctx ".ly: ON, OFF, MAC or SYM expected, not %s" o
 
 (* .ms on|off; off initially (p.271). *)
@@ -718,15 +730,17 @@ let ms ctx ops =
 (* .me [line] (p.277): leave the current macro; the rest of the line, if
    any, is processed after it as if it had been part of the caller (it
    was substituted with the .me line, while the macro was current:
-   SH35-0050 p.17).
-   DCF-VERIFY: .me outside a macro is a warning. *)
+   SH35-0050 p.17).  Outside a macro the line is processed as if it had
+   been written without the .me (LR p.245 r1). *)
 let me ctx ops =
   match Input.end_macro ctx.Ctx.input with
   | Some _ ->
       if String.trim ops <> "" then
         Input.push_back ctx.input ~kind:(Input.Split ctx.line_substituted) ops
           ctx.loc
-  | None -> Ctx.warn ctx ".me outside a macro ignored"
+  | None ->
+      if String.trim ops <> "" then
+        ctx.Ctx.process ctx (Ctx.Split ctx.line_substituted) ops
 
 (** Invoke macro [name] in a new Macro frame whose local scope is [scope] (it
     holds the arguments). *)
@@ -792,28 +806,6 @@ let ec ctx ops =
       | Some w -> w.Ctx.run ctx args
       | None -> Ctx.warn ctx "unsupported control word .%s" name)
 
-(* A Macro frame left the stack (end of body, .me, .ef, .ap, abort):
-   .do groups opened in it and still open are discarded, and a skip that
-   began in it ends with it. *)
-let frame_popped ctx = function
-  | Input.Macro m ->
-      let mine, others =
-        List.partition (fun e -> e.Ctx.owner = m.Input.mid) ctx.Ctx.do_stack
-      in
-      List.iter
-        (fun e ->
-          Loc.report ctx.diag Loc.Warning e.Ctx.opened
-            ".do begin without .do end in macro %s; group discarded"
-            m.Input.name)
-        (List.rev mine);
-      ctx.do_stack <- others;
-      if ctx.skip > 0 && ctx.skip_owner = m.mid then begin
-        Ctx.error_at ctx ctx.skip_from
-          ".do begin without .do end (skipped to end of macro %s)" m.name;
-        ctx.skip <- 0
-      end
-  | Input.File _ | Input.Lines _ -> ()
-
 let install ctx =
   let r name f = Ctx.register ctx name f in
   r "im" im;
@@ -833,7 +825,6 @@ let install ctx =
   r "el" el;
   r "an" an;
   r "or" or_;
-  r "do" do_;
   r "go" go;
   r "cs" cs;
   r "ct" ct;
@@ -842,5 +833,4 @@ let install ctx =
   r "ly" ly;
   r "me" me;
   r "em" em;
-  r "ec" ec;
-  ctx.input.Input.on_pop <- frame_popped ctx
+  r "ec" ec

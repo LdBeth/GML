@@ -24,7 +24,7 @@
 .* What does not depend on the output is shared with the formatting
 .* profile dcfstarter.gml in starterset.gml (imbedded below): the
 .* delimiters, the text symbols, &date, :psc, the message catalogue
-.* (DSMGMLnnnW here, the same numbers as dcfstarter's DCFSnnnW), the
+.* (IBM's +++DSMGMLnnnx, the same under dcfstarter), the
 .* out-of-context maps and the decisions of the table tags.
 .*
 .* :xmp is verbatim: DSMXMP marks the element xml:space="preserve" and
@@ -41,7 +41,6 @@
 .* ---- the shared part: delimiters and processing (DSMPROF3 items 9-13),
 .* ---- symbols for text (items 15, 27), &date (DSM#SETS), messages ------
 .im starterset
-.se ss@mp 'DSMGML
 .gs rules (att novat stop nomsg) (noatt)
 .*
 .* ---- state (DSM#SET) ---------------------------------------------------------------
@@ -170,7 +169,7 @@
 .dm off
 .dm dsmettlp on
 .if &@state eq titlep .go ok
-.ss@msg 4 titlep
+.ss@msg 11 titlep
 .me
 ...ok
 .se @state = open
@@ -242,7 +241,7 @@
 .dm dsmglist /.dsmlistm g/
 .dm dsmelist on
 .if &@nest@l gt 0 .go ok
-.ss@msg 4 list
+.ss@msg 11 list
 .me
 ...ok
 .se @nest@l = &@nest@l - 1
@@ -253,20 +252,25 @@
 .dm dsmlpart /.*/
 .dm dsmdthd /.*/
 .dm dsmddhd /.*/
+.* two terms in a row (005) and a description without a term (006):
+.* IBM's messages; the elements stay in the tree (the Starter Set
+.* ignores the second term, and puts "?" for the missing one: MSG p.7)
 .dm dsmdterm on
-.if &@dterm eq 1 .ss@msg 10
+.gs copy *t
+.if &@dterm eq 1 .ss@msg 5 definition &*t
 .se @dterm = 1
 .dm off
 .dm dsmddef on
-.if &@dterm ne 1 .ss@msg 11
+.if &@dterm ne 1 .ss@msg 6 definition
 .se @dterm = 0
 .dm off
 .dm dsmgterm on
-.if &@gterm eq 1 .ss@msg 10
+.gs copy *t
+.if &@gterm eq 1 .ss@msg 5 glossary &*t
 .se @gterm = 1
 .dm off
 .dm dsmgdef on
-.if &@gterm ne 1 .ss@msg 11
+.if &@gterm ne 1 .ss@msg 6 glossary
 .se @gterm = 0
 .dm off
 .*
@@ -281,7 +285,7 @@
 .dm off
 .dm dsmexmp on
 .if &@state eq xmp .go ok
-.ss@msg 4 example
+.ss@msg 11 xmp
 .me
 ...ok
 .se @state = &@xstate
@@ -294,7 +298,7 @@
 .aa figdesc dsmfdesc (noatt)
 .dm off
 .dm dsmefig on
-.if &@state ne fig .ss@msg 4 figure
+.if &@state ne fig .ss@msg 11 fig
 .se @state = open
 .ss@fcnx
 .dm off
@@ -310,17 +314,23 @@
 .* the elements are the automatic ones, and concat=no cells keep their
 .* lines (xml:space="preserve", as :xmp).  Format mode is not
 .* switched, since a cell is mostly ended implicitly and the hint would
-.* fall outside it; instead a leading blank is made ordinary text (an
-.* .lb macro, SH35-0069 p.281) until the cell ends, and a blank line
-.* adds nothing, as in fill mode (DCF-VERIFY).
+.* fall outside it; instead, until the cell ends, a leading blank is
+.* made ordinary text (an .lb macro, SH35-0069 p.281), and a blank or
+.* null line is an empty line of the cell (.bl and .nl macros: a
+.* literal empty line, which is no blank line again, LR p.78 remark 2),
+.* as each input line is an output line (SSR 3.32.3.1; LR .BL p.78: a
+.* blank line gives one line of white space).  The semantic tree cannot
+.* leave out a :c that the Starter Set ignores (023: resolve.xsl does),
+.* nor a :thd or :tft after the first row (024).
 .*
 .* :rdef: the element is made by ss@rdef, so that a repeated ARRANGE is
 .* kept (joined with " / ", one value per line of the arrangement).
 .dm dsmrdef /.ss@rdef/
 .dm dsmtable on
-.if &ss@intb ne 0 .ss@msg 2 table
+.if &ss@intb ne 0 .ss@msg 4 table
 .ss@tspan &*
 .xa span=&ss@span
+.gs attval refid
 .ss@tbeg
 .aa thd dsmthd dsmethd
 .aa tft dsmtft dsmetft
@@ -373,13 +383,22 @@
 .ss@ccat
 .if &ss@cno eq 0 .me
 .dm lb /.*/
+.dm bl /.dsm#el/
+.dm nl /.dsm#el/
 .se @tlb = 1
+.dm off
+.* .dsm#el: an empty line of text (a literal line: no .nl again)
+.dm dsm#el on
+.li
+
 .dm off
 .dm dsmecell /.dsm#cend/
 .* .dsm#cend: the end of a concat=no cell
 .dm dsm#cend on
 .if &@tlb eq 0 .me
 .dm lb off
+.dm bl off
+.dm nl off
 .se @tlb = 0
 .dm off
 .* the end of the cells: a note, the caption, the description
@@ -400,13 +419,13 @@
 .dm off
 .dm dsmequot on
 .if &@nest@q gt 0 .se @nest@q = &@nest@q - 1
-.el .ss@msg 4 quotation
+.el .ss@msg 11 q
 .dm off
 .dm dsmlquot /.*/
 .dm dsmelqu /.*/
 .dm dsmftnt /.se @fn = 1/
 .dm dsmeftnt on
-.if &@fn eq 0 .ss@msg 4 footnote
+.if &@fn eq 0 .ss@msg 11 fn
 .se @fn = 0
 .dm off
 .dm dsmcit /.*/
@@ -429,7 +448,7 @@
 .dm dsmfgref /.*/
 .dm dsmtref on
 .gs qatt *q refid
-.if &E'&*q ne 0 .ss@msg 12 refid
+.if &E'&*q ne 0 .ss@msg 19 refid
 .dm off
 .dm dsmfnref /.*/
 .dm dsmliref /.*/

@@ -16,15 +16,13 @@ count &i
 .if &i lt &*1 .go top
 .dm off
 .count 3
-.* .if/.do inside a macro
+.* .if/.th/.el inside a macro, and the long forms .then .else
 .dm cond on
 .if &*1 = 1
-.th .do begin
-one
-.do end
-.el .do begin
-not one
-.do end
+.th one
+.then (then)
+.el not one
+.else (else)
 .dm off
 .cond 1
 .cond 2
@@ -40,3 +38,4 @@ up &*1
 .* .ef inside a macro ends the calling file
 .im sub
 back in main
+.me outside a macro the line is processed

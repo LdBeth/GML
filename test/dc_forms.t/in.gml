@@ -23,12 +23,30 @@
 !ol.!li.beta
 %ol.
 .gs tag off
-.* tag delimiter only: end-tag is it doubled
+.* tag delimiter only: no end-tag delimiter, end tags not recognized
 .dc gml +
 [&$GML.] [&$EGML.]
+.xd eol empty
+.gs tag on
++eol.delta ++eol.
+.gs tag off
+.xd eol
 .* bare option given last: back to the default
 .dc gml
 [&$GML.] [&$EGML.]
+.* three characters in hexadecimal: the initial setting
+.dc gml 4f 7a 7a
+[&$GML.] [&$EGML.]
+.dc gml 7a 7a 7a
+.* X'40' is OFF for the GML delimiter and the separator
+.dc gml 40
+[&$GML.]
+.dc gml
+.dc cw 40
+.ty one line;.ty no separator
+.dc cw
+.* a period is not a GML delimiter
+.dc gml .
 .dc gml : : e mcs >
 [&$GML.] [&$EGML.]
 .gs tag on

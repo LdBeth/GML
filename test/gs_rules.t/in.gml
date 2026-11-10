@@ -12,16 +12,24 @@
 .* stop with msg: the invalid attribute and what follows are text
 .gs rules (novat msg)
 :p id=c (x) rest
-.* step: invalid attributes are skipped
-.gs rules (step)
+.* nostop: invalid attributes are skipped
+.gs rules (nostop)
 :p id=d (x) e=5.Text
-.* noatt: no scan at all, everything after the name is residual text
-.gs rules (noatt nomsg stop)
+.* noatt: no scan at all, everything after the name is residual text;
+.* the other rules are immaterial (LR p.186)
+.gs rules (noatt vat nomsg stop)
 :p id=e.Text
+:p big.Text
 .* end-tag rules: attributes on end tags
 .gs rules (att) (att)
 :p.Para
 ::p id=z.after end
+.* = leaves a set unchanged, () restores the default (LR p.186)
+.gs rules = ()
+:p.Para2
+::p id=y.end default
+.gs rules () =
+:p id=f big.default again
 .* noelem for all tags
 .gs rules (noelem)
 :p.no element

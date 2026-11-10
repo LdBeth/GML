@@ -127,17 +127,20 @@ line with a bad name is an error (and the document is not processed).
   </gml:doc>
   [8]
 
-A pass's number: -pass K -passes N set &$PASS and &$TWO (1 when N > 1;
-SCRIPT's TWOPASS and FPASSES(n), SH20-9186-06 p.126, p.129) and
-&$PASSES (not DCF: the n of FPASSES); the root element carries them for
-tex.xsl.
+A pass's number: -pass K -passes N set &$PASS, &$PSNO (the n of
+FPASSES(n)) and &$TWO (1 only when N = 2: TWOPASS or FPASSES(2), LR
+p.35, p.444); the root element carries them for tex.xsl.  &$PASSES is
+not a DCF symbol.
 
-  $ printf '&$PASS &$TWO &$PASSES\n' > p.gml
+  $ printf '&$PASS &$TWO &$PSNO &$PASSES\n' > p.gml
   $ gml p.gml | tail -2
-  <gml:doc xmlns:gml="urn:x-gml:canonical">1 0 1
+  <gml:doc xmlns:gml="urn:x-gml:canonical">1 0 1 &amp;$PASSES
+  </gml:doc>
+  $ gml -pass 2 -passes 2 p.gml | tail -2
+  <gml:doc xmlns:gml="urn:x-gml:canonical" pass="2" passes="2">2 1 2 &amp;$PASSES
   </gml:doc>
   $ gml -pass 2 -passes 3 p.gml | tail -2
-  <gml:doc xmlns:gml="urn:x-gml:canonical" pass="2" passes="3">2 1 3
+  <gml:doc xmlns:gml="urn:x-gml:canonical" pass="2" passes="3">2 0 3 &amp;$PASSES
   </gml:doc>
   $ gml -pass 4 -passes 3 p.gml
   gml: error: -pass 4 -passes 3: expected 1 <= k <= n

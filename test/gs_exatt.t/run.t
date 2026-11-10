@@ -1,7 +1,8 @@
 .gs exatt: all stacked attributes or selected ones, AS apf, missing
 attributes skipped, processed attributes leave the stack, the next tag
 purges the stack, a control word as attribute APF; an attribute given
-twice is processed once per occurrence, with its own value.
+twice is processed once per occurrence, with its own value, passed as
+the macro's parameters (LR p.188): &*1 of 'two too' is "two".
 
   $ gml in.gml
   in.gml:8 (in macro fig line 1): warning: .gs exatt: no APF place for attribute place
@@ -15,7 +16,7 @@ twice is processed once per occurrence, with its own value.
   [done]
   <keep id="k"/><p>[p done]
   </p></fig><fig ty="to stderr"/><fig id="x" arr="two too">[ARR: one]
-  [ARR: two too]
+  [ARR: two]
   </fig><fig arr="2">[ARR: 1]
   [ARR: 2]
   </fig></gml:doc>

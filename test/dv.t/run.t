@@ -8,15 +8,15 @@ text, not the page number symbol.  A .sx in a running heading or
 footing marks the page number symbol (pagesym=, the fields split
 around it), which tex.xsl writes as \gmlpageno, and every other
 character, a translated &amp. too, as text (\&): the TeX of this
-input is the XSLT fixture xslt/test/tex/dv.  .hr with only
-a rule name draws across the column (SX26-3723 .HR: every operand is
-optional).
+input is the XSLT fixture xslt/test/tex/dv.  .hr thick left right
+draws a rule across the column; a rule name needs at least one
+horizontal displacement (LR p.192).
 
   $ gml in.gml
   <?xml version="1.0" encoding="UTF-8"?>
-  <gml:doc xmlns:gml="urn:x-gml:canonical"><gml:dr spec="thick weight 1mm" break="no"/><gml:rf><gml:sx left="R &amp; D" fill="" right="Page " pagesym="" break="yes"/></gml:rf><gml:rh><gml:lines word="ce" n="1" break="yes">Heading &amp; more, page <gml:pageno break="no"/></gml:lines>
+  <gml:doc xmlns:gml="urn:x-gml:canonical"><gml:dr spec="thick weight 1mm" break="no"/><gml:rf break="yes"><gml:sx left="R &amp; D" fill="" right="Page " pagesym="" break="yes"/></gml:rf><gml:rh break="yes"><gml:lines word="ce" n="1" break="yes">Heading &amp; more, page <gml:pageno break="no"/></gml:lines>
   </gml:rh>Body text with &amp; here and a raised callout<gml:dv name="sup" font="hi1" baseline="3pt" text="1" break="no"/> in text.
-  <gml:hr spec="thick" break="yes"/>After the rule.
+  <gml:hr spec="thick left right" break="yes"/>After the rule.
   <gml:pa break="yes"/>Second page.
   </gml:doc>
 
@@ -42,5 +42,5 @@ is known text: "&" from it is not the page number symbol.
   $ gml plain.gml
   <?xml version="1.0" encoding="UTF-8"?>
   <gml:doc xmlns:gml="urn:x-gml:canonical">Item 3.
-  <gml:br break="yes"/><gml:rf>A <gml:dv name="tamp" text="&amp;" break="no"/> B page <gml:pageno break="no"/>
+  <gml:br break="yes"/><gml:rf break="yes">A <gml:dv name="tamp" text="&amp;" break="no"/> B page <gml:pageno break="no"/>
   </gml:rf></gml:doc>
