@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gml:rf break="yes">Section <gml:symref name="sec">One</gml:symref>
+</gml:rf><p>Text before.
+<gml:symval name="sec" value="Two" break="no"/></p><p>Text after the change.
+</p></gml:doc>

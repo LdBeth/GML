@@ -247,8 +247,12 @@
 .* ---- running heading and footing ---------------------------------------
 .* .f@runf: the footing with the current short heading on the left and
 .* the page number (the page number symbol &) on the right; redefined
-.* whenever the short heading changes (DCF processes a running footing
-.* where it is defined, TPG p.127).
+.* whenever the short heading changes.  TPG p.127 has DCF process a
+.* running footing where it is defined; Rel 4 replaces the symbols in
+.* it when it is placed on a page (LR p.312, p.316), so the .se
+.* f@shead alone would do.  Redefining stays harmless: the new
+.* footing refers to f@shead as well, and the value placed on a page
+.* is the one it has where the page starts either way.
 .dm f@runf on
 .rf on
 .bf hi0
@@ -485,6 +489,7 @@
 .* lines and the security classification.
 .dm f@tipg on
 .pa
+.se f@tpp = &$PN
 .rh sup
 .rf sup
 .sa
@@ -540,6 +545,11 @@
 .pf
 ...end
 .br
+.* the page of the last line: past the first page, message 043 (with
+.* passes; in one pass both pages are the neutral 1)
+.se *p = &$PN
+.if &*p gt &f@tpp .se ss@pg = &*p
+.if &*p gt &f@tpp .ss@msg 43
 .re
 .rh res
 .rf res

@@ -1,7 +1,7 @@
 \input gml
 \gmlbegindocument%
 \gmlstart{gdoc}{}%
-\gmlstart{gml:rh}{}%
+\gmlstart{gml:rh}{break=yes}%
 \gmlbeginlines{ce}{n=1,break=yes}Hint test running head\gmlendlines{}\gmlend{gml:rh}%
 \gmlstart{body}{}%
 \gmlstart{h1}{anchor=gml-h1-1,text=Formatting hints}%
@@ -55,13 +55,16 @@ Next paragraph still offset by the .of control word, all of its lines.
 \gmlstart{hp1}{}italic inside it\gmlend{hp1},
 \gmlhint{pf}{initial=yes,break=no}and back to the initial font.
 \gmlhint{df}{name=big,spec=type(bold italic),break=no,bold=yes,italic=yes}\gmlhint{bf}{font=big,break=no}Defined bold italic font.
-\gmlhint{pf}{initial=yes,break=no}\gmlhint{tp}{action=set,stops=10mh 20mh 30mh,break=no}\gmlhint{fo}{fill=no,align=left,overdraw=extend,break=yes}%
+\gmlhint{pf}{initial=yes,break=no}\gmlhint{tp}{action=set,stops=10mh 20mh 30mh,break=yes}%
+\gmlhint{fo}{fill=no,align=left,overdraw=extend,break=yes}%
 \gmltabline{Name\gmltab Value\gmltab Note}
 \gmltabline{Apple\gmltab 12\gmltab red}
-\gmlhint{tp}{action=set,stops=./25m,break=no}\gmltabline{Leader\gmltab dots}
-\gmlhint{tp}{action=reset,break=no}\gmlhint{fo}{fill=yes,align=justify,overdraw=extend,break=yes}%
+\gmlhint{tp}{action=set,stops=./25m,break=yes}%
+\gmltabline{Leader\gmltab dots}
+\gmlhint{tp}{action=set,stops=,break=yes}%
+\gmlhint{fo}{fill=yes,align=justify,overdraw=extend,break=yes}%
 \gmlhint{sx}{left=Left side,fill=.,right=Right side,break=yes}%
-\gmlhint{hr}{break=yes}%
+\gmlhint{hr}{repeat=yes,break=yes}%
 \gmlhint{bx}{action=on,spec=1ch 40ch,break=yes}%
 Text inside a box.
 \gmlhint{bx}{action=off,break=yes}%
@@ -71,10 +74,12 @@ Text inside a box.
 Kept text one.
 Kept text two.
 \gmlhint{kp}{mode=off,break=yes}%
-\gmlhint{ls}{spec=by 1.5,break=no}Wider line spacing for a while so that a couple of lines of text show
+\gmlhint{ls}{spec=by 1.5,break=yes}%
+Wider line spacing for a while so that a couple of lines of text show
 the change in spacing between the lines of one paragraph.
 \gmlhint{br}{break=yes}%
-\gmlhint{ls}{spec=normal,break=no}\gmlhint{ws}{spec=by 2,break=no}Wide word spaces.
+\gmlhint{ls}{spec=normal,break=yes}%
+\gmlhint{ws}{spec=by 2,break=no}Wide word spaces.
 \gmlhint{ws}{spec=normal,break=no}\gmlhint{rc}{code=1,char=*,break=no}\gmlhint{br}{break=yes}%
 \gmlhint{rc}{code=1,mode=on,break=no}Revised text marked in the margin.
 \gmlhint{br}{break=yes}%
@@ -83,7 +88,8 @@ A shorter line length of four inches for this paragraph which is long
 enough to wrap at that length.
 \gmlhint{ll}{length=default,break=yes}%
 \gmlstart{gml:fn}{}An unnumbered footnote from .fn on.
-\gmlend{gml:fn}\gmlhint{dh}{level=2,spec=font bold,break=no,font=bold}\gmlhint{vr}{break=no}\gmlhint{pa}{break=yes}%
+\gmlend{gml:fn}\gmlhint{dh}{level=2,spec=font bold,break=no,font=bold}\gmlhint{vr}{break=yes}%
+\gmlhint{pa}{break=yes}%
 \gmlhint{pn}{spec=roman,break=no}After a page eject, roman page numbers.
 \gmlstart{gml:h}{level=2,break=yes,text=A control word heading}%
 \gmlhint{tcmark}{anchor=gml.tc.1,break=no}A control word heading\gmlend{gml:h}%

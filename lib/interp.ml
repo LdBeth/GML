@@ -185,7 +185,7 @@ let text ctx ~physical ~continued t =
    are substituted and scanned for GML tags like other text lines
    (p.231 r2).  In literal mode only [.li off] is a control word. *)
 let literal_line ctx s =
-  let s = if ctx.Ctx.subst_on then Subst.string ctx s else s in
+  let s = if ctx.Ctx.subst_on then Subst.string ~defer:true ctx s else s in
   text ctx ~physical:false ~continued:false s
 
 let li ctx ops =
@@ -205,6 +205,33 @@ let literal_off ctx s =
       && String.lowercase_ascii (String.trim (Line.operands c)) = "off"
   | _ -> false
 
+(* Deferred references (running headings, [Doc.symref]) stay in text:
+   a text line, the fields of [.sx], the line of [.ce .ri .us .up .uc]
+   and [.ct].  Every other control word line, a macro call too, has them
+   replaced by their values: its operands are not text put out where the
+   heading is placed ([.if], [.se], [.sk] ...). *)
+let text_words = [ "sx"; "ce"; "ri"; "us"; "up"; "uc"; "ct" ]
+
+let keep_symrefs ctx (c : Line.control) =
+  Ctx.macro_of ctx c = None
+  && library_macro ctx c = None
+  && List.mem c.Line.name text_words
+  &&
+  match
+    String.lowercase_ascii
+      (String.trim (Doc.strip_symrefs ctx.Ctx.doc (Line.operands c)))
+  with
+  | "on" | "off" -> false
+  | o -> c.Line.name = "ct" || c.Line.name = "sx" || int_of_string_opt o = None
+
+let strip_symrefs ctx head =
+  if not (Chars.has_sr head) then head
+  else
+    match Line.classify ctx.Ctx.chars head with
+    | Line.Control c when not (keep_symrefs ctx c) ->
+        Doc.strip_symrefs ctx.Ctx.doc head
+    | _ -> head
+
 (* Steps 3, 5 and 6 of a line that is substituted already (or not to be
    substituted). *)
 let dispatch ctx ~physical ~substituted s =
@@ -218,7 +245,7 @@ let dispatch ctx ~physical ~substituted s =
           Input.push_back ctx.input ~kind:(Input.Split substituted) r ctx.loc)
         rest;
       ctx.line_substituted <- substituted;
-      match Line.classify ch head with
+      match Line.classify ch (strip_symrefs ctx head) with
       | Line.Comment _ | Line.Label _ -> ()
       | Line.Control c -> control ctx c
       | Line.Text t -> text ctx ~physical ~continued:(rest <> None) t)
@@ -360,6 +387,22 @@ let imbed_now ctx path =
 let create ?include_path () =
   let ctx = Ctx.create ?include_path () in
   ctx.process <- process;
+  (* a change of a symbol referred to in a running heading or footing
+     (Doc.tracked) is the hint gml:symval with its new value, substituted
+     as the reference is (Subst.deferred); as written when it is removed:
+     the reference is then unresolved (LR p.316) *)
+  ctx.syms.Symbols.changed <-
+    (fun name ->
+      if Doc.tracked ctx.doc name then
+        Doc.hint ctx.doc "symval"
+          [
+            ("name", name);
+            ( "value",
+              match Symbols.get ctx.syms name with
+              | Some v -> Subst.string ctx v
+              | None -> String.make 1 ctx.chars.Chars.symbol ^ name );
+            ("break", "no");
+          ]);
   Control.install ctx;
   Gmlproc.install ctx;
   Emit.install ctx;

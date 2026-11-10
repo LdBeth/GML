@@ -32,11 +32,14 @@ Tab	separated	line
   after a blank line
 .fo on
 .* a running footing with the page number symbol and a text ampersand
+.* (translated with the table of the definition, LR p.404 r4)
 .se amp = &X'08
 .tr 08 &
 .rf on
+.tr 08 &
 .sx /Left &amp. Right//Page &/
 .rf off
 .rh on
+.tr 08 &
 Page & of the heading; &amp. is a text ampersand
 .rh off

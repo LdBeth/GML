@@ -155,7 +155,9 @@ let is_blank_string s = String.for_all Tagscan.is_blank s
 (* DCF-VERIFY (not in LR Rel 4): a line taken as markup continuation or
    residual text is substituted on its own, without the extended symbol
    rule. *)
-let substitute ctx s = if ctx.Ctx.subst_on then Subst.string ctx s else s
+let substitute ctx s =
+  if ctx.Ctx.subst_on then Subst.string ~defer:true ctx s else s
+
 let warn_on ctx = ctx.Ctx.tag_scan = Ctx.Tags_on
 
 (* The tag as written, for messages. *)

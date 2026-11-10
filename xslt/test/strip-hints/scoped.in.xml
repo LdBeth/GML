@@ -10,7 +10,7 @@
 <gml:scope kind="block" in="0"><gml:br break="yes" cause="in"/>margin back.
 </gml:scope></p></gml:scope><xmp xml:space="preserve"><gml:scope kind="block" fill="no" align="left">  verbatim
 </gml:scope></xmp><gml:scope kind="block" fill="no" align="left" tp="5ch 10ch"><p>no fill
-<gml:scope kind="block" tp="5ch 10ch 20ch">with tabs
+<gml:scope kind="block" tp="5ch 10ch 20ch"><gml:br break="yes" cause="tp"/>with tabs
 </gml:scope></p></gml:scope><gml:scope kind="block" tp="5ch 10ch 20ch"><p>filled again
 </p><gml:scope kind="inline" hy="on"><p>hyphenation on
 <gml:in left="1" unit="i" for="2" for-unit="i" temporary="yes" break="yes"/>temporary indent: an event

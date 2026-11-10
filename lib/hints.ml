@@ -33,8 +33,21 @@
      ([gml:fn], [gml:rh], [gml:rf]): they hold text of another flow.
      Rel 4: symbols in a running heading or footing are replaced when it
      is placed on the page, substitution being off while it is defined
-     (LR p.312 r7, p.315); not yet modelled: it is processed where it is
-     defined.
+     (LR p.312 r7, p.315 r7, p.316: "the value of the symbol at the time
+     the page is started").  The definition is processed where it is
+     defined, but a reference to a global user symbol in its text (a
+     text line, the line of [.ce .ri .us .up .uc], a [.sx] field) is
+     deferred ([Subst.deferred], [Doc.symref]): the element
+     [<gml:symref name="NAME">value now</gml:symref>] (in a [.sx] field
+     the value between U+E001 NAME U+E002 and U+E003), and wherever a
+     symbol so referred to is set or removed afterwards the hint
+     [<gml:symval name="NAME" value="..." break="no"/>] ([Ctx]) gives
+     its new value at that point of the flow (as written, [&NAME], when
+     removed).  The backend that places the heading uses the value in
+     effect where the page starts, the value inside gml:symref before
+     any change.  Other operands (.if .se .sk ...) take the value now.
+     Its text is translated with the initial [.tr] table as changed
+     inside it (LR p.404 r4, [Doc.tr_table]).
    - [.tr] (p.207) is not a hint: it sets the translate table that
      [Doc] applies to text entering the tree.  [.dv] (p.258) sets a
      symbol to a text variable, the hint [gml:dv] where it is used.  [.li] (literal mode) is input processing ([Interp]).
@@ -878,6 +891,30 @@ let toc ctx ops =
   end;
   emit ctx "tc" ~brk:true (("action", "end") :: reserve)
 
+(* [p] without the deferred references written in it by [Doc.field_text]
+   (U+E001 NAME U+E002 value U+E003) *)
+let outside_symrefs p =
+  let o = "\u{E001}" and c = "\u{E003}" in
+  let find sub i =
+    let n = String.length p and k = String.length sub in
+    let rec go i =
+      if i + k > n then None
+      else if String.sub p i k = sub then Some i
+      else go (i + 1)
+    in
+    go i
+  in
+  let b = Buffer.create (String.length p) in
+  let rec go i =
+    match find o i with
+    | None -> Buffer.add_string b (String.sub p i (String.length p - i))
+    | Some j -> (
+        Buffer.add_string b (String.sub p i (j - i));
+        match find c j with Some e -> go (e + String.length c) | None -> ())
+  in
+  go 0;
+  Buffer.contents b
+
 (* .sx [f] [c] /left/fill/right/ (p.76) *)
 let split_text ctx ops =
   let rec opts acc s =
@@ -897,7 +934,9 @@ let split_text ctx ops =
            the page number (SH35-0069 p.128: ".sx c //Introduction/Page &/");
            pagesym= tells the backends which character it is *)
         let ps = ctx.chars.Chars.ps in
-        let out = Doc.output_text (doc ctx) in
+        (* a deferred reference (Doc.symref) is written U+E001 NAME U+E002
+           value U+E003 *)
+        let out = Doc.field_text (doc ctx) in
         if
           Doc.in_running (doc ctx)
           && List.exists (fun f -> Line.index_sep f 0 ps <> None) [ l; f; r ]
@@ -907,12 +946,17 @@ let split_text ctx ops =
              the pagesym= character: the symbol itself, or U+E000 when a
              piece holds it as text (a text variable's "&", DSMPROF3's
              &amp., or a translated one, p.259); the symbol in a text
-             variable is text ([Line.split_on]) *)
+             variable is text ([Line.split_on]); so is the value of a
+             deferred reference (U+E001 ... U+E003): the backend never
+             splits it, so it does not count here *)
           let pieces =
             List.map (fun f -> List.map out (Line.split_on ps f)) [ l; f; r ]
           in
           let m =
-            if List.exists (List.exists (fun p -> String.contains p ps)) pieces
+            if
+              List.exists
+                (List.exists (fun p -> String.contains (outside_symrefs p) ps))
+                pieces
             then "\u{E000}"
             else String.make 1 ps
           in
@@ -982,7 +1026,7 @@ let snapshot ?(initial = false) ctx env =
     {
       env;
       sfmt = copy_fmt (fmt ctx);
-      str = Hashtbl.copy (doc ctx).Doc.tr;
+      str = Hashtbl.copy (Doc.tr_table (doc ctx));
       schars = copy_chars ctx.chars;
       slines = line_state (doc ctx);
     }
@@ -1018,7 +1062,7 @@ let re_breaks ctx sv =
    when it was saved begin again with the lines they had left. *)
 let restore ?(hints = true) ctx sv =
   let st = fmt ctx and old = sv.sfmt in
-  let tbl = (doc ctx).Doc.tr in
+  let tbl = Doc.tr_table (doc ctx) in
   Hashtbl.reset tbl;
   Hashtbl.iter (Hashtbl.replace tbl) sv.str;
   (let c = ctx.chars and s = sv.schars in
@@ -1151,11 +1195,21 @@ let running word ctx ops =
     | (("odd" | "even") as p) :: rest -> (Some p, rest)
     | l -> (None, l)
   in
+  (* .rh or .rf inside a definition ends it (LR p.311 r4, p.315 r4):
+     DSMPROF3's duplex footings are .rf odd ... .rf even ... .rf off *)
+  let end_open () =
+    List.iter
+      (fun n -> if Doc.is_open (doc ctx) n then close_flow ctx n)
+      [ "gml:rh"; "gml:rf" ]
+  in
   match (parity, rest) with
   | None, [ "off" ] -> close_flow ctx name
   | _, [ (("cancel" | "sup" | "res" | "execute") as a) ] ->
+      end_open ();
       emit ctx word ~brk:true (("action", a) :: page parity)
   | _, ([] | [ "on" ]) ->
+      end_open ();
+      Doc.start_running (doc ctx);
       Doc.start_element (doc ctx) name (page parity @ [ ("break", "yes") ])
   | _ ->
       Ctx.error ctx
@@ -1198,7 +1252,7 @@ let utf8 c =
    character; no operands restores the initial table.  A source without
    its output character is an error (the pairs before it are taken). *)
 let translate ctx ops =
-  let tbl = (doc ctx).Doc.tr in
+  let tbl = Doc.tr_table (doc ctx) in
   let rec go = function
     | [] -> ()
     | [ a ] when char_operand a = None ->

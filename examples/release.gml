@@ -111,7 +111,7 @@ unexpected spacing results.
 .se rate = 250
 .se workers = 8
 .se peak = &rate * &workers
-.se load = 1600
+.se load = 1421
 .se util = &load * 100 / &peak
 .se shards = 12
 .se warm = 0
@@ -121,6 +121,7 @@ unexpected spacing results.
 .se warm = &warm + &k
 .if &k lt &shards .go warmup
 .se perday = &peak * 86400
+.if &util gt 80 .mg /ASSERTE/&amp.util &util greater than 80, check calculation/
 :h2 id=cap.Capacity planning
 :p.Each worker thread of &product. &version. serves about
 :m.r = &rate.:em. requests per second, so a server with
@@ -130,7 +131,7 @@ unexpected spacing results.
 requests per second, or &perday. requests a day.
 :p.At start-up the &shards. cache shards are warmed one after another,
 and shard :m.k:em. takes :m.k:em. seconds, so the warm-up takes
-:fml id=warm.\sum_{k=1}^{&shards.} k = {&shards.(&shards.+1)\over 2} = &warm.\ {\rm s}
+:fml id=warm.\sum_{k=1}^{&shards.} k = {&shards.\,(&shards.+1)\over 2} = &warm.\ {\rm s}
 :efml.
 before the server accepts requests.
 :p.Plan the offered load :m.\lambda:em. so that the utilisation

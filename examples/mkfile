@@ -73,10 +73,11 @@ out/release.xml: $TAGSET/profile.gml
 
 # the internal edition: release.gml with -set audience=internal; the later
 # stages (out/release-internal.s.xml, .html) come from the project's rules
-out/release-internal.xml: release.gml $TAGSET/profile.gml
+out/release-internal.xml:Q: release.gml $TAGSET/profile.gml
+	echo internal.xml
 	st=()
 	$GML -profile $GMLPROFILE $GMLFLAGS -set audience=internal release.gml > $target.tmp || st=$status
-	if(! ~ $st '' 4) { rm -f $target.tmp; exit $st }
+	if(! ~ $st '' 4 8) { rm -f $target.tmp; exit $st }
 	mv $target.tmp $target
 
 out/gml.css: $ROOT/share/html/gml.css

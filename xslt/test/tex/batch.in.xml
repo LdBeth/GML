@@ -11,5 +11,5 @@ Tab	separated	line
 <gml:fo fill="no" align="left" overdraw="extend" break="yes"/>  preformatted   text
 
   after a blank line
-<gml:fo fill="yes" align="justify" overdraw="extend" break="yes"/><gml:rf><gml:sx left="Left &amp; Right" fill="" right="Page " pagesym="" break="yes"/></gml:rf><gml:rh>Page <gml:pageno break="no"/> of the heading; &amp; is a text ampersand
+<gml:fo fill="yes" align="justify" overdraw="extend" break="yes"/><gml:rf break="yes"><gml:sx left="Left amp&amp; Right" fill="" right="Page &amp;" pagesym="&amp;" break="yes"/></gml:rf><gml:rh break="yes">Page <gml:pageno break="no"/> of the heading; <gml:symref name="amp">&amp;</gml:symref> is a text ampersand
 </gml:rh></gml:doc>

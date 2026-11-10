@@ -45,6 +45,9 @@ type st = {
   amp : char;
   mutable steps : int;
   split : bool;  (** apply the extended symbol rule *)
+  defer : bool;
+      (** a running heading or footing definition is open: references to global
+          user symbols are deferred ([deferred]) *)
 }
 
 (* ---- attribute values ------------------------------------------------------ *)
@@ -113,6 +116,8 @@ type found =
   | Nothing
   | Value of int * int * string  (** a reference [a, b) and its value *)
   | Attr of int * int * string  (** a final result for [a, b) *)
+  | Deferred of int * int * string
+      (** a deferred reference for [a, b) ([Doc.symref]), not scanned again *)
 
 let is_blank c = c = ' ' || c = '\t'
 
@@ -261,6 +266,65 @@ let eval_attr st s prot a o =
   in
   Attr (a, stop, r)
 
+(* Is the reference at [k] the end of a compound one: right after the
+   symbol character ([&&x]) or after the name of another reference
+   ([&type&x], [&*a&x]), whose name its value completes? *)
+let compound st s k =
+  let j = ref (k - 1) in
+  while !j >= 0 && Symbols.is_name_char s.[!j] do
+    decr j
+  done;
+  let j = if !j >= 0 && !j < k - 1 && s.[!j] = '*' then !j - 1 else !j in
+  j >= 0 && s.[j] = st.amp
+
+(* Rel 4: while a running heading or footing is defined, a reference to a
+   global user symbol is replaced when the heading is placed on the page
+   (LR p.312 r7, p.315 r7, p.316: "Unresolved symbols included in a
+   running heading definition are substituted on each page").  Such a
+   reference [&name] or [&name.] becomes a span ([Doc.symref]) with the
+   value it has now, or as written when it has none (an unresolved
+   symbol).  Not deferred: a local symbol (a macro parameter), a system
+   symbol ([$] names), an array element, the operand of an attribute
+   (taken before, [attr_before]), the end of a compound reference
+   ([compound]: in [&type&x] the value of [&x] builds the name of the
+   other; [part&x] is deferred), and a value that would split the line
+   (the extended rule).  A value with references in it (DSM#SET's
+   [@shead = '&@stitle.']) is carried substituted, as is the value of
+   the hint [gml:symval] ([Interp.create]): the symbols in it are taken
+   where it is defined or set, not per page.  DCF-VERIFY (not in LR Rel
+   4): every global user symbol is deferred, also one that is never set
+   again (a text variable such as [&amp.]): the output is the same, the
+   reference is only marked.  [expand_fwd] is [expand] (below). *)
+let expand_fwd : (st -> string -> string list) ref = ref (fun _ s -> [ s ])
+
+let deferred st s k b name sub v =
+  let ok =
+    st.defer && sub = Plain
+    && (not (Symbols.is_local name))
+    && name.[0] <> '$'
+    && not (compound st s k)
+  in
+  if not ok then None
+  else
+    match v with
+    | None -> Some (Doc.symref st.ctx.Ctx.doc name (String.sub s k (b - k)))
+    | Some v ->
+        let sep = if st.split then st.ctx.Ctx.chars.Chars.cw_sep else None in
+        if
+          Chars.has_sr v
+          || match sep with Some c -> v <> "" && v.[0] = c | None -> false
+        then None
+        else
+          (* a value with references (DSM#SET's @shead = '&@stitle.') is
+             substituted now, without deferring: the value carried *)
+          let v =
+            if String.contains v st.amp then
+              String.concat ""
+                (!expand_fwd { st with split = false; defer = false } v)
+            else v
+          in
+          Some (Doc.symref st.ctx.Ctx.doc name v)
+
 let at st s prot k =
   match attr_before st s k with
   | Some a -> eval_attr st s prot a k
@@ -271,9 +335,11 @@ let at st s prot k =
           match parse_ref s k with
           | None -> Nothing
           | Some (b, name, sub, _) -> (
-              match lookup st name sub with
-              | Some v -> Value (k, b, v)
-              | None -> Nothing)))
+              let v = lookup st name sub in
+              match deferred st s k b name sub v with
+              | Some r -> Deferred (k, b, r)
+              | None -> (
+                  match v with Some v -> Value (k, b, v) | None -> Nothing))))
 
 let rec expand st s =
   let buf = ref s in
@@ -316,6 +382,9 @@ let rec expand st s =
           | Attr (a, b, r) ->
               replace a b r ~protect:true;
               i := a
+          | Deferred (a, b, r) ->
+              replace a b r ~protect:false;
+              i := a
           | Value (a, b, v) -> (
               match sep with
               | Some c when v <> "" && v.[0] = c ->
@@ -342,11 +411,16 @@ let rec expand st s =
   loop ();
   !buf :: !more
 
-let run ctx ~split s =
+let () = expand_fwd := expand
+
+let run ctx ~split ~defer s =
   let amp = ctx.Ctx.chars.Chars.symbol in
   if not (String.contains s amp) then [ s ]
   else
-    let st = { ctx; amp; steps = 0; split } in
+    let defer =
+      defer && (not ctx.Ctx.doc.Doc.mute) && Doc.in_running ctx.Ctx.doc
+    in
+    let st = { ctx; amp; steps = 0; split; defer } in
     try expand st s
     with Runaway m ->
       Ctx.error ctx "%s" m;
@@ -355,8 +429,11 @@ let run ctx ~split s =
 (** Substitute the symbols of an input line, with the extended symbol rule: the
     result is the line and the new lines split off it. On a runaway substitution
     the line is returned unchanged (after an error). *)
-let line ctx s = run ctx ~split:true s
+let line ctx s = run ctx ~split:true ~defer:true s
 
 (** Substitute the symbols of a string (no line splitting: a value that begins
-    with the separator is kept as it is). *)
-let string ctx s = String.concat "" (run ctx ~split:false s)
+    with the separator is kept as it is). With [~defer:true] (text: a literal
+    line, residual text) references are deferred in a running heading as by
+    [line]. *)
+let string ?(defer = false) ctx s =
+  String.concat "" (run ctx ~split:false ~defer s)

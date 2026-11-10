@@ -222,6 +222,11 @@
 .* 024: a :thd or :tft after the first row
 ...m24
 .mg /&ss@mp.024W/&*g TAG NOT VALID AFTER FIRST ROW IN TABLE HAS STARTED. (page &*p)/
+.me
+.* 043: the title page runs onto a second page (MSG p.11; the caller
+.* gives the page in &ss@pg)
+...m43
+.mg /&ss@mp.043I/TITLE PAGE SPANS MULTIPLE PAGES. (page &*p)/
 .dm off
 .*
 .* ---- context checking (DSMPROF3 item 32) ---------------------------------

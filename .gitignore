@@ -10,6 +10,8 @@ SX26-*.pdf
 
 # pipeline outputs produced by mk / gmlfmt in the project root
 /*.xml
+/*.xml.rc
+*.gmlmsg
 /*.html
 /*.tex
 /*.dvi

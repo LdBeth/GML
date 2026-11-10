@@ -242,7 +242,13 @@ let rec index_sep s i sep =
     match Chars.dv_char s i with
     | Some (0, l) -> index_sep s (i + l) sep
     | Some (_, l) -> index_sep s (Chars.dv_skip s (i + l)) sep
-    | None -> index_sep s (i + 1) sep
+    | None -> (
+        (* a deferred reference's value ([Chars.sr_mark]) is text too *)
+        match Chars.sr_char s i with
+        | Some (n, l) when n > 0 ->
+            let e = Chars.sr_find_end s (i + l) in
+            index_sep s (if e < String.length s then e + l else e) sep
+        | _ -> index_sep s (i + 1) sep)
 
 (** [s] split at every [sep] that is not in a text variable ([index_sep]): the
     fields of [.mg] and [.sx], the pieces of a [.sx] field around the page

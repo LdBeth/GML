@@ -26,7 +26,7 @@
 </span><span class="gml-scope" style="display: block; tab-size: 5" data-gml-tb="5ch 10ch 15ch">tabbed
 </span><span class="gml-scope gml-font gml-font-hi2" data-font="hi2">bold font
 </span><span class="gml-scope" style="hyphens: auto">hyphenated
-</span><span class="gml-scope" style="line-height: calc(var(--gml-leading) * 2)">double spaced
+</span><span class="gml-scope" style="display: block; line-height: calc(var(--gml-leading) * 2)">double spaced
 </span></p>
 <div class="gml-scope" style="line-height: var(--gml-leading)">
 <ul class="gml-ul gml-nest-1">

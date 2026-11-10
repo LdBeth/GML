@@ -129,8 +129,13 @@ let () =
   in
   (try Arg.parse_argv Sys.argv spec (fun f -> inputs := f :: !inputs) usage with
    | Arg.Help m -> print_string m; exit 0
-   | Arg.Bad m -> prerr_string m; exit 8);
-  let fail msg = Printf.eprintf "gml: error: %s\n%s\n" msg usage; exit 8 in
+   | Arg.Bad m -> prerr_string m; exit 24);
+  (* DCF's return codes (MSG p.3): 0 4 8 after informational, warning and
+     error messages, with a result; 12 a severe error (processing
+     stopped); 16 a terminal error, here the input, the profile or the
+     output could not be opened (nothing is written); 24 incorrect
+     parameters on the command line *)
+  let fail msg = Printf.eprintf "gml: error: %s\n%s\n" msg usage; exit 24 in
   List.iter fail (List.rev !bad);
   let pass_k = Option.value !pass ~default:1 in
   let passes_n = Option.value !passes ~default:(max 1 pass_k) in
@@ -187,9 +192,10 @@ let () =
     if f = "-" then print_string s
     else
       try Out_channel.with_open_bin f (fun oc -> output_string oc s)
-      with Sys_error e -> Gml.Ctx.error ctx "%s" e
+      with Sys_error e -> Gml.Ctx.error ctx "%s" e; exit 16
   in
-  if ctx.diag.errors = 0 then Gml.Interp.run ctx;
+  if ctx.diag.errors > 0 then exit 16;
+  Gml.Interp.run ctx;
   let root = Gml.Interp.finish ctx in
   let root =
     match root with

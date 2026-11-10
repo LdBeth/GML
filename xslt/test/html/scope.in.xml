@@ -11,10 +11,10 @@
    kept
 </gml:scope><gml:scope kind="block" align="center"><gml:br break="yes" cause="fo fo"/>centered fill
 </gml:scope><gml:scope kind="block" align="right"><gml:br break="yes" cause="fo"/>right aligned
-</gml:scope><gml:scope kind="block" tb="5ch 10ch 15ch"><gml:br break="yes" cause="fo"/>tabbed
-</gml:scope><gml:scope kind="inline" font="hi2">bold font
+</gml:scope><gml:scope kind="block" tb="5ch 10ch 15ch"><gml:br break="yes" cause="fo tb"/>tabbed
+</gml:scope><gml:scope kind="inline" font="hi2"><gml:br break="yes" cause="tb"/>bold font
 </gml:scope><gml:scope kind="inline" hy="on">hyphenated
-</gml:scope><gml:scope kind="block" ls="1line">double spaced
+</gml:scope><gml:scope kind="block" ls="1line"><gml:br break="yes" cause="ls"/>double spaced
 </gml:scope></p><gml:scope kind="block" ls="0line"><ul nest="1"><li>an item
 <gml:scope kind="block" in="2ch"><gml:br break="yes" cause="in"/>indented inside the item
 </gml:scope></li><gml:scope kind="block" in="2ch"><li>the next item

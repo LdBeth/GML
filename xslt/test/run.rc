@@ -44,10 +44,13 @@
 #        words: hint mode) | resolve.xsl; tex/query: gml -aux none.gmlaux
 #        -pass 1 -passes 2 gml/tex-query.gml | resolve.xsl (the page
 #        questions of the pass model, \gmlquery and \gmlpassno); tex/dv:
-#        gml gml/tex-dv.gml (test/dv.t/in.gml) | resolve.xsl
+#        gml gml/tex-dv.gml (test/dv.t/in.gml) | resolve.xsl (also a
+#        deferred symbol, gml:symref, in a running heading and a .sx
+#        field; tex/dcfstarter-tables has gml:symval)
 #   html gmlfmt -to scoped gml/html-NAME.gml   -> html/NAME.in.xml
 #        (control, figs, fn, hints, index, lines, lists, scope, sections,
-#        text; control: raw SCRIPT control words in a semantic document,
+#        symref, text; symref: a running footing's symbol, gml:symref
+#        and gml:symval, dropped; control: raw SCRIPT control words in a semantic document,
 #        the hanging indention over breaks and a .is tab label, a run-in
 #        .dh NBR heading, consecutive .sk skips, the .fn leader);
 #        html/starter and html/params are gml/starter.gml scoped,

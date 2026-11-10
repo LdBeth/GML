@@ -36,6 +36,9 @@
                            before the text, no end (TeX ends the \parshape)
                            continuation (the line does not end here).
     gml:query              \gmlquery{id}{pn|lc}  (a question of the pass model)
+    gml:symref             \gmlsymref{name}{value} (a deferred symbol reference
+                           in a running heading or footing, LR p.316)
+    gml:symval             \gmlsymval{name}{value} (its new value here)
     gml:num                \gmlnum{label}
     gml:pageref            \gmlpageref{anchor}{always|auto}{label}
     generated lists        \gmltocbegin{title} \gmltocentry{level=..,..}{num}{text}{\gmlpageref..}
@@ -136,7 +139,7 @@
       ('doc', 'lines', 'num', 'pageref', 'toc-entries', 'toc-entry', 'entry-text',
        'figlist-entries', 'figlist-entry', 'tlist-entries', 'tlist-entry',
        'index-entries', 'index-group',
-       'index-entry', 'index-term', 'see')"/>
+       'index-entry', 'index-term', 'see', 'symref', 'symval')"/>
 
   <!-- ==== escaping ===================================================== -->
   <xsl:variable name="special"
@@ -193,7 +196,7 @@
        not a block (hp1, q ...) -->
   <xsl:function name="t:is-inline" as="xs:boolean">
     <xsl:param name="n" as="node()?"/>
-    <xsl:sequence select="exists($n/(self::gml:dv | self::gml:bf | self::gml:pf))
+    <xsl:sequence select="exists($n/(self::gml:dv | self::gml:bf | self::gml:pf | self::gml:symref))
         or (exists($n[self::*]) and not($n/self::gml:*) and not(t:is-block($n)))"/>
   </xsl:function>
 
@@ -279,15 +282,48 @@
 
   <!-- a .sx in a running heading or footing: the page number symbol
        (@pagesym) in its fields is the page number, \gmlpageno; any other
-       character, a text "&" too, is text -->
-  <xsl:template match="gml:sx[@pagesym != '']" priority="1">
+       character, a text "&" too, is text.  A deferred symbol reference
+       in a field (U+E001 NAME U+E002 value U+E003, lib/doc.ml) is
+       \gmlsymref{NAME}{value} (see gml:symref); its value is text, not
+       split at the page number symbol -->
+  <xsl:template match="gml:sx[@pagesym != '' or (@left | @fill | @right)[contains(., '&#xE001;')]]"
+                priority="1">
     <xsl:variable name="ps" select="string(@pagesym)"/>
     <xsl:value-of select="concat('\gmlhint{sx}{', string-join(for $a in @* return
         if (name($a) = ('left', 'fill', 'right'))
-        then name($a) || '=' || string-join(for $p in tokenize(string($a), $ps, 'q')
-                                            return t:attr($p), '\gmlpageno{}')
+        then name($a) || '=' || string-join(
+            analyze-string(string($a), '&#xE001;([^&#xE002;]*)&#xE002;([^&#xE003;]*)&#xE003;')/*/
+              (if (self::*:match)
+               then '\gmlsymref{' || t:name(string(*:group[@nr = 1])) || '}{'
+                    || t:attr(string(*:group[@nr = 2])) || '}'
+               else t:sx-text(string(.), $ps)))
         else t:attrs($a, ()), ','), '}')"/>
     <xsl:if test="@break = 'yes'">%&#10;</xsl:if>
+  </xsl:template>
+
+  <!-- the text of a .sx field: the page number symbol $ps (none: '') is
+       \gmlpageno -->
+  <xsl:function name="t:sx-text" as="xs:string">
+    <xsl:param name="s" as="xs:string"/>
+    <xsl:param name="ps" as="xs:string"/>
+    <xsl:sequence select="if ($ps = '') then t:attr($s)
+        else string-join(for $p in tokenize($s, $ps, 'q') return t:attr($p), '\gmlpageno{}')"/>
+  </xsl:function>
+
+  <!-- Rel 4: a symbol in a running heading or footing is replaced when
+       the heading is placed on a page (LR p.316).  gml:symref is a
+       reference to symbol NAME, its content the value where the heading
+       was defined: \gmlsymref{NAME}{value}, set by gml.tex with the value
+       in effect where the page starts.  gml:symval is a new value of
+       NAME at this point of the flow: \gmlsymval{NAME}{value} (a mark).
+       NAME is written as an anchor name (t:name: [A-Za-z0-9.-]). -->
+  <xsl:template match="gml:symref" priority="1">
+    <xsl:value-of select="concat('\gmlsymref{', t:name(string(@name)), '}{')"/>
+    <xsl:apply-templates/>
+    <xsl:text>}</xsl:text>
+  </xsl:template>
+  <xsl:template match="gml:symval" priority="1">
+    <xsl:value-of select="concat('\gmlsymval{', t:name(string(@name)), '}{', t:attr(string(@value)), '}')"/>
   </xsl:template>
 
   <xsl:template match="gml:df | gml:dh | gml:dr" priority="1">
@@ -308,11 +344,13 @@
 
   <!-- a running heading or footing holding the page number symbol (a .sx
        with pagesym=, or "&" alone in its operands or text: .dc PS
-       default): the content is an argument of \gmlrundyn, typeset by
+       default) or a deferred symbol reference (gml:symref, or one in a
+       .sx field): the content is an argument of \gmlrundyn, typeset by
        gml.tex on every page -->
   <xsl:template match="(gml:rh | gml:rf)[.//gml:sx[@pagesym or @left = '&amp;'
-                         or @fill = '&amp;' or @right = '&amp;']
-                         or .//gml:pageno
+                         or @fill = '&amp;' or @right = '&amp;'
+                         or (@left | @fill | @right)[contains(., '&#xE001;')]]
+                         or .//gml:pageno or .//gml:symref
                          or .//text()[matches(., '(^|\s)&amp;(\s|$)')]]" priority="2">
     <xsl:value-of select="concat('\gmlstart{', name(), '}{', t:attrs(@*, ()), '}%', $nl,
                                  '\gmlrundyn{')"/>

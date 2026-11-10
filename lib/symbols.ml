@@ -43,6 +43,13 @@ type t = {
           [name] by [get] (substitution, [.se x = &]), not by [defined] or
           [is_system]: the page state symbols ([&$PN], [&$LC]) are questions to
           the layout engine ([Ctx.query]); the identity for the others *)
+  mutable clean : string -> string;
+      (** applied to a value before [set] or [append] stores it: [Ctx] installs
+          [Doc.strip_symrefs], so no value holds a deferred reference *)
+  mutable changed : string -> unit;
+      (** called with the (normalised) name of a global symbol after [set],
+          [append] or [unset] changed it: [Ctx] puts the hint [gml:symval] out
+          for the symbols of running headings ([Doc.tracked]) *)
 }
 
 (** DCF limit on symbol name length (SH35-0069 p.229; LR p.337). *)
@@ -59,6 +66,8 @@ let create () =
     in_macro = (fun () -> false);
     system = (fun _ _ -> None);
     query = (fun _ v -> v);
+    clean = Fun.id;
+    changed = ignore;
   }
 
 (** Names beginning with [$] are case-insensitive (p.241). *)
@@ -174,7 +183,10 @@ let in_range name sub =
     value of the element last set"), unless element 0 holds a value that is not
     a number. DCF-VERIFY: a non-numeric element 0 is left alone (p.257 warns
     about it rather than saying it is replaced; not in LR Rel 4). *)
+let notify t name = if not (is_local name) then t.changed (norm name)
+
 let set ?(sub = 0) t name v =
+  let v = t.clean v in
   Result.bind (read_only t name) (fun () ->
       Result.map
         (fun () ->
@@ -183,11 +195,13 @@ let set ?(sub = 0) t name v =
           else begin
             Hashtbl.replace s.elems sub v;
             if counter_of s <> None then s.value <- Some (string_of_int sub)
-          end)
+          end;
+          notify t name)
         (in_range name sub))
 
 (** [.se x() = v]: set the element after the index counter (p.256-257). *)
 let append t name v =
+  let v = t.clean v in
   Result.bind (read_only t name) (fun () ->
       let s = sym_of t name in
       match counter_of s with
@@ -197,7 +211,8 @@ let append t name v =
           Result.map
             (fun () ->
               Hashtbl.replace s.elems (c + 1) v;
-              s.value <- Some (string_of_int (c + 1)))
+              s.value <- Some (string_of_int (c + 1));
+              notify t name)
             (in_range name (c + 1)))
 
 (** [.se x off] removes the whole symbol, the whole array if it is one;
@@ -209,7 +224,8 @@ let unset ?(sub = 0) t name =
       match Hashtbl.find_opt sc n with
       | None -> ()
       | Some s ->
-          if sub = 0 then Hashtbl.remove sc n else Hashtbl.remove s.elems sub)
+          if sub = 0 then Hashtbl.remove sc n else Hashtbl.remove s.elems sub;
+          notify t name)
     (read_only t name)
 
 (* ---- carried over between passes ------------------------------------------ *)

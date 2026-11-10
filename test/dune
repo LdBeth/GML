@@ -10,8 +10,17 @@
 ; (SaxonC's transform, as in the mkfile)
 
 (cram
- (applies_to tex_pass)
+ (applies_to tex_pass tex_msgs)
  (deps
   (glob_files %{project_root}/xslt/*.xsl))
  (enabled_if
   (and %{bin-available:tex} %{bin-available:transform})))
+
+; the marks of the running heading symbols: e-TeX (pdftex), not tex
+
+(cram
+ (applies_to tex_symref)
+ (deps
+  (glob_files %{project_root}/xslt/*.xsl))
+ (enabled_if
+  (and %{bin-available:pdftex} %{bin-available:transform})))

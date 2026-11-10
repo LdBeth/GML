@@ -330,6 +330,17 @@
 \def\gml@warnonce#1#2{\expandafter\ifx\csname gml@w@#1\endcsname\relax
   \immediate\write16{GML: #2}\expandafter\gdef\csname gml@w@#1\endcsname{}\fi}
 \def\gml@notimpl#1{\gml@warnonce{hint#1}{hint .#1 is not implemented in TeX (ignored)}}
+% a DCF message found while laying out, in IBM's format (MSG p.5-6):
+% \gml@ibmmsg{DSMGML020W TEXT.} writes "+++DSMGML020W TEXT. (page n)" to
+% the log and to JOB.gmlmsg (unwrapped), which gmlpass shows after the
+% last pass; \gml@ibmsevere stops as SCRIPT/VS does for an S message
+\newwrite\gml@msgfile \immediate\openout\gml@msgfile=\jobname.gmlmsg
+% (page n): the numeric part of the page number, as &$PN (LR p.447 n3),
+% so a roman front-matter page (negative \pageno) gives its number too
+\def\gml@ibmpage{\ifnum\pageno<\z@\number-\pageno\else\number\pageno\fi}
+\def\gml@ibmmsg#1{\immediate\write16{+++#1 (page \gml@ibmpage)}%
+  \immediate\write\gml@msgfile{+++#1 (page \gml@ibmpage)}}
+\def\gml@ibmsevere#1{\gml@ibmmsg{#1}\errmessage{GML: severe error (above), processing stops}}
 % \gml@get\list{key}\macro: \macro := the value of key in list, or empty
 \def\gml@get#1#2#3{\def\gml@get@a##1,#2=##2,##3\gml@nil{\def#3{##2}}%
   \expandafter\gml@get@a\expandafter,#1,#2=\gml@nokey,\gml@nil
@@ -1327,7 +1338,68 @@
   \else{\let\global\relax
     \gml@hintleft\z@\gml@hintright\z@\gml@hintll\z@\gml@ofstate\z@\gml@keepfalse
     \setbox\gml@box#3{\gml@runsetup\csname gml@#1dyn#2\endcsname\par}\box\gml@box}\fi}
-\output={\gml@tbl@output\hsize\gml@defaulthsize\plainoutput\global\gml@plainpagefalse
+% Symbols in a running heading or footing (Rel 4, LR p.312 r7, p.315
+% r7, p.316): "&section is replaced with the value of the symbol at the
+% time the page is started".  The engine writes a reference to a symbol
+% in the definition as \gmlsymref{NAME}{value}, the value where the
+% heading was defined, and every later change of the symbol, where it
+% happens in the flow, as \gmlsymval{NAME}{value}: an e-TeX mark of a
+% class of its own (allocated per name from 1; class 0, \mark, is the
+% tables').  The mark holds \gml@mv{value}, so a value set to empty is
+% not taken for no mark.  When the heading is set for a page (in
+% \output), the value is that of the last mark before the page's first
+% line (a .se after a page eject, before the heading that starts the
+% page: dcfstarter's .pa .se f@shead), else the last one before the page
+% (\topmarks), else the value where the heading was defined.  The marks
+% before the first line are found by splitting a copy of the page box
+% to no height (\gml@symtop): the material before its first legal break
+% (the \topskip glue after a mark), whose last mark is \splitbotmarks,
+% when it has no height (only marks, \write and \special nodes: no
+% line).  DCF-VERIFY (not settled by LR Rel 4): that a .se in the
+% first output line of a page counts only from the next page; LR p.315
+% r1 says a .se that does not break may act "earlier than expected" while
+% page boundaries are found, and advises a .br before it.  A mark in
+% vertical mode after glue, a kern or a penalty would make the next glue
+% a legal break where there was none (after a heading's \nobreak), so a
+% \nobreak follows it there.  Limits: a mark inside a box (a figure, a
+% table cell, a footnote) does not reach the page; a mark between two
+% .sk skips hides the first from \gml@vskip (\lastskip), so they add
+% up; the rest of a page split by the table output routine comes back with its
+% marks, which then count from the page before; a two-column output
+% routine (book/harubi) sets the heading at the second column.  Without
+% e-TeX (Knuth's tex) there are no marks: the value is the one where
+% the heading was defined.
+\def\gml@mv#1{#1}
+\newcount\gml@symclasses \newif\ifgml@symnb \newif\ifgml@symtop
+\ifx\marks\undefined
+  \def\gmlsymval#1#2{}
+  \def\gml@symget#1#2{\def\gml@symv{#2}}
+  \let\gml@symtop\relax
+\else
+  \def\gmlsymval#1#2{\expandafter\ifx\csname gml@mk@#1\endcsname\relax
+      \global\advance\gml@symclasses\@ne
+      \expandafter\xdef\csname gml@mk@#1\endcsname{\number\gml@symclasses}\fi
+    \gml@symnbfalse
+    \ifvmode\ifnum\lastnodetype>10 \ifnum\lastnodetype<14 \gml@symnbtrue\fi\fi\fi
+    \marks\csname gml@mk@#1\endcsname{\noexpand\gml@mv{\unexpanded{#2}}}%
+    \ifgml@symnb\nobreak\fi}
+  \def\gml@symtop{\global\gml@symtopfalse
+    \ifvoid\@cclv\else{\vbadness\@M\vfuzz\maxdimen
+      \splittopskip\z@skip\splitmaxdepth\maxdimen
+      \setbox\z@\copy\@cclv\setbox\z@\vsplit\z@ to\z@
+      \setbox\z@\vbox{\unvbox\z@}\ifdim\ht\z@=\z@\global\gml@symtoptrue\fi}\fi}
+  \def\gml@symget#1#2{\let\gml@symv\empty
+    \expandafter\ifx\csname gml@mk@#1\endcsname\relax\else
+      \edef\gml@tmpm{\csname gml@mk@#1\endcsname}%
+      \ifgml@symtop
+        \expandafter\def\expandafter\gml@symv\expandafter{\splitbotmarks\gml@tmpm}\fi
+      \ifx\gml@symv\empty
+        \expandafter\def\expandafter\gml@symv\expandafter{\topmarks\gml@tmpm}\fi\fi
+    \ifx\gml@symv\empty\def\gml@symv{#2}\fi}
+\fi
+% \gml@symget{NAME}{value}: \gml@symv is the value for this page
+\def\gmlsymref#1#2{\gml@symget{#1}{#2}\gml@symv}
+\output={\gml@tbl@output\gml@symtop\hsize\gml@defaulthsize\plainoutput\global\gml@plainpagefalse
   \global\gml@chappagefalse
   \gml@runsupnext{rh@odd}\gml@runsupnext{rh@even}%
   \gml@runsupnext{rf@odd}\gml@runsupnext{rf@even}}
@@ -1455,11 +1527,16 @@
 \gmldefstart{abstract}{\gml@newpage\gml@sectionhead\gmlabstracttitle}
 \gmldefstart{preface}{\gml@newpage\gml@sectionhead\gmlprefacetitle}
 \gmldefstart{toc}{} \gmldefstart{figlist}{} \gmldefstart{index}{}
-\gmldefstart{titlep}{\gml@newpage\global\gml@plainpagetrue\gml@intitleptrue
+\gmldefstart{titlep}{\gml@newpage\xdef\gml@titlepn{\gml@abspage}%
+  \global\gml@plainpagetrue\gml@intitleptrue
   \gml@vspace\gml@titletop\global\gml@aftertitlefalse
   \gml@setfill{yes}{\gmltitlealign}\hyphenpenalty\@M\gml@apply}
 \gmldefend{titlep}{\par\ifx\gml@sec\empty\else\gml@vskip{2\baselineskip}%
-  \noindent{\gml@hi{2}\gml@sec}\par\fi\gml@newpage}
+  \noindent{\gml@hi{2}\gml@sec}\par\fi\gml@newpage
+  % more than one page shipped since \gml@titlepn: DSMGML043I (MSG p.11);
+  % absolute page numbers: in the front matter they are roman (\pageno<0)
+  \gml@cnta\gml@titlepn\advance\gml@cnta\@ne
+  \ifnum\gml@abspage>\gml@cnta\gml@ibmmsg{DSMGML043I TITLE PAGE SPANS MULTIPLE PAGES.}\fi}
 \def\gml@titlegap{\par\ifgml@aftertitle\global\gml@aftertitlefalse
   \gml@vspace\gml@titlegapdim\else\gml@vskip\baselineskip\fi}
 \gmldefstart{title}{\par\gml@setfont{\csname gml@font@title\endcsname}%
@@ -1736,8 +1813,9 @@
 \def\gml@tbl@cols#1{\gml@tblncols\z@\gml@tA\z@\gml@tK\z@\gml@tbllaststar\z@
   \gml@forwords{#1}\gml@tbl@colone
   \gml@tR\gml@tblwd\advance\gml@tR-\gml@tA
-  \ifnum\gml@tK>\z@\ifdim\gml@tR<\z@\gml@tR\z@
-    \gml@warnonce{tblwide}{table cwidths= wider than the table: * cells get no width}\fi
+  % k* cells with no width left: SVS445S, severe (LR .TD r4 p.383; MSG)
+  \ifnum\gml@tK>\z@\ifdim\gml@tR>\z@\else\gml@tR\z@
+    \gml@ibmsevere{SVS445S RESULTANT CELL WIDTH IN ROW TOO SMALL.}\fi
     \gml@tU\gml@tR\divide\gml@tU\gml@tK\fi
   \gml@tX\z@\gml@tS\z@\expandafter\def\csname gml@tx@0\endcsname{0}\gml@tblk\z@\gml@tbl@colloop}
 \def\gml@tbl@colone#1{\advance\gml@tblncols\@ne\def\gml@tmpd{#1}\gml@ifin\gml@tmpd*%
@@ -1814,7 +1892,7 @@
 % the frame of a cell (\gml@tW x \gml@tH) and its content placed by valign
 \def\gml@tbl@frame#1{\gml@tI\gml@tH\advance\gml@tI-2\gml@tblrule
   \vbox to\gml@tH{\hrule height\gml@tblrule width\gml@tW
-    \hbox to\gml@tW{\vrule width\gml@tblrule\kern\gml@cellhpad
+    \hbox to\gml@tW{\vrule width\gml@tblrule\kern\csname gml@cp@\the\gml@tbli\endcsname
       \vbox to\gml@tI{\csname gml@tbl@va@#1\endcsname{\box\gml@tbl@cellbox}}%
       \hss\vrule width\gml@tblrule}%
     \hrule height\gml@tblrule width\gml@tW}}
@@ -1855,7 +1933,7 @@
   \else\box\gml@chunk\gml@tbl@fnout\gml@chunkfns\fi
   \prevdepth\z@\fi}
 % -- cells
-\gmldefstart{c}{\gml@aget{col}\gml@tc\gml@aget{colspan}\gml@tcs
+\gmldefstart{c}{\gml@aget{col}\gml@tc\gml@aget{n}\gml@tn\gml@aget{colspan}\gml@tcs
   \gml@aget{subrow}\gml@tsr\gml@aget{rowspan}\gml@trs\gml@aget{hp}\gml@thp
   \gml@aget{align}\gml@tal\gml@aget{valign}\gml@tva\gml@aget{concat}\gml@tcc
   \gml@aget{mindepth}\gml@tmd\gml@tbl@warn{rotate}\gml@tbl@warn{shade}%
@@ -1879,7 +1957,13 @@
   \expandafter\xdef\csname gml@cm@\the\gml@tblncell\endcsname{{\number\gml@tX}%
     {\number\gml@tW}{\gml@tsr}{\gml@trs}{\gml@tva}{\number\gml@tH}}%
   \advance\gml@tW-\gml@tX\advance\gml@tW-2\gml@tblrule
-  \advance\gml@tW-\gml@cellhpad\advance\gml@tW-\gml@cellhpad
+  % the cell's indents (\gml@cp@n, used by \gml@tbl@frame); a cell too
+  % narrow for them gets none: DSMGML020W (MSG, GML 020)
+  \gml@tI\gml@tW\advance\gml@tI-\gml@cellhpad\advance\gml@tI-\gml@cellhpad\relax
+  \ifdim\gml@tI>\z@\gml@tW\gml@tI
+    \expandafter\xdef\csname gml@cp@\the\gml@tblncell\endcsname{\gml@cellhpad}%
+  \else\expandafter\gdef\csname gml@cp@\the\gml@tblncell\endcsname{\z@}%
+    \gml@ibmmsg{DSMGML020W CELL WIDTH FOR CELL \gml@tn\space TOO SMALL, ZERO INDENTS USED.}\fi
   \expandafter\ifx\csname gml@cb@\the\gml@tblncell\endcsname\relax
     \expandafter\gml@tbl@newbox\csname gml@cb@\the\gml@tblncell\endcsname\fi
   \global\setbox\csname gml@cb@\the\gml@tblncell\endcsname\vbox\bgroup
@@ -1908,7 +1992,7 @@
 % -- table note: a row of one full-width cell, "Note:" in hp2
 \gmldefstart{tnote}{\def\gml@tsub{1}\def\gml@tv{1*}\let\gml@trowsplit\empty
   \gml@tbl@rowbegin
-  \def\gml@tc{1}\def\gml@tcs{1}\def\gml@tsr{1}\def\gml@trs{1}\def\gml@thp{0}%
+  \def\gml@tc{1}\def\gml@tn{1}\def\gml@tcs{1}\def\gml@tsr{1}\def\gml@trs{1}\def\gml@thp{0}%
   \def\gml@tal{left}\def\gml@tva{top}\def\gml@tcc{yes}\let\gml@tmd\empty
   \gml@tbl@cellbegin}
 \gmldefend{tnote}{\gml@tbl@cellend\gml@tbl@rowend}

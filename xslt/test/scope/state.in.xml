@@ -10,8 +10,8 @@
 </li></ul><gml:pf initial="yes" break="no"/><p>Font back,
 <gml:in left="0" unit="ch" break="yes"/>margin back.
 </p><xmp xml:space="preserve"><gml:fo fill="no" align="left" overdraw="extend" break="yes"/>  verbatim
-<gml:fo fill="yes" align="justify" overdraw="extend" break="yes"/></xmp><gml:fo fill="no" align="left" overdraw="extend" break="yes"/><gml:tp action="set" stops="5ch 10ch" break="no"/><p>no fill
-<gml:tp action="add" stops="20ch" break="no"/>with tabs
+<gml:fo fill="yes" align="justify" overdraw="extend" break="yes"/></xmp><gml:fo fill="no" align="left" overdraw="extend" break="yes"/><gml:tp action="set" stops="5ch 10ch" break="yes"/><p>no fill
+<gml:tp action="add" stops="20ch" break="yes"/>with tabs
 <gml:fo fill="yes" align="justify" overdraw="extend" break="yes"/></p><p>filled again
 <gml:hy mode="on" break="no"/></p><p>hyphenation on
 <gml:in left="1" unit="i" for="2" for-unit="i" temporary="yes" break="yes"/>temporary indent: an event

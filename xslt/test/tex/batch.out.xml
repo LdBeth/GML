@@ -19,11 +19,11 @@ and a second line\gmlendlines{}
 
 \ \ after\ a\ blank\ line
 \gmlhint{fo}{fill=yes,align=justify,overdraw=extend,break=yes}%
-\gmlstart{gml:rf}{}%
-\gmlrundyn{\gmlhint{sx}{left=Left \& Right,fill=,right=Page \gmlpageno{},pagesym=\gmlchar{57344},break=yes}%
+\gmlstart{gml:rf}{break=yes}%
+\gmlrundyn{\gmlhint{sx}{left=Left \gmlsymref{amp}{\&} Right,fill=,right=Page \gmlpageno{},pagesym=\&,break=yes}%
 }\gmlend{gml:rf}%
-\gmlstart{gml:rh}{}%
-\gmlrundyn{Page \gmlhint{pageno}{break=no} of the heading; \& is a text ampersand
+\gmlstart{gml:rh}{break=yes}%
+\gmlrundyn{Page \gmlhint{pageno}{break=no} of the heading; \gmlsymref{amp}{\&} is a text ampersand
 }\gmlend{gml:rh}%
 %
 \gmlenddocument

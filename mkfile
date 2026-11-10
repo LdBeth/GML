@@ -71,14 +71,19 @@ TEXTAGSET=`{if(! ~ $"TAGSET '' && test -f $TAGSET/tagset.tex) echo $TAGSET/tagse
 # (mk takes a metarule with an existing prerequisite as applicable, so
 # the profile is not one here: a mkfile that includes this one can add
 # "doc.xml: $TAGSET/profile.gml")
-$OUTDIR%.xml: %.gml
+$OUTDIR%.xml:Q: %.gml
 	sets=`{echo $SETS}
 	setargs=()
 	for(s in $sets) setargs=($setargs -set $s)
-	# gml returns 4 after warnings (DCF return codes): still a result
+	# gml's return codes are DCF's (MSG p.3): 4 after warnings and 8
+	# after errors are still a result (the messages say what is wrong);
+	# 12 and up (processing stopped, or gml could not run) are not
 	st=()
 	$GML -profile $GMLPROFILE $GMLFLAGS $setargs `{echo $GMLPASSFLAGS} $stem.gml > $target.tmp || st=$status
-	if(! ~ $st '' 4) { rm -f $target.tmp; exit $st }
+	if(! ~ $st '' 4 8) { rm -f $target.tmp $target.rc; exit $st }
+	# the code for gmlpass, which returns the last pass's
+	if(~ $st '') rm -f $target.rc
+	if not echo $st > $target.rc
 	mv $target.tmp $target
 
 # a tag set's stylesheet imports the stock one: both are prerequisites

@@ -115,7 +115,13 @@ gml [-I dir]... [-share dir] [-profile file|name] [-set sym=val]...
   pass of a multi-pass run (`&$PASS`, `&$PSNO`, `&$TWO`; page questions answered
   from TeX's aux file; the symbols carried between passes).  See
   "Passes (`gmlpass`)", which runs them.
-- The return code follows DCF: 0, or 4 after warnings, 8 after errors.
+- The return code follows DCF (MSG p.3): 0, or 4 after warnings, 8 after
+  errors, with a result; 12 after a severe error (processing stopped); 16
+  when the input, the profile or the output cannot be opened (nothing is
+  written); 24 for incorrect parameters on the command line.  `gmlfmt` and
+  the mkfile go on after 4 and 8 and stop at 12 and up; `gmlfmt` and
+  `gmlpass` (the last pass's code, which the mkfile rule leaves in
+  JOB.xml.rc) then return gml's code.
 
 From the source tree:
 `opam exec --switch=gml -- dune exec -- gml -share share -profile starter doc.gml`.

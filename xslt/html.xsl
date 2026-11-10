@@ -93,7 +93,8 @@
                  to say is unwrapped.  Properties with no CSS equivalent
                  are kept as data-gml-NAME.
     gml:raw backend="html" is copied unescaped; other backends dropped.
-    gml:rh gml:rf (page furniture) dropped; gml:fn -> an unnumbered
+    gml:rh gml:rf (page furniture) dropped, and gml:symval (a new value
+    of a symbol they refer to); gml:symref -> its value; gml:fn -> an unnumbered
     entry of the footnote list (kind=leader, the .fn leader definition:
     dropped, the list has its own rule).  gml:sp/sk: .sk skips that
     follow each other with nothing visible between (across scope
@@ -197,14 +198,14 @@
   <xsl:variable name="h:gml-used" select="('doc', 'scope', 'lines', 'br', 'sp', 'sk', 'pa',
       'cp', 'cc', 'cb', 'hr', 'sx', 'h', 'fn', 'rh', 'rf', 'raw', 'num', 'pageref',
       'toc-entries', 'toc-entry', 'entry-text', 'figlist-entries', 'figlist-entry',
-      'tlist-entries', 'tlist-entry', 'cpart', 'dv', 'pi',
+      'tlist-entries', 'tlist-entry', 'cpart', 'dv', 'pi', 'symref',
       'index-entries', 'index-group', 'index-entry', 'index-term', 'see')"/>
   <!-- gml: hints with no HTML meaning: dropped (the state hints too, in
        case the input was not scoped) -->
   <xsl:variable name="h:gml-dropped" select="('bx', 'vr', 'kp', 'tc', 'dh', 'df', 'hw', 'rc',
       'fl', 'is', 'ic', 'dr', 'cl', 'cd', 'sc', 'mc', 'pn', 'pl', 'pw', 'pm', 'tm', 'bm',
       'in', 'ir', 'hy', 'of', 'll', 'fo', 'nf', 'ju', 'tp', 'tb', 'ls', 'wz', 'bc',
-      'bf', 'pf', 'ws', 'es', 'sb', 'ud', 'query', 'tcmark', 'sa', 're', 'ix')"/>
+      'bf', 'pf', 'ws', 'es', 'sb', 'ud', 'query', 'tcmark', 'sa', 're', 'ix', 'symval')"/>
   <xsl:variable name="h:lists" select="('ol', 'ul', 'sl', 'l', 'dl', 'gl')"/>
   <xsl:variable name="h:index-tags" select="('i1', 'i2', 'i3', 'ih1', 'ih2', 'ih3', 'iref')"/>
   <!-- elements written inline (phrasing) -->
@@ -234,7 +235,7 @@
         else if ($n/self::gml:scope) then $n/@kind = 'inline'
         else if ($n/self::gml:lines) then $n/@word = ('us', 'up', 'uc', 'rc')
         else if ($n/self::gml:raw) then $n/@backend = 'html'
-        else if ($n/self::gml:dv) then true()
+        else if ($n/self::gml:dv or $n/self::gml:symref) then true()
         else h:unknown($n)"/>
   </xsl:function>
 
@@ -1821,6 +1822,12 @@
       <xsl:when test="starts-with($b, '-')"><sub><xsl:value-of select="@text"/></sub></xsl:when>
       <xsl:otherwise><sup><xsl:value-of select="@text"/></sup></xsl:otherwise>
     </xsl:choose>
+  </xsl:template>
+
+  <!-- a symbol of a running heading (gml:symref, inside gml:rh/gml:rf,
+       which are dropped): its value where the heading was defined -->
+  <xsl:template match="gml:symref">
+    <xsl:apply-templates/>
   </xsl:template>
 
   <xsl:template match="gml:*[local-name() = $h:gml-dropped]" priority="-0.25"/>

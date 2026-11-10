@@ -122,10 +122,7 @@ line with a bad name is an error (and the document is not processed).
   $ printf '&ok\n' > j.gml
   $ gml -symbols-in junk.sym j.gml
   junk.sym:3: error: .se: invalid symbol name b-
-  <?xml version="1.0" encoding="UTF-8"?>
-  <gml:doc xmlns:gml="urn:x-gml:canonical">some text
-  </gml:doc>
-  [8]
+  [16]
 
 A pass's number: -pass K -passes N set &$PASS, &$PSNO (the n of
 FPASSES(n)) and &$TWO (1 only when N = 2: TWOPASS or FPASSES(2), LR
@@ -145,4 +142,4 @@ not a DCF symbol.
   $ gml -pass 4 -passes 3 p.gml
   gml: error: -pass 4 -passes 3: expected 1 <= k <= n
   usage: gml [-I dir]... [-lib dir]... [-share dir] [-profile file|name] [-set sym=val]... [-maxgo n] [-undef-tags text|element|error] [-o out.xml] [-pass k] [-passes n] [-aux file] [-symbols-in file] [-symbols-out file] input.gml
-  [8]
+  [24]

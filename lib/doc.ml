@@ -110,7 +110,19 @@ type t = {
           the output line just before its widths are measured (LR p.404 r8), so
           a [.tr] change in the middle of an output line would also affect the
           text before it there, and running headings and footings use the
-          initial table as changed inside them (r4); not yet modelled. *)
+          initial table as changed inside them (r4): while a definition is open,
+          [run_tr] is the table instead ([tr_table]). *)
+  run_tr : (int, string) Hashtbl.t;
+      (** the translate table of a running heading or footing definition: empty
+          (the initial table) when the definition starts ([start_running]),
+          changed by [.tr] inside it (LR p.404 r4) *)
+  symrefs : (string, int) Hashtbl.t;
+      (** the global symbols referred to in running headings and footings so far
+          ([symref]), by name: their numbers in the marks ([Chars.sr_mark]) *)
+  sr_names : (int, string) Hashtbl.t;  (** the names of [symrefs], by number *)
+  sr_used : (string, unit) Hashtbl.t;
+      (** the names of the deferred references that entered the tree (the text
+          of a running heading or footing, a [.sx] field): [tracked] *)
   mutable page_symbol : unit -> char option;
       (** the page number symbol ([.dc ps]; [Ctx] installs it): in the text of a
           running heading or footing ([gml:rh], [gml:rf]) it stands for the page
@@ -134,6 +146,10 @@ let create () =
     here = (fun () -> "");
     mute = false;
     tr = Hashtbl.create 8;
+    run_tr = Hashtbl.create 1;
+    symrefs = Hashtbl.create 4;
+    sr_names = Hashtbl.create 4;
+    sr_used = Hashtbl.create 4;
     page_symbol = (fun () -> None);
     dvars = Hashtbl.create 8;
   }
@@ -265,10 +281,43 @@ let is_open t name = List.mem name (open_elements t)
 (** Is a running heading or footing definition open? *)
 let in_running t = is_open t "gml:rh" || is_open t "gml:rf"
 
+(** The translate table in effect: a running heading or footing has its own
+    ([run_tr]). *)
+let tr_table t = if in_running t then t.run_tr else t.tr
+
+(** A running heading or footing definition starts (before its element is
+    opened): its text is translated with the initial table, as changed by [.tr]
+    inside it (LR p.404 r4). *)
+let start_running t = if not (in_running t) then Hashtbl.reset t.run_tr
+
 let current t = match open_elements t with [] -> None | n :: _ -> Some n
+
+(** [s] with its deferred references ([symref], below) replaced by their values:
+    the marks ([Chars.sr_mark]) taken out (the operands of a control word that
+    takes no text, a value stored in a symbol, an attribute). *)
+let strip_symrefs _t s =
+  if not (Chars.has_sr s) then s
+  else begin
+    let b = Buffer.create (String.length s) in
+    let rec go i =
+      if i < String.length s then
+        match Chars.sr_char s i with
+        | Some (_, l) -> go (i + l)
+        | None ->
+            Buffer.add_char b s.[i];
+            go (i + 1)
+    in
+    go 0;
+    Buffer.contents b
+  end
+
+let strip_attrs t attrs =
+  if Hashtbl.length t.symrefs = 0 then attrs
+  else List.map (fun (k, v) -> (k, strip_symrefs t v)) attrs
 
 let start_element ?(eol = false) ?(provisional = false) t name attrs =
   if not t.mute then begin
+    let attrs = strip_attrs t attrs in
     let s = suspend t in
     let rec implicit () =
       match t.stack with
@@ -321,6 +370,7 @@ let end_element ?(force = false) t name =
 (** Set (or replace) attribute [k] of the innermost open element; false if there
     is none. *)
 let set_attr t k v =
+  let v = strip_symrefs t v in
   if t.mute then true
   else
     match plain_stack t with
@@ -339,7 +389,8 @@ let set_attr t k v =
 (* ---- content ------------------------------------------------------------ *)
 
 let translate t s =
-  if Hashtbl.length t.tr = 0 then s
+  let tr = tr_table t in
+  if Hashtbl.length tr = 0 then s
   else begin
     let b = Buffer.create (String.length s) in
     let rec go i =
@@ -347,7 +398,7 @@ let translate t s =
         let d = String.get_utf_8_uchar s i in
         let n = Uchar.utf_decode_length d in
         (match
-           Hashtbl.find_opt t.tr (Uchar.to_int (Uchar.utf_decode_uchar d))
+           Hashtbl.find_opt tr (Uchar.to_int (Uchar.utf_decode_uchar d))
          with
         | Some r -> Buffer.add_string b r
         | None -> Buffer.add_string b (String.sub s i n));
@@ -480,20 +531,123 @@ let join_dvars t left s =
                  Option.value (List.assoc_opt "text" a) ~default:"")
            l)
 
+(* ---- deferred symbol references (running headings) -------------------- *)
+
+(* Rel 4 (LR p.312 r7, p.315 r7, p.316): a symbol in a running heading or
+   footing is replaced with "the value of the symbol at the time the page
+   is started".  While a definition is open, [Subst] puts a reference to a
+   global user symbol out as [symref name value]: its value now between
+   two plane-16 marks ([Chars.sr_mark]), the start mark numbered for the
+   name.  The span is text that travels with the line (a text line, the
+   text of [.ce], a [.sx] field, a macro argument); [Interp] strips the
+   marks from the operands of the other control words, [Symbols.set] from
+   a value it stores.  When the text enters the tree the span becomes the
+   element [<gml:symref name="NAME">value</gml:symref>] ([add_text]): the
+   value is the fallback (for HTML, for a page before any change, and for
+   a TeX without e-TeX marks), translated like the text around it; in a
+   [.sx] field it is written [U+E001 NAME U+E002 value U+E003]
+   ([field_text]).  The names referred to are [tracked]: [Ctx] puts the
+   hint [gml:symval] out where one of them is set again. *)
+
+(** The span of a deferred reference to [name] with the value [value]. *)
+let symref t name value =
+  let n =
+    match Hashtbl.find_opt t.symrefs name with
+    | Some n -> n
+    | None ->
+        let n = Hashtbl.length t.symrefs + 1 in
+        Hashtbl.replace t.symrefs name n;
+        Hashtbl.replace t.sr_names n name;
+        n
+  in
+  Chars.sr_mark n ^ value ^ Chars.sr_end
+
+(** Has a running heading or footing referred to the global symbol [name] in its
+    text? (A span taken out of a control word's operands, [.sk &n], does not
+    count.) *)
+let tracked t name = Hashtbl.mem t.sr_used name
+
+let use_symref t name = if not t.mute then Hashtbl.replace t.sr_used name ()
+
+(* [s] as pieces: [Either.Left text] and [Either.Right (name, value)] (a
+   deferred reference); a stray mark is dropped, an unended span runs to
+   the end of [s] *)
+let split_symrefs t s =
+  if not (Chars.has_sr s) then [ Either.Left s ]
+  else begin
+    let n = String.length s in
+    let left acc i j =
+      if j > i then Either.Left (String.sub s i (j - i)) :: acc else acc
+    in
+    let rec go i start acc =
+      if i >= n then List.rev (left acc start n)
+      else
+        match Chars.sr_char s i with
+        | Some (k, l) when Hashtbl.mem t.sr_names k ->
+            let e = Chars.sr_find_end s (i + l) in
+            let next =
+              match if e < n then Chars.sr_char s e else None with
+              | Some (_, l') -> e + l'
+              | None -> n
+            in
+            go next next
+              (Either.Right
+                 (Hashtbl.find t.sr_names k, String.sub s (i + l) (e - i - l))
+              :: left acc start i)
+        | Some (_, l) -> go (i + l) (i + l) (left acc start i)
+        | None -> go (i + 1) start acc
+    in
+    go 0 0 []
+  end
+
 (* [s] with its text variables replaced by their text (an attribute value) *)
-let dvar_text t s = join_dvars t Fun.id s
+let dvar_text t s = join_dvars t Fun.id (strip_symrefs t s)
 
 (** [s] as it is put out, for text in a hint's attribute (the fields of [.sx]):
     translated ([.tr]), its text variables replaced by their text (which is not
     translated). *)
-let output_text t s = join_dvars t (translate t) s
+let output_text t s = join_dvars t (translate t) (strip_symrefs t s)
 
-(* Text enters the tree translated ([.tr]).  In a running heading or
+(** A field of [.sx]: [output_text], a deferred reference written
+    [U+E001 NAME U+E002 value U+E003]. *)
+let field_text t s =
+  String.concat ""
+    (List.map
+       (function
+         | Either.Left s -> output_text t s
+         | Either.Right (name, v) ->
+             use_symref t name;
+             "\u{E001}" ^ name ^ "\u{E002}" ^ output_text t v ^ "\u{E003}")
+       (split_symrefs t s))
+
+(* Text enters the tree translated ([.tr]).  A deferred reference is the
+   element [gml:symref] around its value.  In a running heading or
    footing the page number symbol is split off first, as the hint
    [gml:pageno]: it is the page number symbol before any translation
    (SH35-0069 p.259: "&amp." is X'08 translated to "&" on output, a text
    ampersand). *)
 let rec add_text t s =
+  match split_symrefs t s with
+  | [ Either.Left s ] -> add_dv_text t s
+  | l ->
+      List.iter
+        (function
+          | Either.Left s -> if s <> "" then add_dv_text t s
+          | Either.Right (name, v) ->
+              use_symref t name;
+              add t
+                (Tree.Element
+                   ( "gml:symref",
+                     [ ("name", name) ],
+                     List.filter_map
+                       (function
+                         | Either.Left "" -> None
+                         | Either.Left s -> Some (Tree.Text (translate t s))
+                         | Either.Right a -> Some (Tree.Hint ("dv", a)))
+                       (split_dvars t v) )))
+        l
+
+and add_dv_text t s =
   match split_dvars t s with
   | [ Either.Left s ] -> add_plain_text t s
   | l ->
@@ -600,7 +754,8 @@ let hint t name attrs =
     add t
       (Tree.Hint
          ( name,
-           if Hashtbl.length t.dvars = 0 then attrs
+           if Hashtbl.length t.dvars = 0 && Hashtbl.length t.symrefs = 0 then
+             attrs
            else List.map (fun (k, v) -> (k, dvar_text t v)) attrs ))
 
 let raw t backend content =

@@ -92,3 +92,48 @@ let rec dv_skip s i =
     | Some (0, l) -> i + l
     | Some (_, l) -> dv_skip s (i + l)
     | None -> dv_skip s (i + 1)
+
+(* ---- the marks of a deferred symbol reference (running headings) ------- *)
+
+(* Rel 4: a symbol in a running heading or footing is replaced when the
+   heading is placed on a page (LR p.312 r7, p.315 r7, p.316).  While a
+   definition is open, substitution ([Subst]) puts a reference to a global
+   user symbol out as its current value between two characters of the
+   private use plane 16: U+100000 + the reference's number ([Doc.symref])
+   before, U+100000 after.  In UTF-8 they are F4 80..8F xx xx, the end
+   mark F4 80 80 80.  A global symbol's value never holds them
+   ([Symbols.set] strips them), so the spans do not nest; the value may
+   hold a text variable (plane 15).  Like a text variable's string, the
+   span is not read by the separator rule ([Line.index_sep]). *)
+let sr_base = 0x100000
+
+let sr_mark n =
+  let b = Buffer.create 4 in
+  Buffer.add_utf_8_uchar b (Uchar.of_int (sr_base + n));
+  Buffer.contents b
+
+let sr_end = sr_mark 0
+
+(** The plane-16 mark at [i] of [s]: its number (0 for the end mark) and its
+    length. *)
+let sr_char s i =
+  if Char.code s.[i] <> 0xF4 then None
+  else
+    let d = String.get_utf_8_uchar s i in
+    let u = Uchar.to_int (Uchar.utf_decode_uchar d) in
+    if Uchar.utf_decode_is_valid d && u >= sr_base then
+      Some (u - sr_base, Uchar.utf_decode_length d)
+    else None
+
+(** The index of the end mark of the deferred reference whose value starts at
+    [i] of [s], or the length of [s] if it is unended. *)
+let rec sr_find_end s i =
+  if i >= String.length s then String.length s
+  else
+    match sr_char s i with
+    | Some (0, _) -> i
+    | Some (_, l) -> sr_find_end s (i + l)
+    | None -> sr_find_end s (i + 1)
+
+(** Does [s] hold a deferred reference? *)
+let has_sr s = String.contains s '\xf4'

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><gml:rh><gml:lines word="ce" n="1" break="yes">Hint test running head</gml:lines>
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><gml:rh break="yes"><gml:lines word="ce" n="1" break="yes">Hint test running head</gml:lines>
 </gml:rh><body><h1 anchor="gml-h1-1">Formatting hints</h1>
 <p>Normal filled text that goes on for a while so that it wraps at least
 once in the justified paragraph mode of the formatter.
@@ -31,21 +31,21 @@ indented by four characters, for this paragraph and the next.
 <hp1>italic inside it</hp1>,
 <gml:pf initial="yes" break="no"/>and back to the initial font.
 <gml:df name="big" spec="type(bold italic)" break="no"/><gml:bf font="big" break="no"/>Defined bold italic font.
-<gml:pf initial="yes" break="no"/><gml:tp action="set" stops="10mh 20mh 30mh" break="no"/><gml:fo fill="no" align="left" overdraw="extend" break="yes"/>Name	Value	Note
+<gml:pf initial="yes" break="no"/><gml:tp action="set" stops="10mh 20mh 30mh" break="yes"/><gml:fo fill="no" align="left" overdraw="extend" break="yes"/>Name	Value	Note
 Apple	12	red
-<gml:tp action="set" stops="./25m" break="no"/>Leader	dots
-<gml:tp action="reset" break="no"/><gml:fo fill="yes" align="justify" overdraw="extend" break="yes"/><gml:sx left="Left side" fill="." right="Right side" break="yes"/><gml:hr break="yes"/><gml:bx action="on" spec="1ch 40ch" break="yes"/>Text inside a box.
+<gml:tp action="set" stops="./25m" break="yes"/>Leader	dots
+<gml:tp action="set" stops="" break="yes"/><gml:fo fill="yes" align="justify" overdraw="extend" break="yes"/><gml:sx left="Left side" fill="." right="Right side" break="yes"/><gml:hr repeat="yes" break="yes"/><gml:bx action="on" spec="1ch 40ch" break="yes"/>Text inside a box.
 <gml:bx action="off" break="yes"/><gml:hy mode="on" break="no"/><gml:hw word="ex-cep-tion-al" break="no"/>Hyphenation is now on for exceptional words.
 <gml:hy mode="off" break="no"/><gml:cp n="5" unit="line" break="yes"/><gml:kp mode="on" break="yes"/>Kept text one.
 Kept text two.
-<gml:kp mode="off" break="yes"/><gml:ls spec="by 1.5" break="no"/>Wider line spacing for a while so that a couple of lines of text show
+<gml:kp mode="off" break="yes"/><gml:ls spec="by 1.5" break="yes"/>Wider line spacing for a while so that a couple of lines of text show
 the change in spacing between the lines of one paragraph.
-<gml:br break="yes"/><gml:ls spec="normal" break="no"/><gml:ws spec="by 2" break="no"/>Wide word spaces.
+<gml:br break="yes"/><gml:ls spec="normal" break="yes"/><gml:ws spec="by 2" break="no"/>Wide word spaces.
 <gml:ws spec="normal" break="no"/><gml:rc code="1" char="*" break="no"/><gml:br break="yes"/><gml:rc code="1" mode="on" break="no"/>Revised text marked in the margin.
 <gml:br break="yes"/><gml:rc code="1" mode="off" break="no"/><gml:ll length="4" unit="i" break="yes"/>A shorter line length of four inches for this paragraph which is long
 enough to wrap at that length.
 <gml:ll length="default" break="yes"/><gml:fn>An unnumbered footnote from .fn on.
-</gml:fn><gml:dh level="2" spec="font bold" break="no"/><gml:vr break="no"/><gml:pa break="yes"/><gml:pn spec="roman" break="no"/>After a page eject, roman page numbers.
+</gml:fn><gml:dh level="2" spec="font bold" break="no"/><gml:vr break="yes"/><gml:pa break="yes"/><gml:pn spec="roman" break="no"/>After a page eject, roman page numbers.
 <gml:h level="2" break="yes"><gml:tcmark anchor="gml.tc.1" break="no"/>A control word heading</gml:h>
 Text after .h2.
 <gml:pa side="odd" break="yes"/>On an odd page.

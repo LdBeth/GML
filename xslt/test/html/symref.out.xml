@@ -1,0 +1,17 @@
+<!DOCTYPE HTML><html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="GML html.xsl">
+<title>Document</title>
+<link rel="stylesheet" href="gml.css">
+</head>
+<body class="gml">
+<main class="gml-doc">
+<p>Text before.
+</p>
+<p>Text after the change.
+</p>
+</main>
+</body>
+</html>

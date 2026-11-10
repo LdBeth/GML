@@ -109,17 +109,22 @@ fn xsl {
 	$SAXON -s:$src -xsl:$sheet $* $sets $params || exit 1
 }
 
-# gml returns 4 after warnings (DCF return codes): still a result
+# gml's return codes are DCF's (MSG p.3): 4 after warnings and 8 after
+# errors are still a result (the messages say what is wrong); 12 and up
+# (processing stopped, or gml could not run) are not.  gmlfmt returns
+# gml's code when the stylesheets succeed, as SCRIPT/VS returns its own.
+gmlrc=()
 fn rungml {
 	st=()
 	$gml -profile $profile $gmlargs $setargs $in || st=$status
-	if(! ~ $st '' 4) exit $st
+	if(! ~ $st '' 4 8) exit $st
+	gmlrc=$st
 	status=()
 }
 
 if(~ $to xml){
 	rungml
-	exit
+	exit $gmlrc
 }
 rungml > $tmp.xml
 switch($to){
@@ -141,3 +146,4 @@ case html
 	xsl scope $tmp.r.xml -o:$tmp.s.xml
 	xsl html $tmp.s.xml
 }
+exit $gmlrc

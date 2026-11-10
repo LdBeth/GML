@@ -463,6 +463,10 @@ let create ?(include_path = []) () =
   ctx.doc.Doc.page_symbol <- (fun () -> Some ctx.chars.Chars.ps);
   ctx.syms.Symbols.system <- system_symbol ctx;
   ctx.syms.Symbols.query <- query ctx;
+  (* deferred references of running headings (Doc.symref): no stored
+     value holds one (a change of a symbol referred to is the hint
+     gml:symval: Interp.create installs Symbols.changed) *)
+  ctx.syms.Symbols.clean <- Doc.strip_symrefs ctx.doc;
   ctx.doc.Doc.report <-
     (fun m -> Loc.report ctx.diag Loc.Warning ctx.loc "%s" m);
   ctx.doc.Doc.here <- (fun () -> Loc.to_string ctx.loc);

@@ -7,9 +7,11 @@
       table in lib/hints.ml (br sp sk in ir of ll fo nf ju pa cp cc cb bx
       hr vr kp dh tc sx tp tb bf pf df hy hw rc bc fl ls sb ws es wz is ic
       ud dr pn pl pw pm tm bm cl cd sc mc), gml:query (a question of the
-      pass model) and the gml:br breaks written by scope.xsl;
+      pass model), gml:symval (a new value of a symbol of a running
+      heading) and the gml:br breaks written by scope.xsl;
     - the scopes unwrapped, their content kept: gml:lines (line-counted
-      words) and gml:scope (scope.xsl);
+      words) and gml:scope (scope.xsl); gml:symref (a symbol of a running
+      heading) is its value;
     - the running heading/footing definitions gml:rh and gml:rf removed
       with their content (page furniture, not document text).
   Kept: gml:doc, gml:h (.h0-.h6 headings), gml:fn (.fn footnotes),
@@ -30,11 +32,11 @@
   <xsl:variable name="hints" select="('br', 'sp', 'sk', 'in', 'ir', 'of', 'll', 'fo', 'nf', 'ju',
       'pa', 'cp', 'cc', 'cb', 'bx', 'hr', 'vr', 'kp', 'dh', 'tc', 'sx', 'tp', 'tb', 'bf', 'pf',
       'df', 'hy', 'hw', 'rc', 'bc', 'fl', 'ls', 'sb', 'ws', 'es', 'wz', 'is', 'ic', 'ud', 'dr',
-      'pn', 'pl', 'pw', 'pm', 'tm', 'bm', 'cl', 'cd', 'sc', 'mc', 'query')"/>
+      'pn', 'pl', 'pw', 'pm', 'tm', 'bm', 'cl', 'cd', 'sc', 'mc', 'query', 'symval')"/>
 
   <xsl:template match="gml:*[local-name() = $hints] | gml:rh | gml:rf"/>
 
-  <xsl:template match="gml:lines | gml:scope">
+  <xsl:template match="gml:lines | gml:scope | gml:symref">
     <xsl:apply-templates/>
   </xsl:template>
 
