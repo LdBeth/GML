@@ -12,7 +12,9 @@
 .*       examples/dcfdemo.gml > dcfdemo.tex
 .*   TEXINPUTS=.:share/tex: pdftex dcfdemo.tex
 .*
-.* (forward references then give DSMGML013W and "ID unknown").
+.* (forward references then give DSMGML013W and "ID unknown", and gml
+.* returns 4, as SCRIPT/VS does after a warning).  In four passes the
+.* document formats without a message: return code 0.
 :gdoc sec='IBM Internal Use Only'.
 :frontm.
 :titlep.
@@ -32,7 +34,8 @@
 :p.This document shows the Starter Set tags formatted by a profile whose
 application processing functions are SCRIPT/VS macros: spacing,
 indention, fonts, numbering and the title page all come from control
-words such as .sk, .in, .of, .bf and .dh.
+words such as .sk, .in, .of, .bf and .dh.  The appendix gives a few
+control words in the document itself.
 :preface.
 :p.The formatting follows the descriptions in the
 :cit.GML Starter Set Implementation Guide:ecit.: headings, lists,
@@ -262,12 +265,69 @@ same page as the reference.
 :i1 pg=end.tables
 :appendix.
 :h1 id=last.Control Words Used
-:p.The appendix headings are lettered.
+:p.The appendix headings are lettered.  The tags of this document are
+mapped to macros of the profile, and the macros issue control words;
+a document can also give control words itself, between its tags, as
+this appendix does.
 :i1 pg=major.control words
 :i1 seeid=para.text
 :h2.Spacing
 :iref refid=para.
-:p.:hp2..sk:ehp2. skips, :hp2..sp:ehp2. spaces.
+:p.:hp2..sk:ehp2. skips, :hp2..sp:ehp2. spaces.  A paragraph tag of
+this profile is a skip of three quarters of a line and nothing else, so
+the control words below go on across paragraphs.
+:h2.Indention for a distance
+:i1.control words
+:i2.indention
+:p.With FOR, an indention lasts for a vertical distance: here four
+output lines, counted from the first line of text, so the skip of the
+paragraph tag before it does not count.
+.in +4 for 4
+:p.This paragraph and the start of the next one are indented four
+characters more than the text around them.  The first line of text
+starts the count, and the lines are counted as they are printed, not
+as they were entered.
+:p.The skip between the two paragraphs, three quarters of a line, is
+part of the distance: the first line of this paragraph ends the four
+lines and is still indented, and the lines after it are back at the
+margin of the text.
+:p.With AFTER, the indention starts later: in the next paragraph the
+first two lines are at the margin, the next two indented, and the rest
+at the margin again.
+.in +4 for 2 after 2
+:p.Two output lines at the margin of the text, then two output lines
+indented by four characters, then the margin again, all in one
+paragraph that was entered as eight input lines and is printed as the
+lines it needs.  The distances are vertical ones: AFTER and FOR could
+as well be given in inches or points, and a skip after the first line
+of text is part of them.  A new .in before the end of a duration ends
+it at once, and an .in without FOR is a permanent change of the
+indention, until the next one.
+:h2.One line moved
+:i2.one line
+:p.Indent line (.il) moves the next output line only, from the margin
+that line has.  The next text, skip or space line uses it up, so it is
+given after a paragraph tag, whose skip would otherwise take it: in the
+next paragraph the first line begins three characters to the right, as
+in a book, and the others are at the margin.
+:p.
+.il 3
+This paragraph starts with an indented first line, which was not given
+in the text: the control word after the paragraph tag moved it.  The
+following lines are at the margin of the text again.
+:h2.Centred lines
+:i2.centring
+:p.The two lines below are centred, each as it was entered:
+.ce 2
+Tags say what a part of the document is,
+control words say how it looks.
+:h2.A macro as a symbol
+:i2.macro value
+.dm motto /Generalized Markup Language/
+.dm motto x
+:p.The symbol &amp.x below was given the current value of the macro
+motto, defined with .dm motto, by the control word .dm motto x:
+:q.&x.:eq.
 :backm.
 :index.
 :egdoc.

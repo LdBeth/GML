@@ -20,9 +20,9 @@ and this line
 and here</gml:lines>
 <gml:lines word="up" n="1" break="no">Upper case line with café</gml:lines>
 Back to normal.
-<gml:in left="5" unit="ch" break="yes"/><gml:lines word="in" n="1" after="yes" left="0" unit="ch" break="no">First line at the old margin, then the following lines are indented by</gml:lines>
+<gml:in left="5" unit="ch" after="1" after-unit="line" break="yes"/>First line at the old margin, then the following lines are indented by
 five characters until the margin changes again, which is right now.
-<gml:in left="0" unit="ch" break="yes"/><gml:lines word="il" n="1" left="3" unit="mh" break="yes">An indented first line in a paragraph that is long enough to wrap onto a</gml:lines>
+<gml:in left="0" unit="ch" break="yes"/><gml:il shift="3" unit="mh" break="yes"/>An indented first line in a paragraph that is long enough to wrap onto a
 second line so the effect can be seen.
 <gml:of offset="4" unit="ch" break="yes"/>Offset: the first line is at the margin and every following line is
 indented by four characters, for this paragraph and the next.

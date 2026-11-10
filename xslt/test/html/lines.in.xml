@@ -1,15 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><body><h1 anchor="gml-h1-1">Line-counted words</h1>
 <p>start
-<gml:lines word="in" n="2" left="3" unit="ch" break="yes">two lines
-indented</gml:lines>
+<gml:in left="3" unit="ch" temporary="yes" for="2" for-unit="line" break="yes"/>two lines
+indented
 back
-<gml:scope kind="block" in="4ch"><gml:br break="yes" cause="in"/><gml:lines word="in" n="1" after="yes" left="0" unit="ch" break="no">one line</gml:lines>
+<gml:scope kind="block" in="4ch"><gml:br break="yes" cause="in"/>one line
 then indented
-<gml:lines word="il" n="1" left="6" unit="ch" break="yes">indented line</gml:lines>
-<gml:lines word="un" n="1" left="2" unit="ch" break="yes">undented line</gml:lines>
+<gml:il shift="2" unit="ch" break="yes"/>indented line
+<gml:un shift="-2" unit="ch" break="yes"/>undented line
 <gml:lines word="uc" n="1" break="no">underscore caps</gml:lines>
 <gml:rc code="1" char="|" break="no"/><gml:lines word="rc" n="1" char="|" break="no">revised</gml:lines>
 <gml:sx left="left" fill="." right="right" break="yes"/><gml:hr repeat="yes" break="yes"/><gml:sk n="2" unit="line" break="yes"/><gml:kp mode="on" break="yes"/>kept
 <gml:kp mode="off" break="yes"/></gml:scope><gml:lines word="ce" n="on" break="yes">first centred
 second centred
-</gml:lines></p></body></gdoc></gml:doc>
+</gml:lines></p><p>A distance is a float before the next text: each paragraph below is
+one block.
+<gml:in left="4" unit="ch" delta="+4" temporary="yes" for="2" for-unit="line" after="2" after-unit="line" break="yes"/></p><p>A paragraph of
+three input lines
+in one block.
+</p><p><gml:il shift="3" unit="ch" break="yes"/>An indented first line
+and a second one.
+</p><p>A length:
+<gml:in left="1" unit="i" temporary="yes" for="0.5" for-unit="i" break="yes"/>half an inch at one inch.
+<gml:ir right="6" unit="ch" temporary="yes" for="3" for-unit="line" break="yes"/></p><p>Three lines with a right indention.
+<gml:il shift="5" unit="ch" break="yes"/></p><p>An .il before a paragraph tag: its skip uses it up.
+</p><p><gml:un shift="-2" unit="ch" break="yes"/>A first line moved left
+of the margin.
+<gml:in left="2" unit="ch" temporary="yes" for="1" for-unit="line" break="yes"/><gml:in left="5" unit="ch" temporary="yes" for="2" for-unit="line" break="yes"/></p><p>Only the second of two FOR before the text counts.
+</p><gml:scope kind="block" in="3ch"><p>A permanent change.
+<gml:in left="5" unit="ch" temporary="yes" for="2" for-unit="line" break="yes"/></p><p>Back to the permanent one plus two.
+<gml:scope kind="block" in="0"><gml:br break="yes" cause="in"/><gml:il shift="2" unit="ch" break="yes"/><gml:br break="yes"/></gml:scope></p></gml:scope><p>A skip between.
+</p></body></gdoc></gml:doc>

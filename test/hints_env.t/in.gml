@@ -45,3 +45,10 @@ Page symbol &$PS. not centred.
 .re
 Page symbol &$PS. centred again.
 .ce off
+.in 3 0
+Temporary indention until changed, &$IN.
+.sa
+.in 8
+Indention &$IN.
+.re
+Back at the temporary one, &$IN.

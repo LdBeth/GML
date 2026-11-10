@@ -66,7 +66,6 @@ type scope = {
   rest : Tree.attrs;  (** attributes of later pieces *)
   mutable remaining : int option;  (** lines still covered; None: until ended *)
   mutable started : bool;  (** a non-empty piece was emitted *)
-  next : scope list;  (** scopes that begin when this one ends *)
 }
 (** A line scope ([gml:lines]): the text of the next [remaining] input lines (or
     up to an explicit end) is wrapped in a [gml:lines] element carrying the
@@ -437,16 +436,15 @@ let line_end t ~counted ~text =
     close_eol ();
     if text then add t (Tree.Text "\n");
     resume t
-      (List.concat_map
+      (List.filter
          (fun sc ->
-           match sc.remaining with Some n when n <= 0 -> sc.next | _ -> [ sc ])
+           match sc.remaining with Some n when n <= 0 -> false | _ -> true)
          s)
   end
   else begin
     (* innermost first; the scopes inside an expired one go on *)
     List.iter (fun sc -> resume t (suspend_to t sc.word)) expired;
-    if text then add t (Tree.Text "\n");
-    List.iter (fun sc -> resume t sc.next) (List.rev expired)
+    if text then add t (Tree.Text "\n")
   end
 
 (* ---- .dv text variables ------------------------------------------------ *)

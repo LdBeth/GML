@@ -4,7 +4,7 @@
 <p><gml:sk n="1" unit="line" break="yes"/>Text with <hp1><gml:bf font="hi1 althi1" break="no"/>underscored</hp1><gml:pf font="@rf hi0" break="no"/> and <gml:bf font="caps" break="no"/>upper case words<gml:pf font="@rf hi0" break="no"/>, then <gml:bf font="docnum" restart="yes" break="no"/>a restarted font<gml:pf font="@rf hi0" break="no"/>
 and <gml:bf font="big" break="no"/>big<gml:pf break="no"/>, <gml:bf font="side" break="no"/>sans<gml:pf break="no"/>, <gml:bf font="small" break="no"/>small<gml:pf break="no"/>.
 </p><h2><gml:h level="2" break="yes">Second level</gml:h>
-<dl><dt><dd><gml:lines word="in" n="1" after="yes" left="0" unit="ch" break="no"><gml:bf font="hi2" restart="yes" break="no"/>Term</gml:lines>
+<dl><dt><dd><gml:in left="0" unit="ch" after="1" after-unit="line" break="no"/><gml:bf font="hi2" restart="yes" break="no"/>Term
 <gml:pf font="@rf hi0" break="no"/><gml:is spec="to 0dh min 1ch" break="no"/>Definition
 </dd></dt></dl><xmp><gml:br break="yes"/><gml:fo fill="no" align="left" overdraw="extend" break="yes"/><gml:bf font="xmpfont" restart="yes" break="no"/><gml:in left="2" unit="ch" delta="+2" break="yes"/>  indented line
 

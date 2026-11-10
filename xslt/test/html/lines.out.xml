@@ -12,19 +12,48 @@
 <section class="gml-body">
 <h1 id="gml-h1-1" class="gml-h1">Line-counted words</h1>
 <p>start
-<span class="gml-lines gml-in" style="display: block; margin-left: 3ch">two lines
-indented</span>
+<br><span class="gml-in" aria-hidden="true" style="float: left; clear: left; width: 3ch; height: 2lh"></span>two lines
+indented
 back
-<span class="gml-scope" style="display: block; margin-left: 4ch"><span class="gml-lines gml-in" style="display: block; margin-left: calc(0px - 4ch)">one line</span>
+<span class="gml-scope" style="display: block; margin-left: 4ch">one line
 then indented
-<span class="gml-lines gml-il" style="display: block; text-indent: calc(6ch - 4ch)">indented line</span>
-<span class="gml-lines gml-un" style="display: block; text-indent: calc(2ch - 4ch)">undented line</span>
+<br><span class="gml-il" aria-hidden="true" style="float: left; width: 2ch; height: 1lh"></span>indented line
+<br>undented line
 <span class="gml-lines gml-uc" style="text-decoration: underline; text-transform: uppercase">underscore caps</span>
 <span class="gml-lines gml-rc" data-rc="|">revised</span>
 <span class="gml-sx" style="display: flex"><span class="gml-sx-left">left</span><span class="gml-sx-fill" data-fill="."></span><span class="gml-sx-right">right</span></span><span class="gml-hr" style="display: block"></span><span class="gml-sp" style="display: block; height: 2lh"></span>kept
 </span><span class="gml-lines gml-ce" style="display: block; text-align: center; white-space: pre-line">first centred
 second centred
-</span></p></section></article>
+</span></p>
+<p>A distance is a float before the next text: each paragraph below is
+one block.
+</p>
+<p><span class="gml-in" aria-hidden="true" style="float: left; clear: left; width: 4ch; height: 4lh; shape-outside: inset(2lh 0 0 0)"></span>A paragraph of
+three input lines
+in one block.
+</p>
+<p style="text-indent: 3ch">An indented first line
+and a second one.
+</p>
+<p>A length:
+<br><span class="gml-in" aria-hidden="true" style="float: left; clear: left; width: 1in; height: 0.5in"></span>half an inch at one inch.
+</p>
+<p><span class="gml-ir" aria-hidden="true" style="float: right; clear: right; width: 6ch; height: 3lh"></span>Three lines with a right indention.
+</p>
+<p>An .il before a paragraph tag: its skip uses it up.
+</p>
+<p style="text-indent: -2ch">A first line moved left
+of the margin.
+</p>
+<p><span class="gml-in" aria-hidden="true" style="float: left; clear: left; width: 5ch; height: 2lh"></span>Only the second of two FOR before the text counts.
+</p>
+<div class="gml-scope" style="margin-left: 3ch">
+<p>A permanent change.
+</p>
+<p><span class="gml-in" aria-hidden="true" style="float: left; clear: left; width: calc(5ch - 3ch); height: 2lh"></span>Back to the permanent one plus two.
+<span class="gml-scope" style="display: block; margin-left: calc(0px - 3ch)"></span></p></div>
+<p>A skip between.
+</p></section></article>
 </main>
 </body>
 </html>

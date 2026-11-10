@@ -37,7 +37,7 @@ before :hp.a phrase:ehp. after
 and a second line
 outside
 .in 1i for 2i
-not counted: the amount is not in lines
+a distance in inches, measured by TeX
 .ce 3
 .ce off
 not centered

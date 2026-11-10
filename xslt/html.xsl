@@ -84,8 +84,7 @@
     gml:hr       hr.  gml:sx: a flex line, left / fill / right.
     gml:lines    ce ri: a centred / right-aligned block whose input lines
                  stay lines (white-space: pre-line); us up uc: underline /
-                 uppercase spans; in ir: a block with that margin; il un:
-                 a block with that first-line indent; rc: span.gml-rc.
+                 uppercase spans; rc: span.gml-rc.
     gml:scope    kind=block -> div (span display:block in phrasing
                  content; in a list, its CSS goes on each item instead),
                  kind=inline -> span (div in flow content), with the
@@ -102,11 +101,48 @@
     gml:h (.hn) of a level defined NBR (gml:dh, accumulator h:dh) is a
     run-in heading (span.gml-runin, the text follows on the same line).
     The device-level events (bx vr kp tc dh df hw rc fl is ic dr cl cd sc
-    mc pn pl pw pm tm bm, temporary in/ir, hy options) have no HTML
-    meaning and are dropped, as are sa re (the saved environment) and ix
-    (the place of the index: resolve.xsl put the gml:index-entries after
-    it).  gml:pi (a SCRIPT index entry) is a link target, like the index
-    tags.
+    mc pn pl pw pm tm bm, hy options) have no HTML meaning and are
+    dropped, as are sa re (the saved environment) and ix (the place of
+    the index: resolve.xsl put the gml:index-entries after it).  gml:pi
+    (a SCRIPT index entry) is a link target, like the index tags.
+    gml:in/gml:ir temporary="yes" (.in/.ir h FOR v1 [AFTER v2]): an
+                 empty float, span.gml-in/.gml-ir aria-hidden="true" with
+                 inline CSS only, before the next text (anywhere after
+                 the hint, so blank space before the first text line, a
+                 paragraph's top margin, does not count):
+                   float, clear: left (ir: right); width: the new
+                   margin less the one of the scopes around; height: v1,
+                   or v2 + v1 with shape-outside: inset(v2 0 0 0)
+                 The lines beside it, in that paragraph and the ones
+                 after it in the same block formatting context, skips
+                 included, make room for it, as DCF counts the distance.
+    gml:il/gml:un .il/.un h, the next output line moved: text-indent: h
+                 on its block when the line is the block's first and the
+                 block has no block inside (the .il after a paragraph
+                 tag; negative too, a hanging line); else, h > 0, a float
+                 span.gml-il/.gml-un h wide, 1lh high, before the text;
+                 nothing when a block ends or a whole one (a skip) comes
+                 between the hint and the next text (the skip uses it
+                 up, as in DCF), nor for a line moved left that is not
+                 a block's first.  Of several before one text, the last counts.
+                 These hints break: inside running text a br (the rule
+                 of gml:br), the paragraph stays one block; with
+                 NOBREAK the float takes the line it is in.  The output
+                 pass (mode h:out) places the markers h:float and h:il
+                 of the first pass, where the output blocks are known.
+                 Limits: a distance in lines is n lh, the line height of
+                 the text (CSS lh: 2023 browsers); a line taller than
+                 that (a larger font) counts as more.  A float cannot
+                 move lines out: an outdent for a distance (a FOR margin
+                 left of the one around) is dropped, as is the AFTER of
+                 a permanent .in (scope.xsl applies the margin at once).
+                 A new .in/.ir ends a running distance in DCF; here only
+                 a new FOR before any text replaces one (the float of a
+                 FOR clears the earlier floats of its side), a float
+                 placed is not shortened by a later margin change.  A
+                 float lives in its block formatting context: a table
+                 cell or a pre (overflow: auto) ends it.  A first line
+                 moved left may reach into the page margin.
 
   Scope properties -> CSS
     in        margin-left   ir  margin-right   (state values are absolute:
@@ -201,10 +237,12 @@
       'tlist-entries', 'tlist-entry', 'cpart', 'dv', 'pi', 'symref',
       'index-entries', 'index-group', 'index-entry', 'index-term', 'see')"/>
   <!-- gml: hints with no HTML meaning: dropped (the state hints too, in
-       case the input was not scoped) -->
+       case the input was not scoped).  A temporary in/ir and il/un have
+       templates of their own (a marker the output pass moves to the next
+       text), but count as invisible where they stand, as these do. -->
   <xsl:variable name="h:gml-dropped" select="('bx', 'vr', 'kp', 'tc', 'dh', 'df', 'hw', 'rc',
       'fl', 'is', 'ic', 'dr', 'cl', 'cd', 'sc', 'mc', 'pn', 'pl', 'pw', 'pm', 'tm', 'bm',
-      'in', 'ir', 'hy', 'of', 'll', 'fo', 'nf', 'ju', 'tp', 'tb', 'ls', 'wz', 'bc',
+      'in', 'ir', 'il', 'un', 'hy', 'of', 'll', 'fo', 'nf', 'ju', 'tp', 'tb', 'ls', 'wz', 'bc',
       'bf', 'pf', 'ws', 'es', 'sb', 'ud', 'query', 'tcmark', 'sa', 're', 'ix', 'symval')"/>
   <xsl:variable name="h:lists" select="('ol', 'ul', 'sl', 'l', 'dl', 'gl')"/>
   <xsl:variable name="h:index-tags" select="('i1', 'i2', 'i3', 'ih1', 'ih2', 'ih3', 'iref')"/>
@@ -639,10 +677,78 @@
                   and not(preceding-sibling::node()[1][self::text()][ends-with(., '&#10;')])">
       <xsl:text>&#10;</xsl:text>
     </xsl:if>
+    <xsl:call-template name="h:out-copy"/>
+  </xsl:template>
+  <xsl:template mode="h:out" match="span[key('h:il-block', generate-id())]">
+    <xsl:call-template name="h:out-copy"/>
+  </xsl:template>
+  <!-- an element, with the first-line indention of a .il/.un it starts
+       with (added to one it has, a hanging indention's) -->
+  <xsl:template name="h:out-copy">
     <xsl:copy>
-      <xsl:apply-templates select="@* | node()" mode="h:out"/>
+      <xsl:apply-templates select="@*" mode="h:out"/>
+      <xsl:variable name="style" select="string(@style)"/>
+      <xsl:for-each select="key('h:il-block', generate-id())[last()]">
+        <xsl:attribute name="style" select="
+            if (matches($style, '(^|;)\s*text-indent:'))
+            then replace($style, '((^|;)\s*)text-indent:\s*([^;]+)', '$1text-indent: calc($3 + ' || @shift || ')')
+            else string-join(($style[. != ''], 'text-indent: ' || @shift), '; ')"/>
+      </xsl:for-each>
+      <xsl:apply-templates select="node()" mode="h:out"/>
     </xsl:copy>
   </xsl:template>
+
+  <!-- indention for a distance, one line moved: the markers of the first
+       pass (gml:in gml:ir gml:il gml:un) go to the next text -->
+  <xsl:key name="h:at" match="h:float | h:il"
+      use="generate-id((following::text()[normalize-space() != ''])[1])"/>
+  <xsl:key name="h:il-block" match="h:il[h:il-use(.) = 'indent']"
+      use="generate-id((following::text()[normalize-space() != ''])[1]/ancestor::*[h:out-block(.)][1])"/>
+  <xsl:template mode="h:out" match="h:float | h:il"/>
+  <xsl:template mode="h:out" match="text()[key('h:at', generate-id())]" priority="1">
+    <!-- the floats of .in/.ir first: one of .il/.un is beside them -->
+    <xsl:for-each select="key('h:at', generate-id())[self::h:float],
+                          key('h:at', generate-id())[self::h:il][h:il-use(.) = 'float']">
+      <span class="{@class}" aria-hidden="true"
+            style="{if (self::h:il) then 'float: left; width: ' || @shift || '; height: 1lh' else @style}"/>
+    </xsl:for-each>
+    <xsl:next-match/>
+  </xsl:template>
+
+  <!-- a block box of the output -->
+  <xsl:function name="h:out-block" as="xs:boolean">
+    <xsl:param name="e" as="element()"/>
+    <xsl:sequence select="local-name($e) = $h:blocks
+                          or ($e/self::span and matches($e/@style, '(^|;)\s*display:\s*(block|flex)'))"/>
+  </xsl:function>
+
+  <!-- How marker $m (.il/.un) moves the next line.  The next text, skip
+       or space line uses it up: none when a block ends between it and the
+       next text, or a whole block (a skip, a rule) is between them, or a
+       later .il/.un counts instead.  "indent" (text-indent on the block)
+       when the text is the first of its block, which has no block inside
+       (they would inherit it): the usual .il after a paragraph tag.
+       Otherwise "float" (one line high) when it moves the line right;
+       a line moved left needs text-indent, so none. -->
+  <xsl:function name="h:il-use" as="xs:string">
+    <xsl:param name="m" as="element(h:il)"/>
+    <xsl:variable name="t" select="($m/following::text()[normalize-space() != ''])[1]"/>
+    <xsl:variable name="tblocks" select="$t/ancestor::*[h:out-block(.)]"/>
+    <xsl:variable name="b" select="$tblocks[last()]"/>
+    <xsl:choose>
+      <!-- the first of: the text, a later .il/.un, a block not around
+           the text -->
+      <xsl:when test="empty($t) or exists($m/ancestor::*[h:out-block(.)] except $tblocks)
+                      or not($m/following::node()[. is $t or self::h:il
+                             or (self::* and h:out-block(.) and not(some $b in $tblocks satisfies $b is .))][1]
+                             is $t)">none</xsl:when>
+      <xsl:when test="exists($b) and ($b//text()[normalize-space() != ''])[1] is $t
+                      and empty($b//*[h:out-block(.)])">indent</xsl:when>
+      <xsl:when test="$m/@right = 'true'">float</xsl:when>
+      <xsl:otherwise>none</xsl:otherwise>
+    </xsl:choose>
+  </xsl:function>
+
   <xsl:template mode="h:out" match="h:raw">
     <xsl:value-of select="." disable-output-escaping="yes"/>
   </xsl:template>
@@ -1646,6 +1752,128 @@
     </xsl:if>
   </xsl:template>
 
+  <!-- ==== indention for a distance, one line moved (.in/.ir FOR, .il/.un) ====
+       Output lines do not exist in HTML, but a vertical distance from a
+       line does: an empty float of the indention's width and the
+       distance's height pushes the line boxes beside it aside, across the
+       paragraphs and the skips between them, as DCF counts.  The hints
+       write markers (h:float, h:il) in the first pass; the output pass
+       (mode h:out) puts each float before the next text (so blank space
+       before the first text line, a paragraph's top margin, does not
+       count) and decides .il there, where the blocks are known. -->
+
+  <!-- a hint that counts output lines (and breaks) -->
+  <xsl:function name="h:line-hint" as="xs:boolean">
+    <xsl:param name="n" as="node()"/>
+    <xsl:sequence select="exists($n/(self::gml:in | self::gml:ir)[@temporary = 'yes'][@break = 'yes']
+                                 | $n/(self::gml:il | self::gml:un)[@break = 'yes'])"/>
+  </xsl:function>
+
+  <!-- the line break such a hint causes: br between two pieces of running
+       text (the rule of gml:br), once for adjacent ones; the paragraph is
+       not split -->
+  <xsl:template name="h:line-hint-break">
+    <xsl:variable name="next" select="following-sibling::node()[not(h:invisible(.))][1]"/>
+    <xsl:if test="@break = 'yes'
+                  and h:inline(preceding-sibling::node()[not(h:invisible(.))][1]) and h:inline($next)
+                  and empty(following-sibling::*[h:line-hint(.)][. &lt;&lt; $next])">
+      <br/>
+    </xsl:if>
+  </xsl:template>
+
+  <!-- a DCF value + unit attribute ("3" "ch", "3ch+1i" "mixed") -->
+  <xsl:function name="h:dim" as="xs:string">
+    <xsl:param name="n" as="xs:string"/>
+    <xsl:param name="unit" as="xs:string?"/>
+    <xsl:sequence select="if ($unit = 'mixed') then $n else $n || $unit"/>
+  </xsl:function>
+
+  <!-- is margin $new to the inside of $old (CSS terms of h:expr)?  The
+     difference, unit by unit: inward when no unit decreases and one
+     increases; when units go both ways, the sign of a relative operand
+     (delta), else inward (an absolute FOR operand adds to the permanent
+     indention) -->
+  <xsl:function name="h:terms" as="map(xs:string, xs:double)">
+    <xsl:param name="e" as="xs:string"/>
+    <xsl:variable name="t" as="map(xs:string, xs:double)*">
+      <xsl:analyze-string select="$e" regex="([+\-]?)\s*([0-9]*\.?[0-9]+)([a-z]+)">
+        <xsl:matching-substring>
+          <xsl:sequence select="map {regex-group(3):
+              (if (regex-group(1) = '-') then -1 else 1) * number(regex-group(2))}"/>
+        </xsl:matching-substring>
+      </xsl:analyze-string>
+    </xsl:variable>
+    <xsl:sequence select="map:merge($t, map {'duplicates': 'combine'})
+                          ! map:merge(map:for-each(., function($k, $v) { map {$k: sum($v)} }))"/>
+  </xsl:function>
+  <xsl:function name="h:inward" as="xs:boolean">
+    <xsl:param name="new" as="xs:string"/>
+    <xsl:param name="old" as="xs:string"/>
+    <xsl:param name="delta" as="xs:string?"/>
+    <xsl:variable name="n" select="h:terms($new)"/>
+    <xsl:variable name="o" select="h:terms($old)"/>
+    <xsl:variable name="d" select="for $k in distinct-values((map:keys($n), map:keys($o)))
+                                   return ($n($k), 0)[1] - ($o($k), 0)[1]"/>
+    <xsl:sequence select="if (every $x in $d satisfies $x le 0) then false()
+                          else if (every $x in $d satisfies $x ge 0) then true()
+                          else not(starts-with($delta, '-'))"/>
+  </xsl:function>
+
+  <!-- a vertical distance as CSS: n lines are n lh (the line height of
+       the float, which is that of the text around it) -->
+  <xsl:function name="h:distance" as="xs:string">
+    <xsl:param name="n" as="xs:string"/>
+    <xsl:param name="unit" as="xs:string?"/>
+    <xsl:sequence select="h:len(h:dim($n, $unit), 'line')"/>
+  </xsl:function>
+
+  <!-- .in/.ir h FOR v1 [AFTER v2]: the margin is @left/@right, the
+       permanent one is that of the scopes around (h:outer); the float is
+       the difference wide, v2 + v1 high, its shape the part after v2
+       (shape-outside: inset).  Not written: an outdent (a float cannot
+       move lines out), and a FOR that another .in/.ir of the same side
+       replaces before any text.  A float clears the floats of its side,
+       so that a new FOR does not add to one still running. -->
+  <xsl:template match="gml:in[@temporary = 'yes'] | gml:ir[@temporary = 'yes']">
+    <xsl:call-template name="h:line-hint-break"/>
+    <xsl:variable name="side" select="if (self::gml:in) then 'left' else 'right'"/>
+    <xsl:variable name="new" select="h:expr(h:dim(if (self::gml:in) then @left else @right, @unit), 'ch')"/>
+    <xsl:variable name="old" select="(h:outer(., local-name()) ! h:expr(., 'ch'), '0px')[1]"/>
+    <xsl:variable name="me" select="local-name()"/>
+    <!-- the next text, unless another FOR of this side comes first -->
+    <xsl:variable name="text" select="following::node()[self::text()[normalize-space() != '']
+        or self::gml:*[local-name() = $me][@temporary = 'yes']][1][self::text()]"/>
+    <xsl:if test="exists($text) and exists(@for) and h:inward($new, $old, @delta)">
+      <xsl:variable name="width" select="h:rel(h:dim(if (self::gml:in) then @left else @right, @unit),
+                                               h:outer(., local-name()))"/>
+      <xsl:variable name="for" select="h:distance(@for, @for-unit)"/>
+      <xsl:variable name="after" select="if (@after) then h:distance(@after, @after-unit) else '0'"/>
+      <xsl:variable name="re" select="'^([0-9]*\.?[0-9]+)([a-z]+)$'"/>
+      <xsl:variable name="height" select="
+          if ($after = '0') then $for
+          else if (matches($for, $re) and matches($after, $re)
+                   and replace($for, $re, '$2') = replace($after, $re, '$2'))
+          then string(number(replace($after, $re, '$1')) + number(replace($for, $re, '$1')))
+               || replace($for, $re, '$2')
+          else 'calc(' || replace($after, '^calc\((.*)\)$', '($1)') || ' + '
+                       || replace($for, '^calc\((.*)\)$', '($1)') || ')'"/>
+      <h:float class="gml-{$me}" style="{string-join((
+          'float: ' || $side, 'clear: ' || $side, 'width: ' || $width, 'height: ' || $height,
+          if ($after = '0') then () else 'shape-outside: inset(' || $after || ' 0 0 0)'), '; ')}"/>
+    </xsl:if>
+  </xsl:template>
+
+  <!-- .il/.un: the shift of the next output line (signed, to the right);
+       the output pass decides how (h:il-use) -->
+  <xsl:template match="gml:il | gml:un">
+    <xsl:call-template name="h:line-hint-break"/>
+    <xsl:variable name="shift" select="h:len(h:dim(@shift, @unit), 'ch')"/>
+    <xsl:if test="$shift != '0'">
+      <h:il class="gml-{local-name()}" shift="{$shift}"
+            right="{not(matches($shift, '^(calc\()?-'))}"/>
+    </xsl:if>
+  </xsl:template>
+
   <!-- the visible node after / before n: over the invisible nodes and
        gml:br, and through the boundaries of scopes (a skip at the end of
        a scope and one after it are consecutive) -->
@@ -1769,7 +1997,7 @@
     <xsl:param name="ctx" as="xs:string" tunnel="yes" select="'flow'"/>
     <xsl:variable name="w" select="string(@word)"/>
     <xsl:choose>
-      <xsl:when test="$w = ('us', 'up', 'uc', 'rc') or not($w = ('ce', 'ri', 'in', 'ir', 'il', 'un'))">
+      <xsl:when test="$w = ('us', 'up', 'uc', 'rc') or not($w = ('ce', 'ri'))">
         <span class="gml-lines gml-{$w}">
           <xsl:if test="$w = 'rc'"><xsl:attribute name="data-rc" select="@char"/></xsl:if>
           <xsl:variable name="css" select="(
@@ -1786,15 +2014,6 @@
           <xsl:choose>
             <xsl:when test="$w = 'ce'">text-align: center; white-space: pre-line</xsl:when>
             <xsl:when test="$w = 'ri'">text-align: right; white-space: pre-line</xsl:when>
-            <xsl:when test="$w = 'in' and @left">
-              <xsl:sequence select="'margin-left: ' || h:rel(@left || @unit, h:outer(., 'in'))"/>
-            </xsl:when>
-            <xsl:when test="$w = 'ir' and @right">
-              <xsl:sequence select="'margin-right: ' || h:rel(@right || @unit, h:outer(., 'ir'))"/>
-            </xsl:when>
-            <xsl:when test="$w = ('il', 'un') and @left">
-              <xsl:sequence select="'text-indent: ' || h:rel(@left || @unit, h:outer(., 'in'))"/>
-            </xsl:when>
           </xsl:choose>
         </xsl:variable>
         <xsl:call-template name="h:block">

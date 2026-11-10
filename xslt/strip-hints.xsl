@@ -4,7 +4,7 @@
 
   Input: canonical, resolved or scoped XML.  Output: the same tree with
     - every formatting hint element removed: the gml:NAME hints of the
-      table in lib/hints.ml (br sp sk in ir of ll fo nf ju pa cp cc cb bx
+      table in lib/hints.ml (br sp sk in ir il un of ll fo nf ju pa cp cc cb bx
       hr vr kp dh tc sx tp tb bf pf df hy hw rc bc fl ls sb ws es wz is ic
       ud dr pn pl pw pm tm bm cl cd sc mc), gml:query (a question of the
       pass model), gml:symval (a new value of a symbol of a running
@@ -31,7 +31,7 @@
 
   <xsl:variable name="hints" select="('br', 'sp', 'sk', 'in', 'ir', 'of', 'll', 'fo', 'nf', 'ju',
       'pa', 'cp', 'cc', 'cb', 'bx', 'hr', 'vr', 'kp', 'dh', 'tc', 'sx', 'tp', 'tb', 'bf', 'pf',
-      'df', 'hy', 'hw', 'rc', 'bc', 'fl', 'ls', 'sb', 'ws', 'es', 'wz', 'is', 'ic', 'ud', 'dr',
+      'df', 'hy', 'hw', 'rc', 'bc', 'il', 'un', 'fl', 'ls', 'sb', 'ws', 'es', 'wz', 'is', 'ic', 'ud', 'dr',
       'pn', 'pl', 'pw', 'pm', 'tm', 'bm', 'cl', 'cd', 'sc', 'mc', 'query', 'symval')"/>
 
   <xsl:template match="gml:*[local-name() = $hints] | gml:rh | gml:rf"/>

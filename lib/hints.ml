@@ -17,17 +17,15 @@
      of positions into tokens such as ["1ch 45ch"]); nothing is
      converted to device units.
    - Words that count input lines ([.ce n], [.ri n], [.us n], [.up n],
-     [.uc n], [.il], [.un], [.in x for n], [.in x after n], [.rc * c])
-     do not leave the counting to the backends: the text of the lines
-     they cover is wrapped in a [<gml:lines word="ce" n="2" ...>] scope
-     ([Doc.scope]) carrying the state that applies inside it.  The
-     operand forms are a number of lines, ON ... OFF (n="on"), or text
-     on the control word line itself (one covered line).  Rel 4: the
-     FOR/AFTER amounts of [.in]/[.ir] are vertical distances of output,
-     counted from the first nonblank text line (LR p.210-211); not yet
-     modelled: a scope counts input lines, so an amount in lines is
-     scoped and any other amount is left on the hint ([for]/[after]
-     attributes).
+     [.uc n], [.rc * c]) do not leave the counting to the backends: the
+     text of the lines they cover is wrapped in a
+     [<gml:lines word="ce" n="2" ...>] scope ([Doc.scope]) carrying the
+     state that applies inside it.  The operand forms are a number of
+     lines, ON ... OFF (n="on"), or text on the control word line itself
+     (one covered line).  Words that count OUTPUT lines are hints only:
+     the FOR/AFTER distances of [.in]/[.ir] (LR p.210-211, counted from
+     the first nonblank text line) and the next output line of [.il]/
+     [.un] are measured by the backend that makes the lines (gml.tex).
    - [.h0]-[.h6] give an element [<gml:h level="n">text</gml:h>].
      [.fn on/off] and [.rh]/[.rf] definitions give elements too
      ([gml:fn], [gml:rh], [gml:rf]): they hold text of another flow.
@@ -66,8 +64,8 @@
    | .sp .sk     | yes   | [v] [a] [c]                      | sp/sk n unit [absolute] [conditional]     |
    | .ce .ri     | yes   | [n|on|off|text]                  | gml:lines word n                          |
    | .us .up .uc | no    | [n|on|off|text]                  | gml:lines word n                          |
-   | .in .ir     | yes*  | [h] [[for] v1] [[after] v2] [nobreak] | in left/ir right unit [delta] [offset="0"] [after for] |
-   | .il .un     | yes   | h                                | gml:lines word n="1" left unit            |
+   | .in .ir     | yes*  | [h] [[for] v1] [[after] v2] [nobreak] | in left/ir right unit [delta] [offset="0"] [temporary="yes" for for-unit] [after after-unit] |
+   | .il .un     | yes   | h                                | il/un shift unit (signed, right positive) |
    | .of         | yes   | [h]                              | of offset unit [delta]                    |
    | .ll         | yes   | [h]                              | ll length unit [delta] | length="default" |
    | .fo         | yes   | [on|off|left|right|center|inside|outside] [extend|fold|trunc] | fo fill align overdraw |
@@ -186,14 +184,13 @@ let push_text ctx text =
 
 (* ---- line scopes ------------------------------------------------------------ *)
 
-let scope ?(next = []) ?(once = []) ~word ~n ~brk attrs remaining =
+let scope ~word ~n ~brk attrs remaining =
   {
     Doc.word;
-    first = (("n", n) :: attrs) @ once @ [ ("break", yn brk) ];
+    first = (("n", n) :: attrs) @ [ ("break", yn brk) ];
     rest = ("cont", "yes") :: attrs;
     remaining;
     started = false;
-    next;
   }
 
 (* [n|on|off|text]: no operand is one line; 0 or OFF ends the scope. *)
@@ -221,6 +218,7 @@ type side = {
   attr : string;
   get : Ctx.fmt -> Units.sum;
   set : Ctx.fmt -> Units.sum -> unit;
+  set_tmp : Ctx.fmt -> Units.sum option -> unit;
 }
 
 let left_side =
@@ -229,6 +227,7 @@ let left_side =
     attr = "left";
     get = (fun f -> f.left);
     set = (fun f v -> f.left <- v);
+    set_tmp = (fun f v -> f.left_tmp <- v);
   }
 
 let right_side =
@@ -237,6 +236,7 @@ let right_side =
     attr = "right";
     get = (fun f -> f.right);
     set = (fun f v -> f.right <- v);
+    set_tmp = (fun f v -> f.right_tmp <- v);
   }
 
 let delta (o : Units.operand) sum =
@@ -255,15 +255,28 @@ let delta (o : Units.operand) sum =
    h is v1, without AFTER the number after v1 is v2 (r6, r7: ".in .7i
    1" is FOR 1).  v1 omitted or * is a permanent change; 0 a temporary
    one that lasts until another .in (the hint says the margin, the
-   permanent indention a relative .in starts from is unchanged); any
+   permanent indention a relative .in starts from is unchanged; the
+   engine keeps it as [left_tmp] for &$IN and .sa/.re); any
    other v1 a temporary change for that distance: the margin is the
-   permanent one plus the operand (r1).  v2 (0 or omitted: at once) is
-   the distance before the change.
+   permanent one plus the operand (r1), and the hint says
+   temporary=yes.  v2 (0 or omitted: at once) is the distance before
+   the change.
+   FOR and AFTER are vertical distances of output (r1, r3): the hint
+   carries them as given, for and for-unit, after and after-unit (a
+   number of lines is unit=line), and the backend measures them (gml.tex counts;
+   html.xsl makes a float of that height).  Nothing here counts
+   lines: the engine state is the permanent indention and a temporary
+   one until changed (&$IN, [Ctx.margin]).
    Any .in, temporary ones too, clears all offsets ("any .IN request
    clears all offsets", LR p.260; ".in" alone cancels .in and .of,
-   p.211): the hint (or the first scope) carries offset="0".  .ir does
-   not (p.260 speaks of .IN only). *)
+   p.211): the hint carries offset="0".  .ir does not (p.260 speaks of
+   .IN only). *)
 type duration = Permanent | Until_changed | For of Units.operand
+
+let distance name = function
+  | Some (o : Units.operand) ->
+      [ (name, Units.show_operand o); (name ^ "-unit", o.value.unit) ]
+  | None -> []
 
 let indent side ctx ops =
   let cw = side.word in
@@ -287,7 +300,6 @@ let indent side ctx ops =
   match parse None None None false (tokens ops) with
   | Error w -> Ctx.error ctx ".%s: unexpected operand %s" cw w
   | Ok (h, v1, v2, nb) ->
-      let brk = not nb in
       let duration k =
         match v1 with
         | None | Some "*" -> k Permanent
@@ -307,15 +319,22 @@ let indent side ctx ops =
               after (fun after ->
                   let st = fmt ctx in
                   let perm = side.get st in
-                  let vattrs sum = Units.attrs ~default:"ch" side.attr sum in
-                  let after_n = Option.bind after Units.lines in
-                  let uncounted name = function
-                    | Some o when Units.lines o = None ->
-                        [
-                          (name, Units.show_operand o);
-                          (name ^ "-unit", o.value.unit);
-                        ]
-                    | _ -> []
+                  let margin, temp =
+                    match dur with
+                    | Permanent ->
+                        let now = Units.apply perm o in
+                        side.set st now;
+                        side.set_tmp st None;
+                        (now, [])
+                    | Until_changed ->
+                        let now =
+                          Units.add perm o.value.unit (Units.signed o)
+                        in
+                        side.set_tmp st (Some now);
+                        (now, [])
+                    | For f ->
+                        ( Units.add perm o.value.unit (Units.signed o),
+                          ("temporary", "yes") :: distance "for" (Some f) )
                   in
                   let of_end =
                     if cw = "in" && st.offset <> Units.zero then begin
@@ -324,61 +343,26 @@ let indent side ctx ops =
                     end
                     else []
                   in
-                  let temp = Units.add perm o.value.unit (Units.signed o) in
-                  let margin now =
-                    emit ctx cw ~brk
-                      (vattrs now @ delta o now @ of_end
-                     @ uncounted "after" after);
-                    Option.iter
-                      (fun n ->
-                        Doc.open_scope (doc ctx)
-                          (scope ~word:cw ~n:(string_of_int n) ~brk:false
-                             (("after", "yes") :: vattrs perm)
-                             (Some n)))
-                      after_n
-                  in
-                  match dur with
-                  | Permanent ->
-                      let now = Units.apply perm o in
-                      side.set st now;
-                      margin now
-                  | Until_changed -> margin temp
-                  | For f -> (
-                      let tattrs = vattrs temp @ delta o temp in
-                      match Units.lines f with
-                      | Some n -> (
-                          let s_for once =
-                            scope ~once ~word:cw ~n:(string_of_int n)
-                              ~brk:(brk && after_n = None)
-                              tattrs (Some n)
-                          in
-                          match after_n with
-                          | Some a ->
-                              Doc.open_scope (doc ctx)
-                                (scope ~once:of_end
-                                   ~next:[ s_for [] ]
-                                   ~word:cw ~n:(string_of_int a) ~brk
-                                   (("after", "yes") :: vattrs perm)
-                                   (Some a))
-                          | None -> Doc.open_scope (doc ctx) (s_for of_end))
-                      | None ->
-                          emit ctx cw ~brk
-                            (tattrs @ of_end @ uncounted "for" (Some f)
-                           @ uncounted "after" after
-                            @ [ ("temporary", "yes") ])))))
+                  emit ctx cw ~brk:(not nb)
+                    (Units.attrs ~default:"ch" side.attr margin
+                    @ delta o margin @ of_end @ temp @ distance "after" after))))
 
-(* .il h / .un h: the next line only, moved right / left (p.80). *)
+(* .il h / .un h: the next output line only, shifted "from the current
+   margin (which includes any indent or offset values in effect)" (LR
+   p.206 r1; p.416 r2): +h or h to the right and -h to the left for .il,
+   the reverse for .un (r3: .un 5 = .il -5).  A sign is a direction,
+   not an increment: successive ones without text, the last counts (r5;
+   p.416 r3).  The hint il/un carries shift (signed, to the right) and
+   unit; the backend adds the margin of that line, which only it knows
+   (FOR/AFTER, .of), and finds the line: the next text, skip or space
+   line triggers the word (p.206 r7, p.416 r4). *)
 let one_line word sign ctx ops =
   dim ctx word Units.Horizontal
     (if String.trim ops = "" then "0" else ops)
     (fun o ->
-      let st = fmt ctx in
-      let h = Units.signed o * sign in
-      let sum = Units.add st.left o.value.unit h in
-      Doc.open_scope (doc ctx)
-        (scope ~word ~n:"1" ~brk:true
-           (Units.attrs ~default:"ch" "left" sum)
-           (Some 1)))
+      emit ctx word ~brk:true
+        (Units.attrs ~default:"ch" "shift"
+           (Units.add Units.zero o.value.unit (Units.signed o * sign))))
 
 (* .of [h] (p.84) and .ll [h] (p.122). *)
 let offset ctx ops =
@@ -990,15 +974,19 @@ let close_flow ctx name =
 
 (* .sa/.re save and restore "the active and page environments along
    with the .TI and .TR translate tables" (LR p.451, Table 25).  Of
-   them the engine tracks: the indention, offset and right indention,
-   the formatting mode (.fo/.nf), the current font and font save stack,
-   hyphenation and the line length ([Ctx.fmt]); the .tr table; the .dc
-   characters of the active environment, CONT CW GML MCS PS (LR p.451;
-   [Ctx.chars]); and the .ce .ri .us .up .uc line counts (the lines
-   remaining, or ON; Table 25 note 2).  Not tracked: .ti (not
-   implemented), tabs, line spacing, baseline, revision codes and the
-   page layout words, which are hints only.  A footnote saves the active
-   environment when it starts and restores it when it ends (LR p.451). *)
+   them the engine tracks: the indention (with a temporary one until
+   changed), offset and right indention, the formatting mode (.fo/.nf),
+   the current font and font save stack, hyphenation and the line
+   length ([Ctx.fmt]); the .tr table; the .dc characters of the active
+   environment, CONT CW GML MCS PS (LR p.451; [Ctx.chars]); and the .ce
+   .ri .us .up .uc line counts (the lines remaining, or ON; Table 25
+   note 2).  The rest of the indention (Table 25 note 3: .IN .IL .UN
+   .OF "individually saved"), the FOR/AFTER distances left and a
+   pending .il/.un, is the backend's: gml.tex saves it at gml:sa and
+   puts it back at gml:re.  Not tracked: .ti (not implemented), tabs,
+   line spacing, baseline, revision codes and the page layout words,
+   which are hints only.  A footnote saves the active environment when
+   it starts and restores it when it ends (LR p.451). *)
 
 let fn_env = " fn" (* a name no .sa operand can give *)
 let line_words = [ "ce"; "ri"; "us"; "up"; "uc" ]
@@ -1078,7 +1066,9 @@ let restore ?(hints = true) ctx sv =
   in
   let cur = copy_fmt st in
   st.left <- old.left;
+  st.left_tmp <- old.left_tmp;
   st.right <- old.right;
+  st.right_tmp <- old.right_tmp;
   st.offset <- old.offset;
   st.ll <- old.ll;
   st.fill <- old.fill;
@@ -1086,10 +1076,12 @@ let restore ?(hints = true) ctx sv =
   st.overdraw <- old.overdraw;
   st.fonts <- old.fonts;
   st.hyph <- old.hyph;
-  re "in" (cur.left <> old.left) (Units.attrs ~default:"ch" "left" old.left);
+  let lm (f : Ctx.fmt) = Ctx.margin f.left f.left_tmp
+  and rm (f : Ctx.fmt) = Ctx.margin f.right f.right_tmp in
+  re "in" (lm cur <> lm old) (Units.attrs ~default:"ch" "left" (lm old));
   re "of" (cur.offset <> old.offset)
     (Units.attrs ~default:"ch" "offset" old.offset);
-  re "ir" (cur.right <> old.right) (Units.attrs ~default:"ch" "right" old.right);
+  re "ir" (rm cur <> rm old) (Units.attrs ~default:"ch" "right" (rm old));
   re "ll" (cur.ll <> old.ll)
     (match old.ll with
     | None -> [ ("length", "default") ]

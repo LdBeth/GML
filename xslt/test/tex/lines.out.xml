@@ -6,18 +6,21 @@ However, this one is not.
 \gmlbeginlines{ce}{n=1,break=yes}Chapter 1\gmlendlines{}
 \gmlbeginlines{ri}{n=on,break=yes}These lines must
 be flush right.
-\gmlendlines{}\gmlhint{in}{left=5,unit=ch,break=yes}%
-\gmlbeginlines{in}{n=1,after=yes,left=0,unit=ch,break=no}Subsequent text will be indented,\gmlendlines{}
+\gmlendlines{}\gmlhint{in}{left=5,unit=ch,after=1,after-unit=line,break=yes}%
+Subsequent text will be indented,
 except for the first line.
 \gmlhint{in}{left=0,unit=ch,break=yes}%
-\gmlbeginlines{in}{n=2,left=2,unit=ch,delta=+2,break=yes}temporary one
-temporary two\gmlendlines{}
+\gmlhint{in}{left=2,unit=ch,delta=+2,temporary=yes,for=2,for-unit=line,break=yes}%
+temporary one
+temporary two
 permanent
-\gmlbeginlines{in}{n=1,after=yes,left=0,unit=ch,break=yes}old margin\gmlendlines{}
-\gmlbeginlines{in}{n=1,left=3,unit=ch,delta=+3,break=no}temporary\gmlendlines{}
+\gmlhint{in}{left=3,unit=ch,delta=+3,temporary=yes,for=1,for-unit=line,after=1,after-unit=line,break=yes}%
+old margin
+temporary
 back
 \gmlhint{in}{left=0,unit=ch,break=yes}%
-\gmlhint{il}{left=3,unit=mh,break=yes}first line indented
+\gmlhint{il}{shift=3,unit=mh,break=yes}%
+first line indented
 second line
 \gmlbeginlines{us}{n=3,break=no}\gmlusword{Do} \gmlusword{not}
 \gmlusword{destroy} \gmlusword{this} \gmlusword{letter}
@@ -26,8 +29,8 @@ its expiration date.
 \gmlbeginlines{ce}{n=2,break=yes,more=yes}before \gmlendlines{}\gmlstart{hp}{}\gmlbeginlines{ce}{cont=yes,more=yes}a phrase\gmlendlines{}\gmlend{hp}\gmlbeginlines{ce}{cont=yes} after
 and a second line\gmlendlines{}
 outside
-\gmlhint{in}{left=1,unit=i,for=2,for-unit=i,temporary=yes,break=yes}%
-not counted: the amount is not in lines
+\gmlhint{in}{left=1,unit=i,temporary=yes,for=2,for-unit=i,break=yes}%
+a distance in inches, measured by TeX
 not centered
 %
 \gmlenddocument

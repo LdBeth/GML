@@ -31,10 +31,10 @@
                            (gml:pageno: the page number symbol in the text of
                            a running heading or footing, SH35-0069 p.128)
     gml:lines              \gmlbeginlines{WORD}{k=v,...[,more=yes]}...\gmlendlines
-                           more=yes: the next gml:lines is its cont="yes";
-                           .il/.un (one output line): \gmlhint{il}{left,unit}
-                           before the text, no end (TeX ends the \parshape)
+                           more=yes: the next gml:lines is its cont="yes"
                            continuation (the line does not end here).
+                           (.in/.ir FOR/AFTER and .il/.un are plain hints:
+                           gml.tex counts their output lines.)
     gml:query              \gmlquery{id}{pn|lc}  (a question of the pass model)
     gml:symref             \gmlsymref{name}{value} (a deferred symbol reference
                            in a running heading or footing, LR p.316)
@@ -392,19 +392,6 @@
   <xsl:template match="gml:pageref">
     <xsl:value-of select="concat('\gmlpageref{', t:name(@refid), '}{',
         (@when, 'always')[1], '}{', t:attr(string(@label)), '}')"/>
-  </xsl:template>
-
-  <!-- .il / .un: the next output line only.  TeX needs nothing but a
-       \parshape set before the paragraph (the hint il/un), which TeX
-       itself drops when the paragraph ends: no scope, no end marker;
-       the pieces after an element inside (cont="yes") are their text. -->
-  <xsl:template match="gml:lines[@word = ('il', 'un')][@cont = 'yes']">
-    <xsl:apply-templates/>
-  </xsl:template>
-
-  <xsl:template match="gml:lines[@word = ('il', 'un')][@n = '1']">
-    <xsl:value-of select="concat('\gmlhint{', @word, '}{', t:attrs(@* except (@word, @n), ()), '}')"/>
-    <xsl:apply-templates/>
   </xsl:template>
 
   <xsl:template match="gml:lines">

@@ -53,7 +53,10 @@ type capture = {
 
 type fmt = {
   mutable left : Units.sum;  (** [.in], permanent left indention *)
-  mutable right : Units.sum;  (** [.ir], right indention *)
+  mutable left_tmp : Units.sum option;
+      (** the temporary indention of a [.in] with v1 = 0, until changed *)
+  mutable right : Units.sum;  (** [.ir], permanent right indention *)
+  mutable right_tmp : Units.sum option;  (** the same for [.ir] *)
   mutable offset : Units.sum;  (** [.of] *)
   mutable ll : Units.sum option;  (** [.ll]; None: the device default *)
   mutable fill : bool;  (** concatenation ([.fo]/[.nf]) *)
@@ -68,7 +71,9 @@ type fmt = {
 let initial_fmt () =
   {
     left = Units.zero;
+    left_tmp = None;
     right = Units.zero;
+    right_tmp = None;
     offset = Units.zero;
     ll = None;
     fill = true;
@@ -79,6 +84,10 @@ let initial_fmt () =
   }
 
 let copy_fmt (f : fmt) = { f with left = f.left }
+
+(** The margin a side has apart from FOR/AFTER distances (which only the backend
+    measures): the temporary indention until changed, else the permanent one. *)
+let margin perm tmp = Option.value tmp ~default:perm
 
 type saved = {
   env : string;  (** the [.sa] name, upper case; "" without one *)
@@ -313,9 +322,15 @@ let system_value ctx name sub =
       | "$PRT" -> Some "ON"
       | "$PARM" -> Some "DEVICE 3800N6 INDEX"
       (* page characteristics (LR p.445, Table 20): figure spaces and
-         lines *)
-      | "$IN" -> Some (spaces st.left)
-      | "$IR" -> Some (spaces st.right)
+         lines.  &$IN is "the composite net indention for the next
+         output line, including permanent and temporary components"
+         (LR p.211 r4): of it the engine knows the permanent indention
+         and a temporary one until changed (v1 = 0); a FOR or AFTER
+         distance is measured by the backend, so &$IN is the indention
+         once the pending distances are over, and a pending .il/.un is
+         not in it *)
+      | "$IN" -> Some (spaces (margin st.left st.left_tmp))
+      | "$IR" -> Some (spaces (margin st.right st.right_tmp))
       | "$OF" -> Some (spaces st.offset)
       | "$LL" | "$CL" -> Some ll
       | "$PW" -> Some "85"

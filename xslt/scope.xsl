@@ -14,8 +14,9 @@
     gml:in  (not temporary)      in   = left+unit      0
                                  (offset="0": also of = 0, any .in
                                  clears all offsets, LR p.260; a
-                                 temporary gml:in or a gml:lines
-                                 word="in" with offset="0" too)
+                                 temporary gml:in with offset="0"
+                                 too; after= is ignored: the margin
+                                 holds at once)
     gml:ir  (not temporary)      ir   = right+unit     0
     gml:of                       of   = offset+unit    0
     gml:ll                       ll   = length+unit    default
@@ -38,8 +39,8 @@
 
   Everything else is an event and stays where it is: br sp sk pa cp cc cb
   bx hr vr kp sx tc dh df hw rc fl is ic dr cl cd sc mc, the page layout
-  words pn pl pw pm tm bm (page-level, not scoped), .in/.ir FOR an amount
-  not in lines (temporary="yes"), .hy with options only, and the elements
+  words pn pl pw pm tm bm (page-level, not scoped), .in/.ir FOR a
+  distance (temporary="yes"), .il/.un, .hy with options only, and the elements
   gml:lines (already a scope), gml:h, gml:fn, gml:rh, gml:rf, gml:raw.
   State hints inside such elements count like any other.
 
@@ -157,8 +158,7 @@
     <xsl:accumulator-rule match="gml:in[not(@temporary = 'yes')]"
         select="map:put(if (@offset) then map:put($value, 'of', '0') else $value,
                         'in', s:dim(@left, @unit))"/>
-    <xsl:accumulator-rule match="gml:in[@temporary = 'yes'][@offset]
-                                 | gml:lines[@word = 'in'][@offset]"
+    <xsl:accumulator-rule match="gml:in[@temporary = 'yes'][@offset]"
         select="map:put($value, 'of', '0')"/>
     <xsl:accumulator-rule match="gml:ir[not(@temporary = 'yes')]"
         select="map:put($value, 'ir', s:dim(@right, @unit))"/>

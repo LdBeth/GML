@@ -11,7 +11,10 @@ a stack: .re takes the most recent one off; a named one is kept apart:
 saved, .re restores the initial values (p.309 r2).  .re breaks when
 the format mode or the centring changes (r3, r4).  A footnote saves the
 environment and clears the offset; .fn off restores it without hints.
-.fv is a hint.
+.fv is a hint.  A temporary indention until changed (.in h 0) is part
+of the indention saved, and &$IN gives it (LR p.211 r4: permanent and
+temporary components; a FOR/AFTER distance and a pending .il/.un are
+gml.tex's, which saves them at gml:sa).
 
   $ gml in.gml
   in.gml:30: warning: .re NOSUCH: no environment saved with this name
@@ -26,5 +29,8 @@ environment and clears the offset; .fn off restores it without hints.
   <gml:in left="6" unit="ch" break="yes"/><gml:of offset="1" unit="ch" break="yes"/><gml:fn>Footnote.
   <gml:in left="9" unit="ch" break="yes"/></gml:fn><gml:in left="7" unit="ch" delta="+1" offset="0" break="yes"/><gml:fv spec="justify" break="no"/><gml:lines word="ce" n="on" break="yes"><gml:sa break="no"/></gml:lines>Page symbol % not centred.
   <gml:re break="yes"/><gml:lines word="ce" n="on" break="no">Page symbol # centred again.
-  </gml:lines></gml:doc>
+  </gml:lines><gml:in left="10" unit="ch" break="yes"/>Temporary indention until changed, 10
+  <gml:sa break="no"/><gml:in left="8" unit="ch" break="yes"/>Indention 8
+  <gml:re break="no"/><gml:in left="10" unit="ch" restore="yes" break="no"/>Back at the temporary one, 10
+  </gml:doc>
   [4]

@@ -13,9 +13,9 @@
 %   \gmlhint{NAME}{k=v,...}       a DCF formatting hint (point event):
 %       break=yes calls \gml@break (\par), then \gml@hint@NAME.
 %   \gmlbeginlines{WORD}{k=v,...} ... \gmlendlines    a gml:lines scope
-%       (.ce .ri .us .up .uc .in/.ir after/for .rc *); handlers
+%       (.ce .ri .us .up .uc .rc *); handlers
 %       \gml@lines@WORD@pre (before the group) @begin @end @post (after).
-%       A one-line scope (.il .un) comes as the hint il/un before its text.
+%       .in/.ir FOR/AFTER and .il/.un are hints (see \gml@pqshape).
 %   \gmlnum{label}                gml:num, dispatched on the current
 %       element: \gml@num@NAME{label} (h1: label+quad, li: hanging label,
 %       figcap: bold hanging label, fn: dropped - the mark is a key).
@@ -162,6 +162,14 @@
 \newdimen\gml@rulewd \newdimen\gml@bxwd \newdimen\gml@hrpos \newdimen\gml@hrstart
 \newcount\gml@bxstate \newcount\gml@hrmode
 \newif\ifgml@celltop  % at the top of a table cell: element skips are dropped
+% the distances of .in/.ir FOR/AFTER and .il/.un (see \gml@pqshape)
+\newdimen\gml@pqLs \newdimen\gml@pqLn \newdimen\gml@pqLd \newcount\gml@pqLg
+\newdimen\gml@pqRs \newdimen\gml@pqRn \newdimen\gml@pqRd \newcount\gml@pqRg
+\newdimen\gml@pqId \newcount\gml@pqIn \newdimen\gml@pqB
+\newcount\gml@pqaL \newcount\gml@pqbL \newcount\gml@pqaR \newcount\gml@pqbR
+\newcount\gml@pqi \newcount\gml@pqj \newcount\gml@pqk \newcount\gml@pqm \newcount\gml@pqh
+\newdimen\gml@pqx \newdimen\gml@pqy \newdimen\gml@pqhi \newcount\gml@pqha
+\newif\ifgml@pqown \newif\ifgml@pqblank \newif\ifgml@pqon \newcount\gml@pqdepth
 
 % ---- constants -----------------------------------------------------------
 \def\gml@yes{yes} \def\gml@no{no} \def\gml@mixedstr{mixed}
@@ -358,6 +366,21 @@
 \def\gml@fw@a#1 #2\gml@nil{\def\gml@fw@w{#1}%
   \ifx\gml@fw@w\empty\else\gml@fw@do{#1}\fi
   \def\gml@fw@w{#2}\ifx\gml@fw@w\empty\else\gml@fw@a#2\gml@nil\fi}
+% EXT: the 3800 font ids (LR Tables 29 and 32, p.455-457; the GS GU TU
+% fonts of Table 31) as faces of a page printer, by their role: a text
+% font is roman, an italic or underscored one italic (underscore is
+% italic, as for .df US), a bold or overstruck one bold.  The pitch and
+% the family (Gothic, Courier, ...) are not kept: the body face of TeX
+% is not a fixed-pitch one.  \gmldeffont{gt12}{...} after this changes
+% one.
+\def\gml@fl@def#1{\expandafter\let\csname gml@font@#1\endcsname\gml@fl@cmd}
+\def\gml@fl@cmd{\rm}
+\gml@forwords{gt10 gt12 gt15 st10 st12 st15 rt10 gp12 gs10 gs12 gs15
+  cr10 ce10 ce12 pr10 or10 pr12 lr12 dotr brtr estr}\gml@fl@def
+\def\gml@fl@cmd{\it}
+\gml@forwords{gi12 si10 si12 gu10 gu12 gu15 tu10 pi12 sr12 bitr eitr}\gml@fl@def
+\def\gml@fl@cmd{\bf}
+\gml@forwords{gb10 gb12 sb12 so12 gr10 co10 ob10 pb12 lb12 ebtr}\gml@fl@def
 % \gml@ifin{\macro}{string}: \ifgml@found
 \def\gml@ifin#1#2{\def\gml@ifin@a##1#2##2\gml@nil{\def\gml@ifin@r{##2}}%
   \expandafter\gml@ifin@a#1#2\gml@nil
@@ -469,22 +492,32 @@
 % an obeyed end of line (format off): the line is a paragraph; an empty
 % line is a blank line only in xml:space="preserve" text
 {\catcode`\^^M=\active \gdef^^M{\gml@obeyedline}}
-\def\gml@obeyedline{\ifhmode\par\else\ifgml@preserve\leavevmode\par\fi\fi}
-% DCF .of and revision codes act on every paragraph start
+\def\gml@obeyedline{\ifhmode\par\else\ifgml@preserve
+  \global\gml@pqblanktrue\leavevmode\par\global\gml@pqblankfalse\fi\fi}
+% DCF .of and revision codes act on every paragraph start.  The hanging
+% indention of a paragraph of the body is kept in \gml@pqhi/\gml@pqha
+% too: a line scope that began before the paragraph may end its group
+% inside it (\gmlendlines), and \par then puts it back
 \def\gml@everypar{\ifcase\gml@ofstate\or
     \hangindent\gml@ofdim\hangafter\@ne\global\gml@ofstate\tw@
   \or\hangindent\gml@ofdim\hangafter\z@\fi
+  \global\gml@pqhi\hangindent\global\gml@pqha\hangafter
   \ifgml@rcon\llap{\gml@rcchar\enspace}\fi\global\gml@celltopfalse}
 \def\gml@rcchar{|}
 
 % ---- vertical space ------------------------------------------------------------
 % \gml@vskip: a DCF skip (.sk): discarded at the top of a page, and
 % consecutive skips do not add up (the larger one counts).
-\def\gml@vskip#1{\par\ifvmode\ifgml@celltop\else\gml@dimd=#1\relax
-  \ifdim\lastskip<\gml@dimd \ifdim\lastskip>\z@\vskip-\lastskip\fi
-    \ifgml@keep\nobreak\fi\vskip\gml@dimd\fi\fi\fi}
+% Both count toward a pending .in/.ir FOR/AFTER (\gml@pqvert): a skip
+% by what it adds, not at the top of a page (\pagetotal = 0 after the
+% \par: TeX discards it).
+\def\gml@vskip#1{\par\ifvmode\gml@pqtrigger\ifgml@celltop\else\gml@dimd=#1\relax
+  \ifdim\lastskip<\gml@dimd \gml@pqy\gml@dimd
+    \ifdim\lastskip>\z@\advance\gml@pqy-\lastskip\vskip-\lastskip\fi
+    \ifgml@keep\nobreak\fi\vskip\gml@dimd
+    \ifdim\pagetotal>\z@\gml@pqvert\gml@pqy\fi\fi\fi\fi}
 % \gml@vspace: a DCF space (.sp): kept at the top of a page
-\def\gml@vspace#1{\par\ifvmode\vglue#1\relax\fi}
+\def\gml@vspace#1{\par\ifvmode\gml@pqtrigger\vglue#1\relax\gml@pqvert{#1}\fi}
 \def\gml@newpage{\par\vfill\penalty-\@M}
 % \gml@chapnewpage: a new page for an h0/h1 or section heading.  Pending
 % floats are flushed first (\supereject: plain's \dosupereject puts them on
@@ -707,44 +740,225 @@
     \edef\gml@shapelist{\gml@shapelist\space\the\gml@dima\space\the\gml@dimc}\advance\count@\m@ne\repeat
   \gml@cnta=#1\relax\advance\gml@cnta#2\relax\advance\gml@cnta\@ne
   \parshape\gml@cnta\gml@shapelist\space0pt\space\hsize\relax}
-% lines in a vertical amount: \gml@cntb := ceiling(dim / baselineskip)
-\def\gml@linesof#1{\gml@dimd=#1\relax\gml@cntb\gml@dimd
-  \gml@cnta\baselineskip\divide\gml@cntb\gml@cnta
-  \multiply\gml@cnta\gml@cntb\ifnum\gml@cnta<\gml@dimd\advance\gml@cntb\@ne\fi}
+% ---- indention for a distance ---------------------------------------------------
+% .in/.ir FOR v1 AFTER v2 (LR p.210-212) and .il/.un (p.206, p.416) act
+% on output lines, which only TeX makes: the engine sends one hint each
+% (for/after with their units as given; the shift of .il/.un) and
+% gml.tex measures.  The indention holds "for all following lines
+% (including new paragraphs and pages)" (r1), so it outlives the
+% paragraph: a queue per side of remaining vertical DISTANCES.  L (.in):
+% \gml@pqLs before the change (AFTER), then \gml@pqLn moved by
+% \gml@pqLd (FOR); R (.ir) the same.  A permanent .in with AFTER queues
+% the old margin: 0, v2, old - new.  A new .in empties L, a new .ir R.
+% Lines are n\baselineskip, taken when the hint is seen.
+% The measure (B = \baselineskip at the paragraph's end): line i of a
+% paragraph starts (i-1)B after its first line, and is moved iff
+% s <= (i-1)B < s+n: it starts before the distance is used up (the
+% stretch of the glue is ignored).  Then the paragraph uses \prevgraf
+% times B, a skip or space what it adds, the rows of a table their
+% height.  Counting begins with the first nonblank text line
+% (\gml@pqLg, \gml@pqRg; a table row is text): a skip or space before
+% it does not count (r3, said of v2; DCF-VERIFY for v1), nor does a
+% skip at the top of a page, which TeX discards: \pagetotal = 0 after
+% the \par (no box on the page; \pagegoal is not \maxdimen on a page of
+% insertions only).  Limit: a skip at which TeX later breaks the page
+% counts (the page builder chooses that break only when it meets a
+% later breakpoint, after the next paragraph has taken its shape).  A
+% format-off line is a paragraph (one line), a blank one counts once
+% counting has begun (\ifgml@pqblank).
+% .il/.un: the next output line moved by \gml@pqId (the shift, signed)
+% from the margin that line has, FOR/AFTER and .of included (p.206 r1,
+% p.416 r2); \gml@pqIn = 1 while it is pending.  The word "is triggered
+% by the next text, skip, or space line" (p.206 r7, p.416 r4): the
+% first line of the next paragraph takes it (a blank format-off line
+% too), or a skip or space uses it up (\gml@pqtrigger, also a skip TeX
+% discards).  Successive ones: the last (r5, the engine).  It is a
+% value of its own (p.451 Table 25 note 3): a .in leaves it pending
+% (DCF-VERIFY).
+% Each vertical list has a queue of its own.  \gml@pqenter, run by
+% \everyvbox (which \gmlbegindocument sets after the tag set), by
+% \output and by the footnote \insert, starts an empty queue and puts
+% the one outside back when the box ends (\aftergroup\gml@pqleave, a
+% saved copy per level \gml@pqdepth).  So a figure, a table cell or a
+% footnote neither takes the distance of the text around it nor uses
+% it, and a FOR, AFTER or .il inside it is measured there.  (A keep
+% "operates with a separate environment" whose indention is "set to the
+% basic indention currently in effect", LR p.228 .KP r1: a temporary
+% indention of the text outside does not go in, DCF-VERIFY.)
+% \ifgml@pqown marks such a box.  In a box without one (an \everyvbox a
+% tag set sets after \gmlbegindocument; \ifinner) or in restricted
+% horizontal mode nothing is consumed and a hint moves one paragraph
+% (\gml@shape).
+\def\gml@pqmain{\gml@pqontrue\ifinner\ifgml@pqown\else\gml@pqonfalse\fi\fi}
+\def\gml@pqclear#1{\global\csname gml@pq#1s\endcsname\z@
+  \global\csname gml@pq#1n\endcsname\z@ \global\csname gml@pq#1g\endcsname\z@}
+\def\gml@pqreset{\gml@pqclear L\gml@pqclear R\global\gml@pqIn\z@}
+% the queue as global assignments
+\def\gml@pqsnap{\global\gml@pqLs\the\gml@pqLs\global\gml@pqLn\the\gml@pqLn
+  \global\gml@pqLd\the\gml@pqLd\global\gml@pqLg\the\gml@pqLg\relax
+  \global\gml@pqRs\the\gml@pqRs\global\gml@pqRn\the\gml@pqRn
+  \global\gml@pqRd\the\gml@pqRd\global\gml@pqRg\the\gml@pqRg\relax
+  \global\gml@pqId\the\gml@pqId\global\gml@pqIn\the\gml@pqIn\relax}
+% a box: the queue outside, and the hanging indention \par puts back
+% (\gml@pqhi, \gml@pqha), are saved; the box starts empty
+\def\gml@pqenter{\global\advance\gml@pqdepth\@ne
+  \expandafter\xdef\csname gml@pqsv@\the\gml@pqdepth\endcsname{\gml@pqsnap
+    \global\gml@pqhi\the\gml@pqhi\global\gml@pqha\the\gml@pqha\relax}%
+  \aftergroup\gml@pqleave\gml@pqreset\gml@pqowntrue}
+\def\gml@pqleave{\csname gml@pqsv@\the\gml@pqdepth\endcsname
+  \global\advance\gml@pqdepth\m@ne}
+% \gml@pqset{L|R}{after}{for}{delta}
+\def\gml@pqset#1#2#3#4{\gml@pqclear{#1}%
+  \global\csname gml@pq#1s\endcsname=#2\relax
+  \global\csname gml@pq#1n\endcsname=#3\relax
+  \global\csname gml@pq#1d\endcsname=#4\relax}
+\def\gml@pqbase{\gml@pqB\baselineskip\ifdim\gml@pqB>\z@\else\gml@pqB12\p@\fi}
+% \gml@pqceil{dimen}\count: the lines that start before dimen, ceiling(dimen/B)
+\def\gml@pqceil#1#2{\gml@pqx=#1\relax#2\gml@pqx\divide#2\gml@pqB
+  \gml@pqy\gml@pqB\multiply\gml@pqy#2\ifdim\gml@pqy<\gml@pqx\advance#2\@ne\fi}
+% the shape, at the end of a paragraph: an entry per line up to the
+% last one that differs from those after it (the last entry repeats),
+% built a run of equal lines at a time
+\def\gml@pqshape{\ifdim\gml@pqLn>\z@\gml@pqbuild\else\ifdim\gml@pqRn>\z@\gml@pqbuild
+  \else\ifnum\gml@pqIn>\z@\gml@pqbuild\fi\fi\fi}
+\def\gml@pqbuild{\begingroup\gml@pqbase
+  \gml@pqzone L\gml@pqaL\gml@pqbL \gml@pqzone R\gml@pqaR\gml@pqbR
+  \gml@pqh\hangafter\ifnum\gml@pqh<\z@\gml@pqh-\gml@pqh\fi
+  \ifdim\hangindent=\z@\gml@pqh\z@\fi
+  \gml@pqm\z@\gml@pqmax\gml@pqbL\gml@pqmax\gml@pqbR\gml@pqmax\gml@pqIn\gml@pqmax\gml@pqh
+  \gml@pqj\gml@pqaL\advance\gml@pqj\m@ne\gml@pqmax\gml@pqj
+  \gml@pqj\gml@pqaR\advance\gml@pqj\m@ne\gml@pqmax\gml@pqj
+  \advance\gml@pqm\@ne
+  \gdef\gml@pqlist{}\gml@pqi\@ne\gml@pqrun
+  \xdef\gml@pqlist{\the\gml@pqm\gml@pqlist}%
+  \endgroup\parshape\gml@pqlist\relax}
+\def\gml@pqmax#1{\ifnum#1<\maxdimen\ifnum#1>\gml@pqm\gml@pqm#1\fi\fi}
+% \gml@pqzone{L|R}\first\last: the lines moved, s <= (i-1)B < s+n
+% (none: \last < \first; no end: \last = \maxdimen)
+\def\gml@pqzone#1#2#3{#2\@ne#3\z@
+  \ifdim\csname gml@pq#1n\endcsname>\z@\ifdim\csname gml@pq#1s\endcsname<\maxdimen
+    \gml@pqceil{\csname gml@pq#1s\endcsname}#2\advance#2\@ne
+    \gml@pqx\maxdimen\advance\gml@pqx-\csname gml@pq#1s\endcsname
+    \ifdim\csname gml@pq#1n\endcsname<\gml@pqx
+      \gml@pqx\csname gml@pq#1s\endcsname\advance\gml@pqx\csname gml@pq#1n\endcsname
+      \gml@pqceil\gml@pqx#3%
+    \else#3\maxdimen\fi\fi\fi}
+% the lines \gml@pqi to \gml@pqk (the next boundary) are alike
+\def\gml@pqrun{\gml@pqentry\gml@pqk\gml@pqm
+  \gml@pqj\gml@pqaL\advance\gml@pqj\m@ne\gml@pqmin\gml@pqj\gml@pqmin\gml@pqbL
+  \gml@pqj\gml@pqaR\advance\gml@pqj\m@ne\gml@pqmin\gml@pqj\gml@pqmin\gml@pqbR
+  \gml@pqmin\gml@pqIn\gml@pqmin\gml@pqh
+  \gml@pqj\gml@pqk\advance\gml@pqj-\gml@pqi\advance\gml@pqj\@ne
+  \xdef\gml@pqlist{\gml@pqlist\expandafter\gml@pqrep\romannumeral\number\gml@pqj000\relax}%
+  \ifnum\gml@pqk<\gml@pqm\gml@pqi\gml@pqk\advance\gml@pqi\@ne\expandafter\gml@pqrun\fi}
+\def\gml@pqmin#1{\ifnum#1<\gml@pqi\else\ifnum#1<\gml@pqk\gml@pqk#1\fi\fi}
+% \gml@pqe once for each m (\romannumeral n000 is n m's)
+\def\gml@pqrep#1{\if m#1\gml@pqe\expandafter\gml@pqrep\fi}
+% the entry of line \gml@pqi; the hanging indention of .of is folded
+% in (\parshape overrides it)
+\def\gml@pqentry{\gml@pqx\z@\gml@pqy\z@
+  \ifnum\gml@pqi<\gml@pqaL\else\ifnum\gml@pqi>\gml@pqbL\else\advance\gml@pqx\gml@pqLd\fi\fi
+  \ifnum\gml@pqi>\gml@pqIn\else\advance\gml@pqx\gml@pqId\fi
+  \ifnum\gml@pqi<\gml@pqaR\else\ifnum\gml@pqi>\gml@pqbR\else\advance\gml@pqy\gml@pqRd\fi\fi
+  \ifdim\hangindent=\z@\else\ifnum\hangafter<\z@
+      \ifnum\gml@pqi>\gml@pqh\else\gml@pqhang\fi
+    \else\ifnum\gml@pqi>\gml@pqh\gml@pqhang\fi\fi\fi
+  \advance\gml@pqy\gml@pqx\gml@pqy-\gml@pqy\advance\gml@pqy\hsize
+  \edef\gml@pqe{\space\the\gml@pqx\space\the\gml@pqy}}
+\def\gml@pqhang{\ifdim\hangindent>\z@\advance\gml@pqx\hangindent
+  \else\advance\gml@pqy-\hangindent\fi}
+% after the paragraph: \prevgraf lines used, and a pending .il/.un
+\def\gml@pqcount{\ifvmode\gml@pqmain\ifgml@pqon\ifnum\prevgraf>\z@
+  \gml@pqbase\gml@pqx\gml@pqB\multiply\gml@pqx\prevgraf
+  \ifgml@pqblank\gml@pqspend\else\gml@pqtext\fi
+  \global\advance\gml@pqIn-\prevgraf
+  \ifnum\gml@pqIn<\z@\global\gml@pqIn\z@\fi\fi\fi\fi}
+% \gml@pqx of text: counting begins, the distance is used
+\def\gml@pqtext{\global\gml@pqLg\@ne\global\gml@pqRg\@ne\gml@pqeat L\gml@pqeat R}
+% \gml@pqx used: from the AFTER part, then the FOR part (\maxdimen: no end)
+\def\gml@pqeat#1{\ifdim\csname gml@pq#1n\endcsname>\z@
+  \ifdim\csname gml@pq#1s\endcsname<\maxdimen
+  \global\advance\csname gml@pq#1s\endcsname-\gml@pqx
+  \ifdim\csname gml@pq#1s\endcsname<\z@
+    \ifdim\csname gml@pq#1n\endcsname<\maxdimen
+      \global\advance\csname gml@pq#1n\endcsname\csname gml@pq#1s\endcsname\fi
+    \global\csname gml@pq#1s\endcsname\z@
+    \ifdim\csname gml@pq#1n\endcsname<\z@\global\csname gml@pq#1n\endcsname\z@\fi
+  \fi\fi\fi}
+\def\gml@pqspend{\ifnum\gml@pqLg>\z@\gml@pqeat L\fi\ifnum\gml@pqRg>\z@\gml@pqeat R\fi}
+% a skip or space of #1 added to the list (in vertical mode)
+\def\gml@pqvert#1{\gml@pqmain\ifgml@pqon\gml@pqx=#1\relax\gml@pqspend\fi}
+% a skip or space line: a pending .il/.un is used up
+\def\gml@pqtrigger{\gml@pqmain\ifgml@pqon\global\gml@pqIn\z@\fi}
+% table rows (box #1) put on the list: text of their height
+\def\gml@pqrows#1{\gml@pqmain\ifgml@pqon\gml@pqx\ht#1\advance\gml@pqx\dp#1\gml@pqtext\fi}
+% the paragraph end: a paragraph (unrestricted horizontal mode) takes the
+% shape and is counted, also when it is ended by plain's \endgraf
+\let\gml@@par\par
+\def\par{\ifhmode\ifinner\gml@@par\else
+  \gml@pqhangback\gml@pqshape\gml@@par\gml@pqcount\fi\else\gml@@par\fi}
+\let\endgraf\par
+\def\gml@pqhangback{\ifdim\hangindent=\z@\ifdim\gml@pqhi=\z@\else
+  \hangindent\gml@pqhi\hangafter\gml@pqha\fi\fi}
+% .sa/.re (LR p.323, p.309): the engine follows a .re with the hints
+% that set the saved margins again (restore=yes).  The rest of the
+% indention (p.451 Table 25 note 3: .IN .IL .UN .OF "individually
+% saved"), the distances left and a pending .il/.un, is saved here: the
+% unnamed ones on a stack (\gml@pqel items), a named one by its name;
+% .re with none saved empties the queue (the initial values, p.309 r2)
+\let\gml@pqel\relax \def\gml@pqsastack{}
+\def\gml@pqsave#1{\ifx#1\empty\xdef\gml@pqsastack{\gml@pqel{\gml@pqsnap}\gml@pqsastack}%
+  \else\gml@pqname#1\expandafter\xdef\csname gml@pqsa@\gml@pqnm\endcsname{\gml@pqsnap}\fi}
+\def\gml@pqrestore#1{\ifx#1\empty
+    \ifx\gml@pqsastack\empty\gml@pqreset
+    \else\expandafter\gml@pqpop\gml@pqsastack\gml@nil\fi
+  \else\gml@pqname#1\expandafter\ifx\csname gml@pqsa@\gml@pqnm\endcsname\relax\gml@pqreset
+    \else\csname gml@pqsa@\gml@pqnm\endcsname\fi\fi}
+% the name as characters (tex.xsl writes # $ % & as \# \$ \% \&)
+\def\gml@pqname#1{{\def\#{\string\#}\def\${\string\$}\def\%{\string\%}%
+  \def\&{\string\&}\def\gmlchar##1{+##1+}\xdef\gml@pqnm{#1}}}
+\def\gml@pqpop\gml@pqel#1#2\gml@nil{#1\gdef\gml@pqsastack{#2}}
 
 % ---- hints ------------------------------------------------------------------------
 \gmldefhint{br}{}
 \gmldefhint{sp}{\gml@hdim{n}{unit}\gml@dima\gml@vspace\gml@dima}
 \gmldefhint{sk}{\gml@hdim{n}{unit}\gml@dima\gml@vskip\gml@dima}
-% .in/.ir: permanent margins; temporary (FOR/AFTER not in lines): parshape
-% a .in that ends the offset carries offset=0: any .in, a temporary one
-% too, clears all offsets (LR p.260)
-\def\gml@indent#1#2{\gml@hget{offset}\gml@tmpb
+% .in/.ir: the margin (permanent, or temporary until changed) with an
+% AFTER distance at the old margin; temporary=yes (FOR): the queue.  A
+% .in that ends the offset carries offset=0: any .in, a temporary one
+% too, clears all offsets (LR p.260).  restore=yes (after a gml:re,
+% which has put the queue back): the margin only
+\def\gml@indent#1#2#3{\gml@hget{offset}\gml@tmpb
   \ifx\gml@tmpb\empty\else\global\gml@ofdim\z@\global\gml@ofstate\z@\fi
+  \gml@hget{restore}\gml@tmpb
+  \gml@pqmain\ifgml@pqon\ifx\gml@tmpb\gml@yes\else\gml@pqclear{#3}\fi\fi
+  \gml@hdim{#1}{unit}\gml@dima\gml@pqdist{after}\gml@dimb
   \gml@hget{temporary}\gml@tmpb
-  \ifx\gml@tmpb\gml@yes\gml@tempindent{#1}{#2}%
-  \else\gml@hdim{#1}{unit}\gml@dima\global#2\gml@dima\gml@apply\fi}
-\gmldefhint{in}{\gml@indent{left}\gml@hintleft}
-\gmldefhint{ir}{\gml@indent{right}\gml@hintright}
-% .il h / .un h: the next output line moved right / left (tex.xsl sends
-% the one-line gml:lines scope as this hint, before the text): a one-line
-% \parshape relative to the margin, which ends with the paragraph; in
-% format-off mode the next input line is that paragraph.  left is the
-% absolute margin (the engine added h to the .in margin).
-\gmldefhint{il}{\gml@hdim{left}{unit}\gml@dima\advance\gml@dima-\gml@hintleft
-  \edef\gml@tdelta{\the\gml@dima}\gml@shape0{1}\gml@tdelta\z@}
+  \ifx\gml@tmpb\gml@yes\advance\gml@dima-#2\gml@pqdist{for}\gml@dimc
+    \ifgml@pqon\gml@pqset{#3}\gml@dimb\gml@dimc\gml@dima
+    \else\gml@pqbase\gml@pqceil\gml@dimb\gml@cnta\gml@pqceil\gml@dimc\gml@cntb
+      \edef\gml@tdelta{\the\gml@dima}%
+      \if L#3\gml@shape\gml@cnta\gml@cntb\gml@tdelta\z@
+      \else\gml@shape\gml@cnta\gml@cntb\z@\gml@tdelta\fi\fi
+  \else\ifgml@pqon\ifdim\gml@dimb>\z@\gml@dimc#2\advance\gml@dimc-\gml@dima
+      \gml@pqset{#3}\z@\gml@dimb\gml@dimc\fi\fi
+    \global#2\gml@dima\gml@apply\fi}
+% \gml@pqdist{for|after}\register: the distance, 0 if none, \maxdimen
+% (no end) if it is longer (about 1365 lines of 12pt)
+\def\gml@pqdist#1#2{\gml@hget{#1}\gml@tv\ifx\gml@tv\empty#2\z@
+  \else\gml@hget{#1-unit}\gml@tu\gml@dimof1\gml@tu#2%
+    \ifx\gml@tu\gml@mixedstr#2\z@\fi
+    \ifdim#2>\z@\gml@pqk\maxdimen\divide\gml@pqk#2%
+      \ifdim\gml@tv sp<\gml@pqk sp\gml@dimof\gml@tv\gml@tu#2\else#2\maxdimen\fi
+    \else\gml@dimof\gml@tv\gml@tu#2\fi\fi}
+\gmldefhint{in}{\gml@indent{left}\gml@hintleft L}
+\gmldefhint{ir}{\gml@indent{right}\gml@hintright R}
+% .il h / .un h: shift= (signed, to the right) from the margin of the
+% next output line, which \gml@pqentry adds (see \gml@pqId)
+\gmldefhint{il}{\gml@hdim{shift}{unit}\gml@dima
+  \gml@pqmain\ifgml@pqon\global\gml@pqIn\@ne\global\gml@pqId\gml@dima
+  \else\edef\gml@tdelta{\the\gml@dima}\gml@shape0{1}\gml@tdelta\z@\fi}
 \expandafter\let\csname gml@hint@un\expandafter\endcsname\csname gml@hint@il\endcsname
-\def\gml@tempindent#1#2{\gml@hdim{#1}{unit}\gml@dima\advance\gml@dima-#2%
-  \edef\gml@tdelta{\the\gml@dima}%
-  \gml@hget{for}\gml@tv\gml@hget{for-unit}\gml@tu
-  \ifx\gml@tv\empty\def\gml@tfor{1}\else
-    \gml@dimof\gml@tv\gml@tu\gml@dimc\gml@linesof\gml@dimc\edef\gml@tfor{\the\gml@cntb}\fi
-  \gml@hget{after}\gml@tv\gml@hget{after-unit}\gml@tu
-  \ifx\gml@tv\empty\def\gml@tafter{0}\else
-    \gml@dimof\gml@tv\gml@tu\gml@dimc\gml@linesof\gml@dimc\edef\gml@tafter{\the\gml@cntb}\fi
-  \def\gml@tmpb{left}\edef\gml@tmpc{#1}%
-  \ifx\gml@tmpb\gml@tmpc\gml@shape\gml@tafter\gml@tfor\gml@tdelta\z@
-  \else\gml@shape\gml@tafter\gml@tfor\z@\gml@tdelta\fi}
 \gmldefhint{of}{\gml@hdim{offset}{unit}\gml@dima\global\gml@ofdim\gml@dima
   \ifdim\gml@ofdim=\z@\global\gml@ofstate\z@\else\global\gml@ofstate\@ne\fi}
 \gmldefhint{ll}{\gml@hget{length}\gml@tv
@@ -954,9 +1168,8 @@
 % a font switch.  UP is done by tex.xsl (\gmlupword).  TYPE: the family
 % chooses the slot (mono: tt, sans: ss/ssbf, else rm it bf bi), a size
 % loads the slot at that size (\gml@sized).  FONT name alone (no other
-% operand) is that font if it is known.  Rel 4: the 3800 font ids
-% (FONT GT10, &$CHAR(n); LR Tables 29-32 p.455-457) name faces; not yet
-% modelled (the body face).  An omitted TYPE weight is MEDIUM and an
+% operand) is that font if it is known, the 3800 font ids among them
+% (FONT GT10, &$CHAR(n); see \gml@fl@def).  An omitted TYPE weight is MEDIUM and an
 % omitted width NORMAL, not inherited (LR p.132), so the slot is chosen
 % from this definition alone.  The
 % definition is global; \gmldeffont{NAME}{...} after it overrides it.
@@ -1143,9 +1356,12 @@
     \leavevmode\raise\gml@dima\hbox{\gml@fontcmd\gml@dvtext}\fi}
 \gmldefhint{bc}{} \gmldefhint{fl}{} \gmldefhint{wz}{}
 % .sa/.re: the engine follows a .re with the hints that set the saved
-% state again (restore=yes), so nothing to do here.  .fv: page-level
-% vertical justification is TeX's own business.
-\gmldefhint{sa}{} \gmldefhint{re}{} \gmldefhint{fv}{}
+% state again (restore=yes); the queue of distances is saved and put
+% back here (\gml@pqsave).  .fv: page-level vertical justification is
+% TeX's own business.
+\gmldefhint{sa}{\gml@hget{name}\gml@tv\gml@pqsave\gml@tv}
+\gmldefhint{re}{\gml@hget{name}\gml@tv\gml@pqrestore\gml@tv}
+\gmldefhint{fv}{}
 % .pi: an index entry; resolve.xsl gives it an anchor (its page
 % reference target) and puts the index after the .ix, so .ix itself
 % has nothing to do here
@@ -1164,35 +1380,6 @@
 \gmldeflines{ri}{end}{\gml@lmore}
 % .us/.up/.uc: tex.xsl wraps the words (\gmlusword ...); nothing else
 \gmldeflines{us}{begin}{} \gmldeflines{up}{begin}{} \gmldeflines{uc}{begin}{}
-% .in/.ir FOR/AFTER n, .il, .un: the first n lines get the scope's margin.
-% Fill mode: \parshape over n output lines (set before the group);
-% format off: the margin for the covered lines (each one a paragraph).
-\def\gml@lines@margin#1#2#3{% attr, permanent register, left|right
-  \gml@get\gml@lattrs{#1}\gml@tv\gml@get\gml@lattrs{unit}\gml@tu
-  \gml@dimof\gml@tv\gml@tu\gml@dima\advance\gml@dima-#2%
-  \edef\gml@tdelta{\the\gml@dima}%
-  \gml@get\gml@lattrs{n}\gml@tv\gml@numpart\gml@tv
-  \ifx\gml@sn\empty\def\gml@sn{1}\fi
-  \ifx\gml@curfill\gml@no\else
-    \gml@get\gml@lattrs{cont}\gml@tmpb\ifx\gml@tmpb\gml@yes\else
-      \def\gml@tmpb{left}\def\gml@tmpc{#3}%
-      \ifx\gml@tmpb\gml@tmpc\gml@shape0\gml@sn\gml@tdelta\z@
-      \else\gml@shape0\gml@sn\z@\gml@tdelta\fi\fi\fi}
-\gmldeflines{in}{pre}{\gml@get\gml@lattrs{offset}\gml@tmpb
-  \ifx\gml@tmpb\empty\else\global\gml@ofdim\z@\global\gml@ofstate\z@\fi
-  \gml@lines@margin{left}\gml@hintleft{left}}
-\gmldeflines{in}{begin}{\ifx\gml@curfill\gml@no
-  \advance\leftskip\gml@tdelta\relax\fi}
-\gmldeflines{in}{end}{\ifx\gml@curfill\gml@no\gml@lmore\fi}
-\gmldeflines{ir}{pre}{\gml@lines@margin{right}\gml@hintright{right}}
-\gmldeflines{ir}{begin}{\ifx\gml@curfill\gml@no\advance\rightskip\gml@tdelta\relax\fi}
-\gmldeflines{ir}{end}{\ifx\gml@curfill\gml@no\gml@lmore\fi}
-\expandafter\let\csname gml@lines@il@pre\expandafter\endcsname\csname gml@lines@in@pre\endcsname
-\expandafter\let\csname gml@lines@il@begin\expandafter\endcsname\csname gml@lines@in@begin\endcsname
-\expandafter\let\csname gml@lines@il@end\expandafter\endcsname\csname gml@lines@in@end\endcsname
-\expandafter\let\csname gml@lines@un@pre\expandafter\endcsname\csname gml@lines@in@pre\endcsname
-\expandafter\let\csname gml@lines@un@begin\expandafter\endcsname\csname gml@lines@in@begin\endcsname
-\expandafter\let\csname gml@lines@un@end\expandafter\endcsname\csname gml@lines@in@end\endcsname
 % .rc * c: a revision character in the margin of the covered line
 \gmldeflines{rc}{begin}{\gml@lget{char}\gml@tv\gml@lget{cont}\gml@tmpb
   \ifx\gml@tmpb\gml@yes\else\leavevmode\llap{\gml@tv\enspace}\fi}
@@ -1399,7 +1586,7 @@
 \fi
 % \gml@symget{NAME}{value}: \gml@symv is the value for this page
 \def\gmlsymref#1#2{\gml@symget{#1}{#2}\gml@symv}
-\output={\gml@tbl@output\gml@symtop\hsize\gml@defaulthsize\plainoutput\global\gml@plainpagefalse
+\output={\gml@pqenter\gml@tbl@output\gml@symtop\hsize\gml@defaulthsize\plainoutput\global\gml@plainpagefalse
   \global\gml@chappagefalse
   \gml@runsupnext{rh@odd}\gml@runsupnext{rh@even}%
   \gml@runsupnext{rf@odd}\gml@runsupnext{rf@even}}
@@ -1805,6 +1992,7 @@
   \expandafter\ifvoid\gml@tbl@box{tft}\gml@tblslot\else
     \ifgml@tblfirst\ifgml@tblthd\nobreak\vskip-\gml@tblrule\fi
     \else\nobreak\vskip-\gml@tblrule\fi
+    \gml@pqrows{\gml@tbl@box{tft}\gml@tblslot}%
     \nointerlineskip\copy\gml@tbl@box{tft}\gml@tblslot
     \ifvoid\gml@tftfns\else\unvbox\gml@tftfns\fi\fi
   \ifgml@tblmarks\mark{-}\fi\prevdepth\z@\fi}
@@ -1901,7 +2089,7 @@
 \def\gml@tbl@va@bottom#1{\vss#1\kern\gml@cellvpad}
 % where a finished row goes
 \def\gml@tbl@dest@thd{\global\setbox\gml@tbl@box{thd}\gml@tblslot\copy\gml@rowbox
-  \nointerlineskip\box\gml@rowbox\gml@tbl@fnout\gml@tblfns
+  \gml@pqrows\gml@rowbox\nointerlineskip\box\gml@rowbox\gml@tbl@fnout\gml@tblfns
   \global\gml@tblthdtrue\global\gml@tblmarkstrue}
 \def\gml@tbl@dest@tft{\global\setbox\gml@tbl@box{tft}\gml@tblslot\box\gml@rowbox
   \gml@tbl@fnadd\gml@tftfns\global\gml@tblmarkstrue}
@@ -1928,6 +2116,7 @@
   \nointerlineskip\gml@dima\vsize
   \advance\gml@dima-\ht\gml@tbl@box{thd}\gml@tblslot
   \advance\gml@dima-\ht\gml@tbl@box{tft}\gml@tblslot
+  \gml@pqrows\gml@chunk
   \ifdim\ht\gml@chunk>\gml@dima\unvbox\gml@chunk
     \global\setbox\gml@chunkfns\box\voidb@x
   \else\box\gml@chunk\gml@tbl@fnout\gml@chunkfns\fi
@@ -2058,12 +2247,18 @@
 \def\gmltlistend{\gmlfiglistend}
 
 % ---- footnotes -------------------------------------------------------------------------------------------
-\def\gml@vfootnote#1{\insert\footins\bgroup
+\def\gml@vfootnote#1{\insert\footins\bgroup\gml@pqenter
   \interlinepenalty\interfootnotelinepenalty
   \splittopskip\ht\strutbox\splitmaxdepth\dp\strutbox\floatingpenalty\@MM
   \leftskip\z@skip\rightskip\z@skip\spaceskip\z@skip\xspaceskip\z@skip
   \ifgml@hintmode\parindent\z@\else\parindent1.5em\fi % hint mode: the profile writes the mark
   \textindent{#1}\footstrut\futurelet\next\fo@t}
+% plain's \@foot ends the footnote's last paragraph with the \insert;
+% in a footnote with a queue of its own (\gml@pqenter) \par ends it
+% first, so it takes the shape of a FOR, AFTER or .il given in it
+% (\gml@pqshape); a tag set's footnote without one is left as plain's,
+% so it does not take the shape of the text around it
+\def\@foot{\strut\ifgml@pqown\par\fi\egroup}
 \def\gml@footnote#1{\let\@sf\empty\ifhmode\edef\@sf{\spacefactor\the\spacefactor}\/\fi
   #1\@sf\gml@vfootnote{#1}}
 \def\gml@fnsetup{\gml@elemleft\z@\gml@elemright\z@\gml@elemhsize\hsize}
@@ -2165,8 +2360,11 @@
 \def\gmlsee#1#2#3{\unskip.\ {\it#2}\ #3}
 
 % ---- the document --------------------------------------------------------------------------------------
+% \everyvbox: a queue of distances per box (\gml@pqenter), before what a
+% tag set put there
 \def\gmlbegindocument{\gmlpass\gml@readrefs\gml@tabdefault
-  \everypar{\gml@everypar}\rm\gml@apply}
+  \everypar{\gml@everypar}\everyvbox\expandafter{\expandafter\gml@pqenter\the\everyvbox}%
+  \rm\gml@apply}
 \def\gmlenddocument{\par\vfill\supereject\gml@checkrefs}
 
 % ---- tag set and local overrides -----------------------------------------------------------------------

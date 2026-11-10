@@ -75,6 +75,8 @@ type dm =
   | Lines of string * string list  (** [.dm name /l1/l2/] *)
   | Set_line of string * int option * string  (** [.dm name(n) /line] *)
   | Delete_line of string * int  (** [.dm name(n) off] *)
+  | Assign of string * int option * string
+      (** [.dm name x], [.dm name(n) x]: the macro (line) into [&x] *)
   | Bad of string  (** a diagnostic *)
 
 let scan_name s i =
@@ -88,9 +90,9 @@ let scan_name s i =
 (* The delimited part of a .dm line ([rest] starts at its first non-blank
    character): the delimiter and what follows, without one final
    delimiter (LR p.142: "The final delimiter may be omitted").  A single
-   alphanumeric character is the [.dm name x] form (the definition into
-   symbol &x, p.143), which we do not support; two or more characters
-   are a delimiter and a line, whatever the first one is (p.143). *)
+   alphanumeric character is the [.dm name x] form ([assign_operand],
+   taken first by [parse_dm]); two or more characters are a delimiter and
+   a line, whatever the first one is (p.143). *)
 let delimited name rest =
   let e = String.length rest in
   let alnum = function
@@ -105,6 +107,32 @@ let delimited name rest =
     let d = rest.[0] in
     let e = if e > 1 && rest.[e - 1] = d then e - 1 else e in
     Ok (d, String.sub rest 1 (e - 1))
+
+(* [.dm name x] (LR p.143): x, the operand alone, is one alphanumeric
+   character; the symbol &x gets the current value of the macro or line *)
+let assign_operand rest =
+  match String.trim rest with
+  | x
+    when String.length x = 1
+         && Line.is_name_char x.[0]
+         && x.[0] <> '@'
+         && x.[0] <> '#'
+         && x.[0] <> '$' ->
+      Some x
+  | _ -> None
+
+(** The current value of macro [name] ([.dm name x]): its lines in order, joined
+    by [sep] (the control word separator, so that the value on a control word
+    line runs them again; DCF-VERIFY: LR p.143 says only "the current value of a
+    macro"); of line [n] ([.dm name(n) x]): that line, null if there is none.
+    [None]: no such macro. *)
+let value (st : store) name sub ~sep =
+  Option.map
+    (fun d ->
+      match sub with
+      | Some n -> Option.value (List.assoc_opt n d.lines) ~default:""
+      | None -> String.concat sep (List.map snd d.lines))
+    (find st name)
 
 (** Parse the operands of [.dm] (LR p.141-145).
 
@@ -156,6 +184,8 @@ let parse_dm ops =
                       (Printf.sprintf ".dm %s(): line number required with OFF"
                          name)
               else if rest = "" then Set_line (name, sub, "")
+              else if assign_operand rest <> None then
+                Assign (name, sub, Option.get (assign_operand rest))
               else
                 match delimited name rest with
                 | Ok (_, line) -> Set_line (name, sub, line)
@@ -171,6 +201,8 @@ let parse_dm ops =
       | "" ->
           if String.lowercase_ascii name = "off" then End None
           else Lines (name, [])
+      | _ when assign_operand rest <> None ->
+          Assign (name, None, Option.get (assign_operand rest))
       | _ -> (
           match delimited name rest with
           | Ok (d, body) -> Lines (name, String.split_on_char d body)

@@ -143,7 +143,7 @@
 % continued on the next page).
 \count\footins=\z@ \skip\footins=\z@skip
 \dimen\footins=\gml@botmargin \advance\dimen\footins-14mm
-\def\gml@vfootnote#1{\insert\footins\bgroup\yoko\hsize\gml@yokowidth
+\def\gml@vfootnote#1{\insert\footins\bgroup\gml@pqenter\yoko\hsize\gml@yokowidth
   \baselineskip12\p@
   \interlinepenalty\interfootnotelinepenalty
   \splittopskip\ht\strutbox\splitmaxdepth\dp\strutbox\floatingpenalty\@MM

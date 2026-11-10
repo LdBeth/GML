@@ -10,7 +10,7 @@
 ; (SaxonC's transform, as in the mkfile)
 
 (cram
- (applies_to tex_pass tex_msgs)
+ (applies_to tex_pass tex_msgs tex_fonts3800 tex_forafter)
  (deps
   (glob_files %{project_root}/xslt/*.xsl))
  (enabled_if

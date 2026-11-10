@@ -673,7 +673,7 @@ let ct ctx ops =
 
 (* .dm name /l1/l2/... | .dm name(n) /line/ | .dm name() /line/
    | .dm name(n) off | .dm name on | .dm name off | .dm name lib
-   | .dm name delete (EXT) (LR p.141-145).
+   | .dm name[(n)] x | .dm name delete (EXT) (LR p.141-145).
    The line is substituted like any other when .su is on (p.142); the
    body of [.dm name on] is captured raw by [Interp.process]. *)
 let dm ctx ops =
@@ -687,6 +687,18 @@ let dm ctx ops =
         Ctx.warn ctx ".dm %s(%d) off: macro %s is not defined" name k name
   | Macro.Begin name ->
       ctx.capture <- Some { Ctx.cname = name; cbody = []; cfrom = ctx.loc }
+  | Macro.Assign (name, sub, x) -> (
+      let sep =
+        match ctx.Ctx.chars.Chars.cw_sep with
+        | Some c -> String.make 1 c
+        | None -> " "
+      in
+      match Macro.value st name sub ~sep with
+      | None -> Ctx.error ctx ".dm %s %s: macro %s is not defined" name x name
+      | Some v -> (
+          match Symbols.set ctx.syms x v with
+          | Ok () -> ()
+          | Error e -> Ctx.error ctx ".dm %s %s: %s" name x e))
   | Macro.Lib name ->
       (* searched whatever the setting of .ly; the definition replaces any
        existing one (p.282) *)
