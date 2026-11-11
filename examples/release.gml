@@ -17,7 +17,7 @@
 .*   all   cd examples && mk   (examples/mkfile: out/)
 .*
 .* ---- document symbols --------------------------------------------------
-.se product = 'Wind Server'
+.se product = 'Watermelon Server'
 .se major = 4
 .se minor = 2
 .se version = &major..&minor
