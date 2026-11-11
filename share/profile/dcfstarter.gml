@@ -9,8 +9,8 @@
 .* the APFs here do the formatting the DCF way: SCRIPT/VS control words
 .* (SH35-0069-3 Text Programmer's Guide, cited TPG p.n), symbols and
 .* counters, as a real Release 3 profile does.  The result is a stream
-.* of formatting hints that a layout engine (TeX in hint mode: tex.xsl
-.* picks it because .df/.dh/.dr come before the first element) turns
+.* of formatting hints that a layout engine (TeX: tex.xsl writes them
+.* for gml.tex) turns
 .* into pages.
 .*
 .* This is NOT IBM's DSMPROF3.  It is written from the documented
@@ -32,7 +32,7 @@
 .*    frontm body appendix backm, the h0-h6 heading elements (resolve.xsl
 .*    builds the :toc entries and their page references from them), toc
 .*    and figlist (where resolve.xsl puts those lists), fig (the float in
-.*    TeX hint mode) and figcap (the figure list).
+.*    TeX) and figcap (the figure list).
 .*  - Margins are absolute: &f@tm is the text left margin in characters
 .*    (&f@rm the right one); every structure computes its .in/.ir from
 .*    them and restores them at its end, so nesting does not depend on
@@ -82,7 +82,7 @@
 .*    an empty toc element, which
 .*    resolve.xsl fills from the h0-h4 elements (the heading APFs wrap
 .*    their .hN in an hN element).  The numbers are in the heading text
-.*    (the profile numbers), so in hint mode the TOC and figure list
+.*    (the profile numbers), so in TeX the TOC and figure list
 .*    print no numbers of their own.
 .*  - Index: :i1 :i2 :i3 :ih1 :ih2 :ih3 :iref give .pi entries (TPG
 .*    p.213-218); :index places them with .ix.
@@ -935,7 +935,7 @@
 .* ---- figures (IG p.115-125; Figure 5: indent 2, skip 1) ----------------------
 .* :fig [id=] [frame=rule|box|none|'string'] [place=top|bottom|inline]
 .* [width=page|column].  A floating keep (inline: a keep) in a fig
-.* element (the float of TeX hint mode, which draws a box frame
+.* element (TeX's float, which draws a box frame
 .* itself: frame=box is passed on, and .bx inside a fig is not drawn
 .* there); the body in format off and in the figure font (figfont, or
 .* the current font: DSMFIG's ".bf figfont =", restored by the caption,

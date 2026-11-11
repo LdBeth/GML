@@ -1,4 +1,3 @@
-\def\gmlmode{hints}
 \input gml
 \gml
 <,dr spec=thick weight 1mm,rule=thick,weight=1mm><

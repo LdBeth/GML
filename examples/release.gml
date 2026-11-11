@@ -13,7 +13,7 @@
 .*                  examples/release.gml
 .*         (gmlfmt -to html gives gml -set $LDEV=HTML: starter)
 .*   PDF   cd examples && ../gmlpass -app ./notes -o out/passes release.gml
-.*         (the default device: dcfstarter, TeX in hint mode)
+.*         (the default device: dcfstarter)
 .*   all   cd examples && mk   (examples/mkfile: out/)
 .*
 .* ---- document symbols --------------------------------------------------

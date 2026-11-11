@@ -238,6 +238,8 @@ carrying the new state, the operand and `break="yes|no"`.  The table in
 | dcfstarter: `ss@last` (starterset.gml; also removed at starter's `:egdoc`, `starterset.t`); `DSMGML013W` (ours) and the "ID unknown" texts only on the last pass (a stand-in, the ID, before it); duplicate IDs checked per pass (`f@dfid`: a stamp per ID, removed at `:egdoc` with the other per-pass state so that two passes in the same state write the same symbol file). | DONE (`passes.t`) |
 
 ## Starter Set profile (`share/profile/starter.gml`)
+The semantic profile, for HTML only; TeX and PDF are made from the
+formatting profile `dcfstarter`, whose control words do the layout.
 Modelled on DSMPROF3 (SH35-0050 Figure 7): `.aa` mappings of every Starter
 Set tag, `.xd` implicit-close models, DSM#CNTX/DSM#RSET messages through
 `.mg`, `:xmp` verbatim (`xml:space="preserve"` + `.fo off`).  `&date` is

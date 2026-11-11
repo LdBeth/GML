@@ -1,1 +1,1 @@
-tex-input=mygml SYSVART=center tex-preamble=\gmlindexcolumns=1
+tex-input=mygml tex-preamble=\gmlindexcolumns=1

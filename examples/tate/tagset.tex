@@ -2,8 +2,8 @@
 % A pTeX engine only (ApTeX: gmlpass -tex aptex).  gml.tex inputs it
 % near its end (tex.xsl's tex-tagset), before the body (\gml), with
 % the main vertical list still empty, so the whole body can be set
-% vertically.  The profile is dcfstarter (hint mode); everything here
-% is TeX's side of the layout:
+% vertically.  The profile is dcfstarter (its control words do the
+% layout); everything here is TeX's side of the layout:
 %   - the main vertical list is tate: lines run top to bottom and stack
 %     from right to left; \hsize is the line length (the height of the
 %     text block on the page), \vsize the width of the text block;
@@ -239,7 +239,7 @@
 % that one both kanji, \kanjiskip; one kanji and one Latin, \xkanjiskip
 % if the Latin one's \xspcode and the kanji's \inhibitxspcode allow it
 % on that side (1: before the character, 2: after it, 3: both).
-\gmldefhstart{ruby}{\leavevmode\gmlattr{first}\gml@tmpa\gml@rbglue\gml@tmpa
+\gmldefstart{ruby}{\leavevmode\gmlattr{first}\gml@tmpa\gml@rbglue\gml@tmpa
   \hbox\bgroup}
 \def\gml@rbglue#1{\gml@cnta\lastnodechar
   \ifnum\gml@cnta<\z@\else\ifx\empty#1\empty\else
@@ -251,7 +251,7 @@
         \ifodd\inhibitxspcode#1 \hskip\xkanjiskip\fi\fi\fi
     \fi\fi\fi}
 \def\gml@rubyfont{\def\gml@jscale{.5}\gml@jsel}
-\gmldefhend{ruby}{\egroup}
+\gmldefend{ruby}{\egroup}
 \gmldefhint{rb}#1#2{\gml@hget{k}\gml@rbk \gml@hget{shift}\gml@rbshift
   \gml@hget{spread}\gml@rbspread
   \setbox\gml@rbbox\hbox{#1}%

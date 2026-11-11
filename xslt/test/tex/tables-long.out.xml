@@ -3,7 +3,7 @@
 <
 gdoc><
 body><
-h1 anchor=h1,text=A long table>A long table<
+h1 anchor=h1>A long table<
 ><
 p>The table below may split before any row; its heading and footing repeat on every page.
 <

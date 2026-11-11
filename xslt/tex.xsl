@@ -9,9 +9,9 @@
 
   Output (method text, pure ASCII):
     [\def\gmlfonts{$tex-fonts}] [\def\gmltagset{$tex-tagset}]
-    [\def\gmlmode{hints}] [\def\gmlpassno{K}\def\gmlpasses{N}: the root's
-    pass= passes=, for gml.tex's \gmlpass]
-    \input gml ($tex-input), $tex-preamble, [\def\gmltitlealign{..}]
+    [\def\gmlpassno{K}\def\gmlpasses{N}: the root's pass= passes=, for
+    gml.tex's \gmlpass]
+    \input gml ($tex-input), $tex-preamble
     \gml         the body starts: < and & are active from here
     body<
     >            closes the root: ends the document
@@ -30,11 +30,9 @@
     &N;                  the character with code point N
   ATTRS is k=v,k=v: all attributes, a value "yes" as the bare key, a
   value holding markup in braces.  An element with anchor= sets its
-  anchor itself.  Computed attributes (t:extra): text= on h0-h6, gml:h
-  and title (plain text, for the running footing), desc on a
-  figcap/tcap followed by a figdesc/tdesc, more on a gml:lines whose
-  next gml:lines is its cont="yes" continuation, and the keys parsed
-  from the spec of gml:df gml:dh gml:dr (below).  Index tags (i1 i2 i3
+  anchor itself.  Computed attributes (t:extra): more on a gml:lines
+  whose next gml:lines is its cont="yes" continuation, and the keys
+  parsed from the spec of gml:df gml:dh gml:dr (below).  Index tags (i1 i2 i3
   ih1 ih2 ih3 iref) are written empty (their text is in
   gml:index-entries).
   A hint may take brace arguments after the tag:
@@ -45,7 +43,7 @@
                               every page (page number symbol, symref)
     <,pageno>                 the page number symbol in a .sx field
     <,pageref refid=A,when=auto,label=L>  (when= left out if always)
-    <,toc-entry ATTRS>{num}{text}{page}   (figlist-entry, tlist-entry)
+    <,toc-entry ATTRS>{text}{page}   (figlist-entry, tlist-entry)
     <,index-group letter=L> <,index-entry level=N>{term}{refs}, refs:
       <,ixfirst> <,ixref refid=A,..> <,ixsep> <,ixrangesep>
       <,see kind=K,label=L>{text}
@@ -82,12 +80,13 @@
   font, default hdN) has UP or UC, or in a heading whose .dh says UP, is
   <!..> (<*..> inside .us scopes): plain TeX cannot upper-case text by a
   font switch.
-  Mode (tex-mode): "hints" writes \def\gmlmode{hints}: gml.tex then
-  leaves the layout to the hints (a real DCF profile formats every tag
-  with control words) and styles only gml:h, gml:fn, gml:rh, gml:rf and
-  the fig float.  "auto" (default) chooses hints when a .df/.dh/.dr hint
-  comes before the first source element (a formatting profile), else
-  "elements".
+  The document is formatted by a formatting profile (dcfstarter, or a
+  tag set built on it): its control words, the hints, do the layout.
+  gml.tex styles what the profile leaves to TeX (gml:h, gml:fn, gml:rh,
+  gml:rf, the fig float, the tables, the generated lists); any other
+  element is a group unless gml.tex or the tag set's tagset.tex defines
+  it.  (The semantic profile starter is for HTML only: tags without a
+  .df/.dh/.dr hint before the first of them are reported.)
   Tag sets (xsl:import): write syntax only through the functions of the
   writer section (t:open t:close t:hint t:tag t:anchor t:attrs t:kv
   t:arg t:esc t:attr t:name t:char t:ref); t:value t:omit t:extra
@@ -117,16 +116,8 @@
        Written as \def\gmltagset{PATH} before \input: gml.tex inputs it
        at its end, before gmllocal.tex. -->
   <xsl:param name="tex-tagset" as="xs:string" select="''"/>
-  <!-- title page alignment as SYSVART: right (default) | left | center -->
-  <xsl:param name="SYSVART" as="xs:string" select="''"/>
-  <!-- elements | hints | auto (see the header) -->
-  <xsl:param name="tex-mode" as="xs:string" select="'auto'"/>
 
   <xsl:variable name="root" select="(/gml:doc, /*)[1]"/>
-  <xsl:variable name="mode" as="xs:string" select="
-      if ($tex-mode = ('elements', 'hints')) then $tex-mode
-      else if (gml:hint-mode($root))
-      then 'hints' else 'elements'"/>
 
   <xsl:variable name="nl" select="'&#10;'"/>
 
@@ -314,23 +305,12 @@
         or (exists($n[self::*]) and not($n/self::gml:*) and not(t:is-block($n)))"/>
   </xsl:function>
 
-  <!-- the plain text of a heading, for the running footing -->
-  <xsl:function name="t:plain" as="xs:string">
-    <xsl:param name="e" as="element()"/>
-    <xsl:sequence select="normalize-space(string-join(($e//text() | $e//gml:dv/@text)[not(ancestor::gml:num)
-        and not(ancestor::*[local-name() = $index-tags])]))"/>
-  </xsl:function>
-
   <!-- the computed attributes of an element or hint, "key=value" -->
   <xsl:function name="t:extra" as="xs:string*">
     <xsl:param name="e" as="element()"/>
     <xsl:variable name="next" select="$e/following::gml:lines[1]"/>
     <xsl:sequence select="
-        if ($e/(self::h0 | self::h1 | self::h2 | self::h3 | self::h4 | self::h5 | self::h6
-                | self::gml:h | self::title)) then 'text=' || t:attr(t:plain($e))
-        else if ($e/(self::figcap[following-sibling::*[1][self::figdesc]]
-                     | self::tcap[following-sibling::*[1][self::tdesc]])) then 'desc=yes'
-        else if ($e/self::gml:lines) then
+        if ($e/self::gml:lines) then
           (if ($next/@cont = 'yes' and $next/@word = $e/@word) then 'more=yes' else ())
         else if ($e/(self::gml:df | self::gml:dh | self::gml:dr)) then
           for $k in (if ($e/self::gml:df) then t:df-keys(string($e/@spec))
@@ -355,16 +335,21 @@
 
   <!-- ==== document ======================================================= -->
   <xsl:template match="/">
+    <!-- tags but no .df/.dh/.dr before the first: not a formatting
+         profile (the semantic profile starter is for HTML only) -->
+    <xsl:variable name="first-source" select="($root//*[not(self::gml:*)])[1]"/>
+    <xsl:if test="exists($first-source)
+        and empty($root//(gml:df | gml:dh | gml:dr)[. &lt;&lt; $first-source])">
+      <xsl:message select="'tex: ' || local-name($first-source) || ': no .df/.dh/.dr'
+          || ' before the first tag: TeX needs a formatting profile (-profile dcfstarter)'"/>
+    </xsl:if>
     <!-- the settings (pass=/passes=: the pass model, gml.tex's \gmlpass) -->
     <xsl:value-of separator="&#10;" select="
         ('\def\gmlfonts{' || $tex-fonts || '}')[$tex-fonts != ''],
         ('\def\gmltagset{' || $tex-tagset || '}')[$tex-tagset != ''],
-        '\def\gmlmode{hints}'[$mode = 'hints'],
         ('\def\gmlpassno{' || t:name(string($root/@pass)) || '}\def\gmlpasses{'
          || t:name(string($root/@passes)) || '}')[$root/@pass and $root/@passes],
         '\input ' || $tex-input, $tex-preamble[. != ''],
-        ('\def\gmltitlealign{' || lower-case($SYSVART) || '}')
-          [lower-case($SYSVART) = ('right', 'left', 'center')],
         '\gml', ''"/>
     <xsl:apply-templates select="(gml:doc, *)[1]/node()"/>
     <xsl:value-of select="t:close(true()) || $nl"/>
@@ -459,8 +444,6 @@
   <!-- ==== generated lists ======================================================= -->
   <xsl:template match="gml:toc-entry | gml:figlist-entry | gml:tlist-entry" priority="1">
     <xsl:value-of select="t:tag(',', local-name(), t:attrs(@*, ()), true()) || '{'"/>
-    <xsl:apply-templates select="gml:num/node()"/>
-    <xsl:text>}{</xsl:text>
     <xsl:apply-templates select="gml:entry-text/node()"/>
     <xsl:text>}{</xsl:text>
     <xsl:apply-templates select="gml:pageref"/>

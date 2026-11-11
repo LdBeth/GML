@@ -3,7 +3,7 @@ role (EXT): GB12 is bold, GI12 italic, and .df FONT ST10 roman; a name
 gml.tex does not know leaves the font unchanged, with a warning.
 
   $ export TEXINPUTS=../../share/tex:
-  $ gml -profile starter -o f.xml f.gml
+  $ gml -profile dcfstarter -o f.xml f.gml
   $ transform -s:f.xml -xsl:../../xslt/resolve.xsl -o:f.r.xml
   $ transform -s:f.r.xml -xsl:../../xslt/tex.xsl -o:f.tex
   $ tex -interaction batchmode f.tex > /dev/null

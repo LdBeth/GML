@@ -71,9 +71,11 @@ When nil: the project's `_build/default/bin/main.exe' with
   "The gmlfmt script.  When nil, ROOT/gmlfmt or \"gmlfmt\" on the path."
   :type '(choice (const :tag "Automatic" nil) file))
 
-(defcustom gml-profile "starter"
-  "Profile passed to gml and gmlfmt with -profile (nil for none)."
-  :type '(choice (const :tag "None" nil) string))
+(defcustom gml-profile nil
+  "Profile passed to gml and gmlfmt with -profile.
+When nil, gmlfmt's default for the target (starter; dcfstarter for
+-to tex), and starter for the engine's diagnostics and for lookups."
+  :type '(choice (const :tag "Default" nil) string))
 
 (defcustom gml-symbols nil
   "Symbols passed as -set NAME=VALUE to gml and gmlfmt.
@@ -1035,7 +1037,7 @@ with the file named in the message."
                 default-directory))
          (tmp (make-temp-file "gml-flymake" nil ".gml"))
          (cmd (append (gml--engine-command)
-                      (and gml-profile (list "-profile" gml-profile))
+                      (list "-profile" (or gml-profile "starter"))
                       (gml--set-args)
                       (list "-I" (expand-file-name dir) "-o" null-device tmp))))
     (save-restriction
@@ -1132,7 +1134,7 @@ with the file named in the message."
         files)
     (dolist (n (gml--collect "^\\.'?\\(?:im\\|ap\\)[ \t]+\\([^ \t\n;]+\\)" 1))
       (when-let* ((f (gml--resolve-file n dir))) (push f files)))
-    (when-let* ((p (and gml-profile (gml--resolve-file gml-profile dir))))
+    (when-let* ((p (gml--resolve-file (or gml-profile "starter") dir)))
       (push p files)
       ;; and the files the profile imbeds (the shipped profiles:
       ;; starterset.gml, where &date and the shared APFs are)

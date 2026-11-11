@@ -32,15 +32,3 @@ answers of a previous pass.
   $ tex -interaction batchmode title.tex > /dev/null
   $ gml -profile dcfstarter -pass 2 -passes 2 -aux title.gmlaux -o title.xml title.gml 2>&1 | sed 's/ (in macro.*): / /'
   title.gml:64 +++DSMGML043I TITLE PAGE SPANS MULTIPLE PAGES. (page 3)
-
-In element mode (-profile starter: no formatting profile, gml.tex lays
-the title page out) gml.tex checks the title page itself: DSMGML043I
-when more than one page was shipped between :titlep and :etitlep.  The
-front matter is numbered in roman (\pageno negative), so the check
-compares absolute page numbers.
-
-  $ gml -profile starter -o stitle.xml title.gml
-  $ totex stitle
-  $ tex -interaction batchmode stitle.tex > /dev/null
-  $ cat stitle.gmlmsg
-  +++DSMGML043I TITLE PAGE SPANS MULTIPLE PAGES. (page 5)

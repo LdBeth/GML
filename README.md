@@ -14,8 +14,8 @@ each hint records the new state and whether it breaks.
 ## Architecture
 
 ```
- doc.gml + profile (share/profile/starter.gml, dcfstarter.gml: both
-    |              imbed starterset.gml)
+ doc.gml + profile (share/profile/dcfstarter.gml for TeX, starter.gml
+    |              for HTML: both imbed starterset.gml)
     |
     |  gml   OCaml engine (lib/, bin/): input stack, substitution,
     |        macros, GML tags -> APFs, .xs/.xd element building, hints
@@ -41,9 +41,15 @@ each hint records the new state and whether it breaks.
 ```
 
 The TeX path is the main one.  The XSLT stages do the restructuring
-(the table grid, lists, numbering, the index) and TeX does the layout;
-tex.xsl writes hint mode when a formatting profile such as dcfstarter
-drives the layout with control words.  The engine knows nothing about
+(the table grid, lists, numbering, the index) and TeX does the layout.
+Each path has its profile: HTML is made from the semantic profile
+`starter`, TeX and PDF from the formatting profile `dcfstarter` (or a
+tag set built on it), whose control words do the layout.  gml.tex
+styles only what the profile leaves to TeX: the headings (`gml:h`,
+from `.dh`), footnotes, running headings and footings, the `fig`
+float, the table grid, and the generated TOC, figure and table lists
+and index; every other element is a group.  A tag set styles its own
+elements with `\gmldefstart`/`\gmldefend`.  The engine knows nothing about
 XSLT; its stages are joined only by files, so each intermediate can be
 inspected.  `xslt/strip-hints.xsl` also reads `doc.r.xml` and writes
 the semantic tree only (`doc.sem.xml`).
@@ -108,8 +114,10 @@ gml [-I dir]... [-share dir] [-profile file|name] [-set sym=val]...
   ch.7): `:rdef` row definitions (CWIDTHS, ARRANGE for spanning cells,
   per-cell HP/ALIGN/VALIGN/CONCAT/ROTATE/MINDEPTH), `:table :thd :tft
   :row :c :tnote :tcap :tdesc`, `:tref` and `:tlist`; resolve.xsl works
-  out the cell grid, numbering and captions, and the HTML and TeX
-  stages draw ruled tables (fixtures from `xslt/test/gml/tables.gml`).
+  out the cell grid, numbering and captions, and html.xsl draws ruled
+  tables (fixtures from `xslt/test/gml/tables.gml`; for TeX, gml.tex
+  draws the grid under dcfstarter).  `starter` is the semantic
+  profile: its output is for HTML, not for TeX.
   The part that does not depend on the output is shared with the
   formatting profile `dcfstarter` (below): `share/profile/starterset.gml`,
   which both profiles imbed (`.im starterset`).  It holds the delimiters,
@@ -150,6 +158,9 @@ From the source tree:
          [-app t] [-set name=value]... [-p name=value]... [-I dir]... in.gml
 ```
 
+`-profile` defaults to `starter`, and to `dcfstarter` for `-to tex`:
+TeX is made from a formatting profile only (dcfstarter, or a tag set
+built on it).
 `-set` goes to gml and to every stylesheet.  `-p` goes to the
 stylesheets only, e.g. `./gmlfmt -to html -set SYSVARH=yes -p h1-prefix=Chapter doc.gml`.
 `-to html`, `scoped` and `semantic` also give gml `-set '$LDEV=HTML'`
@@ -177,9 +188,9 @@ Run mk in the project root.  A target may be any path:
 | `doc.r.xml` | `doc.xml` | resolve.xsl |
 | `doc.s.xml` / `doc.sem.xml` | `doc.r.xml` | scope.xsl / strip-hints.xsl |
 | `doc.html` | `doc.s.xml` | html.xsl |
-| `doc.tex` | `doc.r.xml` | tex.xsl |
+| `doc.tex` | `doc.r.xml` | tex.xsl (needs `PROFILE=dcfstarter` or a `TAGSET`) |
 | `doc.texrun` | `doc.tex` | one run of `$TEX` (default tex) with `share/tex` on TEXINPUTS |
-| `doc.pdf` | `doc.gml` | `gmlpass -n $PASSES -tex $TEXENGINE` (default 4, pdftex): see [Passes](#passes-gmlpass) |
+| `doc.pdf` | `doc.gml` | `gmlpass -n $PASSES -tex $TEXENGINE -profile $PROFILE -o $PASSDIR` (default 4, pdftex, dcfstarter, `passes/` beside the target), then moved: see [Passes](#passes-gmlpass) |
 | `doc.dvi` | `doc.gml` | the same with `$TEX` |
 | `test`, `test-ocaml`, `test-xslt` | | the test suites |
 
@@ -188,14 +199,25 @@ SETS='SYSVARH=yes SYSVARP=draft' mk doc.html     # -set for gml and the styleshe
 mk "XSLTFLAGS='h1-prefix=Chapter'" doc.html      # stylesheet parameters only
 ```
 
+`PROFILE` is empty by default: `starter` for the stages, `dcfstarter`
+for `doc.pdf` and `doc.dvi`.  The stages share one `doc.xml`, so
+`doc.tex` by itself needs the formatting profile named:
+`mk PROFILE=dcfstarter doc.tex`.  The passes of `doc.pdf` and
+`doc.dvi` make their own `doc.xml`, `doc.r.xml` and `doc.tex` (with
+dcfstarter and the pass options) in `PASSDIR` (default `passes/` in
+the target's directory: `OUTDIR/passes`, or `passes/` beside the
+document), so they never replace the files `doc.html` is made from;
+the finished PDF or DVI is moved to the target.
 mk does not know when `SETS` change: remove the intermediates
 (`doc.xml`, `doc.r.xml` ...) first.  For one TeX run (`doc.texrun`),
 run it twice: page references are read from `doc.gmlaux` on the second
 run; `doc.pdf` and `doc.dvi` make the passes.
 
-The stylesheet parameters (`SYSVARS`/`SYSVARD`/`SYSVART` page layouts,
-`paper`, fonts, literals, `css`, `footnotes`, `pageref`, `tex-preamble`
-...) are documented at the top of each stylesheet.
+The stylesheet parameters (`SYSVARH`, literals, `css`, `footnotes`,
+`pageref`, `tex-fonts`, `tex-preamble` ...) are documented at the top
+of each stylesheet.  The title page alignment `SYSVART` is a symbol of
+the formatting profile (`-set SYSVART=left`, see
+[dcfstarter](#formatting-profile-dcfstarter)).
 
 ## Customising
 
@@ -224,13 +246,18 @@ The stylesheet parameters (`SYSVARS`/`SYSVARD`/`SYSVART` page layouts,
   an element (`<:NAME ..>` for `gml:NAME`), `<.NAME ATTRS>` a breaking
   hint and `<,NAME ATTRS>` one that does not, `&N;` a character by its
   code point, `<?pn ID>` a page question, and a few hints with brace
-  arguments (`<,toc-entry level=1>{num}{text}{page}`); ATTRS is
+  arguments (`<,toc-entry level=1>{text}{page}`); ATTRS is
   `k=v,k=v`, a bare `k` for `k=yes`.  The headers of `xslt/tex.xsl`
   and `gml.tex` list every form.  `share/tex/gml.tex` reads
-  `gmllocal.tex` from TEXINPUTS at its end.  Redefine styles there with `\gmldefstart{h1}{...}`,
-  `\gmldefend`, `\gmldefhint{sp}{...}`, `\gmldeflines`, `\gmldefnum`,
-  `\gmldefchar` and `\gmldeffont`.  The tex.xsl parameters
-  `tex-input`/`tex-preamble` load your own macro file or preamble.
+  `gmllocal.tex` from TEXINPUTS at its end.  Override there what TeX
+  does with a hint (`\gmldefhint{sp}{...}`), a font name of `.bf` that
+  the profile does not `.df` (a 3800 font id: `\gmldeffont{gt12}{\tt}`;
+  a `.df` in the document wins), a character (`\gmldefchar{8364}{EUR}`
+  for `&8364;`), a line scope (`\gmldeflines`) or an element that the
+  profile leaves to TeX (`\gmldefstart{NAME}{...}`, `\gmldefend`,
+  `\gmldefnum`: a tag set's, such as `m` of `examples/notes`).  The
+  tex.xsl parameters `tex-input`/`tex-preamble` load your own macro
+  file or preamble.
 - **TeX fonts.** Fonts come from a scheme file `gmlfont-NAME.tex`
   (shipped: `ncs` New Century Schoolbook, the default; `cm` Computer
   Modern) that fills slots with `\gmlfontname{rm}{pncr7t}` ... and
@@ -254,9 +281,9 @@ The stylesheet parameters (`SYSVARS`/`SYSVARD`/`SYSVART` page layouts,
   in `share/gmlapp/NAME`) and adds or overrides template rules.  An
   optional `tagset.tex` is passed to tex.xsl as `tex-tagset`, which
   writes `\def\gmltagset{path}` before `\input gml`; gml.tex inputs it at
-  its end, before `gmllocal.tex` (so the most local file wins).  For
-  hint mode (a formatting profile) it gives its elements styles with
-  `\gmldefhstart`/`\gmldefhend`.  A bundle's `tex.xsl` writes markup
+  its end, before `gmllocal.tex` (so the most local file wins).  It
+  styles the bundle's own elements with `\gmldefstart`/`\gmldefend`;
+  an element nobody defines is only a group.  A bundle's `tex.xsl` writes markup
   only through the writer functions of the stock one (`t:open`,
   `t:close`, `t:hint`, `t:anchor`, `t:attrs`, `t:ref` ...: its header),
   and raw TeX in it may use backslash commands but never a raw `<` or
@@ -266,7 +293,7 @@ The stylesheet parameters (`SYSVARS`/`SYSVARD`/`SYSVART` page layouts,
   A bundle's profile may choose its master by the logical device, as
   DCF profiles do: `.if &$LDEV eq HTML` imbed `starter` (the semantic
   profile, for the HTML), else `dcfstarter` (the formatting profile,
-  for pages).  The HTML paths give gml `-set '$LDEV=HTML'`: `gmlfmt -to
+  for TeX and PDF).  The HTML paths give gml `-set '$LDEV=HTML'`: `gmlfmt -to
   html` (and `scoped`, `semantic`) does it itself, a mkfile adds it to
   `GMLFLAGS` (not `SETS`: those also go to every stylesheet, and
   `$LDEV` is not a parameter name); gmlpass and the other stages keep
@@ -327,7 +354,9 @@ Inside the project the tools are found automatically: the `gml` built in
 `_build` with `-share share`, and `./gmlfmt`.  Elsewhere set `gml-root`,
 or `gml-program` and `gml-gmlfmt-program`.  `gml-profile` and
 `gml-symbols` (an alist for `-set`, safe as a file-local variable) are
-passed to both.
+passed to both.  `gml-profile` nil (the default) gives gmlfmt no
+`-profile`, so it takes its default for the target (starter, dcfstarter
+for `-to tex`); flymake and xref then use starter.
 
 ## Mail: the memo tag set
 
@@ -443,7 +472,7 @@ HTML (`-set '$LDEV=HTML'`, given by `gmlfmt -to html` and the examples'
 mkfile), so the HTML is the semantic profile's, and `dcfstarter`
 otherwise, so `release.pdf` (gmlpass) is the formatting profile's: there
 `:warn` is laid out by its APF with control words, like `:note`, and
-the math elements have hint-mode styles in `tagset.tex`.
+the math elements are styled by `tagset.tex`.
 
 `examples/dcfdemo.gml` shows the formatting profile (see
 [below](#formatting-profile-dcfstarter)): every Starter Set tag
@@ -489,19 +518,18 @@ rule; pTeX puts `\xkanjiskip` between Japanese and Latin), and sets
 each reading in
 half-size type against its base, to its right in a vertical line, in
 a box of no size (one ruby is not broken across lines).
-`../gmlpass -tex aptex -app ./tate -o out tategaki.gml` in examples/, or `mk
+`../gmlpass -tex aptex -app ./tate -o out/passes tategaki.gml` in examples/, or `mk
 out/tategaki.pdf`.
 
 `examples/mkfile` makes everything in `examples/out/` (`cd examples &&
 mk`, or `mk -a` to redo it all): for release.gml the engine XML
 (`release.xml`), resolved, scoped and semantic XML, HTML for both
-audiences, plain TeX (one pass, element mode) and the typeset
-`release.pdf`; for dcfdemo.gml `dcfdemo.pdf` and `dcfdemo.html`; for
-tategaki.gml `tategaki.pdf` (always with aptex).  It
-sets `ROOT`, `TAGSET=notes` and `OUTDIR=out/`, then includes the
-project's `mkfile` for the rules and adds `-set '$LDEV=HTML'` to its
-`GMLFLAGS`, so the engine XML and every stage made from it
-(`release.tex` too) come from starter; the internal edition (`-set
+audiences and the typeset `release.pdf`; for dcfdemo.gml `dcfdemo.pdf`
+and `dcfdemo.html`; for tategaki.gml `tategaki.pdf` (always with
+aptex).  It sets `ROOT`, `TAGSET=notes` and `OUTDIR=out/`, then
+includes the project's `mkfile` for the rules and adds `-set
+'$LDEV=HTML'` to its `GMLFLAGS`, so the engine XML and every stage
+made from it come from starter; the internal edition (`-set
 audience=internal`), `gml.css`, the PDF files (gmlpass, in
 `out/passes/`, the default device: dcfstarter) and dcfdemo.html (the
 project's rules with `-profile starter`: resolve.xsl resolves the
@@ -538,12 +566,13 @@ issue control words (`.sk .in .ir .of .is .bf .pf .df .dh .dr .hr .kp
 `.gs` services.  It was written from the manuals' description of the
 Starter Set's behaviour (Implementation Guide SH35-0050, the GML
 Starter Set reference), not from IBM's macro code; its macros are
-named `f@...` and its messages are IBM's `DSMGMLnnnx`.  TeX is only the layout
-engine: the `.df`/`.dh` at the start put `gml.tex` in hint mode, and
-`.xs`/`.xe` keep just the elements that the later stages need (the
-document sections, headings for the TOC, `fig`/`figcap` for the
-figure list, the table elements for resolve.xsl's grid and the list of
-tables).
+named `f@...` and its messages are IBM's `DSMGMLnnnx`.  It is the
+profile for TeX and PDF (`gmlpass` and `gmlfmt -to tex` use it by
+default); TeX is only the layout engine: the profile's control words
+do the formatting, and `.xs`/`.xe` keep just the elements that the
+later stages need (the document sections, headings for the TOC,
+`fig`/`figcap` for the figure list, the table elements for
+resolve.xsl's grid and the list of tables).
 
 Both profiles imbed `share/profile/starterset.gml` (see `-profile
 starter` above) and so share one message catalogue (`ss@msg`): the
@@ -561,7 +590,7 @@ context (`ss@cntx`) are dropped with DSMPROF3's attribute rules, so
 `:li id=x.` loses its attribute as well.
 
 ```
-cd examples && ../gmlpass -set SYSVARH=yes -o out dcfdemo.gml   # out/dcfdemo.pdf
+cd examples && ../gmlpass -set SYSVARH=yes -o out/passes dcfdemo.gml   # out/passes/dcfdemo.pdf
 
 # the simple alternative: one pass (forward references give DSMGML013W)
 gmlfmt -to tex -profile dcfstarter -set SYSVARH=yes \
@@ -574,7 +603,7 @@ TEXINPUTS=.:share/tex: tex dcfdemo.tex
 
 `-set SYSVARH=yes` numbers the headings (`1.0`, `1.1`, ...; appendix
 headings are lettered); `SYSVART=left|right|center` places the title
-page.  The profile covers `:gdoc` (with `sec=`, which becomes the running
+page (`no`: no title page).  The profile covers `:gdoc` (with `sec=`, which becomes the running
 heading), the front matter (title page, abstract, preface, `:toc`,
 `:figlist`, `:tlist`), body, appendix and back matter with their page numbering
 and running footings, `:h0`-`:h6`, `:p :pc :note`, the five lists with
@@ -616,13 +645,16 @@ give its page on the second TeX run.  With passes they come from TeX:
 gmlpass [-n N] [-tex ENGINE] [-profile p | -app t] [-set name=value]...
         [-p name=value]... [-o DIR] doc.gml
 
-cd examples && ../gmlpass -o out dcfdemo.gml       # out/dcfdemo.pdf
-./gmlpass -tex aptex -o out examples/dcfdemo.gml
-mk PROFILE=dcfstarter PASSES=4 TEXENGINE=aptex doc.pdf
+cd examples && ../gmlpass -o out/passes dcfdemo.gml   # out/passes/dcfdemo.pdf
+./gmlpass -tex aptex -o examples/out/passes examples/dcfdemo.gml
+mk PASSES=4 TEXENGINE=aptex doc.pdf     # in passes/, then moved to doc.pdf
 ```
 
 The default is 4 passes (IBM's FPASSES limit), pdftex and `-profile
-dcfstarter`; `-tex tex` makes a DVI file.  For pass k of N:
+dcfstarter`; `-tex tex` makes a DVI file.  DIR (`-o`) gets the
+passes' own `JOB.xml`, `JOB.r.xml` and `JOB.tex`: keep it apart from
+the files the HTML is made from, as `mk doc.pdf` does (`PASSDIR`,
+default `passes/`).  For pass k of N:
 
 1. `gml -pass k -passes N -aux DIR/JOB.gmlaux -symbols-in DIR/JOB.sym
    -symbols-out DIR/JOB.sym.new`, then the stages to `DIR/JOB.tex`:
@@ -773,11 +805,9 @@ Device and command-option system symbols (`&$PDEV`, `&$CHAR`, `&$SYS`,
 - *provisional* elements: a tag with no end APF and no `.xd` model
   becomes an empty marker unless its own end tag closes it, since IBM's
   profile defines no element models;
-- in TeX, a *hint mode* (`tex-mode=auto|elements|hints`, chosen
-  automatically when `.df`/`.dh`/`.dr` come before the first element)
-  where the element styles of `gml.tex` step aside and the profile's
-  control words do the formatting; named `.dr` rules in `.bx` and
-  `.hr`; `.df` fonts (overstrike as bold, underscore as italic, `up` as
+- in TeX, the profile's control words doing all of the formatting
+  (gml.tex styles no Starter Set element of its own); named `.dr`
+  rules in `.bx` and `.hr`; `.df` fonts (overstrike as bold, underscore as italic, `up` as
   upper case, `type(...)` by family and size); and `.dh`.
 
 All of these have cram tests or XSLT fixtures of their own.  The run

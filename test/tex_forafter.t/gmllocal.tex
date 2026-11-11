@@ -1,5 +1,6 @@
 % the shipped line boxes in the log (lines.awk reads them)
 \tracingoutput1 \showboxdepth6 \showboxbreadth10000 \tracingonline0
-% a note ends with plain's \endgraf (as a tag set may end its own
+% in.gml makes the text of its note an element (.xs note ... .xe note),
+% which ends with plain's \endgraf (as a tag set may end its own
 % paragraphs): it is counted as well
 \gmldefend{note}{\endgraf}

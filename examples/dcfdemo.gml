@@ -2,7 +2,7 @@
 .* share/profile/dcfstarter.gml (the tags are those of the Starter Set,
 .* so it runs under -profile starter too).
 .*
-.*   cd examples && ../gmlpass -set SYSVARH=yes -o out dcfdemo.gml
+.*   cd examples && ../gmlpass -set SYSVARH=yes -o out/passes dcfdemo.gml
 .*
 .* (or mk out/dcfdemo.pdf in examples/): four passes, as with
 .* FPASSES(4), so that the forward references, the TOC, the lists of

@@ -5,13 +5,13 @@ gdoc><
 frontm><
 tlist><
 :tlist-entries title=List of Tables><
-,tlist-entry refid=tn,num=1>{Table&160;1}{Note, caption and description}{<,pageref refid=tn>}<
-,tlist-entry refid=gml-table-5,num=2>{Table&160;2}{A table with a heading and a footing}{<,pageref refid=gml-table-5>}<
+,tlist-entry refid=tn,num=1>{Note, caption and description}{<,pageref refid=tn>}<
+,tlist-entry refid=gml-table-5,num=2>{A table with a heading and a footing}{<,pageref refid=gml-table-5>}<
 ><
 ><
 ><
 body><
-h1 anchor=h1,text=Tables>Tables<
+h1 anchor=h1>Tables<
 ><
 p>A table with star widths, as wide as the column.
 <
@@ -141,7 +141,7 @@ c>Only the third cell of this row has text.
 <
 ><
 ><
-tcap desc><=Table&160;1.>Note, caption and description<
+tcap><=Table&160;1.>Note, caption and description<
 ><
 tdesc>The description follows the caption after a colon.
 <

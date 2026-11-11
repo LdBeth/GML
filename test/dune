@@ -8,10 +8,10 @@
   (glob_files %{project_root}/share/tex/*.tex)))
 
 ; a real TeX run between the passes, the TeX made by the XSLT stages
-; (SaxonC's transform, as in the mkfile)
+; (SaxonC's transform, as in the mkfile); tex_profile: the stages only
 
 (cram
- (applies_to tex_pass tex_msgs tex_fonts3800 tex_forafter)
+ (applies_to tex_pass tex_msgs tex_fonts3800 tex_forafter tex_profile)
  (deps
   (glob_files %{project_root}/xslt/*.xsl)
   %{project_root}/xslt/gml-shared.xml)

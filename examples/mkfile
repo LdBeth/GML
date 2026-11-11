@@ -11,11 +11,11 @@
 # One document, one profile per application: notes/profile.gml picks
 # its master by the logical device.  The engine XML (out/release.xml,
 # out/release-internal.xml), and so the HTML and everything else made
-# from it here (.r.xml .s.xml .sem.xml, the one-pass element TeX
-# out/release.tex), is made with -set $LDEV=HTML (GMLFLAGS: gml only,
-# $LDEV is no stylesheet parameter name): the semantic profile
-# starter.  out/release.pdf (gmlpass) has gml's default device: the
-# formatting profile dcfstarter, TeX in hint mode.  dcfdemo.gml: the
+# from it here (.r.xml .s.xml .sem.xml), is made with -set $LDEV=HTML
+# (GMLFLAGS: gml only, $LDEV is no stylesheet parameter name): the
+# semantic profile starter, which is for HTML only.  out/release.pdf
+# (gmlpass) has gml's default device: the formatting profile
+# dcfstarter, from which the TeX is made.  dcfdemo.gml: the
 # formatting profile (share/profile/dcfstarter.gml) and -set
 # SYSVARH=yes, not the notes tag set.  tategaki.gml: the tag set tate/
 # (Japanese, vertical; PDF only, always with aptex).
@@ -48,7 +48,6 @@ OUT=\
 	out/release.r.xml\
 	out/release.sem.xml\
 	out/release.s.xml\
-	out/release.tex\
 	out/release.html\
 	out/release.pdf\
 	out/release-internal.xml\
@@ -84,9 +83,10 @@ out/gml.css: $ROOT/share/html/gml.css
 	cp $prereq $target
 
 # the passes (these explicit rules win over the project's out/%.pdf,
-# which would make the passes in out/ itself); the passes run the
-# project's mkfile, with its own GMLFLAGS: the default device, so
-# release.pdf comes from notes/profile.gml with dcfstarter
+# which has one pass count, engine and tag set for all; it would work
+# in PASSDIR too); the passes run the project's mkfile, with its own
+# GMLFLAGS: the default device, so release.pdf comes from
+# notes/profile.gml with dcfstarter
 out/release.pdf: release.gml $TAGSET/profile.gml
 	$ROOT/gmlpass -n $FEWPASSES -tex $TEXENGINE -app $TAGSET -o $PASSDIR release.gml
 	mv $PASSDIR/release.pdf $target

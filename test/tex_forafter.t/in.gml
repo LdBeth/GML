@@ -114,8 +114,11 @@ zzzz zzzz zzzz zzzz zzzz zzzz zzzz zzzz zzzz zzzz zzzz zzzz zzzz zzzz zzzz
 zzzz zzzz zzzz zzzz zzzz zzzz zzzz zzzz zzzz zzzz zzzz zzzz zzzz zzzz zzzz.
 :p.Qeng
 .in 5 for 3
-:note.Gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg
+:note.
+.xs note
+Gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg
 gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg gggg.
+.xe note
 :p.Hhhh hhhh hhhh hhhh hhhh hhhh hhhh hhhh hhhh hhhh hhhh hhhh hhhh hhhh hhhh
 hhhh hhhh hhhh hhhh hhhh hhhh hhhh hhhh hhhh hhhh hhhh hhhh hhhh hhhh hhhh.
 :egdoc.

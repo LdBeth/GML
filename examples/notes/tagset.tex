@@ -1,12 +1,8 @@
 % notes/tagset.tex -- TeX styles of the notes tag set.  gmlfmt -app
 % makes the generated TeX load it (by absolute path, @ a letter) near the
-% end of gml.tex, before gmllocal.tex.  Element mode (the profile starter):
-% styles :warn as a ruled, indented block; the label ("Note:"/
-% "Important:") is inserted by the APF.  Hint mode (dcfstarter): only
-% the math, at the end.
-\gmldefstart{warn}{\par\medskip\hrule\smallskip
-  \advance\leftskip 1em \advance\rightskip 1em \noindent}
-\gmldefend{warn}{\par\smallskip\hrule\medskip}
+% end of gml.tex, before gmllocal.tex.  The profile (dcfstarter with
+% notes/profile.gml) lays out everything with control words, :warn
+% among them; what is left to TeX is the math.
 %
 % Math (notes/tex.xsl writes the math text unescaped, but for < and &,
 % which are markup in the body: they are \noteslt and \notesamp, the
@@ -25,13 +21,3 @@
   \ifx\gml@fmlnum\gml@no\else\ifx\gml@fmlnum\empty\else
     \eqno(\gml@fmlnum)\fi\fi$$}
 \gmldefstart{fmlref}{}
-%
-% Hint mode (the formatting profile dcfstarter: an element is only a
-% group unless it has a hint-mode style): the math elements keep their
-% element-mode styles above.  :warn has no element there (the profile's
-% APF lays it out with control words).
-\gmldefhstart{m}{\csname gml@m@start\endcsname}
-\gmldefhend{m}{\csname gml@m@end\endcsname}
-\gmldefhstart{fml}{\csname gml@fml@start\endcsname}
-\gmldefhend{fml}{\csname gml@fml@end\endcsname}
-\gmldefhstart{fmlref}{\csname gml@fmlref@start\endcsname}

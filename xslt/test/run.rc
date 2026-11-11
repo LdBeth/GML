@@ -36,25 +36,32 @@
 #     -> resolve/idempotent*.in.xml (their expected output is the input
 #     itself); resolve/tables-diag and scope/tables are hand-written
 # The backend inputs, with -set SYSVARP=STAGE (so :psc sections select):
-#   tex  gmlfmt -to resolved gml/tex-NAME.gml  -> tex/NAME.in.xml
-#        (chars, hints, lines; params and tagset reuse chars);
-#        tex/starter is gml/starter.gml resolved; tex/features =
-#        resolve/features.out.xml; tex/dcfdefs is hand-written (a
-#        formatting profile's .df/.dr/.dh, hence hint mode); so is
+#   tex  gmlfmt -to resolved -profile dcfstarter gml/tex-NAME.gml
+#        -> tex/NAME.in.xml (chars, hints; params and tagset are
+#        copies of chars).  tex/lines is gmlfmt -to resolved
+#        gml/tex-lines.gml (starter: its own .aa tag in .ce lines) and
+#        tex/features = resolve/features.out.xml: with tex/tables and
+#        tex/tables-long (below) they have tags and no formatting
+#        profile, which tex.xsl reports (their .err); they test the
+#        writer (escaping, line scopes, the generated lists), which
+#        writes any resolved XML the same way.  (Run gmlfmt outside
+#        gml/: there gml/starter.gml would be read as the profile
+#        starter.)  tex/dcfdefs is
+#        hand-written (a formatting profile's .df/.dr/.dh); so is
 #        tex/fontblank (the blank between two font changes, .pf .bf,
 #        stays: :ehp2. :hp1. under dcfstarter)
 #        tex/dcfstarter-tables: gmlfmt -to resolved -profile dcfstarter
-#        gml/dcfstarter-tables.gml (with the G dates; hint mode)
+#        gml/dcfstarter-tables.gml (with the G dates)
 #        tex/batch: gml gml/tex-batch.gml (no profile, the SCRIPT control
-#        words: hint mode) | resolve.xsl; tex/query: gml -aux none.gmlaux
+#        words) | resolve.xsl; tex/query: gml -aux none.gmlaux
 #        -pass 1 -passes 2 gml/tex-query.gml | resolve.xsl (the page
 #        questions of the pass model, <?pn ID> and \gmlpassno); tex/dv:
 #        gml gml/tex-dv.gml (test/dv.t/in.gml) | resolve.xsl (also a
 #        deferred symbol, gml:symref, in a running heading and a .sx
-#        field; tex/dcfstarter-tables has gml:symval).  tex/tables (and
-#        tables-hints, the same file) and tex/tables-long are hand-written
-#        resolved XML: their rows in full where the cells differ from the
-#        rdef (or always: tables-long, the old form), else short
+#        field; tex/dcfstarter-tables has gml:symval).  tex/tables and
+#        tex/tables-long are hand-written resolved XML: their rows in
+#        full where the cells differ from the rdef (or always:
+#        tables-long, the old form), else short
 #   html gmlfmt -to scoped gml/html-NAME.gml   -> html/NAME.in.xml
 #        (control, figs, fn, hints, index, lines, lists, scope, sections,
 #        symref, text; symref: a running footing's symbol, gml:symref

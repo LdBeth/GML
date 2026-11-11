@@ -1,13 +1,31 @@
 \input gml
 \gml
-<
-gdoc><
+<,df name=hi0,spec=type(normal)><,df name=hi1,spec=type(italic),italic><,df name=hi2,spec=type(bold),bold><,df name=hi3,spec=type(bold italic),bold,italic><,df name=hd0,spec=type(bold 20 italic),size=20,bold,italic><,df name=hd1,spec=type(bold 20),size=20,bold><,df name=hd2,spec=type(bold 18 italic),size=18,bold,italic><,df name=hd3,spec=type(bold 14),size=14,bold><,df name=hd4,spec=type(bold 12 italic),size=12,bold,italic><,df name=hd5,spec=type(bold),bold><,df name=hd6,spec=type(bold italic),bold,italic><,df name=title,spec=type(bold 24),size=24,bold><,df name=xmp,spec=type('courier'),face=courier,family=mono><,df name=f@sup,spec=type(7),size=7><,dr spec=f@frule,rule=f@frule><,dr spec=f@fnrule weight 0.2mm,rule=f@fnrule,weight=0.2mm><,dh level=0,spec=pa spbf 1.3i spaf 5 font hd0 up nohy left nto,pa,spbf=1.3i,spaf=5line,font=hd0,up,hy=no,align=left><,dh level=1,spec=pa spbf 1.3i spaf 3 font hd1 up nohy left,pa,spbf=1.3i,spaf=3line,font=hd1,up,hy=no,align=left><,dh level=2,spec=skbf 3 spaf 2 font hd2 up nohy left,skbf=3line,spaf=2line,font=hd2,up,hy=no,align=left><,dh level=3,spec=skbf 3 spaf 2 font hd3 nohy left,skbf=3line,spaf=2line,font=hd3,hy=no,align=left><,dh level=4,spec=skbf 3 spaf 2 font hd4 nohy left,skbf=3line,spaf=2line,font=hd4,hy=no,align=left><,dh level=5,spec=skbf 1 nbr font hd5 nohy,skbf=1line,runin,font=hd5,hy=no><,dh level=6,spec=skbf 1 nbr font hd6 nohy,skbf=1line,runin,font=hd6,hy=no><:fn kind=leader><
+.sp n=1,unit=line><
+.hr spec=f@fnrule 0ch for 16ch><><
+:rf break><,rundyn>{<,bf font=hi0><
+.sx left={<,symref name=f+64+shead>{}},fill=,right={<,pageno>},pagesym=&38;><,pf initial>}<
+><
 :rh break><:lines word=ce,n=1,break>Hint test running head<><
 ><
-body><
-h1 anchor=gml-h1-1,text=Formatting hints>Formatting hints<
+.in left=0,unit=ch><
+.ir right=0,unit=ch><
+body><,dh level=0,spec=tc><,dh level=1,spec=tc><,dh level=2,spec=tc><,dh level=3,spec=tc><,dh level=4,spec=tc><
+.pa page=1><,pn spec=arabic><,symval name=f+64+shead,value=><
+:rf break><,rundyn>{<,bf font=hi0><
+.sx left={<,symref name=f+64+shead>{}},fill=,right={<,pageno>},pagesym=&38;><,pf initial>}<
 ><
-p>Normal filled text that goes on for a while so that it wraps at least
+.in left=0,unit=ch><
+.ir right=0,unit=ch><
+.pa><,symval name=f+64+shead,value=Formatting hints><
+:rf break><,rundyn>{<,bf font=hi0><
+.sx left={<,symref name=f+64+shead>{Formatting hints}},fill=,right={<,pageno>},pagesym=&38;><,pf initial>}<
+><
+h1 anchor=gml-h1-1><
+:h level=1,break><,tcmark anchor=gml.tc.1><!Formatting hints><
+><
+><
+.sk n=0.75,unit=line>Normal filled text that goes on for a while so that it wraps at least
 once in the justified paragraph mode of the formatter.
 <
 .in left=4,unit=ch>Indented by four characters, still in the same paragraph? No: .in breaks.
@@ -53,7 +71,7 @@ indented by four characters, for this paragraph and the next.
 .br>Next paragraph still offset by the .of control word, all of its lines.
 <
 .in left=0,unit=ch,offset=0><,bf font=hi2>Bold from a font change,
-<hp1>italic inside it<>,
+<,bf font=hi1>italic inside it<,pf font=hi2>,
 <,pf initial>and back to the initial font.
 <,df name=big,spec=type(bold italic),bold,italic><,bf font=big>Defined bold italic font.
 <,pf initial><
@@ -93,13 +111,13 @@ enough to wrap at that length.
 .vr><
 .pa><,pn spec=roman>After a page eject, roman page numbers.
 <
-:h level=2,break,text=A control word heading><,tcmark anchor=gml.tc.1>A control word heading<
+:h level=2,break><,tcmark anchor=gml.tc.2><!A control word heading><
 >
 Text after .h2.
 <
 .pa side=odd>On an odd page.
 <
-><
-><
+.in left=0,unit=ch><
+.ir right=0,unit=ch><
 ><
 >

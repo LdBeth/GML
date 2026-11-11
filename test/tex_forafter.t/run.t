@@ -6,12 +6,13 @@ said of v2; DCF-VERIFY for v1).  The engine sends one hint; gml.tex
 keeps the distance left per side (lines are n\baselineskip, here 12pt):
 line i of a paragraph starts (i-1) lines after its first, and is moved
 if it starts before the distance is used up; a paragraph then uses its
-\prevgraf lines, a skip or space its amount.  gmllocal.tex traces the
-shipped boxes; lines.awk prints each line's first letters, shift (left
+\prevgraf lines, a skip or space its amount.  The profile is
+dcfstarter (:p. is .sk .75; its figures and tables have skips of their
+own, which count too).  gmllocal.tex traces the shipped boxes; lines.awk prints each line's first letters, shift (left
 edge) and width, in points (a character is 5.55994pt).
 
   $ export TEXINPUTS=../../share/tex:
-  $ gml -profile starter -o in.xml in.gml
+  $ gml -profile dcfstarter -o in.xml in.gml
   $ transform -s:in.xml -xsl:../../xslt/resolve.xsl -o:in.r.xml
   $ transform -s:in.r.xml -xsl:../../xslt/tex.xsl -o:in.tex
   $ tex -interaction batchmode in.tex > /dev/null
@@ -43,7 +44,8 @@ the next paragraph (S, after a .br).  (c) .in cancels it at once.
   hhhh         0  469.75499
 
 (d) a footnote inside the duration takes none of its lines (its own
-lines, at the foot of the page, are not moved).  (e) .il 2 during a
+lines, at the foot of the page, are not moved: the first page ends
+inside G's paragraph).  (e) .il 2 during a
 FOR: the next line gets both (7), the FOR goes on (5).  (f) .in 3 for
 0.5i after 1: the dimension form, 0.5i = 36.135pt after 12pt: the lines
 that start at 12, 24, 36 and 48pt (< 48.135pt).  (g) .of 3 inside a FOR: the offset is
@@ -71,10 +73,10 @@ kept in the shape (5, then 5+3, then 3 alone).
   Gofs         0  469.75499
   Mmmm  27.79968   441.9553
   mmmm  44.47949   425.2755
-  mmmm  44.47949   425.2755
-  mmmm  16.67981  453.07518
   Note         0  469.75499
   nnnn         0  469.75499
+  mmmm  44.47949   425.2755
+  mmmm  16.67981  453.07518
 
 (h) .ir 5 for 2: two shorter lines.  (i) format off, .in 4 for 2 after
 1: each input line is a line; the blank line after Q is the second FOR
@@ -93,8 +95,9 @@ line, so R is back at the margin.
 (j) a permanent .in 5 after 1: one line at the old margin (shifted
 back by the new one, which \leftskip already has), then the new
 margin.  (k) .in 4 after 0.25i: 18.07pt, the lines at 0 and 12pt at
-the old margin.  (l) a figure (a \vbox) inside .in 5 for 3 takes none of its lines:
-one line of Y, two of A.
+the old margin.  (l) a figure (a \vbox) inside .in 5 for 3 takes none
+of its lines, the skip before it (dcfstarter's .sk 1) counts: one line
+of Y, one of A.
 
   $ awk -f lines.awk in.log | sed -n '52,63p'
   Jprm         0  469.75499
@@ -107,7 +110,7 @@ one line of Y, two of A.
   Mpic         0  469.75499
   Yyyy  27.79968   441.9553
   Aaaa  27.79968   441.9553
-  aaaa  27.79968   441.9553
+  aaaa         0  469.75499
   aaaa         0  469.75499
 
 (m) the demo of examples/dcfdemo.gml: .in 5 for 4, a paragraph of three
@@ -117,8 +120,9 @@ moved, its second is not.  (n) FOR in lines, AFTER a dimension: .in 5
 for 2 after 0.25i, the lines at 0 and 12pt at the margin, at 24 and 36pt
 (< 18.07 + 24) moved.  (o) a skip at the top of a page (after .pa) is
 discarded by TeX and does not count: one line of E, then two of Z.  (p)
-a paragraph ended by plain's \endgraf (gmllocal.tex ends the note with
-it) is counted and shaped: the note's two lines, the skip, then one line
+a paragraph ended by plain's \endgraf (in.gml makes the note's text an
+element, .xs note, and gmllocal.tex ends it with \endgraf) is counted
+and shaped: the note's two lines, the skip, then one line
 of H.
 
   $ awk -f lines.awk in.log | sed -n '64,$p'
@@ -148,7 +152,7 @@ of H.
 in2.gml: .il/.un, boxes, .sa/.re and tables.  lines.awk -v all=1 also
 prints the lines of a box (a figure), their shift relative to it.
 
-  $ gml -profile starter -o in2.xml in2.gml
+  $ gml -profile dcfstarter -o in2.xml in2.gml
   $ transform -s:in2.xml -xsl:../../xslt/resolve.xsl -o:in2.r.xml
   $ transform -s:in2.r.xml -xsl:../../xslt/tex.xsl -o:in2.tex
   $ tex -interaction batchmode in2.tex > /dev/null
@@ -182,21 +186,24 @@ character left of that margin (H, 3 in \leftskip).
 
 (s) a box has a queue of its own: in a figure (format off, a line a
 paragraph) .in 4 for 2 moves two lines (K, L), a permanent .in 3
-after 1 keeps one line at the old margin (N); the text around it is
-not counted by the figure: I and P are the two lines of .in 5 for 2.
-(t) a footnote's .in 3 for 1 moves its first line (R, after the line
-of its mark), the text around it keeps its three lines (Q).
+after 1 keeps one line at the old margin (N, the figure's margin:
+dcfstarter's .in 2); the text around it is not counted by the figure:
+I and the skip before the figure (.sk 1) are the two lines of .in 5
+for 2, so P is at the margin.  (t) a footnote's .in 3 for 1 moves its
+first line (R, after the line of its mark), the text around it keeps
+its three lines (Q).  (The page footings, the page numbers, are left
+out.)
 
-  $ awk -v all=1 -f lines.awk in2.log | sed -n '17,30p;39,40p'
+  $ awk -v all=1 -f lines.awk in2.log | sed -n '17,30p;38,39p'
   Cbox         0  469.75499
   Iiii  27.79968   441.9553
   Jjjj         0  469.75499
   Kkkk  22.23975  447.51524
   Llll  22.23975  447.51524
   Mmmm         0  469.75499
-  Nnnn -16.67981   486.4348
+  Nnnn  -5.55994  475.31493
   Oooo         0  469.75499
-  Pppp  27.79968   441.9553
+  Pppp         0  469.75499
   pppp         0  469.75499
   Dfno         0  469.75499
   Qqqq  27.79968   441.9553
@@ -209,10 +216,11 @@ of its mark), the text around it keeps its three lines (Q).
 saved), .in cancels it (T), .re puts it back: two lines of U.  (.br
 before .sa and .re, as LR p.323 r5 advises.)  (v) the rows of a table
 are counted (their height): .in 5 for 4, one line of V, the table's
-skips and its row use up the rest, so X is at the margin (without the
-row it would be moved).
+skips (dcfstarter's .sk 0.1i before and after) and its row use up all
+but the first line of X (without the row its second would be moved
+too).
 
-  $ awk -v all=1 -f lines.awk in2.log | sed -n '31,38p;41,$p'
+  $ awk -v all=1 -f lines.awk in2.log | sed -n '31,37p;41,43p'
   Esav         0  469.75499
   Ssss  27.79968   441.9553
   Tttt         0  469.75499
@@ -221,5 +229,5 @@ row it would be moved).
   uuuu         0  469.75499
   Ftbl         0  469.75499
   Vvvv  27.79968   441.9553
-  Xxxx         0  469.75499
+  Xxxx  27.79968   441.9553
   xxxx         0  469.75499

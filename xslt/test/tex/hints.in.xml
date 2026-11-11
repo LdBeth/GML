@@ -1,6 +1,6 @@
-<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><gml:rh break="yes"><gml:lines word="ce" n="1" break="yes">Hint test running head</gml:lines>
-</gml:rh><body><h1 anchor="gml-h1-1">Formatting hints</h1>
-<p>Normal filled text that goes on for a while so that it wraps at least
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gml:df name="hi0" spec="type(normal)" break="no"/><gml:df name="hi1" spec="type(italic)" break="no"/><gml:df name="hi2" spec="type(bold)" break="no"/><gml:df name="hi3" spec="type(bold italic)" break="no"/><gml:df name="hd0" spec="type(bold 20 italic)" break="no"/><gml:df name="hd1" spec="type(bold 20)" break="no"/><gml:df name="hd2" spec="type(bold 18 italic)" break="no"/><gml:df name="hd3" spec="type(bold 14)" break="no"/><gml:df name="hd4" spec="type(bold 12 italic)" break="no"/><gml:df name="hd5" spec="type(bold)" break="no"/><gml:df name="hd6" spec="type(bold italic)" break="no"/><gml:df name="title" spec="type(bold 24)" break="no"/><gml:df name="xmp" spec="type('courier')" break="no"/><gml:df name="f@sup" spec="type(7)" break="no"/><gml:dr spec="f@frule" break="no"/><gml:dr spec="f@fnrule weight 0.2mm" break="no"/><gml:dh level="0" spec="pa spbf 1.3i spaf 5 font hd0 up nohy left nto" break="no"/><gml:dh level="1" spec="pa spbf 1.3i spaf 3 font hd1 up nohy left" break="no"/><gml:dh level="2" spec="skbf 3 spaf 2 font hd2 up nohy left" break="no"/><gml:dh level="3" spec="skbf 3 spaf 2 font hd3 nohy left" break="no"/><gml:dh level="4" spec="skbf 3 spaf 2 font hd4 nohy left" break="no"/><gml:dh level="5" spec="skbf 1 nbr font hd5 nohy" break="no"/><gml:dh level="6" spec="skbf 1 nbr font hd6 nohy" break="no"/><gml:fn kind="leader"><gml:sp n="1" unit="line" break="yes"/><gml:hr spec="f@fnrule 0ch for 16ch" break="yes"/></gml:fn><gml:rf break="yes"><gml:bf font="hi0" break="no"/><gml:sx left="f@shead" fill="" right="&amp;" pagesym="&amp;" break="yes"/><gml:pf initial="yes" break="no"/></gml:rf><gml:rh break="yes"><gml:lines word="ce" n="1" break="yes">Hint test running head</gml:lines>
+</gml:rh><gml:in left="0" unit="ch" break="yes"/><gml:ir right="0" unit="ch" break="yes"/><body><gml:dh level="0" spec="tc" break="no"/><gml:dh level="1" spec="tc" break="no"/><gml:dh level="2" spec="tc" break="no"/><gml:dh level="3" spec="tc" break="no"/><gml:dh level="4" spec="tc" break="no"/><gml:pa page="1" break="yes"/><gml:pn spec="arabic" break="no"/><gml:symval name="f@shead" value="" break="no"/><gml:rf break="yes"><gml:bf font="hi0" break="no"/><gml:sx left="f@shead" fill="" right="&amp;" pagesym="&amp;" break="yes"/><gml:pf initial="yes" break="no"/></gml:rf><gml:in left="0" unit="ch" break="yes"/><gml:ir right="0" unit="ch" break="yes"/><gml:pa break="yes"/><gml:symval name="f@shead" value="Formatting hints" break="no"/><gml:rf break="yes"><gml:bf font="hi0" break="no"/><gml:sx left="f@sheadFormatting hints" fill="" right="&amp;" pagesym="&amp;" break="yes"/><gml:pf initial="yes" break="no"/></gml:rf><h1 anchor="gml-h1-1"><gml:h level="1" break="yes"><gml:tcmark anchor="gml.tc.1" break="no"/>Formatting hints</gml:h>
+</h1><gml:sk n="0.75" unit="line" break="yes"/>Normal filled text that goes on for a while so that it wraps at least
 once in the justified paragraph mode of the formatter.
 <gml:in left="4" unit="ch" break="yes"/>Indented by four characters, still in the same paragraph? No: .in breaks.
 <gml:in left="4ch+1i" unit="mixed" delta="+1i" break="yes"/>A mixed indent of four characters plus one inch.
@@ -28,7 +28,7 @@ second line so the effect can be seen.
 indented by four characters, for this paragraph and the next.
 <gml:br break="yes"/>Next paragraph still offset by the .of control word, all of its lines.
 <gml:in left="0" unit="ch" offset="0" break="yes"/><gml:bf font="hi2" break="no"/>Bold from a font change,
-<hp1>italic inside it</hp1>,
+<gml:bf font="hi1" break="no"/>italic inside it<gml:pf font="hi2" break="no"/>,
 <gml:pf initial="yes" break="no"/>and back to the initial font.
 <gml:df name="big" spec="type(bold italic)" break="no"/><gml:bf font="big" break="no"/>Defined bold italic font.
 <gml:pf initial="yes" break="no"/><gml:tp action="set" stops="10mh 20mh 30mh" break="yes"/><gml:fo fill="no" align="left" overdraw="extend" break="yes"/>Name	Value	Note
@@ -46,7 +46,7 @@ the change in spacing between the lines of one paragraph.
 enough to wrap at that length.
 <gml:ll length="default" break="yes"/><gml:fn>An unnumbered footnote from .fn on.
 </gml:fn><gml:dh level="2" spec="font bold" break="no"/><gml:vr break="yes"/><gml:pa break="yes"/><gml:pn spec="roman" break="no"/>After a page eject, roman page numbers.
-<gml:h level="2" break="yes"><gml:tcmark anchor="gml.tc.1" break="no"/>A control word heading</gml:h>
+<gml:h level="2" break="yes"><gml:tcmark anchor="gml.tc.2" break="no"/>A control word heading</gml:h>
 Text after .h2.
 <gml:pa side="odd" break="yes"/>On an odd page.
-</p></body></gdoc></gml:doc>
+<gml:in left="0" unit="ch" break="yes"/><gml:ir right="0" unit="ch" break="yes"/></body></gml:doc>

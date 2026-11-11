@@ -16,6 +16,7 @@ SX26-*.pdf
 /*.tex
 /*.dvi
 /*.pdf
+/passes/
 *.log
 *.aux
 *.ref

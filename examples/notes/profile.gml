@@ -8,7 +8,7 @@
 .* One document, one profile per application: the HTML is made from the
 .* semantic profile starter (its elements, resolve.xsl and html.xsl do
 .* the work), the pages from the formatting profile dcfstarter (its APFs
-.* issue control words, TeX runs in hint mode).  The HTML paths (gmlfmt
+.* issue control words, TeX lays them out).  The HTML paths (gmlfmt
 .* -to html, the examples' mkfile) give gml -set '$LDEV=HTML'; anything
 .* else (gmlpass, a PDF) has gml's default device, so dcfstarter.
 .* n@sem is 1 under starter, 0 under dcfstarter: the APFs below test it.
@@ -80,8 +80,8 @@
 .* default rules say noelem (without an element, :fmlref would leave
 .* nothing for resolve.xsl to fill and the math would be plain text).
 .* The APFs are empty.  The bundle's resolve.xsl numbers the equations,
-.* tex.xsl passes the math to TeX unescaped, tagset.tex typesets it (in
-.* element and in hint mode), html.xsl hands it to KaTeX.
+.* tex.xsl passes the math to TeX unescaped, tagset.tex typesets it (as
+.* its elements), html.xsl hands it to KaTeX.
 .dm mathapf on
 .dm off
 .aa m mathapf (elem) mathapf (elem)

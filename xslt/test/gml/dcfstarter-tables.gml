@@ -1,5 +1,5 @@
 .* dcfstarter-tables.gml - the Starter Set tables formatted by
-.* -profile dcfstarter (hint mode): the profile's skips, "Table n." and
+.* -profile dcfstarter: the profile's skips, "Table n." and
 .* "Note:" labels, the tdesc colon and a CONCAT=NO cell as a format-off
 .* region, around the elements resolve.xsl turns into the grid; a list
 .* of tables, a backward and a forward :tref.

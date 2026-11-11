@@ -1,4 +1,3 @@
-\def\gmlmode{hints}
 \input gml
 \gml
 <,df name=@pi@ul,spec=type('pi font sans serif' 8) codepage aftc0363,face=pi font sans serif,family=pi,size=8><,dr spec=@figrule,rule=@figrule><,dr spec=@thick weight 0.8mm font &38;&36;CHAR(1),rule=@thick,weight=0.8mm><,dr spec=@fnldr w 0.2mm,rule=@fnldr,weight=0.2mm><,df name=hi0,spec=font &38;&36;CHAR(1)><,df name=hi1,spec=us,us><,df name=hi2,spec=os rpt 3,os><,df name=hi3,spec=os rpt 3 us,os,us><,df name=hd1,spec=os rpt 3 us up,os,us,up><,df name=hd2,spec=os rpt 3,os><,df name=caps,spec=up,up><,df name=xmpfont,spec=type('prestige elite'),face=prestige elite,family=mono><,df name=big,spec=type(14 bold,size=14,bold><,df name=small,spec=type (-2 italic),size=-2,italic><,df name=side,spec=type('sans serif' 9 bold) codepage x,face=sans serif,family=sans,size=9,bold><,df name=same,spec=font hi2,font=hi2><,dh level=1,spec=nus nohy nup font hd1 nonum spaf 3 pa left sect tfont hd1toc ts,us=no,hy=no,up=no,font=hd1,spaf=3line,pa,align=left,tfont=hd1toc><,dh level=2,spec=nus nohy up font hd2 skbf p20 spaf 1p6 tfont &38;&36;CHAR(1),us=no,hy=no,up,font=hd2,skbf=20pt,spaf=18pt><,dh level=5,spec=nus nohy nup font hi2 nbr,us=no,hy=no,up=no,font=hi2,runin><,dh level=1,spec=spbf 0,spbf=0line><,dh level=4,spec=,reset><:fn kind=leader><
@@ -6,17 +5,17 @@
 .hr spec=@fnldr 0ch for 16ch><><
 gdoc><
 body><
-h1 text=Defined heading Text with underscored and upper case words&44; then a restarted font and big&44; sans&44; small. Second level Term Definition indented line last line Figure content. Figure 1. A caption Boxed with a thick rule. Second part. Inline space. Run-intext after a run-in heading.><
+h1><
 .pa nostart><
-:h level=1,break,text=Defined heading><!Defined heading><
+:h level=1,break><!Defined heading><
 ><
 p><
 .sk n=1,unit=line>Text with <hp1><,bf font=hi1 althi1>underscored<><,pf font=@rf hi0> and <,bf font=caps><!upper case words><,pf font=@rf hi0>, then <,bf font=docnum,restart>a restarted font<,pf font=@rf hi0>
 and <,bf font=big>big<,pf>, <,bf font=side>sans<,pf>, <,bf font=small>small<,pf>.
 <
 ><
-h2 text=Second level Term Definition indented line last line Figure content. Figure 1. A caption Boxed with a thick rule. Second part. Inline space. Run-intext after a run-in heading.><
-:h level=2,break,text=Second level><!Second level><
+h2><
+:h level=2,break><!Second level><
 ><
 dl><
 dt><
@@ -53,7 +52,7 @@ figcap><=Figure 1.>Figure 1. A caption
 .hr spec=@thick 0ch to 10ch @figrule 12ch for 8ch><
 .hr spec=left right><,is spec=4ch>Inline space.
 <
-:h level=5,break,text=Run-in>Run-in<
+:h level=5,break>Run-in<
 >text after a run-in heading.
 <
 :rh action=sup,break=no><

@@ -1,53 +1,96 @@
 \input gml
 \gml
-<
-gdoc><
-body><
-h1 anchor=gml-h1-1,text=Characters &38; specials>Characters &38; specials<
+<,df name=hi0,spec=type(normal)><,df name=hi1,spec=type(italic),italic><,df name=hi2,spec=type(bold),bold><,df name=hi3,spec=type(bold italic),bold,italic><,df name=hd0,spec=type(bold 20 italic),size=20,bold,italic><,df name=hd1,spec=type(bold 20),size=20,bold><,df name=hd2,spec=type(bold 18 italic),size=18,bold,italic><,df name=hd3,spec=type(bold 14),size=14,bold><,df name=hd4,spec=type(bold 12 italic),size=12,bold,italic><,df name=hd5,spec=type(bold),bold><,df name=hd6,spec=type(bold italic),bold,italic><,df name=title,spec=type(bold 24),size=24,bold><,df name=xmp,spec=type('courier'),face=courier,family=mono><,df name=f@sup,spec=type(7),size=7><,dr spec=f@frule,rule=f@frule><,dr spec=f@fnrule weight 0.2mm,rule=f@fnrule,weight=0.2mm><,dh level=0,spec=pa spbf 1.3i spaf 5 font hd0 up nohy left nto,pa,spbf=1.3i,spaf=5line,font=hd0,up,hy=no,align=left><,dh level=1,spec=pa spbf 1.3i spaf 3 font hd1 up nohy left,pa,spbf=1.3i,spaf=3line,font=hd1,up,hy=no,align=left><,dh level=2,spec=skbf 3 spaf 2 font hd2 up nohy left,skbf=3line,spaf=2line,font=hd2,up,hy=no,align=left><,dh level=3,spec=skbf 3 spaf 2 font hd3 nohy left,skbf=3line,spaf=2line,font=hd3,hy=no,align=left><,dh level=4,spec=skbf 3 spaf 2 font hd4 nohy left,skbf=3line,spaf=2line,font=hd4,hy=no,align=left><,dh level=5,spec=skbf 1 nbr font hd5 nohy,skbf=1line,runin,font=hd5,hy=no><,dh level=6,spec=skbf 1 nbr font hd6 nohy,skbf=1line,runin,font=hd6,hy=no><:fn kind=leader><
+.sp n=1,unit=line><
+.hr spec=f@fnrule 0ch for 16ch><><
+:rf break><,rundyn>{<,bf font=hi0><
+.sx left={<,symref name=f+64+shead>{}},fill=,right={<,pageno>},pagesym=&38;><,pf initial>}<
 ><
-p>TeX specials: &36;5 &38; 10&37; &35;1 a&95;b x&94;2 &126;tilde &92;back &123;braces&125; &60;angle&62; &124;bar&124; &34;quoted&34;.
+.in left=0,unit=ch><
+.ir right=0,unit=ch><
+body><,dh level=0,spec=tc><,dh level=1,spec=tc><,dh level=2,spec=tc><,dh level=3,spec=tc><,dh level=4,spec=tc><
+.pa page=1><,pn spec=arabic><,symval name=f+64+shead,value=><
+:rf break><,rundyn>{<,bf font=hi0><
+.sx left={<,symref name=f+64+shead>{}},fill=,right={<,pageno>},pagesym=&38;><,pf initial>}<
+><
+.in left=0,unit=ch><
+.ir right=0,unit=ch><
+.pa><,symval name=f+64+shead,value=Characters &38; specials><
+:rf break><,rundyn>{<,bf font=hi0><
+.sx left={<,symref name=f+64+shead>{Characters &38; specials}},fill=,right={<,pageno>},pagesym=&38;><,pf initial>}<
+><
+h1 anchor=gml-h1-1><
+:h level=1,break><,tcmark anchor=gml.tc.1><!Characters &38; specials><
+><
+><
+.sk n=0.75,unit=line>TeX specials: &36;5 &38; 10&37; &35;1 a&95;b x&94;2 &126;tilde &92;back &123;braces&125; &60;angle&62; &124;bar&124; &34;quoted&34;.
 Dashes: a-{}-b and a-{}-{}-b; Latin-1: caf&233;, Stra&223;e, &198;r&248;, na&239;ve, &241;, &191;qu&233;?, &169;, &176;, &177;, &215;.
 Typographic: &8220;double&8221; &8216;single&8217; &8212; em &8211; en &8230; &8226; &8364; &8482; and an unknown &9731; snowman.
 <
-><
-xmp xml:space=preserve><
+.sk n=1,unit=line><
+.kp mode=on><
+.in left=2,unit=ch><
+.ir right=0,unit=ch><,bf font=xmp><
 .fo fill=no,align=left,overdraw=extend>\ \ &36;x\ =\ &123;a&95;b&125;\ &38;\ &126;y;\ &35;\ &37;\ &92;z
 <,tabline>{&9;tab&9;separated}
 <
-.fo fill,align=justify,overdraw=extend><
-><
-ol nest=1><
-li num=1><=1.>First
+.fo fill,align=justify,overdraw=extend><,pf initial><
+.kp mode=off><
+.in left=0,unit=ch><
+.ir right=0,unit=ch><
+.sk n=1,unit=line><
+.sk n=0.75,unit=line><
+.in left=4,unit=ch><
+.ir right=0,unit=ch><
+.sk n=0.75,unit=line><
+.in left=0,unit=ch><
+.of offset=4,unit=ch><,islabel>1.
+<,is spec=to 4ch min 1ch blank>First
 <
-><
-li num=2><=2.>Second <hp3>bold italic<><
-><
-><
-sl><
-li>simple
+.sk n=0.75,unit=line><
+.in left=0,unit=ch,offset=0><
+.of offset=4,unit=ch><,islabel>2.
+<,is spec=to 4ch min 1ch blank>Second <,bf font=hi3>bold italic<,pf initial><
+.in left=0,unit=ch,offset=0><
+.ir right=0,unit=ch><
+.sk n=0.75,unit=line><
+.sk n=0.75,unit=line><
+.in left=4,unit=ch><
+.ir right=0,unit=ch><
+.sk n=0.75,unit=line><
+.in left=0,unit=ch><
+.in left=4,unit=ch>simple
 <
-><
-><
-gl><
-gt>Term<
-><
-gd>Glossary definition.
+.in left=0,unit=ch><
+.ir right=0,unit=ch><
+.sk n=0.75,unit=line><
+.sk n=0.75,unit=line><
+.in left=0,unit=ch><
+.ir right=0,unit=ch><
+.sk n=0.75,unit=line><
+.in left=0,unit=ch><,bf font=hi2>Term:
+<,pf initial>Glossary definition.
 <
-><
-><
-dl break=break><
-dthd>Heading term
+.in left=0,unit=ch><
+.ir right=0,unit=ch><
+.sk n=0.75,unit=line><
+.sk n=0.75,unit=line><
+.in left=10,unit=ch><
+.ir right=0,unit=ch><
+.sk n=1,unit=line><
+.in left=0,unit=ch><
+.of offset=10,unit=ch><,islabel><,bf font=hi3>Heading term
+<,pf initial><,is spec=to 10ch min 1ch break><,bf font=hi3>Heading description
+<,pf initial><
+.sk n=1,unit=line><
+.in left=0,unit=ch,offset=0><
+.of offset=10,unit=ch><,islabel><,bf font=hi2>A very long definition term
+<,pf initial><,is spec=to 10ch min 1ch break>Description on its own line.
 <
-><
-ddhd>Heading description
-<
-><
-dt>A very long definition term<
-><
-dd>Description on its own line.
-<
-><
-><
-><
+.in left=0,unit=ch,offset=0><
+.ir right=0,unit=ch><
+.sk n=0.75,unit=line><
+.in left=0,unit=ch><
+.ir right=0,unit=ch><
 ><
 >

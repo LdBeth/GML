@@ -3,7 +3,7 @@
 % Works with Knuth's tex (DVI), pdftex and luatex in plain mode.  No LaTeX.
 % The file tex.xsl writes:
 %
-%   [\def\gmlfonts{..}\def\gmltagset{..}\def\gmlmode{hints}
+%   [\def\gmlfonts{..}\def\gmltagset{..}
 %    \def\gmlpassno{K}\def\gmlpasses{N}]   settings
 %   \input gml
 %   [preamble]
@@ -28,43 +28,42 @@
 % A hint may take brace arguments after the tag:
 %   <,rundyn>{X}  <,symref name=N>{V}  <,symval name=N,value=V>  <,pageno>
 %   <,islabel>  <,tabline>{seg&9;seg...}  <,pageref refid=A,when=auto,label=L>
-%   <:toc-entries title=T> <,toc-entry level=N>{num}{text}{page} ... <>
+%   <:toc-entries title=T> <,toc-entry level=N>{text}{page} ... <>
 %       (figlist, tlist: the same, without level=)
 %   <:index-entries title=T> <,index-group letter=L>
 %       <,index-entry level=N>{term}{refs} ... <>;  refs: <,ixfirst> <,ixsep>
 %       <,ixrangesep> <,ixref refid=A,major,range=,text=> <,see kind=K,label=L>{text}
 %
+% The layout is the formatting profile's (dcfstarter, IBM's DSMPROF3, a
+% tag set's profile): its control words come as hints and do all of it.
 % Elements and hints are the macros below: an element is a group,
-% \gml@estart{NAME}{ATTRS} ... \gml@eend{NAME}: \gml@NAME@start /
-% \gml@NAME@end, the attributes in \gml@attrs (\gmlattr{key}\macro); a
-% hint is \gml@hint{NAME}{ATTRS}: break (=yes) calls \gml@break (\par),
-% then \gml@hint@NAME, last (it may take brace arguments; attributes:
-% \gmlhintattr{key}\macro); a line scope \gml@beginlines{WORD}{ATTRS}
-% ... \gml@endlines: \gml@lines@WORD@pre (before the group) @begin @end
-% @post (after); gml:num \gml@num{label}: \gml@num@NAME on the current
-% element (h1: label+quad, li: hanging label, figcap: bold hanging
-% label, fn: dropped - the mark is a key).  &N; is \gml@charref{N},
-% which is \gml@char{N}: \gml@char@N (\gmldefchar).
+% \gml@estart{NAME}{ATTRS} ... \gml@eend{NAME}, that calls \gml@NAME@start
+% / \gml@NAME@end if defined (the attributes in \gml@attrs:
+% \gmlattr{key}\macro); most are only the group.  gml.tex defines those
+% the profile leaves to TeX: gml:h gml:fn gml:rh gml:rf, the fig float,
+% the tables and the generated lists.  A hint is \gml@hint{NAME}{ATTRS}:
+% break (=yes) calls \gml@break (\par), then \gml@hint@NAME, last (it
+% may take brace arguments; attributes: \gmlhintattr{key}\macro); a line
+% scope \gml@beginlines{WORD}{ATTRS} ... \gml@endlines:
+% \gml@lines@WORD@pre (before the group) @begin @end @post (after);
+% gml:num \gml@num{label}: \gml@num@NAME{label} on the current element
+% if defined, else nothing (the profile writes its own numbers).  &N; is
+% \gml@charref{N}, which is \gml@char{N}: \gml@char@N (\gmldefchar).
 %
 % Overriding: every internal macro is \gml@...; load your own file after
 % this one (a file gmllocal.tex on TEXINPUTS is \input automatically at
 % the end of this file), and use the helpers that need no @ catcode:
-%   \gmldefstart{h1}{...}  \gmldefend{h1}{...}  \gmldefhint{sp}{...}
-%   \gmldefhint{see}#1{...}   (a hint with a brace argument)
-%   \gmldeflines{ce}{begin}{...}  \gmldefnum{li}#1{...}
+%   \gmldefstart{NAME}{...}  \gmldefend{NAME}{...}   (an element the
+%       profile leaves as an element: a tag set's math, ruby, columns)
+%   \gmldefhint{sp}{...}  \gmldefhint{see}#1{...}   (a brace argument)
+%   \gmldeflines{ce}{begin}{...}  \gmldefnum{NAME}#1{...}
 %   \gmldefchar{8364}{EUR}  \gmldeffont{hi1}{\sl}
-%   \gmldefhstart{fig}{...}  \gmldefhend{fig}{...}   (hint mode, below)
 % or \catcode`\@=11 and redefine \gml@... directly.  A tag set's file
 % (\def\gmltagset{file} before \input gml; gmlfmt -app writes it) is
 % \input at the end too, before gmllocal.tex, so the most local wins.
 % Both are read before \gml, with the usual catcodes; a file read in
 % the body sets its own (\gml@input, the aux file reader).
 %
-% Hint mode: \def\gmlmode{hints} before \input gml (tex.xsl writes it
-% for a document formatted by a real DCF profile, e.g. IBM's DSMPROF3):
-% elements are only groups (except gml:h gml:fn gml:rh gml:rf, the fig
-% float, the tables and the generated lists), gml:num prints nothing,
-% and the hints do all the layout.
 % DCF definitions: .df (fonts), .dr (named rules, used by .bx and .hr)
 % and .dh (head levels) are implemented; see their hints below.
 % The hints the engine writes are listed in gml-shared.tex; those
@@ -75,11 +74,13 @@
 % Formatting state.  DCF control words are state (set until changed),
 % and so are \leftskip & co. in TeX.  Hints set GLOBAL hint state
 % (\gml@hintleft, \gml@hintright, \gml@hintll, fill/align, font, keep);
-% elements set LOCAL element state (\gml@elemleft ... and font/fill
-% overrides).  \gml@apply combines them: margins add (element indent +
-% DCF .in), for fill mode and font the most recent setting wins (a
-% global clock stamps each setting), so a .bf inside a paragraph lives
-% on after the paragraph and a :hp1 inside a .bf region is still italic.
+% the elements gml.tex or a tag set styles set LOCAL element state
+% (\gml@elemleft ... and font/fill overrides: a heading's font, a table
+% cell's width).  \gml@apply combines them: margins add (element indent
+% + DCF .in), for fill mode and font the most recent setting wins (a
+% global clock stamps each setting), so a .bf inside a heading lives on
+% after the heading's group and a heading inside a .bf region is still
+% in its own font.
 %
 % DCF units (\gml@dimof{n}{unit}\register).  Which units exist, the
 % sizes of the absolute ones and their written forms are the engine's
@@ -151,7 +152,6 @@
 \newdimen\gml@hintleft \newdimen\gml@hintright \newdimen\gml@hintll
 \newdimen\gml@defaulthsize
 \newdimen\gml@dima \newdimen\gml@dimb \newdimen\gml@dimc \newdimen\gml@dimd
-\newdimen\gml@listind \newdimen\gml@capind
 \newdimen\gml@tabpos \newdimen\gml@ofdim
 \newdimen\gml@bxleft \newdimen\gml@bxright
 \newdimen\gml@basebs
@@ -160,14 +160,13 @@
 \newcount\gml@clock \newcount\gml@efontstamp \newcount\gml@hfontstamp
 \newcount\gml@efillstamp \newcount\gml@hfillstamp
 \newcount\gml@cnta \newcount\gml@cntb \newcount\gml@refcount
-\newcount\gml@qdepth \newcount\gml@tabidx \newcount\gml@ofstate
+\newcount\gml@tabidx \newcount\gml@ofstate
 \newcount\gmlindexcolumns
-\newcount\gml@itemno   % items so far in the current list (local to the list)
-\newbox\gml@box \newbox\gml@figbox \newbox\gml@dtbox
+\newbox\gml@box \newbox\gml@figbox
 \newbox\gml@rhodd \newbox\gml@rheven \newbox\gml@rfodd \newbox\gml@rfeven
 \newbox\gml@fnleader \newbox\gml@ixbox
 \newwrite\gml@refout \newread\gml@in
-\newif\ifgml@plainpage \newif\ifgml@keep \newif\ifgml@aftertitle
+\newif\ifgml@keep
 \newif\ifgml@userrh \newif\ifgml@userrf
 % .rh/.rf SUP per page parity: \gml@sup@rh@odd ... is \gml@yes while
 % suppressed; \gml@supp@rh@odd ... (the page being built) is set by SUP
@@ -177,12 +176,12 @@
 \let\gml@supp@rh@odd\empty \let\gml@supp@rh@even\empty
 \let\gml@supp@rf@odd\empty \let\gml@supp@rf@even\empty
 \newif\ifgml@nofolio \newif\ifgml@refschanged \newif\ifgml@reffile
-\newif\ifgml@chappage  % the current page begins with an h0/h1 or section heading
+\newif\ifgml@chappage  % the current page begins with a heading that ejects (.dh PA)
 \newif\ifgml@tabfound \newif\ifgml@tabfirst \newif\ifgml@rcon
-\newif\ifgml@intitlep \newif\ifgml@preserve \newif\ifgml@paoff
+\newif\ifgml@preserve \newif\ifgml@paoff
 \newif\ifgml@found \newif\ifgml@pnpref \newif\ifgml@bxfirst
-\newif\ifgml@userleader \newif\ifgml@inhead
-\newif\ifgml@hintmode \newif\ifgml@infig \newif\ifgml@fontquiet \newif\ifgml@bxrule
+\newif\ifgml@userleader
+\newif\ifgml@infig \newif\ifgml@fontquiet \newif\ifgml@bxrule
 \newdimen\gml@rulewd \newdimen\gml@bxwd \newdimen\gml@hrpos \newdimen\gml@hrstart
 \newcount\gml@bxstate \newcount\gml@hrmode
 \newif\ifgml@celltop  % at the top of a table cell: element skips are dropped
@@ -208,7 +207,7 @@
 \def\gml@romanstr{roman} \def\gml@arabicstr{arabic} \def\gml@prefstr{pref}
 \def\gml@nobindstr{nobind} \def\gml@leftstr{left} \def\gml@rightstr{right}
 \def\gml@forstr{for} \def\gml@tostr{to} \def\gml@minstr{min} \def\gml@monostr{mono}
-\def\gml@sansstr{sans} \def\gml@hintsstr{hints}
+\def\gml@sansstr{sans}
 \def\gml@nokeymark{\gml@nokey}
 \def\gml@end{\gml@end}
 
@@ -348,13 +347,6 @@
 \hyphenpenalty=\@M   % DCF: hyphenation is off until .hy on
 \raggedbottom
 \gmlindexcolumns=2
-\def\gmltitlealign{right}     % SYSVART: right | left | center
-\def\gmldocnumlabel{Document Number}
-\def\gmlnotelabel{Note:}
-\def\gmlabstracttitle{Abstract}
-\def\gmlprefacetitle{Preface}
-\def\gml@titletop{2in}
-\def\gml@titlegapdim{2in}
 \def\gml@colsep{2em}
 \def\gml@tocpage{2.5em}
 \def\gml@figpad{4pt}
@@ -589,7 +581,7 @@
 % \gml@vspace: a DCF space (.sp): kept at the top of a page
 \def\gml@vspace#1{\par\ifvmode\gml@pqtrigger\vglue#1\relax\gml@pqvert{#1}\fi}
 \def\gml@newpage{\par\vfill\penalty-\@M}
-% \gml@chapnewpage: a new page for an h0/h1 or section heading.  Pending
+% \gml@chapnewpage: a new page for a heading (.dh PA).  Pending
 % floats are flushed first (\supereject: plain's \dosupereject puts them on
 % pages of their own), so a figure of the previous chapter never lands above
 % the new heading; the page is then marked as a chapter page (see fig).
@@ -599,48 +591,24 @@
 \def\gml@needspace#1{\par\ifvmode\ifinner\else\gml@dimc=#1\relax\penalty\z@
   \ifdim\pagegoal<\maxdimen \gml@dimb\pagegoal\advance\gml@dimb-\pagetotal
     \ifdim\gml@dimb<\gml@dimc\vfill\penalty-\@M\fi\fi\fi\fi}
-\def\gml@parstart#1{\ifhmode\ifdim\lastkern=1sp\unkern\else\gml@vskip{#1}\fi
-  \else\gml@vskip{#1}\fi}
 
 % ---- dispatch --------------------------------------------------------------------
 % An element (\gml@estart{NAME}{ATTRS}, ended by \gml@eend{NAME}) is a
 % group: the attributes are \gml@attrs (\gmlattr{key}\macro), the start
 % calls \gml@NAME@start (\gmldefstart), the end \gml@NAME@end
 % (\gmldefend), closes the group and re-applies the formatting state
-% (\gml@apply).  An element without a definition is shown as plain text
-% (message once).  anchor= puts out the anchor after the start.
-% Hint mode (\def\gmlmode{hints} before \input gml; tex.xsl writes it for
-% a document formatted by a real DCF profile): the profile's control
-% words (hints) do the layout, so an element calls \gml@h@NAME@start /
-% \gml@h@NAME@end if defined (\gmldefhstart, \gmldefhend) and is
-% otherwise only a group; gml:num prints nothing (the profile writes its
-% own numbers).  Defined: gml:h gml:fn gml:rh gml:rf (as in element
-% mode), fig (the float and its frame, without margins), the tables and
-% the generated lists.
+% (\gml@apply).  The profile's control words (hints) do the layout, so an
+% element without a definition is only the group; defined here: gml:h
+% gml:fn gml:rh gml:rf, fig (the float and its frame), the tables and the
+% generated lists.  anchor= puts out the anchor after the start.
 \def\gml@estart#1#2{\begingroup\def\gml@cur{#1}\def\gml@attrs{#2}%
-  \def\gml@closer{\gml@eend{#1}}%
-  \ifgml@hintmode\gml@hcall{#1}{start}%
-  \else\expandafter\ifx\csname gml@#1@start\endcsname\relax
-    \gml@warnonce{elt#1}{no TeX style for element #1 (shown as plain text)}%
-  \else\csname gml@#1@start\endcsname\fi\fi
+  \def\gml@closer{\gml@eend{#1}}\gml@ecall{#1}{start}%
   \gml@aget{anchor}\gml@tmpb\ifx\gml@tmpb\empty\else\gml@anchor\gml@tmpb\fi}
-\def\gml@eend#1{\ifgml@hintmode\gml@hcall{#1}{end}%
-  \else\expandafter\ifx\csname gml@#1@end\endcsname\relax
-  \else\csname gml@#1@end\endcsname\fi\fi\endgroup\gml@apply}
-\def\gml@hcall#1#2{\expandafter\ifx\csname gml@h@#1@#2\endcsname\relax
-  \else\csname gml@h@#1@#2\endcsname\fi}
-\def\gmldefhstart#1{\expandafter\def\csname gml@h@#1@start\endcsname}
-\def\gmldefhend#1{\expandafter\def\csname gml@h@#1@end\endcsname}
-% hint mode: these elements keep their element-mode style
-\def\gml@hkeep#1{\gmldefhstart{#1}{\csname gml@#1@start\endcsname}%
-  \gmldefhend{#1}{\csname gml@#1@end\endcsname}}
-\gml@hkeep{gml:h} \gml@hkeep{gml:fn} \gml@hkeep{gml:rh} \gml@hkeep{gml:rf}
-\ifx\gmlmode\undefined\else\ifx\gmlmode\gml@hintsstr\gml@hintmodetrue\fi\fi
+\def\gml@eend#1{\gml@ecall{#1}{end}\endgroup\gml@apply}
+\def\gml@ecall#1#2{\expandafter\ifx\csname gml@#1@#2\endcsname\relax
+  \else\csname gml@#1@#2\endcsname\fi}
 \def\gmldefstart#1{\expandafter\def\csname gml@#1@start\endcsname}
 \def\gmldefend#1{\expandafter\def\csname gml@#1@end\endcsname}
-\def\gml@letelement#1#2{%
-  \expandafter\let\csname gml@#1@start\expandafter\endcsname\csname gml@#2@start\endcsname
-  \expandafter\let\csname gml@#1@end\expandafter\endcsname\csname gml@#2@end\endcsname}
 \def\gmldefhint#1{\expandafter\long\expandafter\def\csname gml@hint@#1\endcsname}
 \def\gmldeflines#1#2{\expandafter\def\csname gml@lines@#1@#2\endcsname}
 \def\gmldefnum#1{\expandafter\def\csname gml@num@#1\endcsname}
@@ -705,13 +673,10 @@
 \def\gml@lmore{\gml@lget{more}\gml@tmpb\ifx\gml@tmpb\gml@yes\else\ifhmode\par\fi\fi}
 
 % gml:num, dispatched on the current element: \gml@num@NAME{label}
-% (h1: label+quad, li: hanging label, figcap: bold hanging label, fn:
-% dropped - the mark is a key); in hint mode \gml@hnum@NAME or nothing
-\def\gml@num#1{\ifgml@hintmode
-    \expandafter\ifx\csname gml@hnum@\gml@cur\endcsname\relax
-    \else\csname gml@hnum@\gml@cur\endcsname{#1}\fi
-  \else\expandafter\ifx\csname gml@num@\gml@cur\endcsname\relax
-  #1\enspace\else\csname gml@num@\gml@cur\endcsname{#1}\fi\fi}
+% (\gmldefnum) if defined, else nothing (the profile writes its own
+% numbers)
+\def\gml@num#1{\expandafter\ifx\csname gml@num@\gml@cur\endcsname\relax
+  \else\csname gml@num@\gml@cur\endcsname{#1}\fi}
 
 % ---- the reader ----------------------------------------------------------------------
 % In the body (after \gml) < and & are active.  < reads a tag up to the
@@ -726,7 +691,7 @@
 % brace arguments.  Outside format-off mode everything from < to the
 % handler expands without an assignment, so a kern or ligature between
 % the character before a tag and the first one its handler puts out is
-% kept (the period and the closing quote of "nation.<>" ending a q).
+% kept (a period and a closing quote after a tag: "nation.<>&8221;").
 \long\def\gml@firstoftwo#1#2{#1}
 \long\def\gml@secondoftwo#1#2{#2}
 \long\def\gml@tag#1>{\gml@kind#1>\gml@nil}
@@ -1664,25 +1629,24 @@
     run TeX again to get them right.}\fi}
 
 % ---- running headings and footings ------------------------------------------------------
-\def\gml@sec{} \def\gml@shead{}
 \headline={\gml@headline} \footline={\gml@footline}
 % .rh/.rf sup suppresses the page it is issued on even if res follows
 % before the page is complete (the Starter Set's title page: sup, the
 % title page text, res, then the page eject)
-\def\gml@headline{\rm\ifgml@plainpage\hfil\else\gml@runsupp{rh}\ifgml@found\hfil
-  \else\ifgml@userrh\gml@userrh\else\gml@defaultrh\fi\fi\fi}
-\def\gml@footline{\rm\ifgml@plainpage\hfil\else\gml@runsupp{rf}\ifgml@found\hfil
-  \else\ifgml@userrf\gml@userrf\else\gml@defaultrf\fi\fi\fi}
+\def\gml@headline{\rm\gml@runsupp{rh}\ifgml@found\hfil
+  \else\ifgml@userrh\gml@userrh\else\gml@defaultrh\fi\fi}
+\def\gml@footline{\rm\gml@runsupp{rf}\ifgml@found\hfil
+  \else\ifgml@userrf\gml@userrf\else\gml@defaultrf\fi\fi}
 % \gml@runsupp{rh|rf}: \ifgml@found if suppressed on this page's parity
 \def\gml@runsupp#1{\gml@foundfalse
   \ifodd\pageno\expandafter\ifx\csname gml@supp@#1@odd\endcsname\gml@yes\gml@foundtrue\fi
   \else\expandafter\ifx\csname gml@supp@#1@even\endcsname\gml@yes\gml@foundtrue\fi\fi}
 \def\gml@runsupnext#1{\expandafter\global\expandafter\let
   \csname gml@supp@#1\expandafter\endcsname\csname gml@sup@#1\endcsname}
-% Starter Set: the security classification centred at the top; the short
-% heading on the left and the page number on the right at the foot
-\def\gml@defaultrh{\hfil{\gml@hi{2}\gml@sec}\hfil}
-\def\gml@defaultrf{\gml@shead\hfil\ifgml@nofolio\else\gml@folio\fi}
+% without a .rh/.rf: no heading; the page number on the right at the
+% foot
+\def\gml@defaultrh{\hfil}
+\def\gml@defaultrf{\hfil\ifgml@nofolio\else\gml@folio\fi}
 \def\gml@userrh{\ifodd\pageno\gml@runput{rh}{odd}\vbox\else\gml@runput{rh}{even}\vbox\fi\hss}
 \def\gml@userrf{\ifodd\pageno\gml@runput{rf}{odd}\vtop\else\gml@runput{rf}{even}\vtop\fi\hss}
 % The page number symbol (.dc PS, default &) in a running heading or
@@ -1772,7 +1736,7 @@
 \gmldefhint{symref}#1{\gml@hget{name}\gml@tv\expandafter\gml@symref\expandafter{\gml@tv}{#1}}
 \gmldefhint{symval}{\gml@hget{name}\gml@tv\gml@hget{value}\gml@tu
   \edef\gml@tmpa{\noexpand\gml@symval{\gml@tv}}\expandafter\gml@tmpa\expandafter{\gml@tu}}
-\output={\gml@pqenter\gml@tbl@output\gml@symtop\hsize\gml@defaulthsize\plainoutput\global\gml@plainpagefalse
+\output={\gml@pqenter\gml@tbl@output\gml@symtop\hsize\gml@defaulthsize\plainoutput
   \global\gml@chappagefalse
   \gml@runsupnext{rh@odd}\gml@runsupnext{rh@even}%
   \gml@runsupnext{rf@odd}\gml@runsupnext{rf@even}}
@@ -1868,173 +1832,27 @@
   \gml@dhget{#1}{us}\ifx\gml@dhv\gml@yes\expandafter\gml@setfont\expandafter{\gml@efont\it}\fi
   \gml@dhget{#1}{hy}\ifx\gml@dhv\gml@yes\hyphenpenalty50 \else\hyphenpenalty\@M\fi
   \gml@dhget{#1}{align}\ifx\gml@dhv\empty\def\gml@dhv{left}\fi
-  \gml@setfill{yes}\gml@dhv\gml@apply\gml@inheadtrue\noindent}
+  \gml@setfill{yes}\gml@dhv\gml@apply\noindent}
 \def\gml@headend#1{\gml@dhget{#1}{runin}%
   \ifx\gml@dhv\gml@yes\unskip\enspace\kern1sp
   \else\par\nobreak
     \gml@dhget{#1}{spaf}\ifx\gml@dhv\empty\csname gml@head@post@#1\endcsname
     \else\gml@dimtok\gml@dhv\gml@dima\gml@vskip\gml@dima\fi\fi}
-\def\gml@headshead{\gml@aget{stitle}\gml@tv\ifx\gml@tv\empty\gml@aget{text}\gml@tv\fi
-  \global\let\gml@shead\gml@tv}
-\def\gml@headnum#1{#1\quad}
-\def\gml@defheading#1{%
-  \gmldefstart{h#1}{\gml@headstart{#1}\ifnum#1<2 \gml@headshead\fi}%
-  \gmldefend{h#1}{\gml@headend{#1}}%
-  \expandafter\let\csname gml@num@h#1\endcsname\gml@headnum}
-\gml@defheading0 \gml@defheading1 \gml@defheading2 \gml@defheading3
-\gml@defheading4 \gml@defheading5 \gml@defheading6
 \gmldefstart{gml:h}{\gml@aget{level}\gml@lvl\ifx\gml@lvl\empty\def\gml@lvl{1}\fi
   \expandafter\gml@headstart\expandafter{\gml@lvl}}
 \gmldefend{gml:h}{\expandafter\gml@headend\expandafter{\gml@lvl}}
-% a heading with a literal text (abstract, preface, toc, figlist, index)
+% a heading with a literal text (the generated lists)
 \def\gml@sectionhead#1{\begingroup\gml@headstart1#1\gml@headend1\endgroup
-  \gdef\gml@shead{#1}\gml@apply}
-
-% ---- document sections and the title page -----------------------------------------------
-\gmldefstart{gdoc}{\gml@aget{sec}\gml@tv\global\let\gml@sec\gml@tv}
-\gmldefend{gdoc}{\par}
-\gmldefstart{frontm}{\gml@newpage\global\pageno\m@ne}
-\gmldefstart{body}{\gml@newpage\global\pageno\@ne}
-\gmldefstart{appendix}{\gml@newpage}
-\gmldefstart{backm}{\gml@newpage}
-\gmldefstart{abstract}{\gml@newpage\gml@sectionhead\gmlabstracttitle}
-\gmldefstart{preface}{\gml@newpage\gml@sectionhead\gmlprefacetitle}
-\gmldefstart{toc}{} \gmldefstart{figlist}{} \gmldefstart{index}{}
-\gmldefstart{titlep}{\gml@newpage\xdef\gml@titlepn{\gml@abspage}%
-  \global\gml@plainpagetrue\gml@intitleptrue
-  \gml@vspace\gml@titletop\global\gml@aftertitlefalse
-  \gml@setfill{yes}{\gmltitlealign}\hyphenpenalty\@M\gml@apply}
-\gmldefend{titlep}{\par\ifx\gml@sec\empty\else\gml@vskip{2\baselineskip}%
-  \noindent{\gml@hi{2}\gml@sec}\par\fi\gml@newpage
-  % more than one page shipped since \gml@titlepn: DSMGML043I (MSG p.11);
-  % absolute page numbers: in the front matter they are roman (\pageno<0)
-  \gml@cnta\gml@titlepn\advance\gml@cnta\@ne
-  \ifnum\gml@abspage>\gml@cnta\gml@ibmmsg{DSMGML043I TITLE PAGE SPANS MULTIPLE PAGES.}\fi}
-\def\gml@titlegap{\par\ifgml@aftertitle\global\gml@aftertitlefalse
-  \gml@vspace\gml@titlegapdim\else\gml@vskip\baselineskip\fi}
-\gmldefstart{title}{\par\gml@setfont{\csname gml@font@title\endcsname}%
-  \baselineskip30pt\gml@apply
-  \gml@aget{stitle}\gml@tv\ifx\gml@tv\empty\gml@aget{text}\gml@tv\fi
-  \global\let\gml@shead\gml@tv\noindent}
-\gmldefend{title}{\par\global\gml@aftertitletrue}
-\gmldefstart{docnum}{\gml@titlegap\noindent\gmldocnumlabel\ }
-\gmldefend{docnum}{\par}
-\gmldefstart{date}{\gml@titlegap\noindent}
-\gmldefend{date}{\par}
-\gmldefstart{author}{\gml@titlegap\noindent}
-\gmldefend{author}{\par}
-\gmldefstart{address}{\ifgml@intitlep\gml@titlegap\gml@setfill{no}{\gmltitlealign}%
-  \else\gml@vskip{.75\baselineskip}\advance\gml@elemleft4\gml@chwidth
-    \gml@setfill{no}{left}\fi\gml@apply}
-\gmldefend{address}{\par\ifgml@intitlep\else\gml@vskip{.75\baselineskip}\fi}
-\gmldefstart{aline}{\par}
-\gmldefend{aline}{\par}
-
-% ---- paragraphs, notes, quotations, examples --------------------------------------------
-\gmldefstart{p}{\gml@parstart{.75\baselineskip}}
-\gmldefend{p}{\par}
-\gml@letelement{pc}{p}
-\gmldefstart{note}{\gml@parstart{.75\baselineskip}\leavevmode
-  {\gml@hi{2}\gmlnotelabel}\nobreak\ }
-\gmldefend{note}{\par}
-\gmldefstart{lq}{\gml@vskip\baselineskip\advance\gml@elemleft3\gml@chwidth
-  \advance\gml@elemright3\gml@chwidth\gml@apply}
-\gmldefend{lq}{\gml@vskip\baselineskip}
-\gmldefstart{xmp}{\gml@vskip\baselineskip\advance\gml@elemleft2\gml@chwidth
-  \gml@setfont\tt\gml@setfill{no}{left}\gml@preservetrue\gml@apply}
-\gmldefend{xmp}{\par\gml@vskip\baselineskip}
-
-% ---- highlighting and phrases -------------------------------------------------------------
-% in a heading the heading font is kept (it is already bold and large)
-\def\gml@hp#1{\ifgml@inhead\else\gml@setfont{\gml@hi{#1}}\fi}
-\gmldefstart{hp0}{\gml@hp0}
-\gmldefstart{hp1}{\gml@hp1} \gmldefend{hp1}{\/}
-\gmldefstart{hp2}{\gml@hp2}
-\gmldefstart{hp3}{\gml@hp3} \gmldefend{hp3}{\/}
-\gmldefstart{cit}{\gml@setfont{\gml@hi{1}}} \gmldefend{cit}{\/}
-\gmldefstart{q}{\advance\gml@qdepth\@ne\ifodd\gml@qdepth``\else`\fi}
-\gmldefend{q}{\ifodd\gml@qdepth''\else'\fi}
-\gmldefstart{hdref}{} \gmldefstart{figref}{} \gmldefstart{liref}{}
-\def\gml@fnmark#1{\leavevmode\raise.5ex\hbox{\sevenrm#1}}
-\gmldefstart{fnref}{\leavevmode\raise.5ex\hbox\bgroup\sevenrm}
-\gmldefend{fnref}{\egroup}
-% index tags: only their anchors (the terms are in gml:index-entries)
-\gmldefstart{i1}{} \gmldefstart{i2}{} \gmldefstart{i3}{}
-\gmldefstart{ih1}{} \gmldefstart{ih2}{} \gmldefstart{ih3}{} \gmldefstart{iref}{}
-
-% ---- lists ---------------------------------------------------------------------------------------
-% SH35-0050 Figure 5: indent / skip  ol ul sl 4 .75, dl 10 1, gl 0 .75
-\def\gml@itemskip{\z@} \def\gml@listtype{} \def\gml@ulnest{1}
-\def\gml@termhi{2} \def\gml@headhi{3}
-% \gml@itembreak: no page break between the first and second item of a list
-% (a club line: a lone first item at the foot of a page)
-\def\gml@itembreak{\global\advance\gml@itemno\@ne
-  \ifnum\gml@itemno=\tw@ \par\nobreak\fi}
-\def\gml@outeritem{0}
-\def\gml@liststart#1#2#3{\gml@vskip{#3}\def\gml@listtype{#1}%
-  \edef\gml@outeritem{\the\gml@itemno}\global\gml@itemno\z@
-  \advance\gml@elemleft#2\relax\gml@listind#2\relax
-  \gml@aget{compact}\gml@tv\ifx\gml@tv\empty\def\gml@itemskip{#3}\else\def\gml@itemskip{\z@}\fi
-  \gml@aget{termhi}\gml@tv\ifx\gml@tv\empty\else\let\gml@termhi\gml@tv\fi
-  \gml@aget{headhi}\gml@tv\ifx\gml@tv\empty\else\let\gml@headhi\gml@tv\fi
   \gml@apply}
-\def\gml@listend#1{\global\gml@itemno\gml@outeritem\relax\gml@vskip{#1}}
-\gmldefstart{ol}{\gml@liststart{ol}{4\gml@chwidth}{.75\baselineskip}}
-\gmldefend{ol}{\gml@listend{.75\baselineskip}}
-\gml@letelement{ul}{ol}
-\gmldefstart{ul}{\gml@liststart{ul}{4\gml@chwidth}{.75\baselineskip}%
-  \gml@aget{nest}\gml@tv\ifx\gml@tv\empty\else\let\gml@ulnest\gml@tv\fi}
-\gmldefstart{sl}{\gml@liststart{sl}{4\gml@chwidth}{.75\baselineskip}}
-\gmldefend{sl}{\gml@listend{.75\baselineskip}}
-% dl tsize= (default 10 characters, SH20-9187 3.7): the term column and
-% its gutter
-\def\gml@dltsize{\gml@aget{tsize}\gml@tv\ifx\gml@tv\empty\def\gml@tv{10}\fi
-  \gml@rawdim\gml@tv{ch}\gml@dima}
-\gmldefstart{dl}{\gml@dltsize\gml@liststart{dl}{\gml@dima}{\baselineskip}%
-  \gml@aget{break}\gml@dlbreak}
-\gmldefend{dl}{\gml@listend\baselineskip}
-\gmldefstart{gl}{\gml@liststart{gl}{\z@}{.75\baselineskip}}
-\gmldefend{gl}{\gml@listend{.75\baselineskip}}
-\def\gmlbullet#1{\ifcase#1\or$\bullet$\or---\or$\ast$\else$\bullet$\fi}
-\def\gml@itemlabel#1{\llap{\hbox to\gml@listind{#1\hss}}}
-\def\gml@li@ul{\gml@itemlabel{\gmlbullet\gml@ulnest}}
-\gmldefstart{li}{\par\gml@itembreak\gml@vskip\gml@itemskip\leavevmode
-  \csname gml@li@\gml@listtype\endcsname}
-\gmldefend{li}{\par}
-\gmldefnum{li}#1{\gml@itemlabel{#1}}
-\gmldefstart{lp}{\par\gml@vskip\gml@itemskip}
-\gmldefend{lp}{\par}
-% terms: a box in the hanging indent if it fits (with a gutter of one
-% blank); a longer term is followed by one blank and the description
-% runs on, or (dl break) the description starts on the next line
-% (SH20-9187 3.7).  dthd is a term too.
-\def\gml@termstart#1{\par\gml@itembreak\gml@vskip\gml@itemskip\noindent\hskip-\gml@listind
-  \setbox\gml@dtbox\hbox\bgroup\gml@setfont{\gml@hi{#1}}}
-\def\gml@termend{\unskip\egroup\gml@dimb\gml@listind\advance\gml@dimb-\gml@chwidth
-  \ifdim\wd\gml@dtbox>\gml@dimb
-    \ifx\gml@dlbreak\empty\box\gml@dtbox\ \kern1sp\else\box\gml@dtbox\par\fi
-  \else\hbox to\gml@listind{\box\gml@dtbox\hss}\kern1sp\fi}
-\gmldefstart{dt}{\gml@termstart\gml@termhi}
-\gmldefend{dt}{\gml@termend}
-\gmldefstart{dthd}{\gml@termstart\gml@headhi}
-\gmldefend{dthd}{\gml@termend}
-\gmldefstart{dd}{}
-\gmldefend{dd}{\par}
-\gmldefstart{ddhd}{\gml@setfont{\gml@hi{\gml@headhi}}}
-\gmldefend{ddhd}{\par}
-\let\gml@dlbreak\empty
-\gmldefstart{gt}{\par\gml@itembreak\gml@vskip\gml@itemskip\noindent\gml@setfont{\gml@hi{\gml@termhi}}}
-\gmldefend{gt}{\unskip\/\kern1sp}
-\gmldefstart{gd}{\ifhmode\ifdim\lastkern=1sp\unkern:\enspace\fi\fi}
-\gmldefend{gd}{\par}
 
 % ---- figures ---------------------------------------------------------------------------------------
 % frame=rule (default): rules above and below; box; none; any other value:
 % a line of that string.  place=inline: \midinsert, else \topinsert (plain
-% TeX has no bottom floats).  On a page that begins with an h0/h1 or
-% section heading a top float would go above that heading, so there it is
-% a \midinsert too: here if it fits, else at the top of the next page.
-% The body is in format-off mode.
+% TeX has no bottom floats).  On a page that begins with a heading that
+% ejects (\gml@chapnewpage) a top float would go above that heading, so
+% there it is a \midinsert too: here if it fits, else at the top of the
+% next page.  The body's margins, fill and caption are the profile's
+% (its .bx words inside draw nothing: \ifgml@infig).
 \def\gml@charrule#1{\hbox to\hsize{\xleaders\hbox{#1}\hfil}}
 \def\gml@figopen{\par\gml@aget{place}\gml@tv
   \ifx\gml@tv\gml@inlinestr\midinsert
@@ -2043,11 +1861,7 @@
   \setbox\gml@figbox\vbox\bgroup\gml@infigtrue
   \ifx\gml@figframe\gml@boxstr\advance\gml@elemhsize-2\gml@figpad
     \advance\gml@elemhsize-.8pt\fi}
-\gmldefstart{fig}{\gml@figopen
-  \advance\gml@elemleft2\gml@chwidth\advance\gml@elemright2\gml@chwidth
-  \gml@setfill{no}{left}\gml@apply}
-\gmldefhstart{fig}{\gml@figopen\gml@apply}
-\gmldefhend{fig}{\csname gml@fig@end\endcsname}
+\gmldefstart{fig}{\gml@figopen\gml@apply}
 \gmldefend{fig}{\par\egroup
   \ifx\gml@figframe\gml@rulestr\hrule\kern\gml@figpad\box\gml@figbox\kern\gml@figpad\hrule
   \else\ifx\gml@figframe\gml@boxstr\vbox{\hrule\hbox{\vrule\kern\gml@figpad
@@ -2055,14 +1869,6 @@
   \else\ifx\gml@figframe\gml@nonestr\box\gml@figbox
   \else\gml@charrule\gml@figframe\box\gml@figbox\gml@charrule\gml@figframe
   \fi\fi\fi\endinsert}
-\gmldefstart{figcap}{\gml@vskip\baselineskip\gml@setfill{yes}{left}\gml@apply\noindent}
-\gmldefend{figcap}{\gml@aget{desc}\gml@tv\ifx\gml@tv\gml@yes\unskip\kern1sp\else\par\fi}
-\gmldefnum{figcap}#1{\setbox\gml@box\hbox{{\bf#1}\enspace}\global\gml@capind\wd\gml@box
-  \hangindent\gml@capind\hangafter\@ne\box\gml@box}
-\gmldefstart{figdesc}{\gml@setfill{yes}{left}\gml@apply
-  \ifhmode\ifdim\lastkern=1sp\unkern\fi:\ \ \hangindent\gml@capind\hangafter\@ne
-  \else\gml@vskip\baselineskip\noindent\fi}
-\gmldefend{figdesc}{\par}
 
 % ---- tables ------------------------------------------------------------------------------------------
 % Starter Set tables (SH20-9186 ch. 7), as resolve.xsl gives them:
@@ -2106,22 +1912,25 @@
 % that begins inside a table (\topmark) and the footing at the bottom of
 % one that ends inside it; what then no longer fits is \vsplit off and
 % goes back to the next page.  The last four tables keep their boxes
-% (n mod 4).  tnote is a full-width row; tcap/tdesc are styled like
-% figcap/figdesc below the table, kept with its last rows (\nobreak after
-% the rows; in hint mode the caption paragraph does not break either).
+% (n mod 4).  tnote is a full-width row.  The rows are laid out here
+% (the grid is TeX's job), the profile does the rest, as a DCF profile
+% does (dcfstarter.gml): the space before and after the table (.sk), the
+% "Table n." and "Note:" labels and the caption and description styling
+% (.sk .bf; the .ct colon of tdesc joins the caption's paragraph).  tcap
+% and tdesc only end the rows, kept with the last ones (\nobreak); the
+% paragraph they start ends with the table and does not break.
 % rotate and shade: a message, ignored.
 % Footnotes in cells: the \insert is held apart and put on the page right
 % after the row (or the group of rows) that refers to it; one in thd or
 % tft goes with its first placement only, and one in a row that \output
 % sends on to the next page stays on the page before.
 % Not supported: tables inside table cells.
-% Settings: \gml@tablerule (rule weight), \gml@cellhpad, \gml@cellvpad,
-% \gml@tableskip (space before and after); every step is a \gml@tbl@...
-% macro and every element a \gml@NAME@start/end, so all can be redefined.
+% Settings: \gml@tablerule (rule weight), \gml@cellhpad, \gml@cellvpad;
+% every step is a \gml@tbl@... macro and every element a
+% \gml@NAME@start/end, so all can be redefined.
 \def\gml@tablerule{.4pt}
 \def\gml@cellhpad{4pt}
 \def\gml@cellvpad{2pt}
-\def\gml@tableskip{\baselineskip}
 \newdimen\gml@tblwd \newdimen\gml@tbloff \newdimen\gml@tblrule
 \newdimen\gml@tA \newdimen\gml@tR \newdimen\gml@tU \newdimen\gml@tS \newdimen\gml@tX
 \newdimen\gml@tW \newdimen\gml@tH \newdimen\gml@tI \newdimen\gml@tY
@@ -2150,7 +1959,7 @@
 \def\gml@tbl@warn#1{\gml@aget{#1}\gml@tv\def\gml@tmpd{0}%
   \ifx\gml@tv\empty\else\ifx\gml@tv\gml@tmpd\else
   \gml@warnonce{tbl#1}{table #1= is not supported in TeX (ignored)}\fi\fi}
-\gmldefstart{table}{\par\gml@vskip\gml@tableskip\gml@tbl@open}
+\gmldefstart{table}{\par\gml@tbl@open}
 \def\gml@tbl@open{\global\advance\gml@tblno\@ne\gml@tbl@slotof\gml@tblno
   \global\let\gml@tblslot\gml@tblos
   \global\setbox\gml@tbl@box{thd}\gml@tblslot\box\voidb@x
@@ -2171,7 +1980,7 @@
   \global\gml@tblopentrue\global\gml@tblfirsttrue
   \global\gml@tblthdfalse\global\gml@tblmarksfalse
   \def\gml@rowdest{body}}
-\gmldefend{table}{\gml@tbl@finish\par\gml@vskip\gml@tableskip}
+\gmldefend{table}{\gml@tbl@finish{\interlinepenalty\@M\par}}
 \gmldefstart{thd}{\def\gml@rowdest{thd}}
 \gmldefstart{tft}{\def\gml@rowdest{tft}}
 % a row definition, written once: <rdef id=K,cols=,subrows=,cwidths=>, a
@@ -2380,33 +2189,16 @@
   \hbox to\hsize{\kern-\gml@cellhpad\vrule height\gml@tblrule depth\z@ width\gml@dima
     \kern-\gml@cellhpad}%
   \kern\gml@cellvpad\prevdepth.3\baselineskip\global\gml@celltoptrue}
-% -- table note: a row of one full-width cell, "Note:" in hp2
+% -- table note: a row of one full-width cell (the label is the profile's)
 \gmldefstart{tnote}{\def\gml@tsub{1}\let\gml@trd\empty\def\gml@tv{1*}\let\gml@trowsplit\empty
   \gml@tbl@rowbegin
   \def\gml@tc{1}\def\gml@tn{1}\def\gml@tcs{1}\def\gml@tsr{1}\def\gml@trs{1}\def\gml@thp{0}%
   \def\gml@tal{left}\def\gml@tva{top}\def\gml@tcc{yes}\let\gml@tmd\empty
   \gml@tbl@cellbegin}
 \gmldefend{tnote}{\gml@tbl@cellend\gml@tbl@rowend}
-\gmldefnum{tnote}#1{\leavevmode{\gml@hi{2}#1}\nobreak\ }
-% -- caption and description: as figcap/figdesc, after the table
-\gmldefstart{tcap}{\gml@tbl@finish\nobreak\gml@figcap@start}
-\expandafter\let\csname gml@tcap@end\expandafter\endcsname\csname gml@figcap@end\endcsname
-\expandafter\let\csname gml@num@tcap\expandafter\endcsname\csname gml@num@figcap\endcsname
-\gmldefstart{tdesc}{\gml@tbl@finish\nobreak\gml@figdesc@start}
-\expandafter\let\csname gml@tdesc@end\expandafter\endcsname\csname gml@figdesc@end\endcsname
-\gmldefstart{tref}{} \gmldefstart{tlist}{}
-% hint mode: the rows are still laid out here (the grid is TeX's job), but
-% the profile does the rest, as a DCF profile does (dcfstarter.gml): the
-% space before and after the table (.sk), the "Table n." and "Note:"
-% labels (so gml:num prints nothing, as everywhere in hint mode) and the
-% caption and description styling (.sk .bf; the .ct colon of tdesc joins
-% the caption's paragraph, so tcap ends no paragraph).  tcap and tdesc
-% only end the rows; the paragraph they start ends with the table.
-\gml@hkeep{rdef} \gml@hkeep{thd} \gml@hkeep{tft} \gml@hkeep{row} \gml@hkeep{c}
-\gml@hkeep{gml:cpart} \gml@hkeep{tnote}
-\gmldefhstart{table}{\par\gml@tbl@open}
-\gmldefhend{table}{\gml@tbl@finish{\interlinepenalty\@M\par}}
-\gmldefhstart{tcap}{\gml@tbl@finish\nobreak} \gmldefhstart{tdesc}{\gml@tbl@finish\nobreak}
+% -- caption and description (the profile's): the rows end before them
+\gmldefstart{tcap}{\gml@tbl@finish\nobreak}
+\gmldefstart{tdesc}{\gml@tbl@finish\nobreak}
 % -- \output: repeat thd at the top and tft at the bottom of a page inside a table
 \def\gml@tbl@output{\global\setbox\gml@tblrest\box\voidb@x
   \ifx\gml@tblforce\empty\edef\gml@tbltop{\topmark}\else\let\gml@tbltop\gml@tblforce\fi
@@ -2446,11 +2238,14 @@
     \kern-\gml@tblrule\nointerlineskip\copy\gml@tbl@box{tft}\gml@tblftr\fi\fi}}
 
 % ---- footnotes -------------------------------------------------------------------------------------------
+% gml:fn: a .fn block (the profile writes the mark and the text), an
+% \insert; kind=leader: the rule above the notes (\footnoterule).
+% \gml@vfootnote{}: the \insert, open (a tag set may redefine it)
 \def\gml@vfootnote#1{\insert\footins\bgroup\gml@pqenter
   \interlinepenalty\interfootnotelinepenalty
   \splittopskip\ht\strutbox\splitmaxdepth\dp\strutbox\floatingpenalty\@MM
   \leftskip\z@skip\rightskip\z@skip\spaceskip\z@skip\xspaceskip\z@skip
-  \ifgml@hintmode\parindent\z@\else\parindent1.5em\fi % hint mode: the profile writes the mark
+  \parindent\z@
   \textindent{#1}\footstrut\futurelet\next\fo@t}
 % plain's \@foot ends the footnote's last paragraph with the \insert;
 % in a footnote with a queue of its own (\gml@pqenter) \par ends it
@@ -2458,34 +2253,21 @@
 % (\gml@pqshape); a tag set's footnote without one is left as plain's,
 % so it does not take the shape of the text around it
 \def\@foot{\strut\ifgml@pqown\par\fi\egroup}
-\def\gml@footnote#1{\let\@sf\empty\ifhmode\edef\@sf{\spacefactor\the\spacefactor}\/\fi
-  #1\@sf\gml@vfootnote{#1}}
 \def\gml@fnsetup{\gml@elemleft\z@\gml@elemright\z@\gml@elemhsize\hsize}
-\gmldefstart{fn}{\gml@aget{num}\gml@tv\gml@aget{callout}\gml@tmpb
-  \edef\gml@tmpc{\noexpand\gml@fnmark{\gml@tv}}%
-  \ifgml@incell\gml@tbl@fnstart\else\let\gml@fnclose\egroup
-  \ifx\gml@tmpb\gml@no\let\gml@fncmd\gml@vfootnote\else\let\gml@fncmd\gml@footnote\fi
-  \expandafter\gml@fncmd\expandafter{\gml@tmpc}\bgroup\gml@fnsetup\fi}
-\gmldefend{fn}{\gml@fnclose}
 % in a table cell the \insert is built in \gml@tblfns, at the width of the
-% text around the table; \gml@tbl@rowend's destination puts it on the page
-\def\gml@tbl@fnstart{\ifx\gml@tmpb\gml@no\else
-    \let\@sf\empty\ifhmode\edef\@sf{\spacefactor\the\spacefactor}\/\fi
-    \gml@tmpc\@sf\fi
-  \expandafter\gml@tbl@fnhold\expandafter{\gml@tmpc}}
-% #1 the mark: the footnote's \insert is built inside \gml@tblfns (closed
-% by \gml@fnclose's two \egroup)
+% text around the table; \gml@tbl@rowend's destination puts it on the page.
+% \gml@tbl@fnhold{mark}: the footnote's \insert is built inside
+% \gml@tblfns (closed by \gml@fnclose's two \egroup)
 \def\gml@tbl@fnhold#1{\def\gml@fnclose{\egroup\egroup}%
   \global\setbox\gml@tblfns\vbox\bgroup\ifvoid\gml@tblfns\else\unvbox\gml@tblfns\fi
     \gml@incellfalse\gml@tbl@fnreset\hsize\gml@tblfnhsize\gml@vfootnote{#1}\bgroup\gml@fnsetup}
-\gmldefnum{fn}#1{}
 \gmldefstart{gml:fn}{\gml@aget{kind}\gml@fnkind
   \ifx\gml@fnkind\gml@leaderstr\global\gml@userleadertrue
     \global\setbox\gml@fnleader\vbox\bgroup\gml@runsetup
   \else\ifgml@incell\gml@tbl@hfnstart\else\let\gml@fnclose\egroup
     \gml@vfootnote{}\bgroup\gml@fnsetup\fi\fi}
 \gmldefend{gml:fn}{\ifx\gml@fnkind\gml@leaderstr\par\egroup\else\gml@fnclose\fi}
-% a .fn block (hint mode) in a table cell: held in \gml@tblfns as an fn element
+% a .fn block in a table cell: held in \gml@tblfns
 \def\gml@tbl@hfnstart{\gml@tbl@fnhold{}}
 % the cell's font, fill and alignment do not reach its footnotes
 \def\gml@tbl@fnreset{\def\gml@efont{\rm}\gml@efontstamp\z@\let\gml@efill\empty
@@ -2495,36 +2277,30 @@
   \else\gml@plainfootnoterule\fi}
 
 % ---- table of contents, lists of illustrations and tables ---------------------------------------
-% <:toc-entries title=T> <,toc-entry ATTRS>{num}{text}{page} ... <>, the
+% <:toc-entries title=T> <,toc-entry ATTRS>{text}{page} ... <>, the
 % same for figlist and tlist (the entries: refid= num=; a toc entry
-% level=); in hint mode too
+% level=).  The profile numbers its headings and figures in their text,
+% so an entry prints no number of its own.
 \def\gml@tocind#1{\ifnum#1<2 \gml@dima\z@\else\gml@cnta#1\advance\gml@cnta\m@ne
   \multiply\gml@cnta\tw@\gml@dima\gml@cnta\gml@chwidth\fi}
-\def\gml@leaderline#1#2#3{% num text page
+\def\gml@leaderline#1#2{% text page
   \leftskip\gml@dima\rightskip\gml@tocpage plus1fil\parfillskip-\rightskip
-  \def\gml@tmpd{#1}\ifx\gml@tmpd\empty\else
-    \setbox\gml@box\hbox{#1\enspace}\hangindent\wd\gml@box\hangafter\@ne\fi
-  \noindent\ifx\gml@tmpd\empty\else\box\gml@box\fi #2\nobreak
-  \leaders\hbox to.75em{\hss.\hss}\hfill\nobreak\hbox to\gml@tocpage{\hss#3}\par}
+  \noindent#1\nobreak
+  \leaders\hbox to.75em{\hss.\hss}\hfill\nobreak\hbox to\gml@tocpage{\hss#2}\par}
 % the heading (title=) and the list's group, inside the element's
 \def\gml@listhead{\gml@aget{title}\gml@tv
   \expandafter\gml@sectionhead\expandafter{\gml@tv}\begingroup\hyphenpenalty\@M}
 \def\gml@listfoot{\par\endgroup\gml@apply\gml@newpage}
-\def\gml@deflist#1#2#3{\gmldefstart{gml:#1-entries}{#2}\gmldefend{gml:#1-entries}{#3}%
-  \gmldefhstart{gml:#1-entries}{#2}\gmldefhend{gml:#1-entries}{#3}}
+\def\gml@deflist#1#2#3{\gmldefstart{gml:#1-entries}{#2}\gmldefend{gml:#1-entries}{#3}}
 \gml@deflist{toc}\gml@listhead\gml@listfoot
 \gml@deflist{figlist}\gml@listhead\gml@listfoot
 \gml@deflist{tlist}\gml@listhead\gml@listfoot
-\gmldefhint{toc-entry}#1#2#3{\gml@hget{level}\gml@tv\ifx\gml@tv\empty\def\gml@tv{1}\fi
+\gmldefhint{toc-entry}#1#2{\gml@hget{level}\gml@tv\ifx\gml@tv\empty\def\gml@tv{1}\fi
   \par\ifnum\gml@tv<2 \gml@vskip\baselineskip\fi
   \begingroup\gml@tocind\gml@tv\advance\gml@dima\gml@elemleft
-  \ifnum\gml@tv<2 \bf\fi\gml@tocnum{#1}{#2}{#3}\endgroup}
-% hint mode: the profile numbers its headings and figures in their text,
-% so the entries print no number of their own (as gml:num)
-\def\gml@tocnum#1{\ifgml@hintmode\def\gml@tmpn{}\else\def\gml@tmpn{#1}\fi
-  \expandafter\gml@leaderline\expandafter{\gml@tmpn}}
-\gmldefhint{figlist-entry}#1#2#3{\par\gml@vskip{.5\baselineskip}%
-  \begingroup\gml@dima\gml@elemleft\gml@tocnum{#1}{#2}{#3}\endgroup}
+  \ifnum\gml@tv<2 \bf\fi\gml@leaderline{#1}{#2}\endgroup}
+\gmldefhint{figlist-entry}#1#2{\par\gml@vskip{.5\baselineskip}%
+  \begingroup\gml@dima\gml@elemleft\gml@leaderline{#1}{#2}\endgroup}
 \expandafter\let\csname gml@hint@tlist-entry\expandafter\endcsname
   \csname gml@hint@figlist-entry\endcsname
 

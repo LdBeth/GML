@@ -4,27 +4,27 @@
 gdoc><
 frontm><
 titlep><
-title text=Test>Test<
+title>Test<
 ><
 ><
 toc><
 :toc-entries title=Table of Contents><
-,toc-entry level=1,refid=intro,section=body,num=1.0>{1.0}{Introduction}{<,pageref refid=intro>}<
-,toc-entry level=2,refid=sub,section=body,num=1.1>{1.1}{Sub <hp1>section<>}{<,pageref refid=sub>}<
-,toc-entry level=3,refid=gml-h3-1,section=body,num=1.1.1>{1.1.1}{Third}{<,pageref refid=gml-h3-1>}<
-,toc-entry level=4,refid=gml-h4-1,section=body,num=1.1.1.1>{1.1.1.1}{Fourth}{<,pageref refid=gml-h4-1>}<
-,toc-entry level=1,refid=appa,section=appendix,num=A>{Appendix A.}{Extra}{<,pageref refid=appa>}<
-,toc-entry level=2,refid=gml-h2-2,section=appendix,num=A.1>{A.1}{Appsub}{<,pageref refid=gml-h2-2>}<
+,toc-entry level=1,refid=intro,section=body,num=1.0>{Introduction}{<,pageref refid=intro>}<
+,toc-entry level=2,refid=sub,section=body,num=1.1>{Sub <hp1>section<>}{<,pageref refid=sub>}<
+,toc-entry level=3,refid=gml-h3-1,section=body,num=1.1.1>{Third}{<,pageref refid=gml-h3-1>}<
+,toc-entry level=4,refid=gml-h4-1,section=body,num=1.1.1.1>{Fourth}{<,pageref refid=gml-h4-1>}<
+,toc-entry level=1,refid=appa,section=appendix,num=A>{Extra}{<,pageref refid=appa>}<
+,toc-entry level=2,refid=gml-h2-2,section=appendix,num=A.1>{Appsub}{<,pageref refid=gml-h2-2>}<
 ><
 ><
 figlist><
 :figlist-entries title=List of Illustrations><
-,figlist-entry refid=f1,num=1>{Figure&160;1}{First fig}{<,pageref refid=f1>}<
-,figlist-entry refid=gml-fig-2,num=2>{Figure&160;2}{Second}{<,pageref refid=gml-fig-2>}<
+,figlist-entry refid=f1,num=1>{First fig}{<,pageref refid=f1>}<
+,figlist-entry refid=gml-fig-2,num=2>{Second}{<,pageref refid=gml-fig-2>}<
 ><
 ><
 preface><
-h1 anchor=gml-h1-1,text=Preface head>Preface head<
+h1 anchor=gml-h1-1>Preface head<
 ><
 p>Pre.
 <
@@ -32,7 +32,7 @@ p>Pre.
 ><
 ><
 body><
-h1 id=intro,num=1.0,anchor=intro,text=Introduction><=1.0>Introduction<
+h1 id=intro,num=1.0,anchor=intro><=1.0>Introduction<
 ><
 p>Text.<fn id=fa,num=1,anchor=fa,callout=no><=1>Footnote with id.<> More<fn num=2,anchor=gml-fn-2,callout><=2>Plain footnote.<>
 See <fnref refid=fa,resolved,target=fn,num=1>1<>.
@@ -64,7 +64,7 @@ li id=l3,num=1,anchor=l3><=1)>deep
 p>Ref <liref refid=l2,resolved,target=li,num=a>a.<,pageref refid=l2,when=auto,label=on page><> and <liref refid=nope,resolved=no>LI nope unknown<> and <hdref refid=sub,page,resolved,target=h2,num=1.1>&8220;Sub <hp1>section<>&8221;<,pageref refid=sub,label=on page><> <hdref refid=bad,resolved=no>Heading bad unknown<>.
 <
 ><
-h2 id=sub,num=1.1,anchor=sub,text=Sub section><=1.1>Sub <hp1>section<><
+h2 id=sub,num=1.1,anchor=sub><=1.1>Sub <hp1>section<><
 ><
 fig id=f1,num=1,anchor=f1>body
 <
@@ -72,7 +72,7 @@ figcap><=Figure&160;1.>First fig<
 ><
 ><
 fig num=2,anchor=gml-fig-2><
-figcap desc><=Figure&160;2.>Second<
+figcap><=Figure&160;2.>Second<
 ><
 figdesc>desc
 <
@@ -92,17 +92,17 @@ p>indented
 <,bf font=hi1>font
 <
 ><
-h3 num=1.1.1,anchor=gml-h3-1,text=Third><=1.1.1>Third<
+h3 num=1.1.1,anchor=gml-h3-1><=1.1.1>Third<
 ><
-h4 num=1.1.1.1,anchor=gml-h4-1,text=Fourth><=1.1.1.1>Fourth<
+h4 num=1.1.1.1,anchor=gml-h4-1><=1.1.1.1>Fourth<
 ><
-h5 anchor=gml-h5-1,text=Fifth>Fifth<
+h5 anchor=gml-h5-1>Fifth<
 ><
 ><
 appendix><
-h1 id=appa,num=A,anchor=appa,text=Extra><=Appendix A.>Extra<
+h1 id=appa,num=A,anchor=appa><=Appendix A.>Extra<
 ><
-h2 num=A.1,anchor=gml-h2-2,text=Appsub><=A.1>Appsub<
+h2 num=A.1,anchor=gml-h2-2><=A.1>Appsub<
 ><
 ><
 backm><

@@ -38,8 +38,7 @@
      k= the pair's number (left out when the rt has none); the shift (in
      sp, or zw when estimated) moves the reading from the centre of its
      base toward the end of the line; the characters of a spread reading
-     are separated by <,rs>.  The readings are not part of the plain
-     text of a heading (the running footing). -->
+     are separated by <,rs>. -->
 <xsl:stylesheet version="3.0"
     xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
     xmlns:xs="http://www.w3.org/2001/XMLSchema"
@@ -199,11 +198,4 @@
       </xsl:otherwise>
     </xsl:choose>
   </xsl:template>
-
-  <!-- the plain text of a heading, without the readings -->
-  <xsl:function name="t:plain" as="xs:string">
-    <xsl:param name="e" as="element()"/>
-    <xsl:sequence select="normalize-space(string-join(($e//text() | $e//gml:dv/@text)[not(ancestor::gml:num)
-        and not(ancestor::*[local-name() = $index-tags]) and not(ancestor::rt)]))"/>
-  </xsl:function>
 </xsl:stylesheet>

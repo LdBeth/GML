@@ -10,8 +10,9 @@
 #             examples/dcfdemo.gml is stable after 2)
 #   -tex      the TeX engine (default pdftex; aptex, tex): DIR/JOB.pdf, or
 #             DIR/JOB.dvi with tex
-#   -profile  the gml profile (default dcfstarter: a formatting profile;
-#             a semantic one, starter, works too)
+#   -profile  the gml profile (default dcfstarter): a formatting profile,
+#             or a tag set built on one (TeX is made only from a
+#             formatting profile; starter, the semantic one, is for HTML)
 #   -app      a tag set, as for gmlfmt (a bundle directory, or a name in
 #             GMLROOT/share/gmlapp, else a profile name)
 #   -set      a symbol for gml and a parameter for every stylesheet

@@ -1,4 +1,3 @@
-\def\gmlmode{hints}
 \input gml
 \gml
 <,df name=bold,spec=font BOLD,font=bold><,df name=caps,spec=font BOLD up,up,font=bold><,df name=face,spec=type('Helvetica Bold' 12 bold),face=helvetica bold,family=sans,size=12,bold><,dr spec=thin weight 0.2mm,rule=thin,weight=0.2mm><,dh level=1,spec=font caps spaf 2 nbr,font=caps,spaf=2line,runin>Plain text, then a skip.
@@ -6,7 +5,7 @@
 .sp n=2,unit=line><,bf font=caps><!upper case words here>
 <,pf initial>back to normal.
 <
-:h level=1,break,text=A Heading><,tcmark anchor=gml.tc.1><!A Heading><
+:h level=1,break><,tcmark anchor=gml.tc.1><!A Heading><
 >
 Text after the heading.
 <:lines word=ce,n=2,break,more>before <><hp1><:lines word=ce,cont,more>a phrase<><><:lines word=ce,cont> after
