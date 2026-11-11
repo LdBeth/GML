@@ -121,13 +121,13 @@ q { quotes: "\201C" "\201D" "\2018" "\2019"; }
 .gml-unresolved { color: var(--gml-sec); }
 
 /* ---- lists: the labels are written by html.xsl ---------------------------- */
-.gml-ol, .gml-ul, .gml-sl, .gml-l { list-style: none; margin: 0.5em 0 0.75em; padding-left: 2.5em; }
-.gml-ol > li, .gml-ul > li, .gml-l > li { position: relative; margin-bottom: 0.4em; }
+.gml-ol, .gml-ul, .gml-sl { list-style: none; margin: 0.5em 0 0.75em; padding-left: 2.5em; }
+.gml-ol > li, .gml-ul > li { position: relative; margin-bottom: 0.4em; }
 .gml-sl > li { margin-bottom: 0.4em; }
 .gml-compact > li { margin-bottom: 0; }
 .gml-label { position: absolute; right: calc(100% + 0.5em); white-space: nowrap;
              font-variant-numeric: tabular-nums; }
-.gml-ul > li > .gml-label, .gml-l > li > .gml-label { color: var(--gml-muted); }
+.gml-ul > li > .gml-label { color: var(--gml-muted); }
 li > p:last-child, dd > p:last-child { margin-bottom: 0; }
 .gml-lp { margin: 0.4em 0 0.4em -1.5em; }
 

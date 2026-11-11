@@ -1,0 +1,17 @@
+% \gml@enc against the engine's test vectors (vectors.tex, made from
+% gmlshare's XML): \vec{t:name form}{ENC}, \sym{role}{name}{symbol}
+\input gml
+\catcode`\@=11
+\newwrite\out \immediate\openout\out=\jobname.out
+\newcount\n \newcount\bad
+\def\same#1#2{\edef\ma{\meaning\a}\edef\mb{\meaning\b}\advance\n by 1
+  \ifx\ma\mb\else\advance\bad by 1 \immediate\write\out{#1: #2}\fi}
+\def\vec#1#2{\edef\a{\gml@enc{#1}}\def\b{#2}\same{#1}{\a, not \b}}
+\def\sym#1#2#3{\edef\a{\csname sym@#1\endcsname{#2}}\def\b{#3}\same{#2}{\a, not \b}}
+\def\sym@anchor#1{\gml@pfx@anchor\gml@enc{#1}}
+\def\sym@query#1{\gml@pfx@query\gml@qenc{#1}}
+\catcode`\#=12
+\input vectors
+\immediate\write\out{\the\n\space names, \the\bad\space wrong}
+\immediate\closeout\out
+\end

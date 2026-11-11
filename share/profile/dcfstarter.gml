@@ -89,7 +89,7 @@
 .*  - Tables (:rdef :table :thd :tft :row :c :tnote :tcap :tdesc, Rel
 .*    3.2; below): the APFs check context, row definitions and cell
 .*    numbers, number the captions and make the table elements; the grid
-.*    is resolve.xsl's, the rows are laid out by TeX.  :l is not done.
+.*    is resolve.xsl's, the rows are laid out by TeX.
 .*  - :psc proc= selects by SYSVARP (conditional section 9), as in
 .*    starter.gml.
 .*

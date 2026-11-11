@@ -1,0 +1,16 @@
+% the aux file: aux.gmlaux holds a line for every prefix of the engine,
+% all for the same key; \gml@readrefs reads it and starts the new one
+% with its first line; the anchors and the question are written as
+% gml.tex writes them in a document
+\input gml
+\catcode`\@=11
+\newwrite\out \immediate\openout\out=\jobname.out
+\gml@readrefs
+\def\t#1{\immediate\write\out{#1: \expandafter\ifx\csname gml@#1\endcsname\relax
+  not read\else\csname gml@#1\endcsname\fi}}
+\t{pg@x@1}\t{rpg@x@1}
+\immediate\closeout\out
+\gml@q@lc{q1.12.3}
+\shipout\vbox{\gml@anchor{gml.tc.1}\gml@anchor{fig-1}}
+\immediate\closeout\gml@refout
+\end

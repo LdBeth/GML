@@ -53,7 +53,9 @@
      words) are warned about once: "ignored device control word .xx".
 
    The table ([table], at the end) has one row per control word: its
-   name, whether it breaks, its operand grammar, and the builder.
+   name, whether it breaks, its operand grammar, the nodes it puts in
+   the tree (the last column below, declared in [N]: a state hint with
+   the properties it sets, [P]) and the builder.
 
    | Word        | Break | Operands                         | Hint / attributes                         |
    |-------------|-------|----------------------------------|-------------------------------------------|
@@ -122,6 +124,147 @@ let yn b = if b then "yes" else "no"
 
 let emit ctx name ~brk attrs =
   Doc.hint (doc ctx) name (attrs @ [ ("break", yn brk) ])
+
+(* ---- the nodes ------------------------------------------------------------------- *)
+
+(* The properties of the formatting state that the state hints set, as
+   xslt/scope.xsl scopes them, in its order (the order of the attributes
+   of its gml:scope): the block properties, then the inline ones.  The
+   initial values are those of [Ctx.initial_fmt] where the engine tracks
+   the property (written as scope.xsl writes values: a dimension n+unit,
+   zero "0"); the others start as "default", the device's. *)
+module P = struct
+  let f = Ctx.initial_fmt ()
+
+  let dim s =
+    match Units.attrs ~default:"" "v" s with
+    | [ (_, "0"); _ ] -> "0"
+    | [ (_, v); (_, "mixed") ] -> v
+    | [ (_, v); (_, u) ] -> v ^ u
+    | _ -> assert false
+
+  let block prop initial = { Node.prop; tier = Node.Block; initial }
+  let inline prop initial = { Node.prop; tier = Node.Inline; initial }
+  let in_ = block "in" (dim f.left)
+  let ir = block "ir" (dim f.right)
+  let of_ = block "of" (dim f.offset)
+  let ll = block "ll" (match f.ll with None -> "default" | Some l -> dim l)
+  let fill = block "fill" (yn f.fill)
+  let align = block "align" f.align
+  let overdraw = block "overdraw" f.overdraw
+  let tp = block "tp" "default"
+  let tb = block "tb" "default"
+  let ls = block "ls" "default"
+  let wz = block "wz" "default"
+  let bc = block "bc" "default"
+
+  let font =
+    inline "font"
+      (match f.fonts with x :: _ when x <> "" -> x | _ -> "initial")
+
+  let hy = inline "hy" (if f.hyph then "on" else "off")
+  let ws = inline "ws" "default"
+  let es = inline "es" "default"
+  let sb = inline "sb" "default"
+  let ud = inline "ud" "default"
+
+  let all =
+    [
+      in_;
+      ir;
+      of_;
+      ll;
+      fill;
+      align;
+      overdraw;
+      tp;
+      tb;
+      ls;
+      wz;
+      bc;
+      font;
+      hy;
+      ws;
+      es;
+      sb;
+      ud;
+    ]
+end
+
+(* The nodes the words put out (the last column of the header table):
+   the hints, events or state hints with the properties they set
+   (scope.xsl), and the elements.  A hint .in/.ir for a distance
+   (temporary="yes") is not state, nor is a .hy without ON or OFF. *)
+module N = struct
+  open Node
+
+  let br = event "br"
+  let sp = event "sp"
+  let sk = event "sk"
+  let in_ = state ~conditional:true "in" [ P.in_; P.of_ ]
+  let ir = state ~conditional:true "ir" [ P.ir ]
+  let il = event "il"
+  let un = event "un"
+  let of_ = state "of" [ P.of_ ]
+  let ll = state "ll" [ P.ll ]
+  let mode = [ P.fill; P.align; P.overdraw ]
+  let fo = state "fo" mode
+  let nf = state "nf" mode
+  let ju = state "ju" mode
+  let pa = event "pa"
+  let cp = event "cp"
+  let cc = event "cc"
+  let cb = event "cb"
+  let bx = event "bx"
+  let hr = event "hr"
+  let vr = event "vr"
+  let kp = event "kp"
+  let fn = element "fn"
+  let rh_element = element "rh"
+  let rf_element = element "rf"
+  let rh = event "rh"
+  let rf = event "rf"
+  let h = element "h"
+  let dh = event "dh"
+  let tc = event "tc"
+  let tcmark = event "tcmark"
+  let tcentry = event "tcentry"
+  let sx = event "sx"
+  let tp = state "tp" [ P.tp ]
+  let tb = state "tb" [ P.tb ]
+  let bf = state "bf" [ P.font ]
+  let pf = state "pf" [ P.font ]
+  let df = event "df"
+  let hy = state ~conditional:true "hy" [ P.hy ]
+  let hw = event "hw"
+  let rc = event "rc"
+  let bc = state "bc" [ P.bc ]
+  let fl = event "fl"
+  let ls = state "ls" [ P.ls ]
+  let sb = state "sb" [ P.sb ]
+  let ws = state "ws" [ P.ws ]
+  let es = state "es" [ P.es ]
+  let wz = state "wz" [ P.wz ]
+  let is = event "is"
+  let ic = event "ic"
+  let ud = state "ud" [ P.ud ]
+  let dr = event "dr"
+  let pn = event "pn"
+  let pl = event "pl"
+  let pw = event "pw"
+  let pm = event "pm"
+  let tm = event "tm"
+  let bm = event "bm"
+  let cl = event "cl"
+  let cd = event "cd"
+  let sc = event "sc"
+  let mc = event "mc"
+  let sa = event "sa"
+  let re = event "re"
+  let fv = event "fv"
+  let pi = event "pi"
+  let ix = event "ix"
+end
 
 (* Operand words; a lone sign is joined to the next word ("+ 1i"). *)
 let tokens s =
@@ -690,10 +833,11 @@ let heading n ctx ops =
   in
   if def.Toc.only then mark ()
   else begin
-    Doc.start_element ~eol:true d "gml:h"
+    Doc.start_element ~eol:true d (Node.qname N.h)
       ((("level", string_of_int n) :: num) @ [ ("break", "yes") ]);
     mark ();
-    if text = "" then ignore (Doc.end_element d "gml:h") else push_text ctx ops
+    if text = "" then ignore (Doc.end_element d (Node.qname N.h))
+    else push_text ctx ops
   end
 
 (* .dh n options (LR p.136-138): kept as a hint (the backends read the
@@ -832,7 +976,7 @@ let toc ctx ops =
     if title = "/" then None
     else if title <> "" then Some title
     else
-      match Symbols.get ctx.syms "SYSCONTENT" with
+      match Ctx.Sym.get ctx "SYSCONTENT" with
       | Some v when v <> "" -> Some v
       | _ -> Some "CONTENTS"
   in
@@ -840,7 +984,7 @@ let toc ctx ops =
   if not d.Doc.mute then begin
     Option.iter
       (fun t ->
-        Doc.start_element ~eol:true d "gml:h"
+        Doc.start_element ~eol:true d (Node.qname N.h)
           [ ("level", "1"); ("break", "yes") ];
         Doc.text d t)
       title;
@@ -1161,13 +1305,13 @@ let footnote ctx ops =
   let start attrs =
     save ctx fn_env;
     (fmt ctx).offset <- Units.zero;
-    Doc.start_element (doc ctx) "gml:fn" attrs
+    Doc.start_element (doc ctx) (Node.qname N.fn) attrs
   in
   match List.map lc (tokens ops) with
   | [] | [ "on" ] -> start []
   | [ "leader" ] -> start [ ("kind", "leader") ]
   | [ "off" ] ->
-      close_flow ctx "gml:fn";
+      close_flow ctx (Node.qname N.fn);
       Option.iter
         (fun sv ->
           ctx.saved <- List.filter (fun s -> s != sv) ctx.saved;
@@ -1322,7 +1466,7 @@ let define_variable ctx ops =
               if k = [] && not text_form then v
               else Doc.define_variable (doc ctx) (("name", name) :: k) v
             in
-            match Symbols.set ctx.syms name value with
+            match Ctx.Sym.set ctx name value with
             | Ok () -> ()
             | Error e -> Ctx.error ctx ".dv: %s" e)
 
@@ -1371,7 +1515,7 @@ let put_index ctx ops =
           rest
     | _ -> (List.rev acc, s)
   in
-  if Symbols.get ctx.syms "$INDX" = Some "1" then
+  if Ctx.Sym.get ctx "$INDX" = Some "1" then
     let o, rest = opts [] ops in
     let fields, _ = delimited rest in
     let terms, page =
@@ -1441,110 +1585,152 @@ let device word ctx _ =
 
 (* ---- the table ------------------------------------------------------------------- *)
 
-type brk = Yes | No | Varies | Not_a_hint
+type brk = Node.brk = Yes | No | Varies | Not_a_hint
 
+(* [puts]: the nodes a word puts out, each with its break when it is not
+   the word's ([None]); a gml:lines scope is [Doc.lines_node]. *)
 type row = {
   name : string;
   brk : brk;
   grammar : string;
+  puts : (Node.t * brk option) list;
   run : Ctx.t -> string -> unit;
 }
 
-let row name brk grammar run = { name; brk; grammar; run }
+let row name brk grammar puts run = { name; brk; grammar; puts; run }
+
+(* a node with the word's break; with break="no" whatever the word does *)
+let p n = (n, None)
+let quiet n = (n, Some No)
+let lines = p Doc.lines_node
 
 let table =
   [
-    row "br" Yes "" break_;
-    row "lb" Yes "(leading blank)" break_;
-    row "lt" Yes "(leading tab)" break_;
-    row "bl" Yes "(blank line)" blank_line;
-    row "nl" Not_a_hint "(null line)" null_line;
-    row "sp" Yes "[v] [a]" (space "sp");
-    row "sk" Yes "[v] [a|c]" (space "sk");
-    row "ce" Yes "[n|on|off|text]" (counted ~brk:true "ce");
-    row "ri" Yes "[n|on|off|text]" (counted ~brk:true "ri");
-    row "us" No "[n|on|off|text]" (counted ~brk:false "us");
-    row "up" No "[n|on|off|text]" (counted ~brk:false "up");
-    row "uc" No "[n|on|off|text]" (counted ~brk:false "uc");
-    row "in" Varies "[h] [[for] v1] [[after] v2] [nobreak]" (indent left_side);
-    row "ir" Varies "[h] [[for] v1] [[after] v2] [nobreak]" (indent right_side);
-    row "il" Yes "h" (one_line "il" 1);
-    row "un" Yes "h" (one_line "un" (-1));
-    row "of" Yes "[h]" offset;
-    row "ll" Yes "[h]" line_length;
+    row "br" Yes "" [ p N.br ] break_;
+    row "lb" Yes "(leading blank)" [ p N.br ] break_;
+    row "lt" Yes "(leading tab)" [ p N.br ] break_;
+    row "bl" Yes "(blank line)" [ p N.sp ] blank_line;
+    row "nl" Not_a_hint "(null line)" [] null_line;
+    row "sp" Yes "[v] [a]" [ p N.sp ] (space "sp");
+    row "sk" Yes "[v] [a|c]" [ p N.sk ] (space "sk");
+    row "ce" Yes "[n|on|off|text]" [ lines ] (counted ~brk:true "ce");
+    row "ri" Yes "[n|on|off|text]" [ lines ] (counted ~brk:true "ri");
+    row "us" No "[n|on|off|text]" [ lines ] (counted ~brk:false "us");
+    row "up" No "[n|on|off|text]" [ lines ] (counted ~brk:false "up");
+    row "uc" No "[n|on|off|text]" [ lines ] (counted ~brk:false "uc");
+    row "in" Varies "[h] [[for] v1] [[after] v2] [nobreak]"
+      [ p N.in_ ]
+      (indent left_side);
+    row "ir" Varies "[h] [[for] v1] [[after] v2] [nobreak]"
+      [ p N.ir ]
+      (indent right_side);
+    row "il" Yes "h" [ p N.il ] (one_line "il" 1);
+    row "un" Yes "h" [ p N.un ] (one_line "un" (-1));
+    row "of" Yes "[h]" [ p N.of_ ] offset;
+    row "ll" Yes "[h]" [ p N.ll ] line_length;
     row "fo" Yes "[on|off|left|right|center|inside|outside] [extend|fold|trunc]"
+      [ p N.fo ]
       (format false);
     row "nf" Yes "[on|off|left|right|center|inside|outside] [extend|fold|trunc]"
+      [ p N.nf ]
       (format true);
-    row "ju" Yes "[on|off]" justify;
-    row "pa" Yes "[n|+n|-n|nostart] | odd|even [on|off]" page;
-    row "cp" Yes "[v]" (conditional_eject "cp");
-    row "cc" Yes "[v]" (conditional_eject "cc");
-    row "cb" Yes "" (generic "cb" ~brk:true);
-    row "bx" Yes "[off|can|new|set|add|char] positions" box;
-    row "hr" Yes "[rule] h1|left [[to] h2|for l|right] ..." hrule;
-    row "vr" Yes "rule spec" (generic "vr" ~brk:true);
-    row "kp" Varies "on|off|float|delay|inline|v[+v]" keep;
-    row "fn" No "on|off|leader" footnote;
-    row "rh" Yes "[odd|even] on|off|cancel|sup|res|execute" (running "rh");
-    row "rf" Yes "[odd|even] on|off|cancel|sup|res|execute" (running "rf");
-    row "h0" Yes "text" (heading 0);
-    row "h1" Yes "text" (heading 1);
-    row "h2" Yes "text" (heading 2);
-    row "h3" Yes "text" (heading 3);
-    row "h4" Yes "text" (heading 4);
-    row "h5" Yes "text" (heading 5);
-    row "h6" Yes "text" (heading 6);
-    row "dh" No "n options" define_head;
-    row "tc" Yes "[n] [title|/]" toc;
-    row "pt" No "text | .xx line" put_toc;
-    row "sx" Yes "[f] [c] /left/fill/right/" split_text;
-    row "tp" Yes "[add|delete|set] stops" (tabs "tp");
-    row "tb" Yes "[add|clr|del|set] stops" (tabs "tb");
-    row "bf" No "[font...] [=]" begin_font;
-    row "pf" No "" previous_font;
-    row "df" No "name spec" define_font;
-    row "hy" No "[on|off] [options]" hyphenate;
-    row "hw" No "word" (fun ctx ops ->
-        emit ctx "hw" ~brk:false [ ("word", String.trim ops) ]);
-    row "rc" No "n [on|off|c] | adjust h | * c" revision;
-    row "bc" No "on|off" (generic ~read:plain "bc" ~brk:false);
-    row "fl" No "on|off|dump ..." (generic ~read:plain "fl" ~brk:false);
+    row "ju" Yes "[on|off]" [ p N.ju ] justify;
+    row "pa" Yes "[n|+n|-n|nostart] | odd|even [on|off]" [ p N.pa ] page;
+    row "cp" Yes "[v]" [ p N.cp ] (conditional_eject "cp");
+    row "cc" Yes "[v]" [ p N.cc ] (conditional_eject "cc");
+    row "cb" Yes "" [ p N.cb ] (generic "cb" ~brk:true);
+    row "bx" Yes "[off|can|new|set|add|char] positions" [ p N.bx ] box;
+    row "hr" Yes "[rule] h1|left [[to] h2|for l|right] ..." [ p N.hr ] hrule;
+    row "vr" Yes "rule spec" [ p N.vr ] (generic "vr" ~brk:true);
+    row "kp" Varies "on|off|float|delay|inline|v[+v]" [ p N.kp ] keep;
+    row "fn" No "on|off|leader" [ p N.fn ] footnote;
+    row "rh" Yes "[odd|even] on|off|cancel|sup|res|execute"
+      [ p N.rh_element; p N.rh ]
+      (running "rh");
+    row "rf" Yes "[odd|even] on|off|cancel|sup|res|execute"
+      [ p N.rf_element; p N.rf ]
+      (running "rf");
+    row "h0" Yes "text" [ p N.h; quiet N.tcmark ] (heading 0);
+    row "h1" Yes "text" [ p N.h; quiet N.tcmark ] (heading 1);
+    row "h2" Yes "text" [ p N.h; quiet N.tcmark ] (heading 2);
+    row "h3" Yes "text" [ p N.h; quiet N.tcmark ] (heading 3);
+    row "h4" Yes "text" [ p N.h; quiet N.tcmark ] (heading 4);
+    row "h5" Yes "text" [ p N.h; quiet N.tcmark ] (heading 5);
+    row "h6" Yes "text" [ p N.h; quiet N.tcmark ] (heading 6);
+    row "dh" No "n options" [ p N.dh ] define_head;
+    row "tc" Yes "[n] [title|/]" [ p N.tc; p N.h; p N.sk; p N.tcentry ] toc;
+    row "pt" No "text | .xx line" [ p N.tcmark ] put_toc;
+    row "sx" Yes "[f] [c] /left/fill/right/" [ p N.sx ] split_text;
+    row "tp" Yes "[add|delete|set] stops" [ p N.tp ] (tabs "tp");
+    row "tb" Yes "[add|clr|del|set] stops" [ p N.tb ] (tabs "tb");
+    row "bf" No "[font...] [=]" [ p N.bf ] begin_font;
+    row "pf" No "" [ p N.pf ] previous_font;
+    row "df" No "name spec" [ p N.df ] define_font;
+    row "hy" No "[on|off] [options]" [ p N.hy ] hyphenate;
+    row "hw" No "word"
+      [ p N.hw ]
+      (fun ctx ops -> emit ctx "hw" ~brk:false [ ("word", String.trim ops) ]);
+    row "rc" No "n [on|off|c] | adjust h | * c" [ p N.rc; lines ] revision;
+    row "bc" No "on|off" [ p N.bc ] (generic ~read:plain "bc" ~brk:false);
+    row "fl" No "on|off|dump ..."
+      [ p N.fl ]
+      (generic ~read:plain "fl" ~brk:false);
     row "ls" Varies
       "normal v | by f | skip|space|text|all f [f] | ... [nobreak]"
+      [ p N.ls ]
       line_spacing_word;
-    row "sb" No "[v]" (generic ~read:vertical "sb" ~brk:false);
-    row "ws" No "normal h | by f" (generic ~read:word_spacing "ws" ~brk:false);
-    row "es" No "normal h | by f" (generic ~read:word_spacing "es" ~brk:false);
-    row "wz" Yes "on|off" (generic ~read:plain "wz" ~brk:true);
-    row "is" No "[to] h [blank|break|absolute]" (generic "is" ~brk:false);
-    row "ic" No "..." (generic "ic" ~brk:false);
-    row "ud" No "on|off|rule v" (generic ~read:vertical "ud" ~brk:false);
-    row "dr" No "name spec" (generic "dr" ~brk:false);
+    row "sb" No "[v]" [ p N.sb ] (generic ~read:vertical "sb" ~brk:false);
+    row "ws" No "normal h | by f"
+      [ p N.ws ]
+      (generic ~read:word_spacing "ws" ~brk:false);
+    row "es" No "normal h | by f"
+      [ p N.es ]
+      (generic ~read:word_spacing "es" ~brk:false);
+    row "wz" Yes "on|off" [ p N.wz ] (generic ~read:plain "wz" ~brk:true);
+    row "is" No "[to] h [blank|break|absolute]"
+      [ p N.is ]
+      (generic "is" ~brk:false);
+    row "ic" No "..." [ p N.ic ] (generic "ic" ~brk:false);
+    row "ud" No "on|off|rule v"
+      [ p N.ud ]
+      (generic ~read:vertical "ud" ~brk:false);
+    row "dr" No "name spec" [ p N.dr ] (generic "dr" ~brk:false);
     row "pn" No "on|off|offno|roman|arabic|alpha|... | n | pref x"
+      [ p N.pn ]
       (generic ~read:plain "pn" ~brk:false);
-    row "pl" No "[v]" (generic ~read:vertical "pl" ~brk:false);
-    row "pw" No "[h]" (generic "pw" ~brk:false);
-    row "pm" Yes "[nobind] h [h]" (generic "pm" ~brk:true);
-    row "tm" No "[v]" (generic ~read:vertical "tm" ~brk:false);
-    row "bm" No "[v]" (generic ~read:vertical "bm" ~brk:false);
-    row "cl" Yes "[h]" (generic "cl" ~brk:true);
-    row "cd" Yes "n positions" (generic ~read:columns "cd" ~brk:true);
-    row "sc" Yes "" (generic "sc" ~brk:true);
-    row "mc" Yes "" (generic "mc" ~brk:true);
-    row "tr" Not_a_hint "pairs of c|hh" translate;
+    row "pl" No "[v]" [ p N.pl ] (generic ~read:vertical "pl" ~brk:false);
+    row "pw" No "[h]" [ p N.pw ] (generic "pw" ~brk:false);
+    row "pm" Yes "[nobind] h [h]" [ p N.pm ] (generic "pm" ~brk:true);
+    row "tm" No "[v]" [ p N.tm ] (generic ~read:vertical "tm" ~brk:false);
+    row "bm" No "[v]" [ p N.bm ] (generic ~read:vertical "bm" ~brk:false);
+    row "cl" Yes "[h]" [ p N.cl ] (generic "cl" ~brk:true);
+    row "cd" Yes "n positions" [ p N.cd ] (generic ~read:columns "cd" ~brk:true);
+    row "sc" Yes "" [ p N.sc ] (generic "sc" ~brk:true);
+    row "mc" Yes "" [ p N.mc ] (generic "mc" ~brk:true);
+    row "tr" Not_a_hint "pairs of c|hh" [] translate;
+    (* the hint gml:dv is put out where the symbol is used ([Doc]) *)
     row "dv" Not_a_hint "name [font f] [baseline b] [text] /string"
+      [ quiet Doc.dv_node ]
       define_variable;
-    row "sa" No "[envname]" save_env;
-    row "re" Varies "[envname]" restore_env;
+    row "sa" No "[envname]" [ p N.sa ] save_env;
+    (* .re: the hints that establish the restored state again, and the
+       line scopes in force when it was saved ([restore]) *)
+    row "re" Varies "[envname]"
+      (p N.re
+      :: List.map quiet
+           [ N.in_; N.of_; N.ir; N.ll; N.fo; N.hy; N.pf; N.bf; Doc.lines_node ]
+      )
+      restore_env;
     row "fv" No "top|bottom|center|justify"
+      [ p N.fv ]
       (generic ~read:plain "fv" ~brk:false);
     row "pi" No "[start|end|order|ref] [key /k1/k2/k3/] /t1[/t2[/t3[/page]]]"
+      [ p N.pi ]
       put_index;
-    row "ix" Yes "[n] [name|control|/]" index;
+    row "ix" Yes "[n] [name|control|/]" [ p N.ix ] index;
   ]
   @ List.map
-      (fun w -> row w Not_a_hint "(ignored)" (device w))
+      (fun w -> row w Not_a_hint "(ignored)" [] (device w))
       [ "dd"; "it"; "sv"; "dl"; "uw"; "oc"; "sy"; "te"; "lo" ]
 
 let install ctx = List.iter (fun r -> Ctx.register ctx r.name r.run) table

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gml:h level="1" break="yes"><gml:tcmark anchor="gml.tc.1" break="no"/>First chapter</gml:h>
+Some text with a variable<gml:dv name="sup" font="hi1" baseline="3pt" text="1" break="no"/> here.
+Indented and unformatted.
+Restored text.
+<gml:pi t1="Apples" break="no" anchor="gml-pi-1"/>An apple.
+<gml:h level="1" break="yes">CONTENTS</gml:h>
+<gml:tcentry level="1" text="First chapter" dot="yes" anchor="gml.tc.1" break="yes"/><gml:index-entries title="Index"><gml:index-group letter="A"><gml:index-entry level="1"><gml:index-term>Apples</gml:index-term><gml:pageref refid="gml-pi-1"/></gml:index-entry></gml:index-group></gml:index-entries>The end.
+</gml:doc>

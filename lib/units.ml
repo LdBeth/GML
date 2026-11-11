@@ -22,7 +22,7 @@
    value relative; a lone sign followed by the number in the next token
    ([.in + 1i]) is joined by the caller.
    [m] is [mh] on either axis: "Em space (Horizontal) aMH or aM" (LR
-   p.58, Table 6). *)
+   p.58, Table 6).  The table is [units], below. *)
 
 type axis = Horizontal | Vertical
 
@@ -33,8 +33,6 @@ type operand = {
   sign : char option;  (** ['+'] or ['-'] if relative *)
   value : v;  (** the magnitude (non-negative) *)
 }
-
-let default_unit = function Horizontal -> "ch" | Vertical -> "line"
 
 (* "12", "1,5", ".75", "2.25" -> hundredths; at most [dec] decimals. *)
 let number ?(dec = 2) s =
@@ -70,6 +68,63 @@ let ends s suf =
 
 let chop s k = String.sub s 0 (String.length s - k)
 
+(* The units of the table above.  [size]: an absolute unit is a
+   fraction of an inch; a device unit and a relative one have no size
+   without a device (the backends know it), and the engine takes the
+   size given (EXT) where it must measure: the system symbols in figure
+   spaces ([figure_spaces]) and &DH' / &DV' ([device_units]). *)
+type size =
+  | Absolute of (int * int)  (** num/den inch *)
+  | Device of (int * int)  (** a device unit; EXT: num/den inch *)
+  | Relative of string * (int * int)
+      (** relative to the first; EXT: num/den inch *)
+
+type def = {
+  name : string;  (** the normalised name *)
+  axis : axis option;  (** None: either axis *)
+  default : axis option;  (** the unit of a bare number on this axis *)
+  suffixes : string list;  (** written [a]SUFFIX *)
+  compound : char option;  (** written [n]C[p]: whole units of 12 points *)
+  whole : bool;  (** whole numbers only *)
+  size : size;
+}
+
+let def ?axis ?default ?(suffixes = []) ?compound ?(whole = false) name size =
+  { name; axis; default; suffixes; compound; whole; size }
+
+(* EXT: no device; a 240-pel page printer (3800 Model 3, 3820): a figure
+   space and an em 1/10 inch (the 10-pitch font), a line and an em-height
+   1/6 inch, a device unit 1/240 inch *)
+let units =
+  [
+    def "ch" ~axis:Horizontal ~default:Horizontal
+      (Relative ("figure space of the initial font", (1, 10)));
+    def "line" ~axis:Vertical ~default:Vertical
+      (Relative ("line spacing of the current font", (1, 6)));
+    def "cm" ~suffixes:[ "cm" ] (Absolute (100, 254));
+    def "mm" ~suffixes:[ "mm" ] (Absolute (10, 254));
+    def "i" ~suffixes:[ "i" ] (Absolute (1, 1));
+    def "mh" ~axis:Horizontal ~suffixes:[ "mh"; "m" ]
+      (Relative ("em-space of the current font", (1, 10)));
+    def "mv" ~axis:Vertical ~suffixes:[ "mv" ]
+      (Relative ("em-height of the current font", (1, 6)));
+    def "dh" ~axis:Horizontal ~suffixes:[ "dh" ] ~whole:true (Device (1, 240));
+    def "dv" ~axis:Vertical ~suffixes:[ "dv" ] ~whole:true (Device (1, 240));
+    def "pt" ~compound:'p' (Absolute (1, 72));
+    (* a cicero is 0.1776 inch (LR glossary, "cicero"), 12 Didot points:
+       1 Didot point = 0.0148 inch = 1.0656 points *)
+    def "dd" ~compound:'c' (Absolute (37, 2500));
+  ]
+
+let inches u = match u.size with Absolute f | Device f | Relative (_, f) -> f
+let default_unit axis = (List.find (fun u -> u.default = Some axis) units).name
+
+(* the suffixes, longest first: "cm" and "mm" end in "m" *)
+let suffixed =
+  List.concat_map (fun u -> List.map (fun x -> (x, u)) u.suffixes) units
+  |> List.stable_sort (fun (a, _) (b, _) ->
+      compare (String.length b) (String.length a))
+
 (* "3p2", "p6", "3p", "p1.5" with [c] = 'p'; whole units and points. *)
 let compound c s =
   match String.index_opt s c with
@@ -87,18 +142,23 @@ let compound c s =
 
 let magnitude axis s =
   let s = String.lowercase_ascii s in
-  let mk unit = Option.map (fun h -> { h; unit }) in
-  if ends s "cm" then mk "cm" (number (chop s 2))
-  else if ends s "mm" then mk "mm" (number (chop s 2))
-  else if ends s "mh" then mk "mh" (number (chop s 2))
-  else if ends s "mv" then mk "mv" (number (chop s 2))
-  else if ends s "dh" then mk "dh" (integer (chop s 2))
-  else if ends s "dv" then mk "dv" (integer (chop s 2))
-  else if ends s "m" then mk "mh" (number (chop s 1))
-  else if ends s "i" then mk "i" (number (chop s 1))
-  else if String.contains s 'p' then mk "pt" (compound 'p' s)
-  else if String.contains s 'c' then mk "dd" (compound 'c' s)
-  else mk (default_unit axis) (number s)
+  let mk u = Option.map (fun h -> { h; unit = u }) in
+  match List.find_opt (fun (x, _) -> ends s x) suffixed with
+  | Some (x, u) ->
+      mk u.name
+        (let n = chop s (String.length x) in
+         if u.whole then integer n else number n)
+  | None -> (
+      match
+        List.find_map
+          (fun u ->
+            match u.compound with
+            | Some c when String.contains s c -> Some (u, c)
+            | _ -> None)
+          units
+      with
+      | Some (u, c) -> mk u.name (compound c s)
+      | None -> mk (default_unit axis) (number s))
 
 (** Parse one dimension operand. *)
 let parse axis s =
@@ -186,25 +246,17 @@ let lines o =
     it (SH35-0069 p.243: "represented in character spaces, regardless of the
     space units used in setting them"). EXT: there is no device, so a figure
     space is taken as 1/10 inch (the 10-pitch font of the 3800) and an em as one
-    figure space; device units count 0. *)
+    figure space ([units]); device units and vertical ones count 0. *)
 let figure_spaces (s : sum) =
-  let per_inch_100 = function
-    | "i" -> Some 100
-    | "cm" -> Some 254
-    | "mm" -> Some 2540
-    | "pt" -> Some 7200
-    | "dd" -> Some 6767 (* 1 Didot point = 1.0640 points *)
-    | _ -> None
-  in
   let hundredths =
     List.fold_left
       (fun acc (u, h) ->
-        match u with
-        | "ch" | "mh" -> acc + h
-        | u -> (
-            match per_inch_100 u with
-            | Some d -> acc + (h * 1000 / d)
-            | None -> acc))
+        match List.find_opt (fun d -> d.name = u) units with
+        | Some ({ size = Absolute _ | Relative _; _ } as d)
+          when d.axis <> Some Vertical ->
+            let num, den = inches d in
+            acc + (h * 10 * num / den)
+        | _ -> acc)
       0 s
   in
   hundredths / 100
@@ -217,21 +269,9 @@ let device_units axis s =
   match parse axis s with
   | Error _ -> None
   | Ok o ->
-      (* device units per unit, as a fraction *)
-      let per =
-        match o.value.unit with
-        | "ch" | "mh" -> Some (24, 1)
-        | "line" | "mv" -> Some (40, 1)
-        | "i" -> Some (240, 1)
-        | "cm" -> Some (24000, 254)
-        | "mm" -> Some (2400, 254)
-        | "pt" -> Some (10, 3)
-        | "dd" -> Some (10640, 3000)
-        | "dh" | "dv" -> Some (1, 1)
-        | _ -> None
-      in
       Option.map
-        (fun (num, den) ->
-          let n = o.value.h * num / (den * 100) in
+        (fun d ->
+          let num, den = inches d in
+          let n = o.value.h * 240 * num / (den * 100) in
           if o.sign = Some '-' then -n else n)
-        per
+        (List.find_opt (fun d -> d.name = o.value.unit) units)

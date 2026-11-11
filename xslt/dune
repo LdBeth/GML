@@ -1,0 +1,11 @@
+; gml-shared.xml: what the engine shares with the stylesheets and
+; gml.tex (lib/shared.ml), made by gmlshare and kept in the source tree
+; (promoted) so that the stylesheets find it next to them
+
+(rule
+ (target gml-shared.xml)
+ (mode promote)
+ (action
+  (with-stdout-to
+   %{target}
+   (run %{exe:../bin/gmlshare.exe} xml))))

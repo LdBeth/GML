@@ -74,7 +74,8 @@ type scope = {
     splits it, the scope going on inside the new element (or the parent) as a
     piece marked [cont="yes"]. *)
 
-let scope_name = "gml:lines"
+let lines_node = { Node.name = "lines"; kind = Node.Scope }
+let scope_name = Node.qname lines_node
 
 type kind = Plain | Scope of scope
 
@@ -131,7 +132,10 @@ type t = {
       (** the text variables of [.dv] ([define_variable]), by number *)
 }
 
-let root_name = "gml:doc"
+let root_node =
+  Node.declare ~from:"the document" { Node.name = "doc"; kind = Node.Root }
+
+let root_name = Node.qname root_node
 
 let elt ?(kind = Plain) ?(eol_close = false) ?(provisional = false) name attrs =
   { name; attrs; children = []; kind; eol_close; provisional }
@@ -542,7 +546,7 @@ let join_dvars t left s =
    two plane-16 marks ([Chars.sr_mark]), the start mark numbered for the
    name.  The span is text that travels with the line (a text line, the
    text of [.ce], a [.sx] field, a macro argument); [Interp] strips the
-   marks from the operands of the other control words, [Symbols.set] from
+   marks from the operands of the other control words, [Ctx.Sym.set] from
    a value it stores.  When the text enters the tree the span becomes the
    element [<gml:symref name="NAME">value</gml:symref>] ([add_text]): the
    value is the fallback (for HTML, for a page before any change, and for
@@ -622,6 +626,20 @@ let field_text t s =
              "\u{E001}" ^ name ^ "\u{E002}" ^ output_text t v ^ "\u{E003}")
        (split_symrefs t s))
 
+(* The nodes put out with the text: a text variable ([.dv], put out by
+   [Hints.define_variable]), a deferred reference and the page number of
+   a running heading or footing. *)
+let dv_node = Node.event "dv"
+
+let symref_node =
+  Node.declare ~from:"a global symbol in a running heading or footing"
+    (Node.element "symref")
+
+let pageno_node =
+  Node.declare ~brk:Node.No
+    ~from:"the page number symbol in a running heading or footing"
+    (Node.event "pageno")
+
 (* Text enters the tree translated ([.tr]).  A deferred reference is the
    element [gml:symref] around its value.  In a running heading or
    footing the page number symbol is split off first, as the hint
@@ -639,13 +657,14 @@ let rec add_text t s =
               use_symref t name;
               add t
                 (Tree.Element
-                   ( "gml:symref",
+                   ( Node.qname symref_node,
                      [ ("name", name) ],
                      List.filter_map
                        (function
                          | Either.Left "" -> None
                          | Either.Left s -> Some (Tree.Text (translate t s))
-                         | Either.Right a -> Some (Tree.Hint ("dv", a)))
+                         | Either.Right a ->
+                             Some (Tree.Hint (dv_node.Node.name, a)))
                        (split_dvars t v) )))
         l
 
@@ -656,7 +675,7 @@ and add_dv_text t s =
       List.iter
         (function
           | Either.Left s -> if s <> "" then add_plain_text t s
-          | Either.Right a -> add t (Tree.Hint ("dv", a)))
+          | Either.Right a -> add t (Tree.Hint (dv_node.Node.name, a)))
         l
 
 and add_plain_text t s =
@@ -664,7 +683,8 @@ and add_plain_text t s =
   | Some c when String.contains s c ->
       List.iteri
         (fun i piece ->
-          if i > 0 then add t (Tree.Hint ("pageno", [ ("break", "no") ]));
+          if i > 0 then
+            add t (Tree.Hint (pageno_node.Node.name, [ ("break", "no") ]));
           if piece <> "" then add t (Tree.Text (translate t piece)))
         (String.split_on_char c s)
   | _ -> add t (Tree.Text (translate t s))

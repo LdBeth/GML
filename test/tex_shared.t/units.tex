@@ -1,0 +1,16 @@
+% \gml@dimof with the units of gml-shared.tex (the engine's sizes), in
+% sp; TeX's own 1in and 0.1776in (a cicero) for comparison; \gml@rawdim
+% with the compound forms
+\input gml
+\catcode`\@=11
+\newwrite\out \immediate\openout\out=\jobname.out
+\def\d#1#2{\gml@dimof{#1}{#2}\gml@dima\immediate\write\out{#1#2 = \number\gml@dima sp}}
+\def\r#1{\gml@rawdim{#1}{ch}\gml@dima\immediate\write\out{#1 = \number\gml@dima sp}}
+\def\tex#1{\gml@dima=#1\immediate\write\out{TeX #1 = \number\gml@dima sp}}
+\d1i \d1{cm} \d1{mm} \d{72}{pt} \d{240}{dh} \d{240}{dv} \d{12}{dd} \d{-1.5}{dd}
+\tex{1in} \tex{0.1776in} \tex{1cm} \tex{42bp}
+\r{3p6} \r{2c4} \r{120dh}
+\gml@dimof2{m}\gml@dima \gml@dimof2{mh}\gml@dimb
+\immediate\write\out{2m = 2mh: \ifdim\gml@dima=\gml@dimb yes\else no\fi}
+\immediate\closeout\out
+\end

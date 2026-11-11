@@ -72,6 +72,23 @@ mk test                                  # both: mk test-ocaml, test-xslt
 bare stage (`xslt/test/run tex`).  Its header (`xslt/test/run.rc`)
 lists how each fixture input was generated.
 
+What the layers must agree on is stated once, in the engine, and
+generated for the others by `gmlshare` (`bin/gmlshare.ml`,
+`lib/shared.ml`; a build tool, not installed): `gmlshare xml` writes
+`xslt/gml-shared.xml` and `gmlshare tex` writes
+`share/tex/gml-shared.tex`.  Both files are kept in the source tree
+and `dune build` rewrites them (promoted), so the stylesheets and
+gml.tex need no OCaml when they run.  They hold every `gml:` node
+the engine writes (hint, element or line scope; a hint's break, and
+for a state hint the scope properties it sets), the scope properties
+with their tier and initial value, the control words, the space
+units with their sizes, and the names of the pass model's aux file
+(the prefixes, its first line, test vectors of the name encoding).
+`xslt/common.xsl` loads the XML for strip-hints.xsl, scope.xsl and
+html.xsl; gml.tex inputs the TeX file for its units and aux names,
+and `\gmlcheckshared` (run by `test/tex_shared.t`) reports an engine
+hint that gml.tex neither defines nor lists as not implemented.
+
 ## Usage
 
 ### `gml`: the engine

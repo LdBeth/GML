@@ -13,7 +13,8 @@
 (cram
  (applies_to tex_pass tex_msgs tex_fonts3800 tex_forafter)
  (deps
-  (glob_files %{project_root}/xslt/*.xsl))
+  (glob_files %{project_root}/xslt/*.xsl)
+  %{project_root}/xslt/gml-shared.xml)
  (enabled_if
   (and %{bin-available:tex} %{bin-available:transform})))
 
@@ -22,6 +23,22 @@
 (cram
  (applies_to tex_symref)
  (deps
-  (glob_files %{project_root}/xslt/*.xsl))
+  (glob_files %{project_root}/xslt/*.xsl)
+  %{project_root}/xslt/gml-shared.xml)
  (enabled_if
   (and %{bin-available:pdftex} %{bin-available:transform})))
+
+; gmlshare (bin/gmlshare.ml), a build tool with no public name: the
+; test runs it by its path in the build tree
+
+(cram
+ (applies_to shared)
+ (deps %{project_root}/bin/gmlshare.exe))
+
+; gml.tex against what it shares with the engine (gml-shared.tex):
+; Knuth's tex only, no stylesheets
+
+(cram
+ (applies_to tex_shared)
+ (deps %{project_root}/bin/gmlshare.exe)
+ (enabled_if %{bin-available:tex}))

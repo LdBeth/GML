@@ -209,9 +209,6 @@ let of_value v =
         kind
   | _ -> None
 
-(** The entries of the previous pass, taken out of the symbol table (the array
-    gml@toc of the symbol file, now undefined). *)
-let carried syms =
-  let es = List.filter_map of_value (Symbols.elements syms Symbols.toc_name) in
-  ignore (Symbols.unset syms Symbols.toc_name);
-  es
+(** The entries of the previous pass, from the elements of the array gml@toc of
+    the symbol file ([Aux.load_symbols] takes them out of the symbol table). *)
+let carried values = List.filter_map of_value values

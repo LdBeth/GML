@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gml:rh break="yes">Page <gml:pageno break="no"/>
+</gml:rh><gml:h level="1" break="yes"><gml:tcmark anchor="gml.tc.1" break="no"/>First chapter</gml:h>
+Some text with a variable<gml:dv name="sup" font="hi1" baseline="3pt" text="1" break="no"/> here.
+<gml:sa break="no"/><gml:in left="4" unit="ch" break="yes"/><gml:fo fill="no" align="left" overdraw="extend" break="yes"/>Indented and unformatted.
+<gml:re break="yes"/><gml:in left="0" unit="ch" restore="yes" break="no"/><gml:fo fill="yes" align="justify" overdraw="extend" restore="yes" break="no"/><gml:fv spec="top" break="no"/>Restored text.
+<gml:pi t1="Apples" break="no" anchor="gml-pi-1"/>An apple.
+<gml:tc action="begin" break="yes"/><gml:h level="1" break="yes">CONTENTS</gml:h>
+<gml:sk n="1" unit="line" break="yes"/><gml:tcentry level="1" text="First chapter" dot="yes" anchor="gml.tc.1" break="yes"/><gml:tc action="end" break="yes"/><gml:ix break="yes"/><gml:index-entries title="Index"><gml:index-group letter="A"><gml:index-entry level="1"><gml:index-term>Apples</gml:index-term><gml:pageref refid="gml-pi-1"/></gml:index-entry></gml:index-group></gml:index-entries>The end.
+</gml:doc>

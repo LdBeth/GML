@@ -7,42 +7,47 @@
   state in force over their content, for backends (HTML) whose model is
   inheritance down a tree rather than a global state.
 
-  State hints (from the table in lib/hints.ml; every one carries the new
-  absolute value, so the state at a point is just the last value seen):
+  The data comes from gml-shared.xml (made by gmlshare from the table
+  of lib/hints.ml and Hints.P; common.xsl reads it): the state hints are
+  its hints of class="state", the properties, their tier (block or
+  inline), order and initial values its <property> rows.  Every state
+  hint carries the new absolute value, so the state at a point is just
+  the last value seen.  How a hint's attributes make the property
+  values is this stylesheet's (the accumulator, step 1); at the start it
+  stops with a message if the state hints of gml-shared.xml are not
+  those it handles ($s:handled, and $s:conditional for the hints that are
+  state only with some attributes):
 
-    hint                         scope attribute   reset/initial value
-    gml:in  (not temporary)      in   = left+unit      0
+    hint                         scope attribute
+    gml:in  (not temporary)      in   = left+unit
                                  (offset="0": also of = 0, any .in
                                  clears all offsets, LR p.260; a
                                  temporary gml:in with offset="0"
                                  too; after= is ignored: the margin
                                  holds at once)
-    gml:ir  (not temporary)      ir   = right+unit     0
-    gml:of                       of   = offset+unit    0
-    gml:ll                       ll   = length+unit    default
+    gml:ir  (not temporary)      ir   = right+unit
+    gml:of                       of   = offset+unit
+    gml:ll                       ll   = length+unit
                                  ("default", or "default+1i" for a change
                                  relative to the device default)
-    gml:fo gml:nf gml:ju         fill (yes|no)          yes
-                                 align                  justify
-                                 overdraw               extend
-    gml:tp / gml:tb              tp / tb = tab stops   default
+    gml:fo gml:nf gml:ju         fill (yes|no), align, overdraw
+    gml:tp / gml:tb              tp / tb = tab stops
                                  (set replaces, add appends, del removes,
                                  no operand = default)
-    gml:ls gml:wz gml:bc         ls wz bc = spec       default
-    gml:bf gml:pf                font (pf: the font restored)  initial
-    gml:hy (with mode)           hy  = on|off           off
-    gml:ws gml:es gml:sb gml:ud  ws es sb ud = spec    default
+    gml:ls gml:wz gml:bc         ls wz bc = spec
+    gml:bf gml:pf                font (pf: the font restored)
+    gml:hy (with mode)           hy  = on|off
+    gml:ws gml:es gml:sb gml:ud  ws es sb ud = spec
 
   Dimensions are written n+unit ("5ch", "1.5i"); zero is "0"; a mixed sum
-  is kept as written ("4ch+1i").  The first eleven attributes are BLOCK
-  properties, the last six INLINE properties.
+  is kept as written ("4ch+1i").
 
-  Everything else is an event and stays where it is: br sp sk pa cp cc cb
-  bx hr vr kp sx tc dh df hw rc fl is ic dr cl cd sc mc, the page layout
-  words pn pl pw pm tm bm (page-level, not scoped), .in/.ir FOR a
-  distance (temporary="yes"), .il/.un, .hy with options only, and the elements
-  gml:lines (already a scope), gml:h, gml:fn, gml:rh, gml:rf, gml:raw.
-  State hints inside such elements count like any other.
+  Everything else is an event and stays where it is: the hints of
+  class="event" (the page layout words pn pl pw pm tm bm among them:
+  page-level, not scoped), .in/.ir FOR a distance (temporary="yes"),
+  .hy with options only, and the elements gml:lines (already a scope),
+  gml:h, gml:fn, gml:rh, gml:rf, gml:raw.  State hints inside such
+  elements count like any other.
 
   Output vocabulary
     <gml:scope kind="block|inline" in=".." fill=".." ...>
@@ -67,7 +72,8 @@
 
   Algorithm
     1. An accumulator `state` (a map property -> value, initially the
-       values above) is updated by every state hint, in document order.
+       initial values, $gml:initial-state) is updated by every state
+       hint, in document order.
        accumulator-before(n) is the state in force when node n starts;
        for a state hint, accumulator-after(n) is the state it sets.
     2. Each element is copied and its children are processed with the
@@ -108,16 +114,15 @@
 
   <xsl:output method="xml" encoding="UTF-8" indent="no"/>
 
-  <xsl:variable name="s:block" select="('in', 'ir', 'of', 'll', 'fill', 'align', 'overdraw',
-                                        'tp', 'tb', 'ls', 'wz', 'bc')"/>
-  <xsl:variable name="s:inline" select="('font', 'hy', 'ws', 'es', 'sb', 'ud')"/>
+  <xsl:include href="common.xsl"/>
 
-  <xsl:variable name="s:initial" as="map(xs:string, xs:string)" select="map {
-      'in': '0', 'ir': '0', 'of': '0', 'll': 'default',
-      'fill': 'yes', 'align': 'justify', 'overdraw': 'extend',
-      'tp': 'default', 'tb': 'default', 'ls': 'default', 'wz': 'default', 'bc': 'default',
-      'font': 'initial', 'hy': 'off',
-      'ws': 'default', 'es': 'default', 'sb': 'default', 'ud': 'default' }"/>
+  <!-- the state hints the accumulator below handles: checked against
+       gml-shared.xml at the start (template "/"), so that a state hint
+       the engine adds cannot pass as an event unnoticed -->
+  <xsl:variable name="s:handled" as="xs:string*" select="('in', 'ir', 'of', 'll', 'fo', 'nf',
+      'ju', 'tp', 'tb', 'ls', 'wz', 'bc', 'ws', 'es', 'sb', 'ud', 'bf', 'pf', 'hy')"/>
+  <!-- and those that are state only with an attribute (s:is-state) -->
+  <xsl:variable name="s:conditional" as="xs:string*" select="('in', 'ir', 'hy')"/>
 
   <xsl:function name="s:dim" as="xs:string">
     <xsl:param name="n" as="xs:string"/>
@@ -143,18 +148,19 @@
     <xsl:sequence select="if (empty($new)) then 'default' else string-join($new, ' ')"/>
   </xsl:function>
 
-  <!-- is this a state hint? -->
+  <!-- is this a state hint?  (a state hint of gml-shared.xml; .in/.ir
+       FOR a distance and .hy with options only are events) -->
   <xsl:function name="s:is-state" as="xs:boolean">
     <xsl:param name="n" as="node()"/>
     <xsl:sequence select="$n instance of element() and namespace-uri($n) = 'urn:x-gml:canonical'
+        and local-name($n) = $gml:state-hint-names
         and (if (local-name($n) = ('in', 'ir')) then not($n/@temporary = 'yes')
              else if (local-name($n) = 'hy') then exists($n/@mode)
-             else local-name($n) = ('of', 'll', 'fo', 'nf', 'ju', 'tp', 'tb', 'ls', 'wz', 'bc',
-                                    'bf', 'pf', 'ws', 'es', 'sb', 'ud'))"/>
+             else true())"/>
   </xsl:function>
 
   <!-- ==== step 1: the state accumulator ================================ -->
-  <xsl:accumulator name="state" as="map(xs:string, xs:string)" initial-value="$s:initial">
+  <xsl:accumulator name="state" as="map(xs:string, xs:string)" initial-value="$gml:initial-state">
     <xsl:accumulator-rule match="gml:in[not(@temporary = 'yes')]"
         select="map:put(if (@offset) then map:put($value, 'of', '0') else $value,
                         'in', s:dim(@left, @unit))"/>
@@ -219,8 +225,16 @@
 
   <!-- ==== step 2/3 ======================================================== -->
   <xsl:template match="/">
+    <xsl:variable name="differ" select="distinct-values((
+        $gml:state-hint-names[not(. = $s:handled)], $s:handled[not(. = $gml:state-hint-names)],
+        $gml:conditional-hint-names[not(. = $s:conditional)],
+        $s:conditional[not(. = $gml:conditional-hint-names)]))"/>
+    <xsl:if test="exists($differ)">
+      <xsl:message terminate="yes" select="'scope.xsl: state hints of gml-shared.xml and of the accumulator differ: '
+                                           || string-join($differ, ' ')"/>
+    </xsl:if>
     <xsl:apply-templates>
-      <xsl:with-param name="ctx" select="$s:initial" tunnel="yes"/>
+      <xsl:with-param name="ctx" select="$gml:initial-state" tunnel="yes"/>
     </xsl:apply-templates>
   </xsl:template>
 
@@ -254,12 +268,12 @@
     <xsl:param name="nodes" as="node()*"/>
     <xsl:param name="ctx" as="map(xs:string, xs:string)"/>
     <xsl:variable name="items" select="$nodes[not(s:is-state(.)) or s:keeps-br(.)]"/>
-    <xsl:for-each-group select="$items" group-adjacent="s:diff(s:state-at(.), $ctx, $s:block)">
+    <xsl:for-each-group select="$items" group-adjacent="s:diff(s:state-at(.), $ctx, $gml:block-properties)">
       <xsl:variable name="st" select="s:state-at(.)"/>
-      <xsl:variable name="bctx" select="map:merge(($ctx, map:merge(for $k in $s:block return map {$k: $st($k)})),
+      <xsl:variable name="bctx" select="map:merge(($ctx, map:merge(for $k in $gml:block-properties return map {$k: $st($k)})),
                                                   map {'duplicates': 'use-last'})"/>
       <xsl:variable name="inner" as="node()*">
-        <xsl:for-each-group select="current-group()" group-adjacent="s:diff(s:state-at(.), $bctx, $s:inline)">
+        <xsl:for-each-group select="current-group()" group-adjacent="s:diff(s:state-at(.), $bctx, $gml:inline-properties)">
           <xsl:variable name="st" select="s:state-at(.)"/>
           <xsl:variable name="content" as="node()*">
             <xsl:for-each select="current-group()">
@@ -282,7 +296,7 @@
                 <xsl:with-param name="kind" select="'inline'"/>
                 <xsl:with-param name="st" select="$st"/>
                 <xsl:with-param name="ctx" select="$bctx"/>
-                <xsl:with-param name="props" select="$s:inline"/>
+                <xsl:with-param name="props" select="$gml:inline-properties"/>
                 <xsl:with-param name="content" select="$content"/>
               </xsl:call-template>
             </xsl:otherwise>
@@ -296,7 +310,7 @@
             <xsl:with-param name="kind" select="'block'"/>
             <xsl:with-param name="st" select="$st"/>
             <xsl:with-param name="ctx" select="$ctx"/>
-            <xsl:with-param name="props" select="$s:block"/>
+            <xsl:with-param name="props" select="$gml:block-properties"/>
             <xsl:with-param name="content" select="$inner"/>
           </xsl:call-template>
         </xsl:otherwise>

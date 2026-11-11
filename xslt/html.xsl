@@ -36,7 +36,7 @@
     lit-note      the label of :note (DSMNOTE: "Note:" in highlight 2).
     lit-footnotes heading of the footnote list ("" = none, the default).
     ul-identifiers  the bullets of :ul by nesting depth (cycling; blanks
-                  or commas separate them); l-identifier: the :l label.
+                  or commas separate them).
     table-width   the nominal width of a table whose rows use different
                   cwidths and that has no width= (a DCF width, "6.5i").
 
@@ -49,7 +49,7 @@
     p -> p; pc -> p.gml-pc; note -> p.gml-note; lq -> blockquote; q -> q
     (the quotation marks come from CSS quotes, nested level aware); cit
     -> cite; hp0 -> span, hp1 -> em, hp2 -> strong, hp3 -> strong>em;
-    ol ul sl l -> ol/ul with explicit labels (span.gml-label; gml:num for
+    ol ul sl -> ol/ul with explicit labels (span.gml-label; gml:num for
     ol, ul-identifiers for ul); lp -> li.gml-lp; dl gl -> dl, dthd dt gt
     -> dt, ddhd dd gd -> dd; xmp -> pre; fig -> figure (frame, place and
     width as classes), the figure body in div.gml-figbody (format off, as
@@ -102,11 +102,14 @@
     boundaries) do not add up: the largest one is kept (gml.tex).  A
     gml:h (.hn) of a level defined NBR (gml:dh, accumulator h:dh) is a
     run-in heading (span.gml-runin, the text follows on the same line).
-    The device-level events (bx vr kp tc dh df hw rc fl is ic dr cl cd sc
-    mc pn pl pw pm tm bm, hy options) have no HTML meaning and are
-    dropped, as are sa re (the saved environment) and ix (the place of
-    the index: resolve.xsl put the gml:index-entries after it).  gml:pi
-    (a SCRIPT index entry) is a link target, like the index tags.
+    Every other hint of the engine (gml-shared.xml, made by gmlshare from
+    lib/hints.ml: h:gml-dropped) has no HTML meaning and is dropped: the
+    device-level events, the page layout, the saved environment (sa re),
+    ix (the place of the index: resolve.xsl put the gml:index-entries
+    after it), the entries and marks of a SCRIPT .tc contents (tcentry
+    tcmark: HTML has no pages; its table of contents is :toc's), and
+    any hint the engine adds until this stylesheet handles it.  gml:pi (a
+    SCRIPT index entry) is a link target, like the index tags.
     gml:in/gml:ir temporary="yes" (.in/.ir h FOR v1 [AFTER v2]): an
                  empty float, span.gml-in/.gml-ir aria-hidden="true" with
                  inline CSS only, before the next text (anywhere after
@@ -171,13 +174,16 @@
     hy        hyphens: auto | manual
     wz bc ws es sb ud: data-gml-NAME only.
 
-  DCF units (lib/units.ml) -> CSS
-    ch -> ch (figure space ~ the width of "0"); line -> lh (the line
-    height of the element); i -> in; cm -> cm; mm -> mm; pt (points and
-    picas) -> pt; dd (Didot points, ciceros) -> pt x 1.0657 (1 dd =
-    0.376 mm); mh, mv, m -> em; dh, dv (device units) -> px; a mixed sum
-    "4ch+1i" -> calc(4ch + 1in); an operand without a unit is ch
-    (horizontal) or lh (vertical).
+  DCF units (lib/units.ml, by gml-shared.xml) -> CSS
+    The relative units map to their CSS kin: ch -> ch (figure space ~
+    the width of "0"); line -> lh (the line height of the element); mh,
+    mv, m -> em.  The absolute units CSS has keep their size: i -> in;
+    cm -> cm; mm -> mm; pt (points and picas) -> pt.  Every other unit
+    with a size in gml-shared.xml is written in points, from its inch
+    fraction there: dd (Didot points, ciceros; 37/2500 inch) x 1.0656,
+    dh, dv (device units, 1/240 inch: 240dh is 72pt) x 0.3; rounded to
+    two decimals.  A mixed sum "4ch+1i" -> calc(4ch + 1in); an operand
+    without a unit is ch (horizontal) or lh (vertical).
 
   Tests: xslt/test/html/NAME.in.xml were made from xslt/test/gml/html-NAME.gml
   (and starter.gml) with
@@ -192,6 +198,7 @@
     xmlns:map="http://www.w3.org/2005/xpath-functions/map"
     xmlns:gml="urn:x-gml:canonical"
     xmlns:h="urn:x-gml:html"
+    xmlns:sh="urn:x-gml:shared"
     exclude-result-prefixes="#all">
 
   <xsl:include href="common.xsl"/>
@@ -213,7 +220,6 @@
   <xsl:param name="lit-note" as="xs:string" select="'Note:'"/>
   <xsl:param name="lit-footnotes" as="xs:string" select="''"/>
   <xsl:param name="ul-identifiers" as="xs:string" select="'• – ◦'"/>
-  <xsl:param name="l-identifier" as="xs:string" select="'*'"/>
   <xsl:param name="table-width" as="xs:string" select="'6.5i'"/>
 
   <xsl:variable name="nbsp" select="'&#xA0;'"/>
@@ -228,25 +234,28 @@
       'titlep', 'title', 'docnum', 'date', 'author', 'address', 'aline', 'abstract', 'preface',
       'toc', 'figlist', 'index', 'h0', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
       'p', 'pc', 'note', 'lq', 'q', 'cit', 'hp0', 'hp1', 'hp2', 'hp3',
-      'ol', 'ul', 'sl', 'l', 'dl', 'gl', 'li', 'lp', 'dt', 'dd', 'dthd', 'ddhd', 'gt', 'gd',
+      'ol', 'ul', 'sl', 'dl', 'gl', 'li', 'lp', 'dt', 'dd', 'dthd', 'ddhd', 'gt', 'gd',
       'xmp', 'fig', 'figcap', 'figdesc', 'fn', 'fnref', 'hdref', 'figref', 'liref',
       'i1', 'i2', 'i3', 'ih1', 'ih2', 'ih3', 'iref', 'psc',
       'rdef', 'table', 'thd', 'tft', 'row', 'c', 'tnote', 'tcap', 'tdesc', 'tref', 'tlist')"/>
-  <!-- gml: elements written as something -->
-  <xsl:variable name="h:gml-used" select="('doc', 'scope', 'lines', 'br', 'sp', 'sk', 'pa',
-      'cp', 'cc', 'cb', 'hr', 'sx', 'h', 'fn', 'rh', 'rf', 'raw', 'num', 'pageref',
+  <!-- gml: nodes of the engine (gml-shared.xml) written as something;
+       gml:rh and gml:rf, elements and hints, have a template that drops
+       them -->
+  <xsl:variable name="h:gml-used" select="('doc', 'lines', 'br', 'sp', 'sk', 'pa',
+      'cp', 'cc', 'cb', 'hr', 'sx', 'h', 'fn', 'rh', 'rf', 'raw', 'dv', 'pi', 'symref')"/>
+  <!-- the gml: vocabulary of resolve.xsl and scope.xsl -->
+  <xsl:variable name="h:gml-stages" select="('scope', 'num', 'pageref',
       'toc-entries', 'toc-entry', 'entry-text', 'figlist-entries', 'figlist-entry',
-      'tlist-entries', 'tlist-entry', 'cpart', 'cell', 'dv', 'pi', 'symref',
+      'tlist-entries', 'tlist-entry', 'cpart', 'cell',
       'index-entries', 'index-group', 'index-entry', 'index-term', 'see')"/>
-  <!-- gml: hints with no HTML meaning: dropped (the state hints too, in
-       case the input was not scoped).  A temporary in/ir and il/un have
-       templates of their own (a marker the output pass moves to the next
-       text), but count as invisible where they stand, as these do. -->
-  <xsl:variable name="h:gml-dropped" select="('bx', 'vr', 'kp', 'tc', 'dh', 'df', 'hw', 'rc',
-      'fl', 'is', 'ic', 'dr', 'cl', 'cd', 'sc', 'mc', 'pn', 'pl', 'pw', 'pm', 'tm', 'bm',
-      'in', 'ir', 'il', 'un', 'hy', 'of', 'll', 'fo', 'nf', 'ju', 'tp', 'tb', 'ls', 'wz', 'bc',
-      'bf', 'pf', 'ws', 'es', 'sb', 'ud', 'query', 'tcmark', 'sa', 're', 'ix', 'symval')"/>
-  <xsl:variable name="h:lists" select="('ol', 'ul', 'sl', 'l', 'dl', 'gl')"/>
+  <!-- gml: hints with no HTML meaning, dropped: every other hint of
+       gml-shared.xml (the state hints too, in case the input was not
+       scoped).  A temporary in/ir and il/un have templates of their own
+       (a marker the output pass moves to the next text), but count as
+       invisible where they stand, as these do. -->
+  <xsl:variable name="h:gml-dropped" as="xs:string*"
+      select="$gml:hint-names[not(. = $h:gml-used)]"/>
+  <xsl:variable name="h:lists" select="('ol', 'ul', 'sl', 'dl', 'gl')"/>
   <xsl:variable name="h:index-tags" select="('i1', 'i2', 'i3', 'ih1', 'ih2', 'ih3', 'iref')"/>
   <!-- elements written inline (phrasing) -->
   <xsl:variable name="h:inline-tags" select="('q', 'cit', 'hp0', 'hp1', 'hp2', 'hp3', 'fn',
@@ -255,7 +264,7 @@
   <xsl:function name="h:unknown" as="xs:boolean">
     <xsl:param name="e" as="element()"/>
     <xsl:sequence select="if (namespace-uri($e) = 'urn:x-gml:canonical')
-        then not(local-name($e) = ($h:gml-used, $h:gml-dropped))
+        then not(local-name($e) = ($h:gml-used, $h:gml-stages, $h:gml-dropped))
         else namespace-uri($e) != '' or not(local-name($e) = ($h:known, $h:extra-known))"/>
   </xsl:function>
 
@@ -293,22 +302,29 @@
   </xsl:function>
 
   <!-- ==== units ======================================================= -->
+  <!-- The DCF units that CSS has, under its name: the relative ones
+       mapped to their CSS kin, the absolute ones of the same size -->
+  <xsl:variable name="h:css-units" as="map(xs:string, xs:string)" select="map {
+      'ch': 'ch', 'line': 'lh', 'mh': 'em', 'mv': 'em', 'm': 'em',
+      'i': 'in', 'cm': 'cm', 'mm': 'mm', 'pt': 'pt'}"/>
+  <!-- points per unit of every unit with a size, from gml-shared.xml
+       (lib/units.ml): the others (dd 1.0656, the device units dh dv 0.3)
+       are written in points -->
+  <xsl:variable name="h:unit-pt" as="map(xs:string, xs:decimal)"
+      select="map:merge(for $u in $gml:unit-names return gml:unit-size($u, 'pt') ! map {$u: .})"/>
+
   <!-- one DCF term (n, unit) -> a CSS length -->
   <xsl:function name="h:term" as="xs:string">
     <xsl:param name="n" as="xs:string"/>
     <xsl:param name="unit" as="xs:string"/>
-    <xsl:variable name="v" select="number($n)"/>
     <xsl:choose>
-      <xsl:when test="$v = 0">0px</xsl:when>
-      <xsl:when test="$unit = 'ch'"><xsl:sequence select="$n || 'ch'"/></xsl:when>
-      <xsl:when test="$unit = 'line'"><xsl:sequence select="$n || 'lh'"/></xsl:when>
-      <xsl:when test="$unit = 'i'"><xsl:sequence select="$n || 'in'"/></xsl:when>
-      <xsl:when test="$unit = ('cm', 'mm', 'pt')"><xsl:sequence select="$n || $unit"/></xsl:when>
-      <xsl:when test="$unit = 'dd'">
-        <xsl:sequence select="string(round($v * 1.0657, 2)) || 'pt'"/>
+      <xsl:when test="number($n) = 0">0px</xsl:when>
+      <xsl:when test="map:contains($h:css-units, $unit)">
+        <xsl:sequence select="$n || $h:css-units($unit)"/>
       </xsl:when>
-      <xsl:when test="$unit = ('mh', 'mv', 'm')"><xsl:sequence select="$n || 'em'"/></xsl:when>
-      <xsl:when test="$unit = ('dh', 'dv')"><xsl:sequence select="$n || 'px'"/></xsl:when>
+      <xsl:when test="map:contains($h:unit-pt, $unit)">
+        <xsl:sequence select="string(round(xs:decimal($n) * $h:unit-pt($unit), 2)) || 'pt'"/>
+      </xsl:when>
       <xsl:otherwise><xsl:sequence select="$n || $unit"/></xsl:otherwise>
     </xsl:choose>
   </xsl:function>
@@ -1061,7 +1077,7 @@
   </xsl:template>
 
   <!-- ==== lists ========================================================== -->
-  <xsl:template match="ol | ul | sl | l">
+  <xsl:template match="ol | ul | sl">
     <xsl:element name="{if (self::ol) then 'ol' else 'ul'}">
       <xsl:attribute name="class" select="string-join(('gml-' || local-name(),
           if (@compact) then 'gml-compact' else (),
@@ -1118,7 +1134,6 @@
                                          else count($list/ancestor-or-self::ul)"/>
           <xsl:value-of select="$ul-ids[($d - 1) mod count($ul-ids) + 1]"/>
         </xsl:when>
-        <xsl:when test="$list/self::l"><xsl:value-of select="$l-identifier"/></xsl:when>
       </xsl:choose>
     </xsl:variable>
     <li>
@@ -1212,9 +1227,12 @@
 
   <!-- ==== tables ========================================================== -->
   <!-- DCF space units of a width (cwidths, width=, mindepth) -> CSS and
-       nominal points (an inch is 72pt, a pica 12pt, a cicero 12 Didot
-       points of 0.376mm, an em 10pt, a figure space (no unit) 7.2pt, a
-       device unit 1/240 inch).  () if it is not a length. -->
+       nominal points: the absolute and device units by their sizes in
+       gml-shared.xml ($h:unit-pt; [n]p[p] picas and points, [n]c[p]
+       ciceros and Didot points, 12 points to the pica or cicero), the
+       relative ones by this stylesheet's guess (a figure space, no
+       unit, 7.2pt, a line 12pt, an em 10pt).  () if it is not a
+       length. -->
   <xsl:function name="h:dcf-len" as="xs:anyAtomicType*">
     <xsl:param name="w" as="xs:string?"/>
     <xsl:param name="default-unit" as="xs:string"/>
@@ -1227,11 +1245,11 @@
       </xsl:when>
       <xsl:when test="matches($v, '^' || $num || 'i$')">
         <xsl:variable name="n" select="replace($v, 'i$', '')"/>
-        <xsl:sequence select="$n || 'in', number($n) * 72"/>
+        <xsl:sequence select="$n || $h:css-units('i'), number($n) * $h:unit-pt('i')"/>
       </xsl:when>
       <xsl:when test="matches($v, '^' || $num || '(cm|mm)$')">
         <xsl:variable name="n" select="replace($v, '(cm|mm)$', '')"/>
-        <xsl:sequence select="$v, number($n) * 72 div (if (ends-with($v, 'cm')) then 2.54 else 25.4)"/>
+        <xsl:sequence select="$v, number($n) * $h:unit-pt(replace($v, '^[0-9.]+', ''))"/>
       </xsl:when>
       <xsl:when test="matches($v, '^[0-9]*[pc]([0-9]+(\.[0-9])?)?$') and $v ne 'p' and $v ne 'c'">
         <xsl:variable name="u" select="if (contains($v, 'p')) then 'p' else 'c'"/>
@@ -1239,8 +1257,8 @@
         <xsl:variable name="b" select="substring-after($v, $u)"/>
         <xsl:variable name="pt" select="(if ($a = '') then 0 else number($a)) * 12
                                         + (if ($b = '') then 0 else number($b))"/>
-        <xsl:variable name="pt" select="if ($u = 'c') then round($pt * 1.0657, 2) else $pt"/>
-        <xsl:sequence select="string($pt) || 'pt', $pt"/>
+        <xsl:variable name="pt" select="round(xs:decimal($pt) * $h:unit-pt($gml:shared/sh:units/sh:unit[@compound = $u]/@name), 2)"/>
+        <xsl:sequence select="string($pt) || 'pt', number($pt)"/>
       </xsl:when>
       <xsl:when test="matches($v, '^' || $num || 'm[hv]?$')">
         <xsl:variable name="n" select="replace($v, 'm[hv]?$', '')"/>
@@ -1248,7 +1266,7 @@
       </xsl:when>
       <xsl:when test="matches($v, '^[0-9]+d[hv]$')">
         <xsl:variable name="n" select="replace($v, 'd[hv]$', '')"/>
-        <xsl:sequence select="$n || 'px', number($n) * 0.3"/>
+        <xsl:sequence select="h:term($n, 'dh'), number($n) * $h:unit-pt('dh')"/>
       </xsl:when>
     </xsl:choose>
   </xsl:function>

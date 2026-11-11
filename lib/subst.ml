@@ -153,23 +153,22 @@ let parse_ref s k =
     else None
 
 let lookup st name sub =
-  let syms = st.ctx.Ctx.syms in
   (* an unresolved symbol may come from the library ([.ly on|sym]) *)
-  if st.ctx.Ctx.ly_sym && not (Symbols.defined syms name) then
+  if st.ctx.Ctx.ly_sym && not (Ctx.Sym.defined st.ctx name) then
     ignore (Library.resolve_symbol st.ctx name);
   let v =
     match sub with
-    | Plain -> Symbols.get syms name
-    | Elem x -> Symbols.get ~sub:x syms name
+    | Plain -> Ctx.Sym.get st.ctx name
+    | Elem x -> Ctx.Sym.get ~sub:x st.ctx name
     | All ->
-        if Symbols.defined syms name then
+        if Ctx.Sym.defined st.ctx name then
           Some
             (String.concat st.ctx.Ctx.chars.Chars.asep
-               (Symbols.elements syms name))
+               (Ctx.Sym.elements st.ctx name))
         else None
   in
   match v with
-  | None when Symbols.is_local name && syms.Symbols.in_macro () -> Some ""
+  | None when Symbols.is_local name && Ctx.Sym.in_macro st.ctx -> Some ""
   | v -> v
 
 let attr1 = "ELTVWUARXeltvwuarx"
@@ -223,7 +222,7 @@ let eval_attr st s prot a o =
         if o < n && s.[o] = st.amp then
           match parse_ref s o with
           | Some (b, nm, sub, written) ->
-              let defined = Symbols.defined st.ctx.Ctx.syms nm in
+              let defined = Ctx.Sym.defined st.ctx nm in
               (Ref (defined, lookup st nm sub, written), b)
           | None -> literal ()
         else literal ()

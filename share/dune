@@ -16,5 +16,20 @@
  (package gml)
  (files
   (tex/gml.tex as tex/gml.tex)
+  (tex/gml-shared.tex as tex/gml-shared.tex)
   (tex/gmlfont-cm.tex as tex/gmlfont-cm.tex)
   (tex/gmlfont-ncs.tex as tex/gmlfont-ncs.tex)))
+
+; gml-shared.tex: what gml.tex shares with the engine (the space units,
+; the aux file's names, the hints; lib/shared.ml), made by gmlshare and
+; kept in the source tree (promoted) so that TeX finds it next to gml.tex
+
+(subdir
+ tex
+ (rule
+  (target gml-shared.tex)
+  (mode promote)
+  (action
+   (with-stdout-to
+    %{target}
+    (run %{exe:../../bin/gmlshare.exe} tex)))))

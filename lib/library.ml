@@ -93,7 +93,7 @@ let load_symbol ctx name =
   match member ctx name with
   | None -> false
   | Some lines -> (
-      match Symbols.set ctx.Ctx.syms name (symbol_value lines) with
+      match Ctx.Sym.set ctx name (symbol_value lines) with
       | Ok () -> true
       | Error e ->
           Ctx.error ctx "%s" e;
@@ -104,5 +104,5 @@ let load_symbol ctx name =
 let resolve_symbol ctx name =
   ctx.Ctx.ly_sym
   && (not (Symbols.is_local name))
-  && (not (Symbols.is_system ctx.Ctx.syms name))
+  && (not (Ctx.Sym.is_system ctx name))
   && load_symbol ctx name

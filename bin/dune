@@ -1,4 +1,12 @@
 (executable
  (name main)
  (public_name gml)
+ (modules main)
  (libraries gml unix))
+
+; a build tool, not installed: xslt/dune runs it
+
+(executable
+ (name gmlshare)
+ (modules gmlshare)
+ (libraries gml))

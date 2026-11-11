@@ -158,6 +158,11 @@ type t = {
       (** the residual text of the last tag ([.gs scan/copy/insert]) *)
   mutable process : t -> mode -> string -> unit;
       (** the line processor ([Interp.process]) *)
+  mutable symval : t -> string -> unit;
+      (** puts out the hint [gml:symval] for the global symbol named, which
+          changed and is referred to in a running heading or footing ([Sym]'s
+          [changed]); installed by [Interp.create], like [process]: the value is
+          substituted ([Subst], which is above this module) *)
   fmt : fmt;  (** formatting state ([Hints]) *)
   mutable saved : saved list;
       (** environments saved by [.sa] (and by [.fn on]), innermost first *)
@@ -383,12 +388,16 @@ let query_id ctx =
   Hashtbl.replace ctx.query_lines key n;
   Printf.sprintf "q%s.%d" key n
 
+let query_node =
+  Node.declare ~brk:Node.No ~from:"&$PN or &$LC under gml -aux"
+    (Node.event "query")
+
 let query ctx name v =
   match (name, ctx.page_query) with
   | ("$PN" | "$LC"), Some answer
     when (not ctx.doc.Doc.mute) && not (List.mem_assoc name ctx.sys_sets) ->
       let id = query_id ctx in
-      Doc.hint ctx.doc "query"
+      Doc.hint ctx.doc query_node.Node.name
         [
           ("id", id);
           ("what", if name = "$PN" then "pn" else "lc");
@@ -403,6 +412,32 @@ let system_symbol ctx name sub =
   match List.assoc_opt name ctx.sys_sets with
   | Some v when sub = 0 && name <> "$CHAR" -> Some v
   | _ -> system_value ctx name sub
+
+(** The operations on the symbol table ([Symbols.Make]) for this context:
+    [Sym.get ctx name], [Sym.set ctx name v] ... What they need of the
+    interpreter is given here, once: nothing is installed later.
+
+    - the local scope is that of the macro on top of the input stack;
+    - a system symbol is computed ([system_symbol]), [&$PN] and [&$LC] being
+      questions under the pass model ([query]);
+    - no stored value holds a deferred reference of a running heading
+      ([Doc.symref]);
+    - a change of a symbol referred to in a running heading or footing
+      ([Doc.tracked]) is the hint gml:symval ([symval]). *)
+module Sym = Symbols.Make (struct
+  type env = t
+
+  let table ctx = ctx.syms
+
+  let local ctx =
+    Option.value (Input.current_scope ctx.input) ~default:ctx.syms.Symbols.base
+
+  let in_macro ctx = Input.in_macro ctx.input
+  let system = system_symbol
+  let query = query
+  let clean ctx = Doc.strip_symrefs ctx.doc
+  let changed ctx name = if Doc.tracked ctx.doc name then ctx.symval ctx name
+end)
 
 let create ?(include_path = []) () =
   let ctx =
@@ -451,6 +486,7 @@ let create ?(include_path = []) () =
       gml_attrs = [];
       residual = None;
       process = (fun _ _ _ -> ());
+      symval = (fun _ _ -> invalid_arg "Ctx.symval: not installed");
       fmt = initial_fmt ();
       saved = [];
       hctr = Headctr.create ();
@@ -476,21 +512,9 @@ let create ?(include_path = []) () =
     }
   in
   ctx.doc.Doc.page_symbol <- (fun () -> Some ctx.chars.Chars.ps);
-  ctx.syms.Symbols.system <- system_symbol ctx;
-  ctx.syms.Symbols.query <- query ctx;
-  (* deferred references of running headings (Doc.symref): no stored
-     value holds one (a change of a symbol referred to is the hint
-     gml:symval: Interp.create installs Symbols.changed) *)
-  ctx.syms.Symbols.clean <- Doc.strip_symrefs ctx.doc;
   ctx.doc.Doc.report <-
     (fun m -> Loc.report ctx.diag Loc.Warning ctx.loc "%s" m);
   ctx.doc.Doc.here <- (fun () -> Loc.to_string ctx.loc);
-  ctx.syms.Symbols.local <-
-    (fun () ->
-      Option.value
-        (Input.current_scope ctx.input)
-        ~default:ctx.syms.Symbols.base);
-  ctx.syms.Symbols.in_macro <- (fun () -> Input.in_macro ctx.input);
   ctx
 
 let register ctx name run =

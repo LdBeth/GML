@@ -202,7 +202,7 @@
 .dm dsmnote /.*/
 .*
 .* ---- lists (DSMLISTM, DSMELIST) -------------------------------------------------------
-.* The list type (d g o s u z) and tag of each open list are kept in
+.* The list type (d g o s u) and tag of each open list are kept in
 .* @ltype() and @ltag(); the item tags of the innermost list are mapped.
 .dm dsmlistm on
 .se @nest@l = &@nest@l + 1
@@ -230,7 +230,6 @@
 ...xo
 ...xu
 ...xs
-...xz
 .aa li dsmlitem
 .aa lp dsmlpart (noatt)
 .dm off
@@ -498,7 +497,6 @@
 .aa h5 dsmhead5
 .aa h6 dsmhead6
 .aa index dsmindex (noatt)
-.aa l dsmlistm (vat) dsmelist
 .aa li ss@cntx (noelem)
 .aa liref dsmliref
 .aa lp ss@cntx (noatt noelem)

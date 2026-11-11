@@ -134,7 +134,7 @@
       ('gdoc', 'frontm', 'titlep', 'title', 'docnum', 'date', 'author', 'address',
        'aline', 'abstract', 'preface', 'toc', 'figlist', 'body', 'appendix', 'backm',
        'index', 'h0', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'pc', 'note',
-       'ol', 'ul', 'sl', 'l', 'dl', 'gl', 'li', 'lp', 'dthd', 'ddhd', 'dt', 'dd',
+       'ol', 'ul', 'sl', 'dl', 'gl', 'li', 'lp', 'dthd', 'ddhd', 'dt', 'dd',
        'gt', 'gd', 'lq', 'xmp', 'fig', 'figcap', 'figdesc', 'gml:h', 'gml:rh', 'gml:rf',
        'rdef', 'table', 'thd', 'tft', 'row', 'c', 'tnote', 'tcap', 'tdesc', 'tlist')"/>
   <xsl:variable name="index-tags" as="xs:string*"

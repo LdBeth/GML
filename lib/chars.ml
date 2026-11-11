@@ -120,7 +120,7 @@ let dv_plain s =
    private use plane 16: U+100000 + the reference's number ([Doc.symref])
    before, U+100000 after.  In UTF-8 they are F4 80..8F xx xx, the end
    mark F4 80 80 80.  A global symbol's value never holds them
-   ([Symbols.set] strips them), so the spans do not nest; the value may
+   ([Ctx.Sym.set] strips them), so the spans do not nest; the value may
    hold a text variable (plane 15).  Like a text variable's string, the
    span is not read by the separator rule ([Line.index_sep]). *)
 let sr_base = 0x100000

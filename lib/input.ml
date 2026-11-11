@@ -5,7 +5,7 @@
    just asks for the next line.  The top of the stack is the head of
    [frames].
 
-   A Macro frame owns the local symbols of its call ([Symbols.local]
+   A Macro frame owns the local symbols of its call ([Ctx.Sym.local]
    resolves through [current_scope]); outside macros there is one more
    set of locals, [Symbols.base] (SH35-0069 p.276).  Each File and Macro
    frame also holds the result of its most recent comparison, for

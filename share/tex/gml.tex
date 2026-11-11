@@ -67,6 +67,10 @@
 % and the hints do all the layout.
 % DCF definitions: .df (fonts), .dr (named rules, used by .bx and .hr)
 % and .dh (head levels) are implemented; see their hints below.
+% The hints the engine writes are listed in gml-shared.tex; those
+% gml.tex leaves out on purpose are \gml@hintsnotimpl and
+% \gml@hintselsewhere, and \gmlcheckshared reports any other one that
+% has no \gml@hint@NAME (test/tex_shared.t runs it).
 %
 % Formatting state.  DCF control words are state (set until changed),
 % and so are \leftskip & co. in TeX.  Hints set GLOBAL hint state
@@ -77,15 +81,23 @@
 % global clock stamps each setting), so a .bf inside a paragraph lives
 % on after the paragraph and a :hp1 inside a .bf region is still italic.
 %
-% DCF units (\gml@dimof{n}{unit}\register): ch = width of "0" in the
-% body font (\tenrm; cmr10: 5pt); line = \baselineskip; i cm mm; pt = DCF
-% (pica) points = 1/72in = TeX bp; dd = Didot points; mh/mv = em of the
-% current font (\fontdimen6; DCF's em-height is the font size, so mv is
-% also the em, not the ex-height); dh/dv = device units of 1/240in (3820
-% pels).  A mixed sum ("4ch+1i", unit=mixed) is parsed term by term.
+% DCF units (\gml@dimof{n}{unit}\register).  Which units exist, the
+% sizes of the absolute ones and their written forms are the engine's
+% (lib/units.ml), read from gml-shared.tex (made by gmlshare,
+% lib/shared.ml): i cm mm; pt = DCF (pica) points = 1/72in = TeX bp; dd
+% = Didot points of 37/2500in (a cicero is 0.1776in, LR glossary: not
+% TeX's dd); dh/dv = device units of 1/240in (3820 pels).  The relative
+% units are gml.tex's: ch = width of "0" in the body font (\tenrm;
+% cmr10: 5pt); line = \baselineskip; mh/mv = em of the current font
+% (\fontdimen6; DCF's em-height is the font size, so mv is also the em,
+% not the ex-height).  A unit not in the table is taken as ch, with a
+% message.  A mixed sum ("4ch+1i", unit=mixed) is parsed term by term.
 %
 % Page references and the aux file \jobname.gmlaux.  It is SCRIPT
-% source (the next formatting pass imbeds it, lib/aux.ml), one line each:
+% source (the next formatting pass imbeds it, lib/aux.ml), one line each
+% (the first line and the prefixes pa@ pq@ pr@ px@ are the engine's,
+% lib/symbols.ml and lib/aux.ml, read from gml-shared.tex as
+% \gml@auxheader and \gml@pfx@anchor, @query, @pageref, @tagset):
 %   .* gml aux              the first line (constant: gmlpass compares
 %                           two passes' files byte for byte)
 %   .se pa@ENC = 'FOLIO'    an anchor: the page (as printed) it is put
@@ -134,7 +146,7 @@
 \catcode`\@=11
 
 % ---- registers ---------------------------------------------------------
-\newdimen\gml@chwidth \newdimen\gml@devunit
+\newdimen\gml@chwidth \newdimen\gml@rdtmp
 \newdimen\gml@elemleft \newdimen\gml@elemright \newdimen\gml@elemhsize
 \newdimen\gml@hintleft \newdimen\gml@hintright \newdimen\gml@hintll
 \newdimen\gml@defaulthsize
@@ -335,7 +347,6 @@
 \tolerance=1000 \emergencystretch=2em \hbadness=5000 \vbadness=5000
 \hyphenpenalty=\@M   % DCF: hyphenation is off until .hy on
 \raggedbottom
-\gml@devunit=1in \divide\gml@devunit by 240
 \gmlindexcolumns=2
 \def\gmltitlealign{right}     % SYSVART: right | left | center
 \def\gmldocnumlabel{Document Number}
@@ -408,25 +419,65 @@
 \def\gml@lower#1{\edef\gml@tmpl{#1}\lowercase\expandafter{\expandafter
   \def\expandafter\gml@tmpl\expandafter{\gml@tmpl}}}
 
+% ---- shared with the engine ---------------------------------------------------
+% gml-shared.tex (made by gmlshare from the engine's tables, lib/shared.ml)
+% declares the space units, the names of the aux file and the hints the
+% engine writes; the macros it calls are these.
+% A unit of TeX's size (\gml@unitkw{NAME}{TeX unit}): #2=#1cm, as TeX
+% scans a dimension.  Another (\gml@unitsp{NAME}{S}{F}: S+F/10000 sp a
+% unit, in the registers \gml@ui@NAME, \gml@uf@NAME): #1 times each,
+% the fraction divided by 10000, so that 240dh is 1in to the sp.
+\def\gml@unitkw#1#2{\expandafter\def\csname gml@u@#1\endcsname##1##2{##2=##1#2}}
+\def\gml@unitsp#1#2#3{%
+  \expandafter\gml@newdimen\csname gml@ui@#1\endcsname
+  \expandafter\gml@newdimen\csname gml@uf@#1\endcsname
+  \global\csname gml@ui@#1\endcsname=#2sp \global\csname gml@uf@#1\endcsname=#3sp
+  \expandafter\edef\csname gml@u@#1\endcsname##1##2{##2=##1\gml@cs{gml@uf@#1}%
+    \divide##2 10000 \advance##2 ##1\gml@cs{gml@ui@#1}}}
+\def\gml@newdimen{\csname newdimen\endcsname}
+\def\gml@cs#1{\expandafter\noexpand\csname#1\endcsname}
+% a relative unit (\gml@unitrel{NAME}): its meaning is gml.tex's,
+% \gml@ru@NAME; ch = width of "0" in the body font (\tenrm; cmr10: 5pt),
+% line = \baselineskip, mh/mv = em of the current font (\fontdimen6;
+% DCF's em-height is the font size, so mv is also the em, not the
+% ex-height)
+\def\gml@ru@ch#1#2{#2=#1\gml@chwidth}
+\def\gml@ru@line#1#2{#2=#1\baselineskip}
+\def\gml@ru@mh#1#2{#2=#1\fontdimen6\font}
+\let\gml@ru@mv\gml@ru@mh
+\let\gml@relunits\empty
+\def\gml@unitrel#1{\edef\gml@relunits{\gml@relunits#1 }%
+  \expandafter\let\csname gml@u@#1\expandafter\endcsname\csname gml@ru@#1\endcsname}
+% the written forms: [a]SUFFIX (\gml@unitsfx{SUFFIX}{NAME}), [n]C[p]
+% (\gml@unitcpd{C}{NAME}: n units of 12 points and p points)
+\def\gml@unitsfx#1#2{\expandafter\def\csname gml@sfx@#1\endcsname{#2}}
+\def\gml@unitcpd#1#2{\expandafter\def\csname gml@cpd@#1\endcsname{#2}}
+% the aux file: \gml@auxheader its first line; \gml@auxprefix{ROLE}{PREFIX}:
+% \gml@pfx@ROLE (anchor query pageref tagset) the prefix as written,
+% \gml@auxm@ROLE its \meaning, as \gml@auxname compares it
+\def\gml@auxprefix#1#2{\expandafter\def\csname gml@pfx@#1\endcsname{#2}%
+  \expandafter\edef\csname gml@auxm@#1\endcsname
+    {\expandafter\meaning\csname gml@pfx@#1\endcsname}}
+% the hints of the engine, \gml@enginehints (\gmlcheckshared)
+\let\gml@enginehints\empty
+\def\gml@enginehint#1{\edef\gml@enginehints{\gml@enginehints#1 }}
+\input gml-shared
+
 % ---- DCF units ---------------------------------------------------------------
-\def\gml@u@ch#1#2{#2=#1\gml@chwidth}
-\def\gml@u@line#1#2{#2=#1\baselineskip}
-\def\gml@u@i#1#2{#2=#1in}
-\def\gml@u@cm#1#2{#2=#1cm}
-\def\gml@u@mm#1#2{#2=#1mm}
-\def\gml@u@pt#1#2{#2=#1bp}
-\def\gml@u@dd#1#2{#2=#1dd}
-\def\gml@u@mh#1#2{#2=#1\fontdimen6\font}
-\let\gml@u@mv\gml@u@mh \let\gml@u@m\gml@u@mh
-\def\gml@u@dh#1#2{#2=#1\gml@devunit} \let\gml@u@dv\gml@u@dh
-\expandafter\let\csname gml@u@\endcsname\gml@u@ch
-% \gml@dimof{number}{unit}\register   (unit "mixed": number is a sum)
+% \gml@u@NAME#1#2 (above, from gml-shared.tex) sets register #2 to #1 NAME
+% \gml@dimof{number}{unit}\register   (unit "mixed": number is a sum; a
+% unit that is no name but a suffix, "m", is its unit; no unit is ch)
+\expandafter\let\csname gml@u@\endcsname\gml@ru@ch
 \def\gml@dimof#1#2#3{\edef\gml@dv{#1}\edef\gml@du{#2}%
   \ifx\gml@du\gml@mixedstr \expandafter\gml@sum\expandafter{\gml@dv}#3%
-  \else\expandafter\ifx\csname gml@u@\gml@du\endcsname\relax
-    \gml@warnonce{unit\gml@du}{unknown space unit \gml@du\space(taken as ch)}%
-    \gml@u@ch\gml@dv#3%
+  \else\expandafter\ifx\csname gml@u@\gml@du\endcsname\relax\gml@dimsfx#3%
   \else\csname gml@u@\gml@du\endcsname\gml@dv#3\fi\fi}
+\def\gml@dimsfx#1{\expandafter\ifx\csname gml@sfx@\gml@du\endcsname\relax\else
+    \edef\gml@du{\csname gml@sfx@\gml@du\endcsname}\fi
+  \expandafter\ifx\csname gml@u@\gml@du\endcsname\relax
+    \gml@warnonce{unit\gml@du}{unknown space unit \gml@du\space(taken as ch)}%
+    \gml@ru@ch\gml@dv#1%
+  \else\csname gml@u@\gml@du\endcsname\gml@dv#1\fi}
 % \gml@sum{4ch+1i}\register; also one token "15pt" (\gml@dimtok)
 \def\gml@sum#1#2{\let\gml@sumreg#2\gml@sumreg=\z@
   \def\gml@sn{}\def\gml@su{}\gml@sum@a#1\gml@end}
@@ -459,12 +510,11 @@
   \ifx\gml@rd@a\empty\def\gml@rd@a{0}\fi
   \ifx\gml@rd@b\empty\def\gml@rd@b{0}\fi
   \ifx\gml@rd@u\empty\gml@dimof\gml@rd@a{#2}#3%
-  \else\def\gml@tmpd{p}\ifx\gml@rd@u\gml@tmpd
-    #3=\gml@rd@a bp#3=12#3\advance#3\gml@rd@b bp%
-  \else\def\gml@tmpd{c}\ifx\gml@rd@u\gml@tmpd
-    #3=\gml@rd@a dd#3=12#3\advance#3\gml@rd@b dd%
-  \else\def\gml@tmpd{m}\ifx\gml@rd@u\gml@tmpd \gml@dimof\gml@rd@a{mh}#3%
-  \else\gml@dimof\gml@rd@a\gml@rd@u#3\fi\fi\fi\fi}
+  \else\expandafter\ifx\csname gml@cpd@\gml@rd@u\endcsname\relax
+    \gml@dimof\gml@rd@a\gml@rd@u#3%
+  \else\edef\gml@rd@u{\csname gml@cpd@\gml@rd@u\endcsname}%
+    \gml@dimof\gml@rd@a\gml@rd@u#3#3=12#3%
+    \gml@dimof\gml@rd@b\gml@rd@u\gml@rdtmp\advance#3\gml@rdtmp\fi\fi}
 \def\gml@rd@scan#1{\ifx#1\gml@end\let\gml@next\relax\else\let\gml@next\gml@rd@scan
   \if#1'\else\ifnum`#1<`a\relax
     \ifx\gml@rd@u\empty\edef\gml@rd@a{\gml@rd@a#1}\else\edef\gml@rd@b{\gml@rd@b#1}\fi
@@ -605,6 +655,37 @@
   \ifx\gml@tmpb\gml@yes\gml@break\fi
   \expandafter\ifx\csname gml@hint@#1\endcsname\relax\gml@notimpl{#1}%
   \else\csname gml@hint@#1\expandafter\endcsname\fi}
+% The engine's hints (\gml@enginehints, gml-shared.tex) that have no
+% \gml@hint@NAME on purpose: not implemented, \gml@hint says so once
+% (.ic .mc .sb .ud .vr: no TeX meaning, or not modelled) ...
+\def\gml@hintsnotimpl{ic mc sb ud vr}
+% ... and never a hint in TeX: tex.xsl writes gml:query as <?pn ID> or
+% <?lc ID> (\gml@query)
+\def\gml@hintselsewhere{query}
+% \gmlcheckshared: what gml.tex lacks of the engine's declarations, a
+% line "GML: shared: ..." each, else "GML: shared: ok": an engine hint
+% with no \gml@hint@NAME that neither list names; a name in a list that
+% is no engine hint or that has a \gml@hint@NAME; a relative unit with
+% no \gml@ru@NAME.  For the tests (test/tex_shared.t), after \input gml;
+% a document never runs it.
+\def\gmlcheckshared{\begingroup\count@\z@
+  \edef\gml@ck@listed{ \gml@hintsnotimpl\space\gml@hintselsewhere\space}%
+  \edef\gml@ck@engine{ \gml@enginehints}%
+  \gml@forwords\gml@enginehints\gml@ck@hint
+  \gml@forwords\gml@hintsnotimpl\gml@ck@list
+  \gml@forwords\gml@hintselsewhere\gml@ck@list
+  \gml@forwords\gml@relunits\gml@ck@unit
+  \ifnum\count@=\z@\immediate\write16{GML: shared: ok}\fi\endgroup}
+\def\gml@ck@msg#1{\advance\count@\@ne\immediate\write16{GML: shared: #1}}
+\def\gml@ck@hint#1{\expandafter\ifx\csname gml@hint@#1\endcsname\relax
+  \gml@ifin\gml@ck@listed{ #1 }\ifgml@found\else
+    \gml@ck@msg{hint #1 has no \string\gml@hint@#1}\fi\fi}
+\def\gml@ck@list#1{\gml@ifin\gml@ck@engine{ #1 }\ifgml@found\else
+    \gml@ck@msg{#1 is listed but no hint of the engine}\fi
+  \expandafter\ifx\csname gml@hint@#1\endcsname\relax\else
+    \gml@ck@msg{#1 is listed but has \string\gml@hint@#1}\fi}
+\def\gml@ck@unit#1{\expandafter\ifx\csname gml@ru@#1\endcsname\relax
+  \gml@ck@msg{relative unit #1 has no \string\gml@ru@#1}\fi}
 
 % a line scope (\gml@beginlines{WORD}{ATTRS} ... \gml@endlines): .ce
 % .ri .us .up .uc .rc *; handlers \gml@lines@WORD@pre (before the
@@ -1407,7 +1488,6 @@
 \gmldefhint{cd}{\gml@hget{spec}\gml@tv\gml@twowords\gml@tv\gml@numpart\gml@wa
   \ifnum0\gml@sn>1 \gml@warnonce{cd}{multi-column layout (.cd) is not supported; one column}\fi}
 \gmldefhint{sc}{}
-\gmldefhint{mc}{\gml@notimpl{mc}}
 % .tc (SH35-0069 p.156-157): action=begin ejects the page (the engine
 % puts the title heading and the gml:tcentry hints after it); with
 % reserve=n, action=end ejects again and numbers the next page n pages
@@ -1442,8 +1522,6 @@
     \noindent\gml@tctext\nobreak\leaders\hbox to .6em{\hss.\hss}\hfill
     \nobreak\hbox to 3em{\hss\gml@tcpage}\fi
   \par\endgroup}
-\gmldefhint{vr}{\gml@notimpl{vr}}
-\gmldefhint{sb}{\gml@notimpl{sb}}
 % .dv text variables (SH35-0069 p.258-261, SX26-3723): gml:dv where the
 % variable is used, text= in font= (a .df/.bf name), raised by baseline=
 % (a vertical space; negative lowers it, as .sb).  A shifted variable is
@@ -1468,8 +1546,6 @@
 % has nothing to do here
 \gmldefhint{pi}{\gml@hget{anchor}\gml@tv\ifx\gml@tv\empty\else\gml@anchor\gml@tv\fi}
 \gmldefhint{ix}{}
-\gmldefhint{ic}{\gml@notimpl{ic}}
-\gmldefhint{ud}{\gml@notimpl{ud}}
 
 % ---- line scopes ------------------------------------------------------------------------
 % .ce/.ri: each covered input line is a centred / right-aligned line
@@ -1511,18 +1587,18 @@
   \ifvmode\vskip\z@\gml@tmpa\nobreak\else\gml@tmpa\fi}
 % <@NAME>, anchor=: a page-reference target
 \def\gml@anchor#1{\ifgml@reffile
-  \gml@shipwrite{.se pa@\gml@enc{#1} = '\noexpand\gml@folio'}\fi}
+  \gml@shipwrite{.se \gml@pfx@anchor\gml@enc{#1} = '\noexpand\gml@folio'}\fi}
 % <?WHAT ID>: the questions of the pass model (an unknown kind is ignored)
 \def\gml@query#1#2{\ifgml@reffile\csname gml@q@#2\endcsname{#1}\fi}
 \def\gml@abspage{\ifnum\pageno<\z@\number-\pageno\else\number\pageno\fi}
-\def\gml@q@pn#1{\gml@shipwrite{.se pq@\gml@qenc{#1} = \noexpand\gml@abspage}}
+\def\gml@q@pn#1{\gml@shipwrite{.se \gml@pfx@query\gml@qenc{#1} = \noexpand\gml@abspage}}
 \def\gml@q@lc#1{\begingroup\gml@lbuild
   \ifdim\pagegoal=\maxdimen\gml@dima\vsize
   \else\gml@dima\pagegoal\advance\gml@dima-\pagetotal\fi
   \gml@dimb\baselineskip\ifdim\gml@dimb>\z@\else\gml@dimb12\p@\fi
   \gml@cnta\gml@dima\divide\gml@cnta\gml@dimb
   \ifnum\gml@cnta<\z@\gml@cnta\z@\fi
-  \immediate\write\gml@refout{.se pq@\gml@qenc{#1} = \the\gml@cnta}\endgroup}
+  \immediate\write\gml@refout{.se \gml@pfx@query\gml@qenc{#1} = \the\gml@cnta}\endgroup}
 \def\gml@lbuild{\ifvmode\ifinner\else\ifnum\parshape=\z@\ifdim\hangindent=\z@
   \ifnum\looseness=\z@\ifnum\hangafter=\@ne\endgraf\fi\fi\fi\fi\fi\fi}
 % \gmlpass: draft output on a pass before the last
@@ -1537,7 +1613,7 @@
   \ifx\gml@tu\gml@autostr\gml@pageref@auto\else\gml@reflabel\gml@pagenumber\gml@prid\fi}
 \def\gml@reflabel{\ifx\gml@prlab\empty\else\ \gml@prlab\nobreak\ \fi}
 \def\gml@pageref@auto{\global\advance\gml@refcount\@ne
-  \ifgml@reffile\gml@shipwrite{.se pr@\the\gml@refcount\space= '\noexpand\gml@folio'}\fi
+  \ifgml@reffile\gml@shipwrite{.se \gml@pfx@pageref\the\gml@refcount\space= '\noexpand\gml@folio'}\fi
   \expandafter\let\expandafter\gml@pa\csname gml@rpg@\the\gml@refcount\endcsname
   \expandafter\let\expandafter\gml@pb\csname gml@pg@\gml@enc\gml@prid\endcsname
   \ifx\gml@pa\relax\gml@reflabel\gml@pagecs\gml@pb
@@ -1547,7 +1623,11 @@
 % time (\read), each ".se NAME = VALUE" line parsed by delimited macros
 % (a line that does not start with ".se " is skipped); VALUE loses its
 % quotes (a doubled quote is not undone: a folio has none).  pa@ENC
-% defines \gml@pg@ENC, pr@N \gml@rpg@N; pq@ (the engine's) is skipped.
+% defines \gml@pg@ENC, pr@N \gml@rpg@N; pq@ (the engine's) and px@ (a
+% tag set's) are skipped.  The prefixes are gml-shared.tex's, compared
+% by \meaning (\gml@auxm@ROLE: the line is read with @ of catcode 12);
+% the patterns here (".se ", " = ", a prefix of three characters) are
+% the SCRIPT syntax of lib/aux.ml (test/tex_shared.t checks both).
 % #1 (\gml@auxset or \gml@auxcmp) gets {pg|rpg}{key}{value}; #2 runs
 % when there is no file.
 \def\gml@auxcat{\catcode`\\=12 \catcode`\{=12 \catcode`\}=12 \catcode`\$=12
@@ -1569,16 +1649,15 @@
 \def\gml@auxval#1'#2'#3\gml@nil{\def\gml@tmpd{#1}%
   \ifx\gml@tmpd\empty\def\gml@tmpd{#2}\fi}
 \def\gml@auxname#1#2#3#4\gml@stop#5\gml@nil{\def\gml@tmpb{#1#2#3}%
-  \ifx\gml@tmpb\gml@auxpa\gml@auxput{pg}{#4}\gml@tmpd
-  \else\ifx\gml@tmpb\gml@auxpr\gml@auxput{rpg}{#4}\gml@tmpd\fi\fi}
-\edef\gml@auxpa{pa\string @}
-\edef\gml@auxpr{pr\string @}
+  \edef\gml@tmpb{\meaning\gml@tmpb}%
+  \ifx\gml@tmpb\gml@auxm@anchor\gml@auxput{pg}{#4}\gml@tmpd
+  \else\ifx\gml@tmpb\gml@auxm@pageref\gml@auxput{rpg}{#4}\gml@tmpd\fi\fi}
 \def\gml@auxset#1#2#3{\expandafter\global\expandafter\let\csname gml@#1@#2\endcsname#3}
 \def\gml@auxcmp#1#2#3{\expandafter\ifx\csname gml@#1@#2\endcsname#3\else
   \global\gml@refschangedtrue\fi}
 \def\gml@readrefs{\gml@auxfile\gml@auxset{\global\gml@refschangedtrue}%
   \immediate\openout\gml@refout=\jobname.gmlaux \global\gml@reffiletrue
-  \immediate\write\gml@refout{.* gml aux}}
+  \immediate\write\gml@refout{\gml@auxheader}}
 \def\gml@checkrefs{\immediate\closeout\gml@refout\global\gml@reffilefalse
   \gml@auxfile\gml@auxcmp{}%
   \ifgml@refschanged\immediate\write16{GML: page references have changed;
@@ -1907,7 +1986,6 @@
   \gml@aget{nest}\gml@tv\ifx\gml@tv\empty\else\let\gml@ulnest\gml@tv\fi}
 \gmldefstart{sl}{\gml@liststart{sl}{4\gml@chwidth}{.75\baselineskip}}
 \gmldefend{sl}{\gml@listend{.75\baselineskip}}
-\gml@letelement{l}{sl}
 % dl tsize= (default 10 characters, SH20-9187 3.7): the term column and
 % its gutter
 \def\gml@dltsize{\gml@aget{tsize}\gml@tv\ifx\gml@tv\empty\def\gml@tv{10}\fi

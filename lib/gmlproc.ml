@@ -699,7 +699,7 @@ let attval ctx args =
   List.iter
     (fun (k, a, v) ->
       let sym = Option.value a ~default:k in
-      match Symbols.set ctx.Ctx.syms sym v with
+      match Ctx.Sym.set ctx sym v with
       | Ok () -> ()
       | Error e -> Ctx.error ctx ".gs attval: %s" e)
     l;
@@ -745,7 +745,7 @@ let residual ctx =
   | _ -> None
 
 let set_sym ctx cw sym v =
-  match Symbols.set ctx.Ctx.syms sym v with
+  match Ctx.Sym.set ctx sym v with
   | Ok () -> ()
   | Error e -> Ctx.error ctx ".gs %s: %s" cw e
 
@@ -855,7 +855,7 @@ let is_arg_key k =
        (String.sub k 1 (String.length k - 1))
 
 let gs_args ctx ops =
-  let scope = ctx.Ctx.syms.Symbols.local () in
+  let scope = Ctx.Sym.local ctx in
   let old =
     Hashtbl.fold
       (fun k _ acc -> if is_arg_key k then k :: acc else acc)
@@ -881,14 +881,13 @@ let gs_vars ctx names =
   List.iteri
     (fun i name ->
       let v =
-        Option.value ~default:""
-          (Symbols.get ctx.Ctx.syms ("*" ^ string_of_int (i + 1)))
+        Option.value ~default:"" (Ctx.Sym.get ctx ("*" ^ string_of_int (i + 1)))
       in
       if String.contains name '(' then
         Ctx.error ctx ".gs vars: array symbol %s not allowed" name
       else
         Control.check_name ctx ".gs vars" name (fun () ->
-            match Symbols.set ctx.Ctx.syms name v with
+            match Ctx.Sym.set ctx name v with
             | Ok () -> ()
             | Error e -> Ctx.error ctx ".gs vars: %s" e))
     names
@@ -902,13 +901,12 @@ let qatt ctx = function
   | [] -> Ctx.error ctx ".gs qatt: symbol name expected"
   | sym :: names ->
       Control.check_name ctx ".gs qatt" sym (fun () ->
-          let syms = ctx.Ctx.syms in
-          ignore (Symbols.unset syms sym);
+          ignore (Ctx.Sym.unset ctx sym);
           List.iter
             (fun n ->
               if not (List.mem_assoc (String.uppercase_ascii n) ctx.gml_attrs)
               then
-                match Symbols.append syms sym n with
+                match Ctx.Sym.append ctx sym n with
                 | Ok () -> ()
                 | Error e -> Ctx.error ctx ".gs qatt: %s" e)
             names)
@@ -921,14 +919,14 @@ let qatt ctx = function
    (IBM's DSMHEAD1 prefixes an appendix heading with &xref(1)).
    DCF-VERIFY (not in LR Rel 4): the elements; &@xref after 0. *)
 let hctr ctx args =
-  let c = ctx.Ctx.hctr and syms = ctx.Ctx.syms in
+  let c = ctx.Ctx.hctr in
   let xref n =
     let ps = Headctr.parts c n in
     List.iter
       (fun s ->
-        ignore (Symbols.unset syms s);
-        List.iteri (fun i p -> ignore (Symbols.set ~sub:(i + 1) syms s p)) ps;
-        ignore (Symbols.set syms s (String.concat "." ps)))
+        ignore (Ctx.Sym.unset ctx s);
+        List.iteri (fun i p -> ignore (Ctx.Sym.set ~sub:(i + 1) ctx s p)) ps;
+        ignore (Ctx.Sym.set ctx s (String.concat "." ps)))
       [ "xref"; "@xref" ]
   in
   match args with

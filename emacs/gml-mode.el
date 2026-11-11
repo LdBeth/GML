@@ -286,7 +286,6 @@ Lines that start with one of them are never filled.  Tags given
     ("sl" block "simple list" "compact")
     ("dl" block "definition list" "compact break headhi termhi tsize")
     ("gl" block "glossary list" "compact termhi")
-    ("l" block "list" "compact")
     ("li" text "list item" "id")
     ("lp" text "list part")
     ("dthd" text "definition term heading")

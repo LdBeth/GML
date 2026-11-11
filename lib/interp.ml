@@ -312,16 +312,16 @@ let process ctx mode s =
    system symbol, the value it has throughout (-set '$PDEV=4250'). *)
 let install_sets ctx =
   List.iter
-    (fun (k, v) -> ignore (Symbols.set ctx.Ctx.syms k v))
+    (fun (k, v) -> ignore (Ctx.Sym.set ctx k v))
     (Symbols.date_symbols ());
   List.iter
     (fun (k, v) ->
       if Symbols.is_local k then Ctx.error ctx "-set %s: not a global symbol" k
-      else if Symbols.is_system ctx.Ctx.syms k then
+      else if Ctx.Sym.is_system ctx k then
         ctx.Ctx.sys_sets <- (Symbols.norm k, v) :: ctx.Ctx.sys_sets
       else
         Control.check_name ctx "-set" k (fun () ->
-            match Symbols.set ctx.Ctx.syms k v with
+            match Ctx.Sym.set ctx k v with
             | Ok () -> ()
             | Error e -> Ctx.error ctx "-set: %s" e))
     ctx.Ctx.sets
@@ -383,6 +383,11 @@ let imbed_now ctx path =
   | Error e -> Ctx.error ctx "%s" e
   | Ok _ -> drain ctx
 
+let symval_node =
+  Node.declare ~brk:Node.No
+    ~from:"a change of a symbol referred to in a running heading or footing"
+    (Node.event "symval")
+
 (** A context with the native control words installed. *)
 let create ?include_path () =
   let ctx = Ctx.create ?include_path () in
@@ -391,18 +396,17 @@ let create ?include_path () =
      (Doc.tracked) is the hint gml:symval with its new value, substituted
      as the reference is (Subst.deferred); as written when it is removed:
      the reference is then unresolved (LR p.316) *)
-  ctx.syms.Symbols.changed <-
-    (fun name ->
-      if Doc.tracked ctx.doc name then
-        Doc.hint ctx.doc "symval"
-          [
-            ("name", name);
-            ( "value",
-              match Symbols.get ctx.syms name with
-              | Some v -> Subst.string ctx v
-              | None -> String.make 1 ctx.chars.Chars.symbol ^ name );
-            ("break", "no");
-          ]);
+  ctx.symval <-
+    (fun ctx name ->
+      Doc.hint ctx.doc symval_node.Node.name
+        [
+          ("name", name);
+          ( "value",
+            match Ctx.Sym.get ctx name with
+            | Some v -> Subst.string ctx v
+            | None -> String.make 1 ctx.chars.Chars.symbol ^ name );
+          ("break", "no");
+        ]);
   Control.install ctx;
   Gmlproc.install ctx;
   Emit.install ctx;

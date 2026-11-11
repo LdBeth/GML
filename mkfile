@@ -86,20 +86,23 @@ $OUTDIR%.xml:Q: %.gml
 	if not echo $st > $target.rc
 	mv $target.tmp $target
 
-# a tag set's stylesheet imports the stock one: both are prerequisites
+# a tag set's stylesheet imports the stock one: both are prerequisites;
+# so are what the stock one includes, common.xsl, and what that reads,
+# gml-shared.xml (made by gmlshare, kept current by dune build)
+SHAREDXSL=$XSLT/common.xsl $XSLT/gml-shared.xml
 %.r.xml: %.xml $XSLT/resolve.xsl $RESOLVEXSL
 	$SAXON -s:$stem.xml -xsl:$RESOLVEXSL -o:$target `{echo $SETS} $XSLTFLAGS
 
-%.s.xml: %.r.xml $XSLT/scope.xsl $SCOPEXSL
+%.s.xml: %.r.xml $XSLT/scope.xsl $SHAREDXSL $SCOPEXSL
 	$SAXON -s:$stem.r.xml -xsl:$SCOPEXSL -o:$target `{echo $SETS} $XSLTFLAGS
 
-%.sem.xml: %.r.xml $XSLT/strip-hints.xsl $STRIPXSL
+%.sem.xml: %.r.xml $XSLT/strip-hints.xsl $SHAREDXSL $STRIPXSL
 	$SAXON -s:$stem.r.xml -xsl:$STRIPXSL -o:$target `{echo $SETS} $XSLTFLAGS
 
-%.html: %.s.xml $XSLT/html.xsl $HTMLXSL
+%.html: %.s.xml $XSLT/html.xsl $SHAREDXSL $HTMLXSL
 	$SAXON -s:$stem.s.xml -xsl:$HTMLXSL -o:$target `{echo $SETS} $XSLTFLAGS
 
-%.tex: %.r.xml $XSLT/tex.xsl $TEXXSL
+%.tex: %.r.xml $XSLT/tex.xsl $XSLT/common.xsl $TEXXSL
 	tagparam=()
 	if(! ~ $"TEXTAGSET '') tagparam=tex-tagset^'='^$TEXTAGSET
 	$SAXON -s:$stem.r.xml -xsl:$TEXXSL -o:$target `{echo $SETS} $tagparam $XSLTFLAGS

@@ -71,16 +71,15 @@ let set_file_params ctx cw name args =
         else t)
       toks
   in
-  let syms = ctx.Ctx.syms in
   ignore
-    (Symbols.set syms "0"
+    (Ctx.Sym.set ctx "0"
        (string_of_int (List.length (List.filter (( <> ) "") toks))));
   for i = 1 to max_file_params do
-    ignore (Symbols.unset syms (string_of_int i))
+    ignore (Ctx.Sym.unset ctx (string_of_int i))
   done;
   List.iteri
     (fun i v ->
-      if v <> "" then ignore (Symbols.set syms (string_of_int (i + 1)) v))
+      if v <> "" then ignore (Ctx.Sym.set ctx (string_of_int (i + 1)) v))
     toks
 
 let im ctx ops =
@@ -364,7 +363,7 @@ let page_appended ctx name =
   Hashtbl.remove ctx.Ctx.page_syms (n, 0);
   Option.iter
     (fun c -> Hashtbl.remove ctx.Ctx.page_syms (n, c))
-    (Option.bind (Symbols.get ctx.Ctx.syms n) int_of_string_opt)
+    (Option.bind (Ctx.Sym.get ctx n) int_of_string_opt)
 
 (* .se name[(n)] = expression | 'string'  (quotes doubled inside)
    .se name[(n)] 'string                   (literal, LR p.337-338)
@@ -419,17 +418,17 @@ let se ctx ops =
               result
                 (match sub with
                 | `Next ->
-                    let r = Symbols.append ctx.Ctx.syms name v in
+                    let r = Ctx.Sym.append ctx name v in
                     if r = Ok () then page_appended ctx name;
                     r
                 | `At x ->
-                    let r = Symbols.set ~sub:x ctx.Ctx.syms name v in
+                    let r = Ctx.Sym.set ~sub:x ctx name v in
                     if r = Ok () then page_provenance ctx name x v;
                     r)
             in
             let value rhs =
               if String.trim rhs = "&" then
-                set (Option.value (Symbols.get ctx.syms "$PN") ~default:"")
+                set (Option.value (Ctx.Sym.get ctx "$PN") ~default:"")
               else
                 match
                   Expr.se_value ~sub:sub_word
@@ -445,7 +444,7 @@ let se ctx ops =
               match sub with
               | `At x ->
                   page_unset ctx name x;
-                  result (Symbols.unset ~sub:x ctx.syms name)
+                  result (Ctx.Sym.unset ~sub:x ctx name)
               | `Next -> Ctx.error ctx ".se %s(): OFF needs a subscript" name
             else if rest = "" then begin
               (* not in the syntax (LR p.337); we set the null string *)
@@ -696,7 +695,7 @@ let dm ctx ops =
       match Macro.value st name sub ~sep with
       | None -> Ctx.error ctx ".dm %s %s: macro %s is not defined" name x name
       | Some v -> (
-          match Symbols.set ctx.syms x v with
+          match Ctx.Sym.set ctx x v with
           | Ok () -> ()
           | Error e -> Ctx.error ctx ".dm %s %s: %s" name x e))
   | Macro.Lib name ->

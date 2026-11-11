@@ -8,17 +8,25 @@
 
    A name that starts with [*] is local (p.253, p.276).  There is one set
    of locals per macro call, plus one set for when no macro is the
-   current source; [local] (installed by [Ctx.create]) returns the scope
-   of the current macro frame, or [base].  Every other name is global.
+   current source; [ENV.local] gives the scope of the current macro frame,
+   or [base].  Every other name is global.
 
-   A name that starts with [$] and is known to the [system] callback is a
+   A name that starts with [$] and is known to [ENV.system] is a
    read-only system symbol whose value is computed on each reference.  A
    system symbol may be an array ([&$CHAR(n)]): the callback gets the
    subscript, and element 0 is the number of elements.
 
    Arrays (p.254-257): every symbol is potentially an array; its plain
    value is element 0, the index counter.  [x(n)] for n >= 1 are the
-   elements. *)
+   elements.
+
+   The table itself ([t]) is plain data.  What a reference or an
+   assignment means depends on the interpreter (the macro on the input
+   stack, the system symbols, the page questions, the running headings),
+   so the operations are a functor, [Make], over those dependencies
+   ([ENV]): the one instance is [Ctx.Sym], whose environment is the
+   interpreter context.  The dependencies are fixed when the instance is
+   made, at compile time: none is a field that is filled in later. *)
 
 type sym = {
   mutable value : string option;  (** [&x] = [&x(0)] *)
@@ -30,45 +38,13 @@ type scope = (string, sym) Hashtbl.t
 type t = {
   global : scope;
   base : scope;  (** locals when no macro is the source *)
-  mutable local : unit -> scope;  (** the current local scope *)
-  mutable in_macro : unit -> bool;
-      (** is a macro the current input source (undefined locals are null only
-          then, p.276) *)
-  mutable system : string -> int -> string option;
-      (** value of a system symbol (normalised name, with the [$]) or of one of
-          its elements; installed by [Ctx.create] because the values depend on
-          the context *)
-  mutable query : string -> string -> string;
-      (** [query name v]: a reference to the plain value [v] of system symbol
-          [name] by [get] (substitution, [.se x = &]), not by [defined] or
-          [is_system]: the page state symbols ([&$PN], [&$LC]) are questions to
-          the layout engine ([Ctx.query]); the identity for the others *)
-  mutable clean : string -> string;
-      (** applied to a value before [set] or [append] stores it: [Ctx] installs
-          [Doc.strip_symrefs], so no value holds a deferred reference *)
-  mutable changed : string -> unit;
-      (** called with the (normalised) name of a global symbol after [set],
-          [append] or [unset] changed it: [Ctx] puts the hint [gml:symval] out
-          for the symbols of running headings ([Doc.tracked]) *)
 }
 
 (** DCF limit on symbol name length (SH35-0069 p.229; LR p.337). *)
 let max_name_len = 10
 
 let new_scope () : scope = Hashtbl.create 8
-
-let create () =
-  let base = new_scope () in
-  {
-    global = Hashtbl.create 64;
-    base;
-    local = (fun () -> base);
-    in_macro = (fun () -> false);
-    system = (fun _ _ -> None);
-    query = (fun _ v -> v);
-    clean = Fun.id;
-    changed = ignore;
-  }
+let create () = { global = Hashtbl.create 64; base = new_scope () }
 
 (** Names beginning with [$] are case-insensitive (p.241). *)
 let norm name =
@@ -93,70 +69,11 @@ let valid_name ?(long = false) name =
   && String.for_all is_name_char body
   && (body <> "" || is_local name)
 
-let scope_for t name = if is_local name then t.local () else t.global
 let new_sym () = { value = None; elems = Hashtbl.create 1 }
 
 (** Set [name] in a given scope (macro arguments). *)
 let set_in (sc : scope) name v =
   Hashtbl.replace sc (norm name) { value = Some v; elems = Hashtbl.create 1 }
-
-let is_system t name =
-  let n = norm name in
-  n <> "" && n.[0] = '$' && t.system n 0 <> None
-
-let find t name = Hashtbl.find_opt (scope_for t name) (norm name)
-
-(** Is [name] defined at all (a value or some element)? *)
-let defined t name =
-  is_system t name
-  ||
-  match find t name with
-  | Some s -> s.value <> None || Hashtbl.length s.elems > 0
-  | None -> false
-
-(** Value of [name], or of element [sub] of it. Element 0 is the plain value. An
-    element that is not set, of a symbol that exists, is the null string
-    (p.255). *)
-let get ?(sub = 0) t name =
-  let n = norm name in
-  match if n <> "" && n.[0] = '$' then t.system n sub else None with
-  | Some v -> Some (if sub = 0 then t.query n v else v)
-  | None ->
-      if sub = 0 then Option.bind (find t n) (fun s -> s.value)
-      else if not (defined t n) then None
-      else
-        Some
-          (Option.value ~default:""
-             (Option.bind (find t n) (fun s -> Hashtbl.find_opt s.elems sub)))
-
-(** The elements [x(1)...] in ascending subscript order (p.256). *)
-let elements t name =
-  let n = norm name in
-  if is_system t n then
-    let count =
-      Option.value ~default:0 (Option.bind (t.system n 0) int_of_string_opt)
-    in
-    List.init count (fun i -> Option.value (t.system n (i + 1)) ~default:"")
-  else
-    match find t n with
-    | None -> []
-    | Some s ->
-        Hashtbl.fold (fun k v acc -> (k, v) :: acc) s.elems []
-        |> List.sort compare |> List.map snd
-
-let sym_of t name =
-  let sc = scope_for t name and n = norm name in
-  match Hashtbl.find_opt sc n with
-  | Some s -> s
-  | None ->
-      let s = new_sym () in
-      Hashtbl.replace sc n s;
-      s
-
-let read_only t name =
-  if is_system t name then
-    Error (Printf.sprintf "system symbol &%s is read-only" (norm name))
-  else Ok ()
 
 let counter_of s =
   match s.value with
@@ -178,55 +95,159 @@ let in_range name sub =
       (Printf.sprintf "&%s(%d): an array has at most %d elements" (norm name)
          sub max_elements)
 
-(** Set [name] ([sub] = 0 or absent: the plain value). Setting element n >= 1
-    makes n the index counter (p.257: "it will be incremented from the index
-    value of the element last set"), unless element 0 holds a value that is not
-    a number. DCF-VERIFY: a non-numeric element 0 is left alone (p.257 warns
-    about it rather than saying it is replaced; not in LR Rel 4). *)
-let notify t name = if not (is_local name) then t.changed (norm name)
+(** What the operations need of the interpreter. *)
+module type ENV = sig
+  type env
+  (** the interpreter context *)
 
-let set ?(sub = 0) t name v =
-  let v = t.clean v in
-  Result.bind (read_only t name) (fun () ->
-      Result.map
-        (fun () ->
-          let s = sym_of t name in
-          if sub = 0 then s.value <- Some v
-          else begin
-            Hashtbl.replace s.elems sub v;
-            if counter_of s <> None then s.value <- Some (string_of_int sub)
-          end;
-          notify t name)
-        (in_range name sub))
+  val table : env -> t
 
-(** [.se x() = v]: set the element after the index counter (p.256-257). *)
-let append t name v =
-  let v = t.clean v in
-  Result.bind (read_only t name) (fun () ->
-      let s = sym_of t name in
-      match counter_of s with
-      | None ->
-          Error (Printf.sprintf "index counter &%s is not a number" (norm name))
-      | Some c ->
-          Result.map
-            (fun () ->
-              Hashtbl.replace s.elems (c + 1) v;
-              s.value <- Some (string_of_int (c + 1));
-              notify t name)
-            (in_range name (c + 1)))
+  val local : env -> scope
+  (** the current local scope: that of the macro on top of the input stack, or
+      [base] *)
 
-(** [.se x off] removes the whole symbol, the whole array if it is one;
-    [.se x(n) off] removes one element (p.235). *)
-let unset ?(sub = 0) t name =
-  Result.map
-    (fun () ->
-      let sc = scope_for t name and n = norm name in
-      match Hashtbl.find_opt sc n with
-      | None -> ()
+  val in_macro : env -> bool
+  (** is a macro the current input source (undefined locals are null only then,
+      p.276) *)
+
+  val system : env -> string -> int -> string option
+  (** value of a system symbol (normalised name, with the [$]) or of one of its
+      elements: the values depend on the context *)
+
+  val query : env -> string -> string -> string
+  (** [query env name v]: a reference to the plain value [v] of system symbol
+      [name] by [get] (substitution, [.se x = &]), not by [defined] or
+      [is_system]: the page state symbols ([&$PN], [&$LC]) are questions to the
+      layout engine ([Ctx.query]); the identity for the others *)
+
+  val clean : env -> string -> string
+  (** applied to a value before [set] or [append] stores it
+      ([Doc.strip_symrefs]): no value holds a deferred reference *)
+
+  val changed : env -> string -> unit
+  (** called with the (normalised) name of a global symbol after [set], [append]
+      or [unset] changed it: the hint [gml:symval] for the symbols of running
+      headings ([Doc.tracked]) *)
+end
+
+module Make (E : ENV) = struct
+  let local = E.local
+  let in_macro = E.in_macro
+
+  let scope_for env name =
+    if is_local name then E.local env else (E.table env).global
+
+  let is_system env name =
+    let n = norm name in
+    n <> "" && n.[0] = '$' && E.system env n 0 <> None
+
+  let find env name = Hashtbl.find_opt (scope_for env name) (norm name)
+
+  (** Is [name] defined at all (a value or some element)? *)
+  let defined env name =
+    is_system env name
+    ||
+    match find env name with
+    | Some s -> s.value <> None || Hashtbl.length s.elems > 0
+    | None -> false
+
+  (** Value of [name], or of element [sub] of it. Element 0 is the plain value.
+      An element that is not set, of a symbol that exists, is the null string
+      (p.255). *)
+  let get ?(sub = 0) env name =
+    let n = norm name in
+    match if n <> "" && n.[0] = '$' then E.system env n sub else None with
+    | Some v -> Some (if sub = 0 then E.query env n v else v)
+    | None ->
+        if sub = 0 then Option.bind (find env n) (fun s -> s.value)
+        else if not (defined env n) then None
+        else
+          Some
+            (Option.value ~default:""
+               (Option.bind (find env n) (fun s -> Hashtbl.find_opt s.elems sub)))
+
+  (** The elements [x(1)...] in ascending subscript order (p.256). *)
+  let elements env name =
+    let n = norm name in
+    if is_system env n then
+      let count =
+        Option.value ~default:0
+          (Option.bind (E.system env n 0) int_of_string_opt)
+      in
+      List.init count (fun i ->
+          Option.value (E.system env n (i + 1)) ~default:"")
+    else
+      match find env n with
+      | None -> []
       | Some s ->
-          if sub = 0 then Hashtbl.remove sc n else Hashtbl.remove s.elems sub;
-          notify t name)
-    (read_only t name)
+          Hashtbl.fold (fun k v acc -> (k, v) :: acc) s.elems []
+          |> List.sort compare |> List.map snd
+
+  let sym_of env name =
+    let sc = scope_for env name and n = norm name in
+    match Hashtbl.find_opt sc n with
+    | Some s -> s
+    | None ->
+        let s = new_sym () in
+        Hashtbl.replace sc n s;
+        s
+
+  let read_only env name =
+    if is_system env name then
+      Error (Printf.sprintf "system symbol &%s is read-only" (norm name))
+    else Ok ()
+
+  (** Set [name] ([sub] = 0 or absent: the plain value). Setting element n >= 1
+      makes n the index counter (p.257: "it will be incremented from the index
+      value of the element last set"), unless element 0 holds a value that is
+      not a number. DCF-VERIFY: a non-numeric element 0 is left alone (p.257
+      warns about it rather than saying it is replaced; not in LR Rel 4). *)
+  let notify env name = if not (is_local name) then E.changed env (norm name)
+
+  let set ?(sub = 0) env name v =
+    let v = E.clean env v in
+    Result.bind (read_only env name) (fun () ->
+        Result.map
+          (fun () ->
+            let s = sym_of env name in
+            if sub = 0 then s.value <- Some v
+            else begin
+              Hashtbl.replace s.elems sub v;
+              if counter_of s <> None then s.value <- Some (string_of_int sub)
+            end;
+            notify env name)
+          (in_range name sub))
+
+  (** [.se x() = v]: set the element after the index counter (p.256-257). *)
+  let append env name v =
+    let v = E.clean env v in
+    Result.bind (read_only env name) (fun () ->
+        let s = sym_of env name in
+        match counter_of s with
+        | None ->
+            Error
+              (Printf.sprintf "index counter &%s is not a number" (norm name))
+        | Some c ->
+            Result.map
+              (fun () ->
+                Hashtbl.replace s.elems (c + 1) v;
+                s.value <- Some (string_of_int (c + 1));
+                notify env name)
+              (in_range name (c + 1)))
+
+  (** [.se x off] removes the whole symbol, the whole array if it is one;
+      [.se x(n) off] removes one element (p.235). *)
+  let unset ?(sub = 0) env name =
+    Result.map
+      (fun () ->
+        let sc = scope_for env name and n = norm name in
+        match Hashtbl.find_opt sc n with
+        | None -> ()
+        | Some s ->
+            if sub = 0 then Hashtbl.remove sc n else Hashtbl.remove s.elems sub;
+            notify env name)
+      (read_only env name)
+end
 
 (* ---- carried over between passes ------------------------------------------ *)
 
@@ -326,11 +347,21 @@ let date_names = List.map fst (date_symbols ())
 let anchor_prefix = "pa@"
 
 let query_prefix = "pq@"
+let pageref_prefix = "pr@"
 let tagset_prefix = "px@"
+
+(** The prefixes of the aux file by role (for gml-shared.xml, lib/shared.ml). *)
+let aux_roles =
+  [
+    ("anchor", anchor_prefix);
+    ("query", query_prefix);
+    ("pageref", pageref_prefix);
+    ("tagset", tagset_prefix);
+  ]
 
 (** The symbols of the aux file (lib/aux.ml): not carried, every pass reads them
     again from the file. *)
-let aux_prefixes = [ anchor_prefix; query_prefix; "pr@"; tagset_prefix ]
+let aux_prefixes = List.map snd aux_roles
 
 (** The array the TOC entries travel in (lib/toc.ml). *)
 let toc_name = "gml@toc"
@@ -378,12 +409,15 @@ let dump ?(pages = Hashtbl.create 0) t =
   in
   plain @ List.mapi (fun i q -> se_line ~sub:(i + 1) page_name q) pgq
 
+(** The constant first line of the symbol file (gmlpass compares two passes'
+    files). *)
+let file_header = ".* gml symbols"
+
 (** The whole symbol file around [lines] (the [.se] lines of [dump] and
     [Toc.dump]), with line ends. *)
 let file lines =
   String.concat "\n"
-    ([ ".* gml symbols"; ".su off"; ".dc cw off" ]
-    @ lines @ [ ".dc cw"; ".su on" ])
+    ([ file_header; ".su off"; ".dc cw off" ] @ lines @ [ ".dc cw"; ".su on" ])
   ^ "\n"
 
 (** After loading the symbol file: "all array index counters are reset to zero

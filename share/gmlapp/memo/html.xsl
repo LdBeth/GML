@@ -76,12 +76,12 @@
   attributes (value= on the items when they do not count up by one), a
   :ul whose bullet is one of • ● ◦ ○ ▪ ■ gets disc, circle or square;
   the footnote list is numbered the same way.  Other labels (other
-  ul-identifiers, l-identifier, a numbering format with other
+  ul-identifiers, a numbering format with other
   punctuation) are written as html.xsl writes them, the label an inline
   block pulled into the list's padding by a negative margin.
 
   Parameters (besides html.xsl's lang, title, lit-note, lit-footnotes,
-  table-width, l-identifier, pageref; its footnotes is not used: the
+  table-width, pageref; its footnotes is not used: the
   footnotes are at the end)
     images        how the HTML refers to an image (the :logo): "file" (the
                   default: the file name as written, for a preview) or

@@ -36,6 +36,12 @@
    &$LC is in line spaces of the default font; in page mode DCF says to
    use &DV'&$LC for device units (ibid.). *)
 
+(** The constant first line of the aux file. TeX writes it (gml.tex,
+    \gml@auxfile); the engine reads the file as SCRIPT source, where the line is
+    a comment, and states it here for the shared files (lib/shared.ml): gml.tex
+    takes it from gml-shared.tex. *)
+let header = ".* gml aux"
+
 (* t:name of xslt/tex.xsl: A-Z a-z 0-9 . - as they are, any other
    character (a code point; invalid UTF-8 is U+FFFD) as +code+ *)
 let tex_name s =
@@ -97,7 +103,9 @@ let imbed (ctx : Ctx.t) f =
     those of the previous pass and its array counters start again at 0. *)
 let load_symbols (ctx : Ctx.t) f =
   if imbed ctx f then begin
-    ctx.Ctx.toc.Toc.previous <- Some (Toc.carried ctx.Ctx.syms);
+    ctx.Ctx.toc.Toc.previous <-
+      Some (Toc.carried (Ctx.Sym.elements ctx Symbols.toc_name));
+    ignore (Ctx.Sym.unset ctx Symbols.toc_name);
     Symbols.reset_counters ctx.Ctx.syms
   end
 
@@ -105,16 +113,14 @@ let load_symbols (ctx : Ctx.t) f =
     are its symbols. *)
 let load (ctx : Ctx.t) f =
   ignore (imbed ctx f);
-  ctx.Ctx.page_query <-
-    Some (fun id -> Symbols.get ctx.Ctx.syms (query_name id));
-  ctx.Ctx.page_of <- (fun a -> Symbols.get ctx.Ctx.syms (anchor_name a))
+  ctx.Ctx.page_query <- Some (fun id -> Ctx.Sym.get ctx (query_name id));
+  ctx.Ctx.page_of <- (fun a -> Ctx.Sym.get ctx (anchor_name a))
 
 (** After [load_symbols] and [load] (either may be missing): the symbols of the
     previous pass that carry a page question (gml@pgq, Symbols.dump) get the
     answer of the aux file to it, the neutral default if it has none (no aux
     file, or TeX did not reach the place); gml@pgq is undefined again. *)
 let resolve_pages (ctx : Ctx.t) =
-  let syms = ctx.Ctx.syms in
   List.iter
     (fun e ->
       match String.split_on_char ' ' e with
@@ -122,10 +128,10 @@ let resolve_pages (ctx : Ctx.t) =
           Option.iter
             (fun sub ->
               let v =
-                Option.value (Symbols.get syms (query_name id)) ~default:dflt
+                Option.value (Ctx.Sym.get ctx (query_name id)) ~default:dflt
               in
-              ignore (Symbols.set ~sub syms name v))
+              ignore (Ctx.Sym.set ~sub ctx name v))
             (int_of_string_opt sub)
       | _ -> ())
-    (Symbols.elements syms Symbols.page_name);
-  ignore (Symbols.unset syms Symbols.page_name)
+    (Ctx.Sym.elements ctx Symbols.page_name);
+  ignore (Ctx.Sym.unset ctx Symbols.page_name)
