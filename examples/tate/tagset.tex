@@ -147,7 +147,10 @@
   \interlinepenalty\interfootnotelinepenalty
   \splittopskip\ht\strutbox\splitmaxdepth\dp\strutbox\floatingpenalty\@MM
   \leftskip\z@skip\rightskip\z@skip\spaceskip\z@skip\xspaceskip\z@skip
-  \parindent\z@\textindent{#1}\footstrut\futurelet\next\fo@t}
+  \parindent\z@\futurelet\next\fo@t}
+% (not plain's \textindent{#1}\footstrut: the profile writes the mark,
+% after its own .sp 1, and a paragraph begun here would be an empty
+% line above that space, between the leader and the note)
 % the leader (.fn leader, dcfstarter's rule) is yoko too
 \gmldefstart{gml:fn}{\gml@aget{kind}\gml@fnkind
   \ifx\gml@fnkind\gml@leaderstr\global\gml@userleadertrue
@@ -158,8 +161,10 @@
 % vertical line: set beside the line at its right, as a note number is
 % in vertical Japanese, taking no room in it: an upright yoko box (in a
 % tate list it runs ht+dp along the line and is centred across it), in
-% a box of no length that ends where the mark is put (so it stands
-% beside the character before it), moved to the right (\raise in a
+% a box of no length that ends where the mark is put, the mark moved
+% back in it so that it is centred along the character before it (a
+% mark shorter than 1zw: else it would stand beside that character's
+% foot and look as if it belonged to the full stop after it), moved to the right (\raise in a
 % tate list) by half the kanji and half its own width; the shift that
 % dcfstarter asks for is for a horizontal line
 \newbox\gml@fnmbox
@@ -173,7 +178,9 @@
   \ifx\gml@fontcmd\relax\let\gml@fontcmd\empty\fi
   \setbox\gml@fnmbox\hbox{\yoko\gml@fontcmd\gml@dvtext}%
   \gml@dima.5\wd\gml@fnmbox \advance\gml@dima.5zw
-  \leavevmode\hbox to\z@{\hss\raise\gml@dima\box\gml@fnmbox}}
+  \gml@dimb.5zw \advance\gml@dimb-.5\wd\gml@fnmbox
+  \ifdim\gml@dimb<\z@\gml@dimb\z@\fi
+  \leavevmode\hbox to\z@{\hss\raise\gml@dima\box\gml@fnmbox\kern\gml@dimb}}
 
 % a running heading or footing is a yoko box of that width, wherever it
 % is made (a static one in the body, a dynamic one in \output); other
@@ -186,6 +193,23 @@
   \gml@aget{page}\gml@runpage\gml@aget{action}\gml@runact
   \ifx\gml@runact\empty\else\let\gml@hattrs\gml@attrs\gml@runaction{#1}\fi
   \setbox\gml@box#2\bgroup\yoko\gml@runsetup}
+
+% ---- rensuji ---------------------------------------------------------------------
+% 連数字 (tate-chu-yoko): the identifier of an ordered list item (1.
+% a. 1) ...) stands upright in the vertical line.  tex.xsl writes
+% <,rensuji> before the <,islabel> of such a label; the label box is
+% then a yoko box: in a tate list it runs ht+dp along the line and is
+% centred across it, and the .is TO after it measures it so (pTeX
+% gives \wd of a box as it is in the list it is asked in).
+% Only the letters or digits are centred on the line: the full stop or
+% parenthesis after them (<,rensujitail>{.}, split off by tex.xsl)
+% hangs to their right, taking no width.
+\newif\ifgml@rensuji
+\gmldefhint{rensuji}{\iftdir\gml@rensujitrue\fi}
+\gmldefhint{rensujitail}#1{\ifydir\rlap{#1}\else#1\fi}
+\let\gml@tate@islabel\gml@hint@islabel
+\gmldefhint{islabel}{\gml@tate@islabel
+  \ifgml@rensuji\gml@rensujifalse\yoko\fi}
 
 % ---- ruby ----------------------------------------------------------------------------
 % tex.xsl pairs the bases and readings of a :ruby and works out the

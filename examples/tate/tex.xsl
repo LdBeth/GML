@@ -178,6 +178,28 @@
         else t:ref($n)"/>
   </xsl:function>
 
+  <!-- 連数字 (rensuji, tate-chu-yoko): the identifier of an ordered
+       list item (dcfstarter's 1. a. 1) i. ...: one to three Latin
+       letters or digits and its full stop or parenthesis) is the label
+       that tex.xsl marks with <,islabel>; <,rensuji> before it tells
+       tagset.tex to set that label upright, across the vertical line,
+       and the full stop or parenthesis is <,rensujitail>{.}: it hangs
+       beside the letters or digits, which alone are centred.
+       Any other label (a definition term, a bullet) stays as it is. -->
+  <xsl:template match="text()[following-sibling::node()[1][self::gml:is]]" priority="11">
+    <xsl:variable name="s" select="normalize-space(.)"/>
+    <xsl:choose>
+      <xsl:when test="matches($s, '^[0-9A-Za-z]{1,3}[.)]$') and t:is-label-start(.)">
+        <xsl:value-of select="t:hint('rensuji', '', false()) || t:hint('islabel', '', false())
+            || substring($s, 1, string-length($s) - 1)
+            || t:hint('rensujitail', '', false()) || '{' || substring($s, string-length($s)) || '}&#10;'"/>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:next-match/>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+
   <!-- the plain text of a heading, without the readings -->
   <xsl:function name="t:plain" as="xs:string">
     <xsl:param name="e" as="element()"/>
