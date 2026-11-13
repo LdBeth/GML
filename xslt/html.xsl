@@ -86,7 +86,10 @@
     gml:hr       hr.  gml:sx: a flex line, left / fill / right.
     gml:lines    ce ri: a centred / right-aligned block whose input lines
                  stay lines (white-space: pre-line); us up uc: underline /
-                 uppercase spans; rc: span.gml-rc.
+                 uppercase spans; rc (.rc * c, .rc n on/off): revised
+                 text, ins.gml-lines.gml-rc data-rc=CHAR, as an inline
+                 rc scope (below); a blank character marks nothing
+                 (span.gml-lines).
     gml:scope    kind=block -> div (span display:block in phrasing
                  content; in a list, its CSS goes on each item instead),
                  kind=inline -> span (div in flow content), with the
@@ -172,6 +175,20 @@
     font      class gml-font gml-font-NAME (gml.css styles hi0-hi3 as
               hp0-hp3, the hdN fonts, xmpfont), data-font
     hy        hyphens: auto | manual
+    rc        revised text (.rc; "" none, also for a blank revision
+              character): the scope is written as ins (class gml-rc,
+              data-rc the character) instead of div/span.  Around blocks
+              (the div case) it is ins.gml-rc-block, display: block,
+              and gml.css draws a rule in its left margin from its first
+              line to its last; inside a paragraph (span case) it is an
+              inline ins, faintly shaded (CSS cannot rule a margin per
+              line).  In a list the scope's state goes on the items:
+              li.gml-rc (dt, dd) data-rc, ruled outside the label.
+              Limits: a revision that ends (or turns to a blank
+              character) inside a block it began before still rules
+              that whole block, an ancestor's rule cannot be undone; a
+              different code inside a ruled block is shaded as well.
+              ADJUST and ALIGN (events) are dropped.
     wz bc ws es sb ud: data-gml-NAME only.
 
   DCF units (lib/units.ml, by gml-shared.xml) -> CSS
@@ -535,13 +552,17 @@
 
   <xsl:function name="h:scope-class" as="xs:string*">
     <xsl:param name="s" as="element(gml:scope)"/>
-    <xsl:sequence select="$s/@font ! ('gml-font', h:font-class(.))"/>
+    <xsl:sequence select="$s/@font ! ('gml-font', h:font-class(.)),
+                          $s/@rc[. != ''] ! 'gml-rc'"/>
   </xsl:function>
 
   <xsl:template match="gml:scope">
     <xsl:param name="ctx" as="xs:string" tunnel="yes" select="'flow'"/>
     <xsl:param name="item-css" as="xs:string*" tunnel="yes" select="()"/>
     <xsl:param name="item-class" as="xs:string*" tunnel="yes" select="()"/>
+    <xsl:param name="item-rc" as="xs:string?" tunnel="yes" select="()"/>
+    <!-- revised text (.rc): the revision character, "" none -->
+    <xsl:variable name="rc" select="string(@rc)"/>
     <!-- a block scope written inline keeps only what applies to text -->
     <xsl:variable name="css" select="if (@kind = 'block' and $ctx != 'list' and not(h:box(.)))
         then h:scope-css(.)[matches(., '^(white-space|line-height|tab-size|hyphens|overflow-wrap):')]
@@ -553,6 +574,8 @@
         <xsl:apply-templates>
           <xsl:with-param name="item-css" select="$item-css, $css" tunnel="yes"/>
           <xsl:with-param name="item-class" select="$item-class, $class" tunnel="yes"/>
+          <xsl:with-param name="item-rc" select="if (exists(@rc)) then $rc[. != ''] else $item-rc"
+              tunnel="yes"/>
         </xsl:apply-templates>
       </xsl:when>
       <xsl:when test="empty($css) and empty($class) and not($data)">
@@ -569,8 +592,14 @@
         <xsl:variable name="hang-css" select="$css[matches(., '^(padding-left|text-indent):')]"/>
         <xsl:variable name="hang" select="exists($hang-css) and $ctx = 'flow'"/>
         <xsl:variable name="css" select="if ($hang) then $css[not(. = $hang-css)] else $css"/>
-        <xsl:element name="{if ($ctx = 'flow' and ($block or $has-blocks or $hang)) then 'div' else 'span'}">
-          <xsl:attribute name="class" select="string-join(('gml-scope', $class), ' ')"/>
+        <xsl:variable name="div" select="$ctx = 'flow' and ($block or $has-blocks or $hang)"/>
+        <!-- revised text is ins (transparent: a block in flow content):
+             ruled in the margin around blocks (gml-rc-block), shaded
+             inside a paragraph -->
+        <xsl:element name="{if ($rc != '') then 'ins' else if ($div) then 'div' else 'span'}">
+          <xsl:attribute name="class" select="string-join(('gml-scope', $class,
+              if ($rc != '' and $div) then 'gml-rc-block' else ()), ' ')"/>
+          <xsl:if test="$rc != ''"><xsl:attribute name="data-rc" select="$rc"/></xsl:if>
           <xsl:if test="exists($css) or ($block and $ctx = 'phrasing')">
             <xsl:attribute name="style" select="string-join((
                 if ($block and $ctx = 'phrasing') then 'display: block' else (), $css), '; ')"/>
@@ -1112,10 +1141,13 @@
     <xsl:param name="class" as="xs:string*"/>
     <xsl:param name="item-css" as="xs:string*"/>
     <xsl:param name="item-class" as="xs:string*"/>
+    <xsl:param name="item-rc" as="xs:string?" tunnel="yes" select="()"/>
+    <xsl:variable name="item-class" select="$item-class[not(. = 'gml-rc')], $item-rc ! 'gml-rc'"/>
     <xsl:call-template name="h:id"/>
     <xsl:if test="exists(($class, $item-class))">
       <xsl:attribute name="class" select="string-join(($class, $item-class), ' ')"/>
     </xsl:if>
+    <xsl:if test="exists($item-rc)"><xsl:attribute name="data-rc" select="$item-rc"/></xsl:if>
     <xsl:if test="exists($item-css)">
       <xsl:attribute name="style" select="string-join($item-css, '; ')"/>
     </xsl:if>
@@ -1150,6 +1182,7 @@
         <xsl:with-param name="ctx" select="'flow'" tunnel="yes"/>
         <xsl:with-param name="item-css" select="()" tunnel="yes"/>
         <xsl:with-param name="item-class" select="()" tunnel="yes"/>
+        <xsl:with-param name="item-rc" select="()" tunnel="yes"/>
       </xsl:apply-templates>
     </li>
   </xsl:template>
@@ -1168,6 +1201,7 @@
         <xsl:with-param name="ctx" select="if ($term) then 'phrasing' else 'flow'" tunnel="yes"/>
         <xsl:with-param name="item-css" select="()" tunnel="yes"/>
         <xsl:with-param name="item-class" select="()" tunnel="yes"/>
+        <xsl:with-param name="item-rc" select="()" tunnel="yes"/>
       </xsl:apply-templates>
     </xsl:element>
   </xsl:template>
@@ -2038,9 +2072,28 @@
     <xsl:param name="ctx" as="xs:string" tunnel="yes" select="'flow'"/>
     <xsl:variable name="w" select="string(@word)"/>
     <xsl:choose>
-      <xsl:when test="$w = ('us', 'up', 'uc', 'rc') or not($w = ('ce', 'ri'))">
+      <!-- .rc * c, .rc n on/off: the line is revised text, as a scope with
+           rc= (gml:scope above); a blank character marks nothing -->
+      <xsl:when test="$w = 'rc'">
+        <xsl:choose>
+          <xsl:when test="normalize-space(@char) = ''">
+            <span class="gml-lines">
+              <xsl:apply-templates>
+                <xsl:with-param name="ctx" select="'phrasing'" tunnel="yes"/>
+              </xsl:apply-templates>
+            </span>
+          </xsl:when>
+          <xsl:otherwise>
+            <ins class="gml-lines gml-rc" data-rc="{@char}">
+              <xsl:apply-templates>
+                <xsl:with-param name="ctx" select="'phrasing'" tunnel="yes"/>
+              </xsl:apply-templates>
+            </ins>
+          </xsl:otherwise>
+        </xsl:choose>
+      </xsl:when>
+      <xsl:when test="$w = ('us', 'up', 'uc') or not($w = ('ce', 'ri'))">
         <span class="gml-lines gml-{$w}">
-          <xsl:if test="$w = 'rc'"><xsl:attribute name="data-rc" select="@char"/></xsl:if>
           <xsl:variable name="css" select="(
               if ($w = ('us', 'uc')) then 'text-decoration: underline' else (),
               if ($w = ('up', 'uc')) then 'text-transform: uppercase' else ())"/>

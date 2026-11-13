@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?><gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><body><h1>Revision codes</h1>
+<p>Before the revision.
+</p><gml:scope kind="inline" rc="|"><p>A whole revised paragraph.
+</p><ul><li>A revised item.
+</li><li>Another one.
+</li></ul></gml:scope><p>Text before
+<gml:scope kind="inline" rc="?">a revised phrase
+</gml:scope>and after.
+</p><p>A blank character:
+not marked
+done.
+</p><gml:scope kind="inline" rc="|"><p>Outer revised
+<gml:scope kind="inline" rc="?">inner revised
+</gml:scope>outer again.
+</p></gml:scope><ol><li>Old item.
+</li><gml:scope kind="inline" rc="|"><li>New item.
+</li><li>Another new item.
+</li></gml:scope></ol><gml:scope kind="inline" rc="|"><h2>A revised heading</h2>
+<xmp xml:space="preserve"><gml:scope kind="block" fill="no" align="left">revised example
+</gml:scope></xmp></gml:scope><p>One line:
+<gml:br break="yes"/><gml:lines word="rc" n="1" char="!" break="no">one marked line</gml:lines>
+<gml:br break="yes"/><gml:lines word="rc" n="1" code="2" char="?" break="no">one line of code 2</gml:lines>
+<gml:br break="yes"/><gml:lines word="rc" n="1" code="3" char=" " break="no">a line of the blank code</gml:lines>
+</p></body></gdoc></gml:doc>

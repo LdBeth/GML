@@ -15,8 +15,13 @@ Running head
 .rh off
 .cp 2
 .sx /left/./right/
+.rc 1 |
 .rc 1 on
 revised
 .rc 1 off
 .rc * |
 changed line
+.rc 1 on/off
+one line
+.rc adjust 3 left
+.rc align right

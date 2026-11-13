@@ -51,6 +51,39 @@ type capture = {
 }
 (** A [.dm name on] definition in progress. *)
 
+type rc_def = { rchar : string; rfont : string option }
+(** A revision code defined by [.rc n c [FONT f]]: its character and font ("="
+    the current font). *)
+
+type rc = {
+  defs : (int * rc_def) list;  (** the codes defined, 1-9 *)
+  stack : int list;
+      (** the codes on, the active one first, then the stacked ones (LR p.303
+          r5) *)
+  adjust_left : string;
+      (** [.rc adjust] of the left revision codes, a dimension token ("2ch") *)
+  adjust_right : string;  (** the same for the right ones *)
+  rc_align : string;  (** [.rc align]: left right inside outside outcol *)
+}
+(** The revision code state ([.rc], LR p.301-306), part of the active
+    environment (r7). Immutable: [copy_fmt] shares it. *)
+
+(* ADJUST without h is 2 (LR p.302), taken as the initial value too;
+   ALIGN LEFT "is the default" *)
+let rc_adjust_default =
+  match Units.parse Units.Horizontal "2" with
+  | Ok o -> Units.token o.value
+  | Error _ -> assert false
+
+let initial_rc =
+  {
+    defs = [];
+    stack = [];
+    adjust_left = rc_adjust_default;
+    adjust_right = rc_adjust_default;
+    rc_align = "left";
+  }
+
 type fmt = {
   mutable left : Units.sum;  (** [.in], permanent left indention *)
   mutable left_tmp : Units.sum option;
@@ -64,6 +97,7 @@ type fmt = {
   mutable overdraw : string;  (** extend, fold, trunc *)
   mutable fonts : string list;  (** [.bf] stack, innermost first *)
   mutable hyph : bool;  (** [.hy on|off] *)
+  mutable rc : rc;  (** [.rc] *)
 }
 (** The formatting state that the hints record ([Hints]): each hint carries the
     new value, so the state is tracked here. *)
@@ -81,6 +115,7 @@ let initial_fmt () =
     overdraw = "extend";
     fonts = [];
     hyph = false;
+    rc = initial_rc;
   }
 
 let copy_fmt (f : fmt) = { f with left = f.left }

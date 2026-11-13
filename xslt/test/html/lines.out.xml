@@ -20,7 +20,7 @@ then indented
 <br><span class="gml-il" aria-hidden="true" style="float: left; width: 2ch; height: 1lh"></span>indented line
 <br>undented line
 <span class="gml-lines gml-uc" style="text-decoration: underline; text-transform: uppercase">underscore caps</span>
-<span class="gml-lines gml-rc" data-rc="|">revised</span>
+<ins class="gml-lines gml-rc" data-rc="|">revised</ins>
 <span class="gml-sx" style="display: flex"><span class="gml-sx-left">left</span><span class="gml-sx-fill" data-fill="."></span><span class="gml-sx-right">right</span></span><span class="gml-hr" style="display: block"></span><span class="gml-sp" style="display: block; height: 2lh"></span>kept
 </span><span class="gml-lines gml-ce" style="display: block; text-align: center; white-space: pre-line">first centred
 second centred

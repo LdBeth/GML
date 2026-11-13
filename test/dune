@@ -18,10 +18,11 @@
  (enabled_if
   (and %{bin-available:tex} %{bin-available:transform})))
 
-; the marks of the running heading symbols: e-TeX (pdftex), not tex
+; the marks of the running heading symbols, the revision bars
+; (\pdfsavepos): e-TeX (pdftex), not tex
 
 (cram
- (applies_to tex_symref)
+ (applies_to tex_symref tex_rc)
  (deps
   (glob_files %{project_root}/xslt/*.xsl)
   %{project_root}/xslt/gml-shared.xml)

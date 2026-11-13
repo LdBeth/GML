@@ -15,9 +15,9 @@ share/tex/gml-shared.tex.
 The state hints (xslt/scope.xsl) and the properties they set:
 
   $ grep 'class="state"' shared.xml | sed 's/.*name="\([^"]*\)".*sets="\([^"]*\)".*/\1: \2/' | paste -s -d ' ' -
-  bc: bc bf: font es: es fo: fill align overdraw hy: hy in: in of ir: ir ju: fill align overdraw ll: ll ls: ls nf: fill align overdraw of: of pf: font sb: sb tb: tb tp: tp ud: ud ws: ws wz: wz
+  bc: bc bf: font es: es fo: fill align overdraw hy: hy in: in of ir: ir ju: fill align overdraw ll: ll ls: ls nf: fill align overdraw of: of pf: font rc: rc sb: sb tb: tb tp: tp ud: ud ws: ws wz: wz
   $ grep 'conditional=' shared.xml | sed 's/.*name="\([^"]*\)".*/\1/' | paste -s -d ' ' -
-  hy in ir
+  hy in ir rc
 
 The properties, in scope.xsl's order:
 
@@ -40,6 +40,7 @@ The properties, in scope.xsl's order:
   inline es=default
   inline sb=default
   inline ud=default
+  inline rc=
 
 Every word of the hint table is a registered control word:
 

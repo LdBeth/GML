@@ -93,11 +93,17 @@ the change in spacing between the lines of one paragraph.
 Wide word spaces.
 .ws normal
 .rc 1 *
+.rc adjust 3 left
+.rc align right
 .br
 .rc 1 on
 Revised text marked in the margin.
 .br
 .rc 1 off
+.rc 1 on/off
+One revised line.
+.br
+.rc align
 .ll 4i
 A shorter line length of four inches for this paragraph which is long
 enough to wrap at that length.

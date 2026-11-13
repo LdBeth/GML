@@ -20,7 +20,7 @@
 %   <NAME ATTRS>  <:NAME ATTRS>   start of element NAME, gml:NAME
 %   <>                            end of the innermost open element
 %   <.NAME ATTRS>  <,NAME ATTRS>  hint gml:NAME, breaking or not
-%   <:lines word=W,ATTRS> .. <>   a line scope (.ce .ri .us .up .uc .rc *)
+%   <:lines word=W,ATTRS> .. <>   a line scope (.ce .ri .us .up .uc .rc)
 %   <?pn ID>  <?lc ID>            a question of the pass model (gml:query)
 %   <=LABEL>                      gml:num
 %   <@NAME>                       an anchor (anchor= of an element sets its own)
@@ -108,6 +108,8 @@
 %   .se px@NAME = VALUE     a tag set's own (its TeX file writes it to
 %                           \gml@refout, its profile reads it; like
 %                           the others, never carried to JOB.sym)
+%   .* rc KIND ...          where the revision bars are ("revision
+%                           bars" below): comments to the engine
 % ENC is the name as tex.xsl escaped it (A-Z a-z 0-9 . - and
 % +code+) with "." written "@", "-" "#2D" and "+" "#2B" (\gml@enc), so
 % that it is a SCRIPT symbol name; a question id loses its leading "q"
@@ -177,7 +179,7 @@
 \let\gml@supp@rf@odd\empty \let\gml@supp@rf@even\empty
 \newif\ifgml@nofolio \newif\ifgml@refschanged \newif\ifgml@reffile
 \newif\ifgml@chappage  % the current page begins with a heading that ejects (.dh PA)
-\newif\ifgml@tabfound \newif\ifgml@tabfirst \newif\ifgml@rcon
+\newif\ifgml@tabfound \newif\ifgml@tabfirst
 \newif\ifgml@preserve \newif\ifgml@paoff
 \newif\ifgml@found \newif\ifgml@pnpref \newif\ifgml@bxfirst
 \newif\ifgml@userleader
@@ -556,7 +558,8 @@
 {\catcode`\^^M=\active \gdef^^M{\gml@obeyedline}}
 \def\gml@obeyedline{\ifhmode\par\else\ifgml@preserve
   \global\gml@pqblanktrue\leavevmode\par\global\gml@pqblankfalse\fi\fi}
-% DCF .of and revision codes act on every paragraph start.  The hanging
+% DCF .of acts on every paragraph start, and a revision bar that waits
+% for a line begins there (\gml@rcsync).  The hanging
 % indention of a paragraph of the body is kept in \gml@pqhi/\gml@pqha
 % too: a line scope that began before the paragraph may end its group
 % inside it (\gml@endlines), and \par then puts it back
@@ -564,8 +567,7 @@
     \hangindent\gml@ofdim\hangafter\@ne\global\gml@ofstate\tw@
   \or\hangindent\gml@ofdim\hangafter\z@\fi
   \global\gml@pqhi\hangindent\global\gml@pqha\hangafter
-  \ifgml@rcon\llap{\gml@rcchar\enspace}\fi\global\gml@celltopfalse}
-\def\gml@rcchar{|}
+  \gml@rcsync\global\gml@celltopfalse}
 
 % ---- vertical space ------------------------------------------------------------
 % \gml@vskip: a DCF skip (.sk): discarded at the top of a page, and
@@ -1399,13 +1401,6 @@
 \gmldefhint{hw}{\gml@hget{word}\gml@tv\def\gml@hwword{}%
   \expandafter\gml@hw@a\gml@tv\gml@end
   \ifx\gml@hwword\empty\else\expandafter\hyphenation\expandafter{\gml@hwword}\fi}
-\gmldefhint{rc}{\gml@hget{code}\gml@tv\gml@hget{mode}\gml@tu\gml@hget{char}\gml@tw
-  \ifx\gml@tv\empty\else
-    \ifx\gml@tu\empty\expandafter\global\expandafter\let\csname gml@rc@\gml@tv\endcsname\gml@tw
-    \else\ifx\gml@tu\gml@onstr\global\gml@rcontrue
-      \expandafter\ifx\csname gml@rc@\gml@tv\endcsname\relax\gdef\gml@rcchar{|}%
-      \else\global\expandafter\let\expandafter\gml@rcchar\csname gml@rc@\gml@tv\endcsname\fi
-    \else\global\gml@rconfalse\fi\fi\fi}
 % .ls normal [v] | by f   (the factor f is kept as written by gml)
 \def\gml@twowords#1{\edef\gml@tmpd{#1\space\space}\expandafter\gml@tw@a\gml@tmpd\gml@nil}
 \def\gml@tw@a#1 #2 #3\gml@nil{\def\gml@wa{#1}\def\gml@wb{#2}}
@@ -1522,9 +1517,13 @@
 \gmldeflines{ri}{end}{\gml@lmore}
 % .us/.up/.uc: tex.xsl wraps the words (<_WORD> ...); nothing else
 \gmldeflines{us}{begin}{} \gmldeflines{up}{begin}{} \gmldeflines{uc}{begin}{}
-% .rc * c: a revision character in the margin of the covered line
-\gmldeflines{rc}{begin}{\gml@lget{char}\gml@tv\gml@lget{cont}\gml@tmpb
-  \ifx\gml@tmpb\gml@yes\else\leavevmode\llap{\gml@tv\enspace}\fi}
+% .rc * c, .rc n ON/OFF: a revision bar beside the covered line (unless
+% a code is on already)
+\let\gml@rclineoff\relax
+\gmldeflines{rc}{begin}{\let\gml@rclineoff\relax\gml@lget{char}\gml@tv
+  \ifgml@rcwant\else\ifx\gml@tv\empty\else\ifx\gml@tv\space\else
+    \gml@rcon\let\gml@rclineoff\gml@rcoff\fi\fi\fi}
+\gmldeflines{rc}{end}{\gml@rclineoff}
 
 % ---- page references ----------------------------------------------------------------
 % ENC (the names of the aux file, lib/aux.ml): a name as tex.xsl
@@ -1606,6 +1605,8 @@
     \closein\gml@in\fi}
 \def\gml@auxloop{\read\gml@in to\gml@tmpa
   \ifeof\gml@in\else
+    \ifx\gml@auxput\gml@auxset
+      \expandafter\gml@rcline\gml@tmpa\gml@stop.* rc x \gml@stop\gml@nil\fi
     \expandafter\gml@auxline\gml@tmpa\gml@stop.se x = \gml@stop\gml@nil
     \expandafter\gml@auxloop\fi}
 \def\gml@auxline#1.se #2 = #3\gml@stop#4\gml@nil{\def\gml@tmpb{#1}\def\gml@tmpc{#4}%
@@ -1627,6 +1628,174 @@
   \gml@auxfile\gml@auxcmp{}%
   \ifgml@refschanged\immediate\write16{GML: page references have changed;
     run TeX again to get them right.}\fi}
+
+% ---- revision bars (.rc) ---------------------------------------------------------------
+% The engine keeps the revision codes (the definitions, the stack,
+% .sa/.re) and writes the resolved state: <,rc state=on,code=N,char=C>
+% when the active code changes, <,rc state=off> when none is active,
+% <,rc adjust=H[,side=left|right]> and <,rc align=...>; .rc * c and
+% .rc n ON/OFF are line scopes (<:lines word=rc,char=C>).  The mark is
+% not DCF's character beside each output line (LR p.301) but a rule
+% from the first revised line to the last, as in IBM's later manuals:
+% a code with a character draws it, one with a blank does not (r2).
+%
+% Where the rule goes is known only when a page is put out, so it is
+% drawn a pass late, from the aux file.  A stretch of revised text in
+% one flow (the body, a footnote) is a segment: where it opens and
+% closes a \pdfsavepos notes the place and a \write puts it out at
+% shipout, as comment lines the engine skips:
+%   .* rc o S PAGE Y A L R   segment S opens on page PAGE (the PAGE-th
+%                            page put out) at height Y (sp from the
+%                            bottom of the paper); A the alignment
+%                            (l r i o c), L R the adjust values (sp)
+%   .* rc c S PAGE Y         it closes
+%   .* rc t PAGE Y           the top of the text of the page (box 255)
+%   .* rc e PAGE Y           the bottom of its last line
+% In a paragraph the place is that of the line: Y is the top of the
+% line where a segment opens and its bottom where one closes (the
+% height and depth of a parenthesis of the current font).  Between
+% paragraphs an opening waits for the next paragraph of the same list
+% (\gml@rcsync in \everypar; a list is known by \gml@pqdepth) or for
+% \gml@rcsync where a box is about to be made (a table); a closing is
+% the bottom of the last box (a skip before it is taken out and put
+% back, so that it still counts for \gml@vskip).  The next pass
+% (\gml@rcline, with the page references) pairs o and c, and \output
+% lays the rules of the page over box 255 (\gml@rcpage), measured from
+% the t line of the same page: nothing depends on where the driver puts
+% the origin.  A segment over several pages runs to the e line and
+% from the top of the next page.  On the left the rule begins L before
+% the text, on the right it ends R after it (.rc adjust; 0: no rule);
+% inside and outside go by the folio.
+% Needs \pdfsavepos and e-TeX (pdftex, ApTeX); with Knuth's tex there
+% are no rules.  Limits: a float is not a flow of its own; a footnote
+% split over two pages is ruled from the top of the text on the second;
+% OUTCOL is left (one column).
+\newcount\gml@pgord \newcount\gml@rcseg \newcount\gml@rcpenddepth
+\newdimen\gml@rcadjl \newdimen\gml@rcadjr \newdimen\gml@rcrule
+\newif\ifgml@rcok \newif\ifgml@rcused \newif\ifgml@rcwant \newif\ifgml@rcopen
+\newif\ifgml@rcpend \newif\ifgml@rcnb \newif\ifgml@rcgl
+\gml@rcrule=.8pt \def\gml@rcalign{l}\def\gml@rccur{0}\let\gml@rcsv\relax
+\ifx\pdfsavepos\undefined\else\ifx\numexpr\undefined\else\gml@rcoktrue\fi\fi
+\def\gml@rcinit{\ifgml@rcused\else\global\gml@rcusedtrue
+  \gml@dimtok{2ch}\gml@dima\global\gml@rcadjl\gml@dima\global\gml@rcadjr\gml@dima\fi}
+% \gml@rcwrite{KIND [S]}{adjustment of Y, sp}{ REST}
+\def\gml@rcwrite#1#2#3{\ifgml@reffile\edef\gml@tmpa{\pdfsavepos\write\gml@refout{.* rc #1
+  \noexpand\the\gml@pgord\space\noexpand\the\numexpr\pdflastypos+#2\relax#3}}\gml@tmpa\fi}
+\def\gml@rcopen@#1{\global\advance\gml@rcseg\@ne\xdef\gml@rccur{\the\gml@rcseg}%
+  \global\gml@rcopentrue\global\gml@rcpendfalse
+  \gml@rcwrite{o \gml@rccur}{#1}{ \gml@rcalign\space\number\gml@rcadjl\space\number\gml@rcadjr}}
+\def\gml@rcclose@#1{\global\gml@rcopenfalse\gml@rcwrite{c \gml@rccur}{#1}{}}
+\def\gml@rcasc{\gml@dima\fontcharht\font`\(\relax\ifdim\gml@dima=\z@\gml@dima\ht\strutbox\fi}
+\def\gml@rcdesc{\gml@dima\fontchardp\font`\(\relax\ifdim\gml@dima=\z@\gml@dima\dp\strutbox\fi}
+% in vertical mode: a skip just made is taken out (\gml@rcvglue) and
+% put back after the \write (\gml@rcvafter); after glue, a kern or a
+% penalty a \nobreak follows the \write, so that the next glue is no
+% new breakpoint
+\def\gml@rcvglue{\gml@rcnbfalse\gml@rcglfalse\skip@\z@skip
+  \ifnum\lastnodetype=11 \skip@\lastskip\vskip-\skip@\gml@rcnbtrue\gml@rcgltrue
+  \else\ifnum\lastnodetype>11 \ifnum\lastnodetype<14 \gml@rcnbtrue\fi\fi\fi
+  \gml@dimd\skip@}
+\def\gml@rcvafter{\ifgml@rcnb\nobreak\fi\ifgml@rcgl\vskip\skip@\fi}
+\def\gml@rcstart{\ifhmode\gml@rcasc\gml@rcopen@{\number\gml@dima}%
+  \else\gml@rcvglue\gml@rcopen@{-\number\gml@dimd}\gml@rcvafter\fi}
+\def\gml@rcstop{\ifgml@rcopen
+  \ifhmode\gml@rcglfalse\ifdim\lastskip=\z@\else\skip@\lastskip\unskip\gml@rcgltrue\fi
+    \gml@rcdesc\gml@rcclose@{-\number\gml@dima}\ifgml@rcgl\hskip\skip@\fi
+  \else\gml@rcvglue\gml@rcclose@{0}\gml@rcvafter\fi\fi}
+\def\gml@rcarm{\ifhmode\gml@rcstart
+  \else\global\gml@rcpendtrue\global\gml@rcpenddepth\gml@pqdepth\fi}
+\def\gml@rcon{\gml@rcinit\global\gml@rcwanttrue\ifgml@rcopen\else\gml@rcarm\fi}
+\def\gml@rcoff{\global\gml@rcwantfalse\global\gml@rcpendfalse\gml@rcstop}
+\def\gml@rcsync{\ifgml@rcpend\ifnum\gml@rcpenddepth=\gml@pqdepth\gml@rcstart\fi\fi}
+\def\gml@rcre{\ifgml@rcopen\gml@rcstop\gml@rcarm\fi}
+% a flow of its own (a footnote): the segment of the text around it
+% stays open, the flow has its own.  \gml@rcflow comes after the mark
+% of the footnote (\textindent), in its first line: the profile ends
+% that line and spaces (.sp) before the text, so revised text waits for
+% the next paragraph; a footnote that goes on in the first line is
+% ruled beside its last line only (\gml@rcflowend)
+\def\gml@rcflow{\edef\gml@rcsv{\gdef\noexpand\gml@rccur{\gml@rccur}%
+    \global\expandafter\noexpand\csname gml@rcopen\ifgml@rcopen true\else false\fi\endcsname
+    \global\expandafter\noexpand\csname gml@rcpend\ifgml@rcpend true\else false\fi\endcsname
+    \global\gml@rcpenddepth\the\gml@rcpenddepth\relax}%
+  \global\gml@rcopenfalse\global\gml@rcpendfalse
+  \ifgml@rcwant\global\gml@rcpendtrue\global\gml@rcpenddepth\gml@pqdepth\fi}
+\def\gml@rcflowend{\ifx\gml@rcsv\relax\else\gml@rcsync\gml@rcstop\gml@rcsv\fi}
+\def\gml@rcal@left{l}\def\gml@rcal@right{r}\def\gml@rcal@inside{i}
+\def\gml@rcal@outside{o}\def\gml@rcal@outcol{c}
+\gmldefhint{rc}{\gml@hget{state}\gml@tv
+  \ifx\gml@tv\gml@onstr\gml@hget{char}\gml@tu\gml@rcchar\gml@tu
+  \else\ifx\gml@tv\gml@offstr\gml@rcoff\fi\fi
+  \gml@hget{adjust}\gml@tv
+  \ifx\gml@tv\empty\else\gml@rcinit\gml@hget{side}\gml@tu\gml@dimtok{\gml@tv}\gml@dima
+    \def\gml@tv{right}\ifx\gml@tu\gml@tv\else\global\gml@rcadjl\gml@dima\fi
+    \def\gml@tv{left}\ifx\gml@tu\gml@tv\else\global\gml@rcadjr\gml@dima\fi
+    \gml@rcre\fi
+  \gml@hget{align}\gml@tv
+  \ifx\gml@tv\empty\else\expandafter\ifx\csname gml@rcal@\gml@tv\endcsname\relax\else
+    \xdef\gml@rcalign{\csname gml@rcal@\gml@tv\endcsname}\gml@rcre\fi\fi}
+% a blank revision character: no rule
+\def\gml@rcchar#1{\ifx#1\empty\gml@rcoff\else\ifx#1\space\gml@rcoff\else\gml@rcon\fi\fi}
+% the next pass: the lines of the aux file (\gml@auxloop, at \gml only)
+\def\gml@rcline#1.* rc #2 #3\gml@stop#4\gml@nil{\def\gml@tmpb{#1}\def\gml@tmpc{#4}%
+  \ifx\gml@tmpb\empty\ifx\gml@tmpc\empty\else
+    \expandafter\ifx\csname gml@rcr@#2\endcsname\relax\else
+      \csname gml@rcr@#2\endcsname#3 . . . . . . . \gml@nil\fi\fi\fi}
+\def\gml@rcr@t#1 #2 #3\gml@nil{\if.#2\else\expandafter\gdef\csname gml@rct@#1\endcsname{#2}\fi}
+\def\gml@rcr@e#1 #2 #3\gml@nil{\if.#2\else\expandafter\gdef\csname gml@rce@#1\endcsname{#2}\fi}
+\def\gml@rcr@o#1 #2 #3 #4 #5 #6 #7\gml@nil{\if.#6\else
+  \expandafter\gdef\csname gml@rco@#1\endcsname{{#2}{#3}{#4}{#5}{#6}}\fi}
+\def\gml@rcr@c#1 #2 #3 #4\gml@nil{\if.#3\else
+  \expandafter\ifx\csname gml@rco@#1\endcsname\relax\else
+    \expandafter\expandafter\expandafter\gml@rcpair\csname gml@rco@#1\endcsname{#2}{#3}%
+    \expandafter\global\expandafter\let\csname gml@rco@#1\endcsname\relax\fi\fi}
+% \gml@rcpair{page}{y}{A}{L}{R}{page}{y}: the rules, page by page
+% (\gml@rcp@PAGE: \gml@rcbar{y}{y}{A}{L}{R} ...)
+\def\gml@rcpair#1#2#3#4#5#6#7{\ifnum#1=#6 \gml@rcadd{#1}{#2}{#7}{#3}{#4}{#5}%
+  \else\ifnum#1<#6 \gml@rcadd{#1}{#2}{\noexpand\gml@rcE}{#3}{#4}{#5}%
+    \gml@rcmid{#1}{#6}{#3}{#4}{#5}%
+    \gml@rcadd{#6}{\noexpand\gml@rcT}{#7}{#3}{#4}{#5}\fi\fi}
+\def\gml@rcmid#1#2#3#4#5{\gml@cnta#1\relax
+  \loop\advance\gml@cnta\@ne\ifnum\gml@cnta<#2\relax
+    \gml@rcadd{\the\gml@cnta}{\noexpand\gml@rcT}{\noexpand\gml@rcE}{#3}{#4}{#5}\repeat}
+\def\gml@rcadd#1#2#3#4#5#6{\edef\gml@tmpa{\noexpand\gml@rcbar{#2}{#3}{#4}{#5}{#6}}%
+  \expandafter\ifx\csname gml@rcp@#1\endcsname\relax
+    \expandafter\gdef\csname gml@rcp@#1\endcsname{}\fi
+  \expandafter\xdef\csname gml@rcp@#1\endcsname{%
+    \unexpanded\expandafter\expandafter\expandafter{\csname gml@rcp@#1\endcsname}%
+    \unexpanded\expandafter{\gml@tmpa}}}
+% the page: \gml@rcpage (in \output, before \plainoutput) counts it,
+% lays its rules over box 255 and notes its top and bottom
+\def\gml@rcpage{\global\advance\gml@pgord\@ne
+  \ifgml@rcok\ifvoid\@cclv\else
+    \setbox\@cclv\vbox{\vbox to\z@{\gml@rcbars\vss}\unvbox\@cclv
+      \ifgml@rcused\gml@rcwrite{e}{0}{}\fi}\fi\fi}
+\def\gml@rcbars{\ifgml@rcused\gml@rcwrite{t}{0}{}\fi
+  \expandafter\ifx\csname gml@rct@\the\gml@pgord\endcsname\relax\else
+    \offinterlineskip\csname gml@rcp@\the\gml@pgord\endcsname\fi}
+\def\gml@rcT{\numexpr\csname gml@rct@\the\gml@pgord\endcsname
+  -\number\topskip+\number\ht\strutbox\relax}
+\def\gml@rcE{\expandafter\ifx\csname gml@rce@\the\gml@pgord\endcsname\relax
+    \numexpr\csname gml@rct@\the\gml@pgord\endcsname-\number\vsize\relax
+  \else\csname gml@rce@\the\gml@pgord\endcsname\fi}
+\def\gml@rcbar#1#2#3#4#5{\gml@cnta\numexpr#1\relax\gml@cntb\numexpr#2\relax
+  \ifnum\gml@cnta>\gml@cntb\gml@rcside#3{#4}{#5}%
+    \ifdim\gml@dimc<\maxdimen
+      \vbox to\z@{\kern\dimexpr\numexpr\csname gml@rct@\the\gml@pgord\endcsname
+          -\gml@cnta\relax sp\relax
+        \hbox to\z@{\kern\gml@dimc\vrule width\gml@rcrule
+          height\dimexpr\numexpr\gml@cnta-\gml@cntb\relax sp\relax\hss}\vss}\fi\fi}
+% \gml@rcside A{L}{R}: \gml@dimc the left edge of the rule (\maxdimen: none)
+\def\gml@rcside#1#2#3{\gml@foundtrue
+  \if#1r\gml@foundfalse\fi
+  \if#1i\ifodd\pageno\else\gml@foundfalse\fi\fi
+  \if#1o\ifodd\pageno\gml@foundfalse\fi\fi
+  \ifgml@found\gml@dimc-#2sp \ifnum#2=\z@\gml@dimc\maxdimen\fi
+  \else\gml@dimc\dimexpr\gml@defaulthsize+#3sp-\gml@rcrule\relax
+    \ifnum#3=\z@\gml@dimc\maxdimen\fi\fi}
+\ifgml@rcok\else
+  \let\gml@rcon\relax\let\gml@rcoff\relax\let\gml@rcsync\relax\let\gml@rcre\relax
+  \let\gml@rcflow\relax\let\gml@rcflowend\relax\let\gml@rcinit\relax\fi
 
 % ---- running headings and footings ------------------------------------------------------
 \headline={\gml@headline} \footline={\gml@footline}
@@ -1736,7 +1905,7 @@
 \gmldefhint{symref}#1{\gml@hget{name}\gml@tv\expandafter\gml@symref\expandafter{\gml@tv}{#1}}
 \gmldefhint{symval}{\gml@hget{name}\gml@tv\gml@hget{value}\gml@tu
   \edef\gml@tmpa{\noexpand\gml@symval{\gml@tv}}\expandafter\gml@tmpa\expandafter{\gml@tu}}
-\output={\gml@pqenter\gml@tbl@output\gml@symtop\hsize\gml@defaulthsize\plainoutput
+\output={\gml@pqenter\gml@tbl@output\gml@symtop\hsize\gml@defaulthsize\gml@rcpage\plainoutput
   \global\gml@chappagefalse
   \gml@runsupnext{rh@odd}\gml@runsupnext{rh@even}%
   \gml@runsupnext{rf@odd}\gml@runsupnext{rf@even}}
@@ -1959,7 +2128,7 @@
 \def\gml@tbl@warn#1{\gml@aget{#1}\gml@tv\def\gml@tmpd{0}%
   \ifx\gml@tv\empty\else\ifx\gml@tv\gml@tmpd\else
   \gml@warnonce{tbl#1}{table #1= is not supported in TeX (ignored)}\fi\fi}
-\gmldefstart{table}{\par\gml@tbl@open}
+\gmldefstart{table}{\par\gml@rcsync\gml@tbl@open}
 \def\gml@tbl@open{\global\advance\gml@tblno\@ne\gml@tbl@slotof\gml@tblno
   \global\let\gml@tblslot\gml@tblos
   \global\setbox\gml@tbl@box{thd}\gml@tblslot\box\voidb@x
@@ -2246,13 +2415,13 @@
   \splittopskip\ht\strutbox\splitmaxdepth\dp\strutbox\floatingpenalty\@MM
   \leftskip\z@skip\rightskip\z@skip\spaceskip\z@skip\xspaceskip\z@skip
   \parindent\z@
-  \textindent{#1}\footstrut\futurelet\next\fo@t}
+  \textindent{#1}\footstrut\gml@rcflow\futurelet\next\fo@t}
 % plain's \@foot ends the footnote's last paragraph with the \insert;
 % in a footnote with a queue of its own (\gml@pqenter) \par ends it
 % first, so it takes the shape of a FOR, AFTER or .il given in it
 % (\gml@pqshape); a tag set's footnote without one is left as plain's,
 % so it does not take the shape of the text around it
-\def\@foot{\strut\ifgml@pqown\par\fi\egroup}
+\def\@foot{\strut\gml@rcflowend\ifgml@pqown\par\fi\egroup}
 \def\gml@fnsetup{\gml@elemleft\z@\gml@elemright\z@\gml@elemhsize\hsize}
 % in a table cell the \insert is built in \gml@tblfns, at the width of the
 % text around the table; \gml@tbl@rowend's destination puts it on the page.
@@ -2369,7 +2538,7 @@
 \def\gml{\gmlpass\gml@readrefs\gml@tabdefault
   \everypar{\gml@everypar}\everyvbox\expandafter{\expandafter\gml@pqenter\the\everyvbox}%
   \rm\gml@apply\let\gml@closer\gml@enddocument\catcode`\<=\active\catcode`\&=\active}
-\def\gml@enddocument{\par\vfill\supereject\gml@checkrefs\csname bye\endcsname} % (\bye is \outer)
+\def\gml@enddocument{\gml@rcoff\par\vfill\supereject\gml@checkrefs\csname bye\endcsname} % (\bye is \outer)
 
 % ---- tag set and local overrides -----------------------------------------------------------------------
 \ifx\gmltagset\undefined\else\input\gmltagset\relax\fi

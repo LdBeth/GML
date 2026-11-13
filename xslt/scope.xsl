@@ -38,6 +38,10 @@
     gml:bf gml:pf                font (pf: the font restored)
     gml:hy (with mode)           hy  = on|off
     gml:ws gml:es gml:sb gml:ud  ws es sb ud = spec
+    gml:rc (with state)          rc  = char, the revision character of the
+                                 active code (.rc); "" (the initial value)
+                                 for state="off" and for a code whose
+                                 character is a blank, which marks nothing
 
   Dimensions are written n+unit ("5ch", "1.5i"); zero is "0"; a mixed sum
   is kept as written ("4ch+1i").
@@ -45,7 +49,8 @@
   Everything else is an event and stays where it is: the hints of
   class="event" (the page layout words pn pl pw pm tm bm among them:
   page-level, not scoped), .in/.ir FOR a distance (temporary="yes"),
-  .hy with options only, and the elements gml:lines (already a scope),
+  .hy with options only, .rc ADJUST and ALIGN (gml:rc without state=),
+  and the elements gml:lines (already a scope),
   gml:h, gml:fn, gml:rh, gml:rf, gml:raw.  State hints inside such
   elements count like any other.
 
@@ -120,9 +125,9 @@
        gml-shared.xml at the start (template "/"), so that a state hint
        the engine adds cannot pass as an event unnoticed -->
   <xsl:variable name="s:handled" as="xs:string*" select="('in', 'ir', 'of', 'll', 'fo', 'nf',
-      'ju', 'tp', 'tb', 'ls', 'wz', 'bc', 'ws', 'es', 'sb', 'ud', 'bf', 'pf', 'hy')"/>
+      'ju', 'tp', 'tb', 'ls', 'wz', 'bc', 'ws', 'es', 'sb', 'ud', 'bf', 'pf', 'hy', 'rc')"/>
   <!-- and those that are state only with an attribute (s:is-state) -->
-  <xsl:variable name="s:conditional" as="xs:string*" select="('in', 'ir', 'hy')"/>
+  <xsl:variable name="s:conditional" as="xs:string*" select="('in', 'ir', 'hy', 'rc')"/>
 
   <xsl:function name="s:dim" as="xs:string">
     <xsl:param name="n" as="xs:string"/>
@@ -149,13 +154,15 @@
   </xsl:function>
 
   <!-- is this a state hint?  (a state hint of gml-shared.xml; .in/.ir
-       FOR a distance and .hy with options only are events) -->
+       FOR a distance, .hy with options only and .rc ADJUST/ALIGN are
+       events) -->
   <xsl:function name="s:is-state" as="xs:boolean">
     <xsl:param name="n" as="node()"/>
     <xsl:sequence select="$n instance of element() and namespace-uri($n) = 'urn:x-gml:canonical'
         and local-name($n) = $gml:state-hint-names
         and (if (local-name($n) = ('in', 'ir')) then not($n/@temporary = 'yes')
              else if (local-name($n) = 'hy') then exists($n/@mode)
+             else if (local-name($n) = 'rc') then exists($n/@state)
              else true())"/>
   </xsl:function>
 
@@ -183,6 +190,9 @@
     <xsl:accumulator-rule match="gml:bf" select="map:put($value, 'font', string(@font))"/>
     <xsl:accumulator-rule match="gml:pf" select="map:put($value, 'font', (@font/string(), 'initial')[1])"/>
     <xsl:accumulator-rule match="gml:hy[@mode]" select="map:put($value, 'hy', string(@mode))"/>
+    <xsl:accumulator-rule match="gml:rc[@state]"
+        select="map:put($value, 'rc', if (@state = 'on' and normalize-space(@char) ne '')
+                                      then string(@char) else '')"/>
   </xsl:accumulator>
 
   <xsl:mode use-accumulators="state" on-no-match="shallow-copy"/>

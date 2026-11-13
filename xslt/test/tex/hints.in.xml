@@ -41,8 +41,9 @@ Kept text two.
 <gml:kp mode="off" break="yes"/><gml:ls spec="by 1.5" break="yes"/>Wider line spacing for a while so that a couple of lines of text show
 the change in spacing between the lines of one paragraph.
 <gml:br break="yes"/><gml:ls spec="normal" break="yes"/><gml:ws spec="by 2" break="no"/>Wide word spaces.
-<gml:ws spec="normal" break="no"/><gml:rc code="1" char="*" break="no"/><gml:br break="yes"/><gml:rc code="1" mode="on" break="no"/>Revised text marked in the margin.
-<gml:br break="yes"/><gml:rc code="1" mode="off" break="no"/><gml:ll length="4" unit="i" break="yes"/>A shorter line length of four inches for this paragraph which is long
+<gml:ws spec="normal" break="no"/><gml:rc adjust="3ch" side="left" break="no"/><gml:rc align="right" break="no"/><gml:br break="yes"/><gml:rc state="on" code="1" char="*" break="no"/>Revised text marked in the margin.
+<gml:br break="yes"/><gml:rc state="off" break="no"/><gml:lines word="rc" n="1" code="1" char="*" break="no">One revised line.</gml:lines>
+<gml:br break="yes"/><gml:rc align="left" break="no"/><gml:ll length="4" unit="i" break="yes"/>A shorter line length of four inches for this paragraph which is long
 enough to wrap at that length.
 <gml:ll length="default" break="yes"/><gml:fn>An unnumbered footnote from .fn on.
 </gml:fn><gml:dh level="2" spec="font bold" break="no"/><gml:vr break="yes"/><gml:pa break="yes"/><gml:pn spec="roman" break="no"/>After a page eject, roman page numbers.

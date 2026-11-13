@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gml:doc xmlns:gml="urn:x-gml:canonical"><gdoc><body><h1>Revision codes</h1>
+<p>Before the revision.
+<gml:rc state="on" code="1" char="|" break="no"/></p><p>A whole revised paragraph.
+</p><ul><li>A revised item.
+</li><li>Another one.
+</li></ul><gml:rc state="off" break="no"/><p>Text before
+<gml:rc state="on" code="2" char="?" break="no"/>a revised phrase
+<gml:rc state="off" break="no"/>and after.
+</p><p>A blank character:
+<gml:rc state="on" code="3" char=" " break="no"/>not marked
+<gml:rc state="off" break="no"/>done.
+<gml:rc state="on" code="1" char="|" break="no"/></p><p>Outer revised
+<gml:rc state="on" code="2" char="?" break="no"/>inner revised
+<gml:rc state="on" code="1" char="|" break="no"/>outer again.
+<gml:rc state="off" break="no"/></p><ol><li>Old item.
+<gml:rc state="on" code="1" char="|" break="no"/></li><li>New item.
+</li><li>Another new item.
+</li></ol><h2>A revised heading</h2>
+<xmp xml:space="preserve"><gml:fo fill="no" align="left" overdraw="extend" break="yes"/>revised example
+<gml:fo fill="yes" align="justify" overdraw="extend" break="yes"/></xmp><gml:rc state="off" break="no"/><p>One line:
+<gml:br break="yes"/><gml:lines word="rc" n="1" char="!" break="no">one marked line</gml:lines>
+<gml:br break="yes"/><gml:lines word="rc" n="1" code="2" char="?" break="no">one line of code 2</gml:lines>
+<gml:br break="yes"/><gml:lines word="rc" n="1" code="3" char=" " break="no">a line of the blank code</gml:lines>
+</p></body></gdoc></gml:doc>

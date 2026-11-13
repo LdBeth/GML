@@ -213,7 +213,7 @@ Lines that start with one of them are never filled.  Tags given
     ("pw" fmt "[h]" "page width")
     ("qq" file "" "quit quickly")
     ("qu" file "" "quit")
-    ("rc" fmt "n [on|off|c] | adjust h | * c" "revision code")
+    ("rc" fmt "n c [font f] | n on|off|on/off | * c | adjust [h] [left|right] | align [left|right|inside|outside|outcol]" "revision code")
     ("rf" fmt "[odd|even] on|off|cancel|sup|res|execute" "running footing")
     ("rh" fmt "[odd|even] on|off|cancel|sup|res|execute" "running heading")
     ("ri" fmt "[n|on|off|text]" "right-align lines")

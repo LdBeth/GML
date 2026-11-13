@@ -321,6 +321,62 @@ following lines are at the margin of the text again.
 .ce 2
 Tags say what a part of the document is,
 control words say how it looks.
+:h2.Revision codes
+:i2.revision codes
+.rc 1 |
+.rc 2
+:p.Revision code (.rc) marks the text that has changed since the last
+edition of a document.  A code has a number, from 1 to 9, and a
+character, and it is turned on before the changed text and off after
+it.  SCRIPT/VS prints the character beside every output line of that
+text; here a rule is drawn beside it, from its first line to its last,
+as in the later manuals.
+.br
+.rc 1 on
+:p.This paragraph is new in this edition, and so is the list after it.
+The rule begins with the first line of the paragraph and goes on, over
+the skips between the paragraphs and the items, until the code is
+turned off.
+:ul compact.
+:li.The rule is beside the items of a list,
+:li.beside a table or an example,
+:li.and beside the lines of a footnote.:fn.A footnote in revised text
+has a rule of its own, where the footnote is printed.:efn.
+:eul.
+.rc 1 off
+:p.The control word does not break, so a revision can begin and end
+inside a paragraph.  Of this one only
+.rc 1 on
+the words of this clause are new,
+.rc 1 off
+and the rule is beside the line or lines that hold them, however the
+paragraph is broken into lines, while the rest of it, which was in the
+last edition too, has none.  A .br before the control word ends the
+unrevised line first, where a revision must not reach into it.
+:p.Codes nest: one turned on while another is on is the active one
+until it is turned off.  A code whose character is a blank marks
+nothing, so one level of revision can be hidden and another shown.
+.br
+.rc 1 on
+:p.In this revised paragraph
+.rc 2 on
+this sentence is revised at a level that is not shown, which is why the
+rule has a gap beside it, a gap of at least one whole line, because the
+sentence was made long enough to fill a line of its own and more.
+.rc 2 off
+Where it ends, code 1 is the active one again.
+.rc 1 off
+:p.The rule can be placed at the right of the text, at the inside or
+the outside of the page, and nearer to the text or farther from it:
+.br
+.rc align right
+.rc adjust 1
+.rc 1 on
+:p.this paragraph is marked at the right (.rc align right), one
+character away from the end of the line (.rc adjust 1).
+.rc 1 off
+.rc align left
+.rc adjust
 :h2.A macro as a symbol
 :i2.macro value
 .dm motto /Generalized Markup Language/

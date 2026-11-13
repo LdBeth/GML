@@ -17,8 +17,8 @@
      of positions into tokens such as ["1ch 45ch"]); nothing is
      converted to device units.
    - Words that count input lines ([.ce n], [.ri n], [.us n], [.up n],
-     [.uc n], [.rc * c]) do not leave the counting to the backends: the
-     text of the lines they cover is wrapped in a
+     [.uc n], [.rc * c], [.rc n on/off]) do not leave the counting to the
+     backends: the text of the lines they cover is wrapped in a
      [<gml:lines word="ce" n="2" ...>] scope ([Doc.scope]) carrying the
      state that applies inside it.  The operand forms are a number of
      lines, ON ... OFF (n="on"), or text on the control word line itself
@@ -93,7 +93,7 @@
    | .df         | no    | name spec                        | df name spec                              |
    | .hy         | no    | [on|off] [options]               | hy [mode] [options]                       |
    | .hw         | no    | word                             | hw word                                   |
-   | .rc         | no    | n [on|off|c], adjust h, * c      | rc code [mode] [char] / gml:lines word="rc"|
+   | .rc         | no    | n c [font f], n on|off|on/off, * c, adjust [h] [left|right], align a | rc state code char [font] (sets rc) | rc adjust [side] | rc align; gml:lines word="rc" char [code] [font] |
    | .bc         | no    | on|off                           | bc mode                                   |
    | .ls         | yes*  | as written [nobreak]             | ls spec                                   |
    | .wz .pm     | yes   | as written                       | NAME spec                                 |
@@ -132,7 +132,8 @@ let emit ctx name ~brk attrs =
    of its gml:scope): the block properties, then the inline ones.  The
    initial values are those of [Ctx.initial_fmt] where the engine tracks
    the property (written as scope.xsl writes values: a dimension n+unit,
-   zero "0"); the others start as "default", the device's. *)
+   zero "0"); the others start as "default", the device's, but [rc],
+   "" (no revision code active). *)
 module P = struct
   let f = Ctx.initial_fmt ()
 
@@ -168,6 +169,11 @@ module P = struct
   let sb = inline "sb" "default"
   let ud = inline "ud" "default"
 
+  (* the revision code marking the text: the character of the active
+     code, "" when none is active or its character is a blank (a blank
+     marks nothing) *)
+  let rc = inline "rc" ""
+
   let all =
     [
       in_;
@@ -188,13 +194,15 @@ module P = struct
       es;
       sb;
       ud;
+      rc;
     ]
 end
 
 (* The nodes the words put out (the last column of the header table):
    the hints, events or state hints with the properties they set
    (scope.xsl), and the elements.  A hint .in/.ir for a distance
-   (temporary="yes") is not state, nor is a .hy without ON or OFF. *)
+   (temporary="yes") is not state, nor is a .hy without ON or OFF, nor
+   a .rc without state= (ADJUST, ALIGN). *)
 module N = struct
   open Node
 
@@ -237,7 +245,7 @@ module N = struct
   let df = event "df"
   let hy = state ~conditional:true "hy" [ P.hy ]
   let hw = event "hw"
-  let rc = event "rc"
+  let rc = state ~conditional:true "rc" [ P.rc ]
   let bc = state "bc" [ P.bc ]
   let fl = event "fl"
   let ls = state "ls" [ P.ls ]
@@ -1114,22 +1122,55 @@ let close_flow ctx name =
       Ctx.warn ctx ".%s off: no definition in progress" (String.sub name 4 2)
   | Doc.Mismatch _ -> ()
 
+(* ---- revision code state (used by .re and .rc) ---------------------------------- *)
+
+let rc_attrs (rc : Ctx.rc) n =
+  let d =
+    Option.value (List.assoc_opt n rc.defs)
+      ~default:{ rchar = " "; rfont = None }
+  in
+  [ ("code", string_of_int n); ("char", d.rchar) ]
+  @ match d.rfont with Some f -> [ ("font", f) ] | None -> []
+
+(* The hints that take a backend from revision state [a] to [b]. *)
+let rc_changes ctx (a : Ctx.rc) (b : Ctx.rc) =
+  let active (r : Ctx.rc) =
+    match r.stack with n :: _ -> Some (rc_attrs r n) | [] -> None
+  in
+  (match (active a, active b) with
+  | x, y when x = y -> ()
+  | _, Some attrs -> emit ctx "rc" ~brk:false (("state", "on") :: attrs)
+  | _, None -> emit ctx "rc" ~brk:false [ ("state", "off") ]);
+  let l = a.adjust_left <> b.adjust_left
+  and r = a.adjust_right <> b.adjust_right in
+  if l && r && b.adjust_left = b.adjust_right then
+    emit ctx "rc" ~brk:false [ ("adjust", b.adjust_left) ]
+  else begin
+    if l then
+      emit ctx "rc" ~brk:false [ ("adjust", b.adjust_left); ("side", "left") ];
+    if r then
+      emit ctx "rc" ~brk:false [ ("adjust", b.adjust_right); ("side", "right") ]
+  end;
+  if a.rc_align <> b.rc_align then
+    emit ctx "rc" ~brk:false [ ("align", b.rc_align) ]
+
 (* ---- saved environments ------------------------------------------------------ *)
 
 (* .sa/.re save and restore "the active and page environments along
    with the .TI and .TR translate tables" (LR p.451, Table 25).  Of
    them the engine tracks: the indention (with a temporary one until
    changed), offset and right indention, the formatting mode (.fo/.nf),
-   the current font and font save stack, hyphenation and the line
-   length ([Ctx.fmt]); the .tr table; the .dc characters of the active
-   environment, CONT CW GML MCS PS (LR p.451; [Ctx.chars]); and the .ce
-   .ri .us .up .uc line counts (the lines remaining, or ON; Table 25
-   note 2).  The rest of the indention (Table 25 note 3: .IN .IL .UN
-   .OF "individually saved"), the FOR/AFTER distances left and a
-   pending .il/.un, is the backend's: gml.tex saves it at gml:sa and
+   the current font and font save stack, hyphenation, the line length
+   and the revision codes (definitions, the codes on, ADJUST, ALIGN;
+   LR p.303 r7) ([Ctx.fmt]); the .tr table; the .dc characters of the
+   active environment, CONT CW GML MCS PS (LR p.451; [Ctx.chars]); and
+   the .ce .ri .us .up .uc line counts (the lines remaining, or ON;
+   Table 25 note 2).  The rest of the indention (Table 25 note 3: .IN
+   .IL .UN .OF "individually saved"), the FOR/AFTER distances left and
+   a pending .il/.un, is the backend's: gml.tex saves it at gml:sa and
    puts it back at gml:re.  Not tracked: .ti (not implemented), tabs,
-   line spacing, baseline, revision codes and the page layout words,
-   which are hints only.  A footnote saves the active environment when
+   line spacing, baseline and the page layout words, which are hints
+   only.  A footnote saves the active environment when
    it starts and restores it when it ends (LR p.451). *)
 
 let fn_env = " fn" (* a name no .sa operand can give *)
@@ -1191,7 +1232,9 @@ let re_breaks ctx sv =
    follows: .in/.of, .ir, .ll, the format mode, .hy and the fonts (.pf
    while the saved font stack is a tail of the current one, else .bf of
    the saved font); and the line scopes .ce .ri .us .up .uc in force
-   when it was saved begin again with the lines they had left. *)
+   when it was saved begin again with the lines they had left.  The
+   revision codes ([rc_changes]: the active code, ADJUST, ALIGN) are put
+   out also without [hints], at the end of a footnote. *)
 let restore ?(hints = true) ctx sv =
   let st = fmt ctx and old = sv.sfmt in
   let tbl = Doc.tr_table (doc ctx) in
@@ -1220,6 +1263,7 @@ let restore ?(hints = true) ctx sv =
   st.overdraw <- old.overdraw;
   st.fonts <- old.fonts;
   st.hyph <- old.hyph;
+  st.rc <- old.rc;
   let lm (f : Ctx.fmt) = Ctx.margin f.left f.left_tmp
   and rm (f : Ctx.fmt) = Ctx.margin f.right f.right_tmp in
   re "in" (lm cur <> lm old) (Units.attrs ~default:"ch" "left" (lm old));
@@ -1251,6 +1295,9 @@ let restore ?(hints = true) ctx sv =
         | f :: _ when f <> "" -> [ ("font", f) ]
         | _ -> [ ("font", ""); ("initial", "yes") ])
   end;
+  (* the revision codes also after a footnote: the marking of the text
+     that follows it changes *)
+  rc_changes ctx cur.rc old.rc;
   if hints then begin
     let d = doc ctx in
     let cur = line_state d in
@@ -1353,19 +1400,158 @@ let running word ctx ops =
 
 (* ---- revision codes ------------------------------------------------------------ *)
 
+(* .rc (LR p.301-306): the engine keeps the whole state ([Ctx.rc], in
+   [Ctx.fmt]: part of the active environment, r7) and puts out what it
+   resolves to, never a definition:
+   - the active code: [state="on" code char [font]] each time it
+     changes (an ON, the OFF of the active code bringing back the code
+     stacked under it, r5), [state="off"] when none is left;
+   - [adjust="h" [side="left|right"]] and [align="..."];
+   - [.rc * c] and [.rc n ON/OFF]: the next line, a gml:lines scope
+     ([char], and [code] [font] for a code).
+   The DCF messages (SH35-0048): 515 W ".RC mode was on or off already"
+   for an ON of the active code or an OFF of a code that is not on; 516 W
+   "invalid .RC definition" for a code that is on (r6); 517 W ".RC stack
+   overflow" for a tenth ON; all ignore the word.  Decided where LR and
+   the messages are silent (docs/dcf-notes.md, DCF-VERIFY): a stacked
+   code counts as on for 516 and may be turned on again (stacked
+   twice); its OFF while another is active takes it off the stack
+   quietly; an ON or ON/OFF of a code never defined warns and marks with
+   a blank; [.rc n] alone defines a blank (r2: "including the blank"),
+   as [.rc *] marks one.  FONT is passed on as .bf's fonts are; [=] is
+   the current font (r24). *)
+
 let revision ctx ops =
-  match tokens ops with
+  let st = fmt ctx in
+  let rc = st.rc in
+  let set rc' =
+    st.rc <- rc';
+    rc_changes ctx rc rc'
+  in
+  let line attrs =
+    Doc.open_scope (doc ctx) (scope ~word:"rc" ~n:"1" ~brk:false attrs (Some 1))
+  in
+  let single c =
+    Uchar.utf_decode_length (String.get_utf_8_uchar c 0) = String.length c
+  in
+  let on n = List.mem n rc.stack in
+  let defined n what =
+    if not (List.mem_assoc n rc.defs) then
+      Ctx.warn ctx
+        ".rc %d %s: revision code %d is not defined; its character is a blank" n
+        what n
+  in
+  let define n c font =
+    if not (single c) then
+      Ctx.error ctx ".rc %d: one revision character expected, not %s" n c
+    else if on n then
+      Ctx.warn ctx
+        ".rc %d: invalid .RC definition: revision code %d is on (ignored)" n n
+    else
+      st.rc <-
+        {
+          rc with
+          defs = (n, { rchar = c; rfont = font }) :: List.remove_assoc n rc.defs;
+        }
+  in
+  let code n rest =
+    match (List.map lc rest, rest) with
+    | [], _ -> define n " " None
+    | [ "on" ], _ -> (
+        match rc.stack with
+        | m :: _ when m = n ->
+            Ctx.warn ctx ".rc %d on: .RC mode was on already (ignored)" n
+        | s when List.length s >= 9 ->
+            Ctx.warn ctx ".rc %d on: .RC stack overflow (ignored)" n
+        | s ->
+            defined n "on";
+            set { rc with stack = n :: s })
+    | [ "off" ], _ -> (
+        match rc.stack with
+        | m :: s when m = n -> set { rc with stack = s }
+        | s when List.mem n s ->
+            let rec drop = function
+              | m :: s when m = n -> s
+              | m :: s -> m :: drop s
+              | [] -> []
+            in
+            st.rc <- { rc with stack = drop s }
+        | _ -> Ctx.warn ctx ".rc %d off: .RC mode was off already (ignored)" n)
+    | [ "on/off" ], _ ->
+        defined n "on/off";
+        line (rc_attrs rc n)
+    | [ _ ], [ c ] -> define n c None
+    | [ _; "font"; _ ], [ c; _; f ] -> define n c (Some f)
+    | [ _; "font" ], _ -> Ctx.error ctx ".rc %d: FONT needs a font name" n
+    | _ ->
+        Ctx.error ctx ".rc %d: unexpected operands %s" n
+          (String.concat " " (List.tl rest))
+  in
+  (* not [tokens]: "+" or "-" is a revision character *)
+  match Control.words ops with
+  | [] -> Ctx.error ctx ".rc: operands expected"
+  | [ "*" ] -> line [ ("char", " ") ]
+  | [ "*"; c ] when single c -> line [ ("char", c) ]
   | "*" :: c :: _ ->
-      Doc.open_scope (doc ctx)
-        (scope ~word:"rc" ~n:"1" ~brk:false [ ("char", c) ] (Some 1))
-  | w :: rest when lc w = "adjust" ->
-      emit ctx "rc" ~brk:false
-        [ ("adjust", spec Units.Horizontal (String.concat " " rest)) ]
-  | [ n ] -> emit ctx "rc" ~brk:false [ ("code", n); ("char", " ") ]
-  | [ n; m ] when lc m = "on" || lc m = "off" ->
-      emit ctx "rc" ~brk:false [ ("code", n); ("mode", lc m) ]
-  | [ n; c ] -> emit ctx "rc" ~brk:false [ ("code", n); ("char", c) ]
-  | _ -> Ctx.error ctx ".rc: invalid operands %s" ops
+      Ctx.error ctx ".rc *: one revision character expected, not %s" c
+  | w :: rest when lc w = "adjust" -> (
+      let side w = List.mem (lc w) [ "left"; "right" ] in
+      let width h =
+        match Units.parse Units.Horizontal h with
+        | Ok { sign = None; value } -> Ok (Units.token value)
+        | Ok _ -> Error ("invalid revision code field width " ^ h)
+        | Error e -> Error e
+      in
+      let h, side =
+        match rest with
+        | [] -> (Ok rc_adjust_default, None)
+        | [ s ] when side s -> (Ok rc_adjust_default, Some (lc s))
+        | [ h ] -> (width h, None)
+        | [ h; s ] when side s && not (side h) -> (width h, Some (lc s))
+        | _ :: extra ->
+            (Error ("unexpected operands " ^ String.concat " " extra), None)
+      in
+      let adjust h side =
+        emit ctx "rc" ~brk:false
+          (("adjust", h)
+          :: (match side with Some s -> [ ("side", s) ] | None -> []))
+      in
+      match (h, side) with
+      | Error e, _ -> Ctx.error ctx ".rc adjust: %s" e
+      | Ok h, Some "left" ->
+          st.rc <- { rc with adjust_left = h };
+          adjust h side
+      | Ok h, Some _ ->
+          st.rc <- { rc with adjust_right = h };
+          adjust h side
+      | Ok h, None ->
+          st.rc <- { rc with adjust_left = h; adjust_right = h };
+          adjust h side)
+  | w :: rest when lc w = "align" -> (
+      let align a =
+        st.rc <- { rc with rc_align = a };
+        emit ctx "rc" ~brk:false [ ("align", a) ]
+      in
+      match List.map lc rest with
+      | [] -> align "left"
+      | [ (("left" | "right" | "inside" | "outside" | "outcol") as a) ] ->
+          align a
+      | _ ->
+          Ctx.error ctx
+            ".rc align: LEFT, RIGHT, INSIDE, OUTSIDE or OUTCOL expected, not %s"
+            (String.concat " " rest))
+  | n :: rest -> (
+      match int_of_string_opt n with
+      | Some k
+        when k >= 1 && k <= 9
+             && String.for_all (fun c -> c >= '0' && c <= '9') n ->
+          code k rest
+      | Some _ when String.for_all (fun c -> c >= '0' && c <= '9') n ->
+          Ctx.error ctx ".rc: revision code 1 to 9 expected, not %s" n
+      | _ ->
+          Ctx.error ctx
+            ".rc: a revision code 1 to 9, *, ADJUST or ALIGN expected, not %s" n
+      )
 
 (* ---- .tr and .dv --------------------------------------------------------------- *)
 
@@ -1643,7 +1829,8 @@ let table =
     row "hr" Yes "[rule] h1|left [[to] h2|for l|right] ..." [ p N.hr ] hrule;
     row "vr" Yes "rule spec" [ p N.vr ] (generic "vr" ~brk:true);
     row "kp" Varies "on|off|float|delay|inline|v[+v]" [ p N.kp ] keep;
-    row "fn" No "on|off|leader" [ p N.fn ] footnote;
+    (* .fn off: the revision code hints of the restored environment *)
+    row "fn" No "on|off|leader" [ p N.fn; p N.rc ] footnote;
     row "rh" Yes "[odd|even] on|off|cancel|sup|res|execute"
       [ p N.rh_element; p N.rh ]
       (running "rh");
@@ -1670,7 +1857,11 @@ let table =
     row "hw" No "word"
       [ p N.hw ]
       (fun ctx ops -> emit ctx "hw" ~brk:false [ ("word", String.trim ops) ]);
-    row "rc" No "n [on|off|c] | adjust h | * c" [ p N.rc; lines ] revision;
+    row "rc" No
+      "n c [font f] | n on|off|on/off | * c | adjust [h] [left|right] | align \
+       [left|right|inside|outside|outcol]"
+      [ p N.rc; lines ]
+      revision;
     row "bc" No "on|off" [ p N.bc ] (generic ~read:plain "bc" ~brk:false);
     row "fl" No "on|off|dump ..."
       [ p N.fl ]
@@ -1718,8 +1909,18 @@ let table =
     row "re" Varies "[envname]"
       (p N.re
       :: List.map quiet
-           [ N.in_; N.of_; N.ir; N.ll; N.fo; N.hy; N.pf; N.bf; Doc.lines_node ]
-      )
+           [
+             N.in_;
+             N.of_;
+             N.ir;
+             N.ll;
+             N.fo;
+             N.hy;
+             N.pf;
+             N.bf;
+             N.rc;
+             Doc.lines_node;
+           ])
       restore_env;
     row "fv" No "top|bottom|center|justify"
       [ p N.fv ]

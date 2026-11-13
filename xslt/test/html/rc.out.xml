@@ -1,0 +1,47 @@
+<!DOCTYPE HTML><html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="GML html.xsl">
+<title>Revision codes</title>
+<link rel="stylesheet" href="gml.css">
+</head>
+<body class="gml">
+<main class="gml-doc">
+<article class="gml-gdoc">
+<section class="gml-body">
+<h1 id="gml-h1-1" class="gml-h1">Revision codes</h1>
+<p>Before the revision.
+</p><ins class="gml-scope gml-rc gml-rc-block" data-rc="|"><p>A whole revised paragraph.
+</p><ul class="gml-ul gml-nest-1">
+<li><span class="gml-label">•</span> A revised item.
+</li>
+<li><span class="gml-label">•</span> Another one.
+</li></ul></ins>
+<p>Text before
+<ins class="gml-scope gml-rc" data-rc="?">a revised phrase
+</ins>and after.
+</p>
+<p>A blank character:
+not marked
+done.
+</p><ins class="gml-scope gml-rc gml-rc-block" data-rc="|"><p>Outer revised
+<ins class="gml-scope gml-rc" data-rc="?">inner revised
+</ins>outer again.
+</p></ins>
+<ol class="gml-ol gml-nest-1">
+<li><span class="gml-label">1.</span> Old item.
+</li>
+<li class="gml-rc" data-rc="|"><span class="gml-label">2.</span> New item.
+</li>
+<li class="gml-rc" data-rc="|"><span class="gml-label">3.</span> Another new item.
+</li></ol><ins class="gml-scope gml-rc gml-rc-block" data-rc="|"><h2 id="gml-h2-1" class="gml-h2">A revised heading</h2><pre class="gml-xmp">revised example
+</pre></ins>
+<p>One line:
+<br><ins class="gml-lines gml-rc" data-rc="!">one marked line</ins>
+<br><ins class="gml-lines gml-rc" data-rc="?">one line of code 2</ins>
+<br><span class="gml-lines">a line of the blank code</span>
+</p></section></article>
+</main>
+</body>
+</html>

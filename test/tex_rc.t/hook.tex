@@ -1,0 +1,10 @@
+% the bars \output draws, page by page, to \jobname.bars (the
+% side and the length in whole points)
+\newwrite\bars \immediate\openout\bars=\jobname.bars
+\catcode`\@=11
+\let\hook@bar\gml@rcbar
+\def\gml@rcbar#1#2#3#4#5{\gml@rcside#3{#4}{#5}%
+  \immediate\write\bars{page \the\gml@pgord: \ifdim\gml@dimc<\z@ left\else right\fi
+    \space\number\numexpr(#1-#2)/65536\relax pt}%
+  \hook@bar{#1}{#2}{#3}{#4}{#5}}
+\catcode`\@=12

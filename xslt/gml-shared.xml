@@ -50,7 +50,7 @@
   <node name="pw" kind="hint" class="event" break="no" words="pw"/>
   <node name="query" kind="hint" class="event" break="no" from="&amp;$PN or &amp;$LC under gml -aux"/>
   <node name="raw" kind="raw" from=".xr"/>
-  <node name="rc" kind="hint" class="event" break="no" words="rc"/>
+  <node name="rc" kind="hint" class="state" conditional="yes" sets="rc" break="no" words="fn rc re"/>
   <node name="re" kind="hint" class="event" break="varies" words="re"/>
   <node name="rf" kind="element" words="rf"/>
   <node name="rf" kind="hint" class="event" break="yes" words="rf"/>
@@ -95,6 +95,7 @@
   <property name="es" tier="inline" initial="default"/>
   <property name="sb" tier="inline" initial="default"/>
   <property name="ud" tier="inline" initial="default"/>
+  <property name="rc" tier="inline" initial=""/>
  </properties>
  <words>
   <word name="aa" supported="yes"/>
@@ -138,7 +139,7 @@
   <word name="fi" supported="no"/>
   <word name="fl" supported="yes" break="no" grammar="on|off|dump ..." puts="fl"/>
   <word name="fm" supported="no"/>
-  <word name="fn" supported="yes" break="no" grammar="on|off|leader" puts="fn"/>
+  <word name="fn" supported="yes" break="no" grammar="on|off|leader" puts="fn rc"/>
   <word name="fo" supported="yes" break="yes" grammar="[on|off|left|right|center|inside|outside] [extend|fold|trunc]" puts="fo"/>
   <word name="fs" supported="no"/>
   <word name="ft" supported="no"/>
@@ -199,9 +200,9 @@
   <word name="px" supported="no"/>
   <word name="qq" supported="yes"/>
   <word name="qu" supported="yes"/>
-  <word name="rc" supported="yes" break="no" grammar="n [on|off|c] | adjust h | * c" puts="rc lines"/>
+  <word name="rc" supported="yes" break="no" grammar="n c [font f] | n on|off|on/off | * c | adjust [h] [left|right] | align [left|right|inside|outside|outcol]" puts="rc lines"/>
   <word name="rd" supported="no"/>
-  <word name="re" supported="yes" break="varies" grammar="[envname]" puts="re in of ir ll fo hy pf bf lines"/>
+  <word name="re" supported="yes" break="varies" grammar="[envname]" puts="re in of ir ll fo hy pf bf rc lines"/>
   <word name="rf" supported="yes" break="yes" grammar="[odd|even] on|off|cancel|sup|res|execute" puts="rf"/>
   <word name="rh" supported="yes" break="yes" grammar="[odd|even] on|off|cancel|sup|res|execute" puts="rh"/>
   <word name="ri" supported="yes" break="yes" grammar="[n|on|off|text]" puts="lines"/>

@@ -8,7 +8,7 @@ then indented
 <gml:il shift="2" unit="ch" break="yes"/>indented line
 <gml:un shift="-2" unit="ch" break="yes"/>undented line
 <gml:lines word="uc" n="1" break="no">underscore caps</gml:lines>
-<gml:rc code="1" char="|" break="no"/><gml:lines word="rc" n="1" char="|" break="no">revised</gml:lines>
+<gml:lines word="rc" n="1" char="|" break="no">revised</gml:lines>
 <gml:sx left="left" fill="." right="right" break="yes"/><gml:hr repeat="yes" break="yes"/><gml:sk n="2" unit="line" break="yes"/><gml:kp mode="on" break="yes"/>kept
 <gml:kp mode="off" break="yes"/></gml:scope><gml:lines word="ce" n="on" break="yes">first centred
 second centred

@@ -99,10 +99,11 @@ the change in spacing between the lines of one paragraph.
 <
 .br><
 .ls spec=normal><,ws spec=by 2>Wide word spaces.
-<,ws spec=normal><,rc code=1,char=*><
-.br><,rc code=1,mode=on>Revised text marked in the margin.
+<,ws spec=normal><,rc adjust=3ch,side=left><,rc align=right><
+.br><,rc state=on,code=1,char=*>Revised text marked in the margin.
 <
-.br><,rc code=1,mode=off><
+.br><,rc state=off><:lines word=rc,n=1,code=1,char=*,break=no>One revised line.<><
+.br><,rc align=left><
 .ll length=4,unit=i>A shorter line length of four inches for this paragraph which is long
 enough to wrap at that length.
 <

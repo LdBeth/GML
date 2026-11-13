@@ -26,6 +26,7 @@
 #   G gml/features.gml         -> resolve/features.in.xml
 #   G gml/state.gml            -> scope/state.in.xml
 #   gml gml/index-pi.gml       -> resolve/index-pi.in.xml (no profile)
+#   G gml/html-rc.gml          -> scope/rc.in.xml (the .rc state hints)
 #   resolve/features.in.xml | resolve.xsl SYSVARH=yes  -> scope/features.in.xml
 #   scope/state.in.xml | scope.xsl                     -> strip-hints/scoped.in.xml
 #   G gml/strip-events.gml | resolve.xsl              -> strip-hints/events.in.xml
@@ -63,8 +64,8 @@
 #        full where the cells differ from the rdef (or always:
 #        tables-long, the old form), else short
 #   html gmlfmt -to scoped gml/html-NAME.gml   -> html/NAME.in.xml
-#        (control, figs, fn, hints, index, lines, lists, scope, sections,
-#        symref, text; symref: a running footing's symbol, gml:symref
+#        (control, figs, fn, hints, index, lines, lists, rc, scope,
+#        sections, symref, text; rc: revised text, .rc; symref: a running footing's symbol, gml:symref
 #        and gml:symval, dropped; control: raw SCRIPT control words in a semantic document,
 #        the hanging indention over breaks and a .is tab label, a run-in
 #        .dh NBR heading, consecutive .sk skips, the .fn leader);

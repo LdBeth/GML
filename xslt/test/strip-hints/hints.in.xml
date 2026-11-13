@@ -7,7 +7,7 @@
 <gml:sp n="2" unit="line" break="yes"/><gml:pa break="yes"/><gml:cp n="3" unit="line" break="yes"/><gml:kp mode="on" break="yes"/>kept<gml:kp mode="off" break="yes"/>
 <gml:lines word="ce" n="1" break="yes">centered</gml:lines>
 <gml:bx action="on" spec="1ch 60ch" break="yes"/><gml:hr spec="1ch" break="yes"/><gml:tc title="x" break="yes"/><gml:sx left="l" fill="." right="r" break="yes"/>
-<gml:rc code="1" mode="on" break="no"/>revised<gml:hw word="hy-phen" break="no"/><gml:df name="f" spec="x" break="no"/><gml:dh level="1" spec="x" break="no"/>
+<gml:rc state="on" code="1" char="|" break="no"/>revised<gml:hw word="hy-phen" break="no"/><gml:df name="f" spec="x" break="no"/><gml:dh level="1" spec="x" break="no"/>
 <gml:scope kind="block" in="2ch"><gml:br break="yes" cause="in"/>scoped <gml:scope kind="inline" font="hi1">text</gml:scope></gml:scope>
 <gml:fn>A footnote<gml:in left="2" unit="ch" break="yes"/>.</gml:fn><gml:raw backend="tex">\relax</gml:raw>
 <gml:pn spec="roman" break="no"/><gml:pl spec="11i" break="no"/><gml:cl spec="30ch" break="yes"/><gml:cd spec="2 1ch 35ch" break="yes"/>

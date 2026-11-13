@@ -10,7 +10,8 @@ a stack: .re takes the most recent one off; a named one is kept apart:
 .re name restores it and drops nothing.  With no unnamed environment
 saved, .re restores the initial values (p.309 r2).  .re breaks when
 the format mode or the centring changes (r3, r4).  A footnote saves the
-environment and clears the offset; .fn off restores it without hints.
+environment and clears the offset; .fn off restores it without hints
+(but those of the revision codes, test/rc.t).
 .fv is a hint.  A temporary indention until changed (.in h 0) is part
 of the indention saved, and &$IN gives it (LR p.211 r4: permanent and
 temporary components; a FOR/AFTER distance and a pending .il/.un are

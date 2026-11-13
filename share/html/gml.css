@@ -9,6 +9,9 @@
  *   --gml-justify   what DCF "justify" (.ju on, the default) means:
  *                   start (ragged right) here; set it to justify for DCF
  *   --gml-tsize     the term width of a :dl (set from tsize=)     10ch
+ *   --gml-rc        the colour of the revision code rule (.rc)
+ *   --gml-rc-bg     the shading of revised text within a paragraph
+ *   --gml-rc-gap    the distance of the rule from the revised block 0.75rem
  *
  * Class names: every element html.xsl writes is gml-NAME after its GML
  * tag (gml-h1, gml-note, gml-figcap ...); gml-font-NAME for a .bf font.
@@ -28,6 +31,9 @@
   --gml-accent: #1a5fb4;
   --gml-code-bg: #f3f4f6;
   --gml-sec: #a51d2d;
+  --gml-rc: var(--gml-sec);
+  --gml-rc-bg: #a51d2d14;
+  --gml-rc-gap: 0.75rem;
 
   --gml-body-font: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
   --gml-head-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
@@ -43,6 +49,7 @@
     --gml-accent: #8ab4f8;
     --gml-code-bg: #222326;
     --gml-sec: #ff7b72;
+    --gml-rc-bg: #ff7b7224;
   }
 }
 
@@ -243,7 +250,20 @@ pre, .gml-xmp { font-family: var(--gml-mono-font); font-size: 0.875em; line-heig
 .gml-hr { border: 0; border-top: 1px solid var(--gml-rule); margin: 0.75em 0; display: block; }
 .gml-sx { gap: 0.5em; }
 .gml-sx-fill { flex: 1; border-bottom: 1px dotted var(--gml-muted); margin-bottom: 0.35em; }
-.gml-rc { border-left: 2px solid var(--gml-sec); padding-left: 0.25em; }
+/* revision codes (.rc; html.xsl writes ins.gml-rc, data-rc the revision
+   character): a rule in the left margin beside a revised block (ins
+   around blocks, gml-rc-block; a list item, li.gml-rc), from its first
+   line to its last as gml.tex draws it; revised text inside a paragraph,
+   where no rule can follow the lines, faintly shaded */
+ins.gml-rc { text-decoration: none; background: var(--gml-rc-bg); }
+ins.gml-rc-block { display: block; background: none; }
+.gml-rc-block, li.gml-rc, dt.gml-rc, dd.gml-rc { position: relative; }
+.gml-rc-block::before, li.gml-rc::before, dt.gml-rc::before, dd.gml-rc::before {
+  content: ""; position: absolute; top: 0; bottom: 0;
+  left: calc(-1 * var(--gml-rc-gap)); border-left: 2px solid var(--gml-rc); }
+/* an item's rule outside its label, where the list's rule would be */
+.gml-ol > li.gml-rc::before, .gml-ul > li.gml-rc::before, .gml-sl > li.gml-rc::before {
+  left: calc(-2.5em - var(--gml-rc-gap)); }
 .gml-scope { /* the state is inline style */ }
 
 /* .bf fonts: the Starter Set highlight and heading fonts (IG Figure 6, page
